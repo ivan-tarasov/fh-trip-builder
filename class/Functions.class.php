@@ -437,12 +437,15 @@ class Functions
     return $range;
   }
 
-  /**
-   * Convert arrival time to airport timezone
-   *
-   * NOT DOCUMENTED YET
-   */
-  public static function timeZone($time, $timezone_departure, $timezone_arrival)
+    /**
+     * Convert arrival time to airport timezone
+     *
+     * @param string $time
+     * @param string $timezone_departure
+     * @param string $timezone_arrival
+     * @return mixed
+     */
+  public static function timeZone(string $time, string $timezone_departure, string $timezone_arrival)
   {
     global $db;
 

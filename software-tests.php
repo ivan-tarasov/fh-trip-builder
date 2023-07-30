@@ -6,7 +6,7 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.0.1
+ * @version   0.0.2
  */
 
 include(__DIR__ . '/header.inc.php');
@@ -14,4 +14,3 @@ include(__DIR__ . '/header.inc.php');
 $html .= Functions::template('index', null, 'software-tests');
 
 include(__DIR__ . '/footer.inc.php');
-?>
