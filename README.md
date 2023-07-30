@@ -3,7 +3,7 @@
 [![My portfolio][tarasov-shield]][tarasov-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
-[![TripBulder form screenshot][project-screenshot]](https://tripbuilder.tarasov.ca/)
+[![TripBulder form screenshot][project-screenshot]](https://trip-builder.tarasov.ca/)
 
 # Trip Builder
 
@@ -30,7 +30,7 @@ PHP Coding Assignment for the Backend PHP Developer role at [FlightHub][flighthu
 
 1. Clone the repo
    ```sh
-   git clone https://karapuzoff@bitbucket.org/karapuzoff/trip-builder.git
+   git clone https://github.com/ivan-tarasov/fh-trip-builder.git
    ```
 2. Open site in browser
 3. Enter your MySQL credentials in `config.mysql.php`
@@ -57,8 +57,8 @@ If you have a suggestion that would make TripBuilder better, please fork the rep
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
-[demo-url]: https://tripbuilder.tarasov.ca/
-[readme-url]: https://bitbucket.org/karapuzoff/trip-builder/src/develop/README.md
+[demo-url]: https://trip-builder.tarasov.ca/
+[readme-url]: https://github.com/ivan-tarasov/fh-trip-builder/blob/master/README.md
 [flighthub-url]: https://flighthubgroup.com/
 [php-logo]: https://img.shields.io/badge/php-%3E%207.1.3-blue?style=for-the-badge
 [php-url]: https://www.php.net/ChangeLog-7.php#PHP_7_1
@@ -71,9 +71,9 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 [fontawesome-logo]: https://img.shields.io/badge/FontAwesome-228ae6?style=for-the-badge&logo=fontawesome&logoColor=white
 [fontawesome-url]: https://fontawesome.com
 [issues-shield]: https://img.shields.io/bitbucket/issues-raw/karapuzoff/trip-builder?style=for-the-badge
-[issues-url]: https://bitbucket.org/karapuzoff/trip-builder/issues
+[issues-url]: https://github.com/ivan-tarasov/fh-trip-builder/issues
 [pulls-shield]: https://img.shields.io/bitbucket/pr-raw/karapuzoff/trip-builder?style=for-the-badge
-[pulls-url]: https://bitbucket.org/karapuzoff/trip-builder/pull-requests/
+[pulls-url]: https://github.com/ivan-tarasov/fh-trip-builder/pulls
 [tarasov-shield]: https://img.shields.io/website?label=tarasov.ca&logo=tarasov.ca&style=for-the-badge&url=https%3A%2F%2Ftarasov.ca%2F
 [tarasov-url]: https://tarasov.ca/
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
