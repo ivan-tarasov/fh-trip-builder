@@ -7,7 +7,6 @@
 
 class MysqliDb
 {
-
     /**
      * Static instance of self
      *
