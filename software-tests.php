@@ -2,11 +2,9 @@
 /**
  * Software tests page
  *
- * Show all airlines from DB
- *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.0.2
+ * @version   0.0.3
  */
 
 include(__DIR__ . '/header.inc.php');

@@ -15,23 +15,23 @@
 
 class Timer
 {
-  /**
-   * @var float execution start time
-   */
+    /**
+     * @var float execution start time
+     */
     private static $start = .0;
 
-  /**
-   * Start execution
-   */
+    /**
+     * Start execution
+     */
     static function start()
     {
         self::$start = microtime(true);
     }
 
-  /**
-   * Difference between the current timestamp and self::$start
-   * @return float
-   */
+    /**
+     * Difference between the current timestamp and self::$start
+     * @return float
+     */
     static function finish($pre = false)
     {
         // LOCAL

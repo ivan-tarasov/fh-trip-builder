@@ -1,10 +1,10 @@
 <?php
 /**
- * API => GET flight with parameters
+ * API / GET flight with parameters
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.2.2
+ * @version   0.2.3
  */
 
 if (!defined('__ROOT__')) {

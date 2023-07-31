@@ -1,10 +1,10 @@
 <?php
 /**
- * API => Shaw all airlines
+ * API / Shaw all airlines
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.1.2
+ * @version   0.1.3
  */
 
 if (!defined('__ROOT__')) {

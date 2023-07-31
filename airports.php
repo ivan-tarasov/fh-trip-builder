@@ -6,11 +6,12 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.1.2
+ * @version   0.1.3
  */
 
-if (!defined('__ROOT__'))
+if (!defined('__ROOT__')) {
     define('__ROOT__', dirname(__FILE__));
+}
 
 include(__ROOT__ . '/header.inc.php');
 

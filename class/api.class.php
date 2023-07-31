@@ -19,7 +19,14 @@ require_once ROOT_PATH . '/vendor/Unirest.php';
 
 class APIConnector
 {
+    /**
+     * @var $_token
+     */
     private $_token;
+
+    /**
+     * @var $_api
+     */
     private $_api;
 
     function __construct($url, $token)

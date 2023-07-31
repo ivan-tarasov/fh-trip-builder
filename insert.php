@@ -4,11 +4,12 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.0.6
+ * @version   0.0.7
  */
 
-if (!defined('__ROOT__'))
-	define('__ROOT__', dirname(__FILE__));
+if (!defined('__ROOT__')) {
+    define('__ROOT__', dirname(__FILE__));
+}
 
 require_once __ROOT__ . '/class/Timer.class.php';
 require_once __ROOT__ . '/class/MysqliDb.class.php';

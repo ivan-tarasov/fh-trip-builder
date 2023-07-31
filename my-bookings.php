@@ -4,11 +4,12 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.0.2
+ * @version   0.0.3
  */
 
-if (!defined('__ROOT__'))
+if (!defined('__ROOT__')) {
     define('__ROOT__', dirname(__FILE__));
+}
 
 include(__ROOT__ . '/header.inc.php');
 
@@ -40,10 +41,10 @@ foreach ($bookings as $id => $booking) {
 
     $ticket['booking_id'] = $booking['id'];
     $ticket['created']    = $booking['created'];
-    $ticket['direction'] = count($ticket['flights']) == 2
+    $ticket['direction']  = count($ticket['flights']) == 2
         ? 'roundtrip'
         : 'oneway';
-    $ticket['price'] = count($ticket['flights']) == 2
+    $ticket['price']      = count($ticket['flights']) == 2
         ? $ticket['flights']['a']['price'] + $ticket['flights']['b']['price']
         : $ticket['flights']['a']['price'];
 
@@ -114,6 +115,10 @@ include(__ROOT__ . '/footer.inc.php');
 
 /**
  * Getting info about flight
+ *
+ * @param $id
+ * @param $direction
+ * @return mixed
  */
 function getFlightInfo($id, $direction)
 {

@@ -11,9 +11,16 @@ require_once __ROOT__ . '/class/Functions.class.php';
 
 class API
 {
-    // Minimum security at this time...
+    /**
+     * Minimum security at this time...
+     *
+     * @var string $_token
+     */
     private string $_token = 'SomeAPItoken_$ecretWORD---orHASH';
 
+    /**
+     * @var $db
+     */
     public static $db;
 
     public function __construct()
@@ -40,6 +47,7 @@ class API
                 self::$db = Functions::$db;
             } catch (Exception $e) {
                 http_response_code($e->getMessage());
+
                 throw new statusCode($e->getMessage());
             }
         } catch (statusCode $e) {
@@ -114,14 +122,14 @@ class statusCode extends Exception
     public function errorCode()
     {
         $statusError = [
-          400 => 'Bad request. Check API documentation',
-          401 => 'Access denied. Bad credentials, check API token',
-          500 => 'Internal Server Error. Something wrong on our side'
+            400 => 'Bad request. Check API documentation',
+            401 => 'Access denied. Bad credentials, check API token',
+            500 => 'Internal Server Error. Something wrong on our side'
         ];
 
         $errorMsg = [
-          'code'    => $this->getMessage(),
-          'message' => $statusError[$this->getMessage()]
+            'code'    => $this->getMessage(),
+            'message' => $statusError[$this->getMessage()]
         ];
 
         header('TRIPBUILDER-ERROR-MESSAGE: ' . $statusError[$this->getMessage()]);

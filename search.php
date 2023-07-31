@@ -4,7 +4,7 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.2.2
+ * @version   0.2.3
  */
 
 if (!defined('__ROOT__')) {
@@ -37,6 +37,7 @@ if (!empty($query_hash['returning_date'])) {
 if (!empty($_POST['sortBy'])) {
     $_SESSION['sortBy'] = $_POST['sortBy'];
 }
+
 if (array_key_first($activetab) == 'roundtrip') {
     if (! empty($_SESSION['sortBy']) && Config::$site['sort'][$_SESSION['sortBy']]['roundtrip'] != 1) {
         $_SESSION['sortBy'] = 'price';

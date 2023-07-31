@@ -50,6 +50,7 @@ try {
     }
 
     $json = [];
+
     $hidden_format = '<span class="hidden">%1$s|%2$s|%3$s|%4$s</span>';
 
     foreach ($airports_groups as $city => $group) {

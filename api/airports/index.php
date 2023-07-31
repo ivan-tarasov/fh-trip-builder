@@ -1,10 +1,10 @@
 <?php
 /**
- * API => Shaw all airports
+ * API / Shaw all airports
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.1.2
+ * @version   0.1.3
  */
 
 if (!defined('__ROOT__')) {

@@ -9,6 +9,11 @@
 
 class Config
 {
+    /**
+     * Main config array
+     *
+     * @var array $site
+     */
     public static $site = [
         // Site version ================================================================================================
         'version' => [

@@ -44,7 +44,7 @@ class Functions
     /**
      * Check software installation
      *
-     * @version 0.0.2
+     * @return bool
      */
     public static function checkSetup()
     {
@@ -576,6 +576,10 @@ class Functions
         return $query_array;
     }
 
+    /**
+     * @param $hash
+     * @return false|string|null
+     */
     private static function hash2date($hash)
     {
         if (! empty($hash)) {

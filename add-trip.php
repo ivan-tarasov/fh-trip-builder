@@ -28,6 +28,7 @@ require_once __ROOT__ . '/class/Functions.class.php';
 Functions::DBCheck();
 
 Functions::$db->where('id', $_GET['departing_id']);
+
 $flight = Functions::$db->getOne('flights', 'departure_time');
 
 $sql_data = [

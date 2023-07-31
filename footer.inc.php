@@ -4,7 +4,7 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.1.3
+ * @version   0.1.4
  */
 
 $db_flights_count = number_format(round(Functions::$db->getOne('flights', 'count(*) as cnt')['cnt'], 2));
@@ -50,7 +50,7 @@ $app_version = sprintf(
 );
 
 $footer_params = [
-    '%APP_VERSION%' => $app_version,
+    '%APP_VERSION%'        => $app_version,
     '%EXECUTION_TIMER%'    => Timer::finish(),
     '%DATABASE_REQUESTS%'  => count(Functions::$db->trace),
     '%FLIGHTS_COUNT%'      => $db_flights_count,
