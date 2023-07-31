@@ -1,17 +1,17 @@
 DROP TABLE IF EXISTS `airports`;
 
 CREATE TABLE `airports` (
-  `code` char(3) NOT NULL DEFAULT '',
-  `enabled` int(1) DEFAULT NULL,
-  `country_code` char(2) NOT NULL,
-  `region_code` char(6) NOT NULL DEFAULT '',
-  `city_code` char(3) DEFAULT '',
-  `city` varchar(255) NOT NULL DEFAULT '',
-  `timezone` varchar(255) NOT NULL DEFAULT '',
-  `title` varchar(255) NOT NULL DEFAULT '',
-  `latitude` decimal(9,6) NOT NULL,
-  `longitude` decimal(9,6) NOT NULL,
-  PRIMARY KEY (`code`)
+    `code` char(3) NOT NULL DEFAULT '',
+    `enabled` int(1) DEFAULT NULL,
+    `country_code` char(2) NOT NULL,
+    `region_code` char(6) NOT NULL DEFAULT '',
+    `city_code` char(3) DEFAULT '',
+    `city` varchar(255) NOT NULL DEFAULT '',
+    `timezone` varchar(255) NOT NULL DEFAULT '',
+    `title` varchar(255) NOT NULL DEFAULT '',
+    `latitude` decimal(9,6) NOT NULL,
+    `longitude` decimal(9,6) NOT NULL,
+    PRIMARY KEY (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --/*!17 LOCK TABLES airports WRITE */;

@@ -1,9 +1,9 @@
 DROP TABLE IF EXISTS `countries`;
 
 CREATE TABLE `countries` (
-  `code` char(2) NOT NULL DEFAULT '',
-  `title` varchar(255) NOT NULL DEFAULT '',
-  PRIMARY KEY (`code`)
+    `code` char(2) NOT NULL DEFAULT '',
+    `title` varchar(255) NOT NULL DEFAULT '',
+    PRIMARY KEY (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --/*!9 LOCK TABLES countries WRITE */;

@@ -1,11 +1,11 @@
 DROP TABLE IF EXISTS airlines;
 
 CREATE TABLE airlines (
-  code char(2) NOT NULL DEFAULT '',
-  title varchar(255) NOT NULL DEFAULT '',
-  country_code char(2) DEFAULT '',
-  traffic int(5) NOT NULL,
-  PRIMARY KEY (code)
+    code char(2) NOT NULL DEFAULT '',
+    title varchar(255) NOT NULL DEFAULT '',
+    country_code char(2) DEFAULT '',
+    traffic int(5) NOT NULL,
+    PRIMARY KEY (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --/*!11 LOCK TABLES airlines WRITE */;
