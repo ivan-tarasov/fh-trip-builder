@@ -1,0 +1,12 @@
+{
+    "name": "tarasov/trip-builder",
+    "description": "Web Developer PHP assessment for a FlightHub.",
+    "license": "proprietary",
+    "type": "project",
+    "autoload": {
+      "psr-4": {"TripBuilder\\": "src/"}
+    },
+    "require": {
+        "thingengineer/mysqli-database-class": "dev-master"
+    }
+}
