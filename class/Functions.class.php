@@ -19,7 +19,7 @@ class Functions
     public static function DBCheck()
     {
         // DB credentials
-        try {
+        // try {
             // MySQL init
             self::$db = new MysqliDb(
                 Config::get('mysql')['host'],
@@ -28,17 +28,17 @@ class Functions
                 Config::get('mysql')['db']
             );
 
-            self::$db->checkConnect();
-        } catch (Exception $e) {
-            echo sprintf(
-                '%s%s%s',
-                Functions::template('header', null, 'terminal'),
-                Functions::template('db-credentials', null, 'error'),
-                Functions::template('footer', null, 'terminal')
-            );
-
-            die();
-        }
+            // self::$db->checkConnect();
+//        } catch (Exception $e) {
+//            echo sprintf(
+//                '%s%s%s',
+//                Functions::template('header', null, 'terminal'),
+//                Functions::template('db-credentials', null, 'error'),
+//                Functions::template('footer', null, 'terminal')
+//            );
+//
+//            die();
+//        }
     }
 
     /**
@@ -80,7 +80,7 @@ class Functions
         $tpl = $___scriptsFolder . '/' . $folder . $tpl . '.tpl';
         $tpl = file_get_contents($tpl, true);
 
-        if (!empty($replace)) {
+        if (! empty($replace)) {
             $tpl = strtr($tpl, $replace);
         }
 

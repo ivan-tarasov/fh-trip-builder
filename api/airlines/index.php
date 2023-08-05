@@ -11,6 +11,8 @@ if (!defined('__ROOT__')) {
     define('__ROOT__', dirname(__FILE__, 3));
 }
 
+require_once __ROOT__ . '/vendor/autoload.php';
+
 require_once __ROOT__ . '/config/Main.class.php';
 require_once __ROOT__ . '/api/API.class.php';
 

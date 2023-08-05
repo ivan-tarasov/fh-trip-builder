@@ -3,6 +3,8 @@ if (!defined('__ROOT__')) {
     define('__ROOT__', dirname(__FILE__, 2));
 }
 
+require_once __ROOT__ . '/vendor/autoload.php';
+
 require_once __ROOT__ . '/class/Timer.class.php';
 require_once __ROOT__ . '/class/MysqliDb.class.php';
 
@@ -39,7 +41,8 @@ class API
 
                 // Simple X-AUTH
                 if (empty($CURL_headers['X-Auth-Token']) || $this->_token !== $CURL_headers['X-Auth-Token']) {
-                    throw new statusCode(401);
+                    // throw new APIstatusCode(401);
+                    (new API)->errorCode(401);
                 }
 
                 Functions::DBCheck();
@@ -113,13 +116,9 @@ class API
         }
 
         return $return;
-  }
+    }
 
-}
-
-class statusCode extends Exception
-{
-    public function errorCode()
+    public function errorCode($code)
     {
         $statusError = [
             400 => 'Bad request. Check API documentation',
@@ -128,12 +127,34 @@ class statusCode extends Exception
         ];
 
         $errorMsg = [
-            'code'    => $this->getMessage(),
-            'message' => $statusError[$this->getMessage()]
+            'code'    => $code,
+            'message' => $statusError[$code]
         ];
 
-        header('TRIPBUILDER-ERROR-MESSAGE: ' . $statusError[$this->getMessage()]);
+        header('TRIPBUILDER-ERROR-MESSAGE: ' . $statusError[$code]);
 
         return json_encode($errorMsg, JSON_PRETTY_PRINT);
     }
+
 }
+
+//class statusCode extends Exception
+//{
+//    public function errorCode()
+//    {
+//        $statusError = [
+//            400 => 'Bad request. Check API documentation',
+//            401 => 'Access denied. Bad credentials, check API token',
+//            500 => 'Internal Server Error. Something wrong on our side'
+//        ];
+//
+//        $errorMsg = [
+//            'code'    => $this->getMessage(),
+//            'message' => $statusError[$this->getMessage()]
+//        ];
+//
+//        header('TRIPBUILDER-ERROR-MESSAGE: ' . $statusError[$this->getMessage()]);
+//
+//        return json_encode($errorMsg, JSON_PRETTY_PRINT);
+//    }
+//}

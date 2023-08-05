@@ -7,6 +7,10 @@
  * @version   0.2.3
  */
 
+require_once 'vendor/autoload.php';
+
+use TripBuilder\Debug\dBug;
+
 if (!defined('__ROOT__')) {
     define('__ROOT__', dirname(__FILE__));
 }

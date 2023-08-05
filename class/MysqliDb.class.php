@@ -5,7 +5,7 @@
  * @version 2.9.3
  */
 
-class MysqliDb
+class MysqliDb_old
 {
     /**
      * Static instance of self
@@ -1463,10 +1463,12 @@ class MysqliDb
      */
     public function checkConnect()
     {
-        if (!empty($this->mysqli()->connect_error))
-            return false; //return $this->mysqli()->connect_error;
-        else
+        if (!empty($this->mysqli()->connect_error)) {
+            return false;
+            // return $this->mysqli()->connect_error;
+        } else {
             return true;
+        }
     }
 
     /**

@@ -11,6 +11,8 @@ if (!defined('__ROOT__')) {
     define('__ROOT__', dirname(__FILE__, 3));
 }
 
+require_once __ROOT__ . '/vendor/autoload.php';
+
 require_once __ROOT__ . '/config/Main.class.php';
 require_once __ROOT__ . '/api/API.class.php';
 
@@ -18,14 +20,20 @@ $api = new API();
 
 // Check API
 if (empty($_GET['from']) || !isset($_GET['to']) || !isset($_GET['departure_date_start']) || !isset($_GET['departure_date_end'])) {
-    throw new statusCode(400);
+    $api->errorCode(400);
+    //throw new statusCode(400);
 }
 
-define('SESSION', $_GET['SESSION_DATA']);
-define('FROM', $_GET['from']);
-define('TO', $_GET['to']);
-define('DEPARTURE_START', $_GET['departure_date_start']);
-define('DEPARTURE_END', $_GET['departure_date_end']);
+//define('SESSION', $_GET['SESSION_DATA']);
+//define('FROM', $_GET['from']);
+//define('TO', $_GET['to']);
+//define('DEPARTURE_START', $_GET['departure_date_start']);
+//define('DEPARTURE_END', $_GET['departure_date_end']);define('SESSION', $_GET['SESSION_DATA']);
+define('SESSION', ['checktime' => 1691209198]);
+define('FROM', 'MOW');
+define('TO', 'IST');
+define('DEPARTURE_START', '2023-08-07 00:00:00');
+define('DEPARTURE_END', '2023-08-07 23:59:59');
 
 $flights['sort_by'] = SESSION['sortBy'] ?? 'price';
 

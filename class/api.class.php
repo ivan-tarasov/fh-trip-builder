@@ -120,6 +120,7 @@ class APIConnector
             'current_page'         => $current_page,
             'SESSION_DATA'         => $_SESSION
         ];
+        new \TripBuilder\Debug\dBug($input_data);
 
         return $this->sendRequest('/flights/', $input_data);
     }

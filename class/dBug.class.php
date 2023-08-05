@@ -2,6 +2,8 @@
 /**
  * Class dBug
  */
+namespace Class;
+
 class dBug
 {
 
