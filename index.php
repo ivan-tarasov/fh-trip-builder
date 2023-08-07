@@ -4,17 +4,29 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.1.3
+ * @version   2.0.1
  */
 
-include(__DIR__ . '/header.inc.php');
+require_once 'vendor/autoload.php';
 
-$params = [
-    '%PAGE_TITLE%'        => 'Main page',
-    '%MAIN_BG_IMAGE%'     => rand(1, 10),
-    '%API_PATH_AIRPORTS%' => Config::get('api')['url'] . '/airports.php'
-];
+use TripBuilder\Config\Routs;
 
-$html .= Functions::template('index', $params, 'index');
+// Enable .env file variables
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
-include(__DIR__ . '/footer.inc.php');
+// Get the current URI
+$uri = rtrim($_SERVER['REQUEST_URI'], '/');
+
+// Find the corresponding controller and action
+[$controllerName, $actionName] = explode('@', Routs::ENABLED_ROUTS[$uri] ?? 'NotFound@index');
+
+// Load and execute the controller action
+$controllerClassName = sprintf(
+    '%s\%sController',
+    Routs::ROUTS_CONTROLLERS_PATH,
+    ucfirst($controllerName)
+);
+
+$controller = new $controllerClassName();
+$controller->$actionName();
