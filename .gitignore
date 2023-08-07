@@ -1,6 +1,9 @@
 # Git folder
 .git
 
+# Env file
+.env
+
 # PHPStorm project configurations
 .idea/
 
