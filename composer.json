@@ -8,6 +8,8 @@
     },
     "require": {
         "thingengineer/mysqli-database-class": "dev-master",
-        "ext-json": "*"
+        "ext-json": "*",
+        "vlucas/phpdotenv": "^5.5",
+        "guzzlehttp/guzzle": "^7.7"
     }
 }
