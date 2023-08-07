@@ -25,8 +25,6 @@ class AbstractApi
     {
         $this->guardUnauthorizedAccess();
         $this->guardNotAllowedRequestMethod();
-
-        $this->sendResponse(200, [$_SERVER['REQUEST_METHOD']]);
     }
 
     /**
