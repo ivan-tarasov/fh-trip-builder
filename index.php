@@ -9,14 +9,14 @@
 
 require_once 'vendor/autoload.php';
 
-use TripBuilder\Config\Routs;
+use TripBuilder\Routs;
 
 // Enable .env file variables
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
 // Get the current URI
-$uri = rtrim($_SERVER['REQUEST_URI'], '/');
+$uri = rtrim($_SERVER['REQUEST_URI'], '/') ?: '/';
 
 // Find the corresponding controller and action
 [$controllerName, $actionName] = explode('@', Routs::ENABLED_ROUTS[$uri] ?? 'NotFound@index');

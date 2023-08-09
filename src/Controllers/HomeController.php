@@ -2,10 +2,13 @@
 
 namespace TripBuilder\Controllers;
 
+use TripBuilder\Debug\dBug;
+use TripBuilder\Config;
+
 class HomeController
 {
     public function index()
     {
-        echo 'Welcome to the Home Page';
+        new dBug(Config::get('site', 'pagination'));
     }
 }

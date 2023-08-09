@@ -1,6 +1,6 @@
 <?php
 
-namespace TripBuilder\Config;
+namespace TripBuilder;
 
 class Routs
 {
@@ -18,6 +18,7 @@ class Routs
         |--------------------------------------------------------------------------
         */
         '/api'          => 'Api@index',
+        '/api/server'   => 'Api@server',
         '/api/airports' => 'Api@airports',
         '/api/airlines' => 'Api@airlines',
     ];

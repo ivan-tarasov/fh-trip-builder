@@ -1,7 +1,7 @@
 <?php
 namespace TripBuilder\Cron\Inserter;
 
-use TripBuilder\Config\MainConfig as Config;
+use TripBuilder\Config;
 
 class Flights {
     const FLIGHTS_COUNT       = 5000;

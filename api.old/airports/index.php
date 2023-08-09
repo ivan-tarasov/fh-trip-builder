@@ -13,8 +13,6 @@ if (!defined('__ROOT__')) {
 
 require_once __ROOT__ . '/vendor/autoload.php';
 
-echo TripBuilder\Config\MainConfig::getRootDir(); die();
-
 $airports = new \TripBuilder\Api\Airports\Response();
 try {
     $airports->get();

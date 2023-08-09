@@ -2,6 +2,9 @@
 
 namespace TripBuilder\Api;
 
+use TripBuilder\Debug\dBug;
+use TripBuilder\Helper;
+
 class AbstractApi
 {
     const HEADER_AUTH_KEY = 'Authorization';
@@ -73,9 +76,14 @@ class AbstractApi
      */
     public function sendResponse($statusCode, $data = null, $headers = null)
     {
+        // Building response array
         $response = json_encode([
-            'status' => $statusCode,
-            'data'   => $data ?? [],
+            'status'    => $statusCode,
+            'endpoint'  => Helper::getUrlPath(),
+            'method'    => $this->getRequestMethod(),
+            'timestamp' => date('Y-m-d H:i:s'),
+            'count'     => count($data),
+            'data'      => $data ?? [],
         ]);
 
         // Sending response code
@@ -87,9 +95,7 @@ class AbstractApi
 
         // Setting up response headers
         self::addHeader('Content-type', 'application/json; charset=utf-8');
-        // self::addHeader('Access-Control-Allow-Methods', 'OPTIONS,GET,POST,PUT,DELETE');
-        // self::addHeader('Access-Control-Max-Age', 3600);
-        // self::addHeader('Access-Control-Allow-Headers', 'Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With');
+        self::addHeader('Access-Control-Max-Age', 3600);
         self::addHeader('Content-Length', strlen($response));
 
         if ($headers) {
