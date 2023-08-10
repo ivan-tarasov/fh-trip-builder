@@ -19,13 +19,18 @@ class Routs
         | API controller with endpoints
         |--------------------------------------------------------------------------
         */
-        '/api'          => 'Api@index',
-        '/api/server'   => 'Api@server',
-        '/api/airports' => 'Api@airports',
-        '/api/airlines' => 'Api@airlines',
+        '/api'                   => 'Api@index',
+        '/api/server'            => 'Api@server',
+        '/api/airports'          => 'Api@airports',
+        '/api/airports/autofill' => 'Api@airportsAutofill',
+        '/api/airlines'          => 'Api@airlines',
     ];
 
     const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';
+
+    const EXCLUDE_HEADER_FOOTER = [
+        'Api',
+    ];
 
     private static string $currentPage;
 

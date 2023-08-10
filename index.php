@@ -35,13 +35,13 @@ try {
     $controller = new $controllerClassName();
 
     // Build and show page header
-    $abstractController->header();
+    in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER) ?: $abstractController->header();
 
     // Activate requested controller
     $controller->$actionName();
 
     // Build and show page footer
-    $abstractController->footer();
+    in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER) ?: $abstractController->footer();
 
     // This is the end...
 } catch (Exception $e) {
