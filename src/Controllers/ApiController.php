@@ -34,6 +34,13 @@ class ApiController extends AbstractApi
         $airports->get();
     }
 
+    public function airportsAutofill(): void
+    {
+        $airports = new Airports\Response();
+
+        $airports->getAutofill();
+    }
+
     /**
      * @throws \Exception
      */

@@ -11,6 +11,14 @@ class AbstractApi
 
     const HEADER_ALLOWED_METHODS = ['POST','GET'];
 
+    const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
+        '/api/airports/autofill',
+    ];
+
+    const RAW_RESPONSE_ENDPOINTS = [
+        '/api/airports/autofill',
+    ];
+
     /**
      * Minimum security at this time...
      *
@@ -45,7 +53,9 @@ class AbstractApi
      */
     private function guardUnauthorizedAccess(): void
     {
-        if (! in_array($this->getAuthToken(), $this->authorizedTokens)) {
+        if (! in_array(Helper::getUrlPath(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS) &&
+            ! in_array($this->getAuthToken(), $this->authorizedTokens)
+        ) {
             HttpException::unauthorizedAccess();
         }
     }
@@ -76,22 +86,27 @@ class AbstractApi
      */
     public function sendResponse($statusCode, $data = null, $headers = null)
     {
-        // Building response array
-        $response = json_encode([
-            'status'    => $statusCode,
-            'endpoint'  => Helper::getUrlPath(),
-            'method'    => $this->getRequestMethod(),
-            'timestamp' => date('Y-m-d H:i:s'),
-            'count'     => count($data),
-            'data'      => $data ?? [],
-        ]);
-
         // Sending response code
         http_response_code($statusCode);
 
         // Cleaning the output
         ob_clean();
         header_remove();
+
+        // For some endpoints we not using typical output and return raw data
+        if (! in_array(Helper::getUrlPath(), self::RAW_RESPONSE_ENDPOINTS)) {
+            // Building response array
+            $response = json_encode([
+                'status' => $statusCode,
+                'endpoint' => Helper::getUrlPath(),
+                'method' => $this->getRequestMethod(),
+                'timestamp' => date('Y-m-d H:i:s'),
+                'count' => count($data),
+                'data' => $data ?? [],
+            ]);
+        } else {
+            $response = json_encode($data, JSON_PRETTY_PRINT);
+        }
 
         // Setting up response headers
         self::addHeader('Content-type', 'application/json; charset=utf-8');
