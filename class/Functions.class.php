@@ -286,7 +286,7 @@ class Functions
      */
     public static function airlineLogo($iata): string
     {
-        $path = '/images/airlines/';
+        $path = '/frontend/images/airlines/';
         $ext  = '.png';
 
         return file_exists(__ROOT__ . $path . $iata . $ext)

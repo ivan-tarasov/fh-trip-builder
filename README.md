@@ -87,4 +87,4 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 [pulls-url]: https://github.com/ivan-tarasov/fh-trip-builder/pulls
 
 
-[project-screenshot]: images/git/form.png
+[project-screenshot]: frontend/images/git/form.png

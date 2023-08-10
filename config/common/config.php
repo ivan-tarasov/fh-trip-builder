@@ -74,24 +74,28 @@ $config['site'] = [
 
     // Main menu items =================================================================================================
     'main-menu' => [
-        '/my/bookings' => [
+        '/my/bookings/' => [
             'text'   => 'My bookings',
             'icon'   => 'far fa-address-book',
-            'spacer' => 1
+            'spacer' => 3
         ],
-        '/airlines' => [
+        '/airlines/' => [
             'text'   => 'Airlines',
             'icon'   => 'fas fa-plane'
         ],
-        '/airports' => [
+        '/airports/' => [
             'text'   => 'Airports',
             'icon'   => 'fas fa-map-marked-alt',
-            'spacer' => 1
+            'spacer' => 3
         ],
-        '/software-tests' => [
-            'text'   => 'Software tests',
-            'icon'   => 'fas fa-code'
+        '/about/' => [
+            'text'   => 'About project',
+            'icon'   => 'fas fa-circle-info',
         ],
+//        '/software-tests/' => [
+//            'text'   => 'Software tests',
+//            'icon'   => 'fas fa-code'
+//        ],
     ],
 
     // Sorting section of search sidebar ===============================================================================

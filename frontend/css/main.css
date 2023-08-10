@@ -194,34 +194,34 @@ a:active {
   background-color: #000;
 }
 .bg-img-1 {
-  background: url("../images/bg-img-01.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-01.jpg") center center/cover no-repeat;
 }
 .bg-img-2 {
-  background: url("../images/bg-img-02.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-02.jpg") center center/cover no-repeat;
 }
 .bg-img-3 {
-  background: url("../images/bg-img-03.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-03.jpg") center center/cover no-repeat;
 }
 .bg-img-4 {
-  background: url("../images/bg-img-04.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-04.jpg") center center/cover no-repeat;
 }
 .bg-img-5 {
-  background: url("../images/bg-img-05.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-05.jpg") center center/cover no-repeat;
 }
 .bg-img-6 {
-  background: url("../images/bg-img-06.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-06.jpg") center center/cover no-repeat;
 }
 .bg-img-7 {
-  background: url("../images/bg-img-07.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-07.jpg") center center/cover no-repeat;
 }
 .bg-img-8 {
-  background: url("../images/bg-img-08.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-08.jpg") center center/cover no-repeat;
 }
 .bg-img-9 {
-  background: url("../images/bg-img-09.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-09.jpg") center center/cover no-repeat;
 }
 .bg-img-10 {
-  background: url("../images/bg-img-10.jpg") center center/cover no-repeat;
+  background: url("/frontend/images/bg-img-10.jpg") center center/cover no-repeat;
 }
 
 /* ==========================================================================

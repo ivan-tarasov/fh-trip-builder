@@ -140,7 +140,10 @@ class AbstractController
             ->save()->render();
     }
 
-    private function copyrightYears()
+    /**
+     * @return int|string
+     */
+    private function copyrightYears(): int|string
     {
         $appYear     = Config::get('app', 'year');
         $currentYear = date('Y');

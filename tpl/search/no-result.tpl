@@ -8,7 +8,7 @@
       </h1>
       <hr class="mt-3 mb-3" />
       <p class="h5 pb-5">Aww yeah, seems we are not found any flight for this direction. Try to change filter or destination. And, sure, you can always <a href="#">subscribe</a> to this direction to get alert for new flight.</p>
-      <img src="/images/no-results.png" class="img-fluid" />
+      <img src="/frontend/images/no-results.png" class="img-fluid" />
     </div>
   </div>
 </div>

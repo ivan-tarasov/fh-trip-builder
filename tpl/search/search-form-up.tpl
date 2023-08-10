@@ -33,7 +33,8 @@
                     <label class="label">origin:</label>
                     <input class="input--style-1" type="text" id="round_departing_airport" value="%SEARCH_CITY_DEPARTURE%" data-prefetch="%API_PATH_AIRPORTS%" placeholder="City or airport" required="required" autocomplete="off" />
                     <input type="hidden" id="round_departing_airport_value" value="%SEARCH_CITY_DEPARTURE%" data-order="1" />
-                    <i class="zmdi zmdi-search input-group-symbol"></i>
+                    <!--i class="zmdi zmdi-search input-group-symbol"></i-->
+                    <i class="fa-solid fa-magnifying-glass"></i>
                     <script>
                     document.addEventListener('DOMContentLoaded', e => {
                       $('#round_departing_airport').autocomplete()
@@ -47,7 +48,8 @@
                     <label class="label">destination:</label>
                     <input class="input--style-1" type="text" id="round_arrival_airport" value="%SEARCH_CITY_ARRIVAL%" data-prefetch="%API_PATH_AIRPORTS%" placeholder="City or airport" required="required" autocomplete="off" />
                     <input type="hidden" id="round_arrival_airport_value" value="%SEARCH_CITY_ARRIVAL%" data-order="3" />
-                    <i class="zmdi zmdi-search input-group-symbol"></i>
+                    <!--i class="zmdi zmdi-search input-group-symbol"></i-->
+                    <i class="fa-solid fa-magnifying-glass"></i>
                     <script>
                     document.addEventListener('DOMContentLoaded', e => {
                       $('#round_arrival_airport').autocomplete()
@@ -107,7 +109,8 @@
                     <label class="label">origin:</label>
                     <input class="input--style-1" type="text" id="oneway_departing_airport" value="%SEARCH_CITY_DEPARTURE%" data-prefetch="%API_PATH_AIRPORTS%" placeholder="City or airport" required="required" autocomplete="off" />
                     <input type="hidden" id="oneway_departing_airport_value" value="%SEARCH_CITY_DEPARTURE%" data-order="1" />
-                    <i class="zmdi zmdi-search input-group-symbol"></i>
+                    <!--i class="zmdi zmdi-search input-group-symbol"></i-->
+                    <i class="fa-solid fa-magnifying-glass"></i>
                     <script>
                     document.addEventListener('DOMContentLoaded', e => {
                       $('#oneway_departing_airport').autocomplete()
@@ -121,7 +124,8 @@
                     <label class="label">destination:</label>
                     <input class="input--style-1" type="text" id="oneway_arrival_airport" value="%SEARCH_CITY_ARRIVAL%" data-prefetch="%API_PATH_AIRPORTS%" placeholder="City or airport" required="required" autocomplete="off" />
                     <input type="hidden" id="oneway_arrival_airport_value" value="%SEARCH_CITY_ARRIVAL%" data-order="3" />
-                    <i class="zmdi zmdi-search input-group-symbol"></i>
+                    <!--i class="zmdi zmdi-search input-group-symbol"></i-->
+                    <i class="fa-solid fa-magnifying-glass"></i>
                     <script>
                     document.addEventListener('DOMContentLoaded', e => {
                       $('#oneway_arrival_airport').autocomplete()
