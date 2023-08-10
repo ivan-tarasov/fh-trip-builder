@@ -9,9 +9,11 @@
 
 namespace TripBuilder;
 
+use TripBuilder\Debug\dBug;
+
 class Config
 {
-    const CONFIG_DIRECTORY = '/config';
+    const CONFIG_DIRECTORY = 'config';
 
     const CONFIG_FILE = 'config.php';
 
@@ -23,7 +25,7 @@ class Config
      */
     public static function get($class = null, $key = null, $default = null): mixed
     {
-        require_once sprintf(
+        require sprintf(
             '%s/%s/%s/%s',
             Helper::getRootDir(),
             self::CONFIG_DIRECTORY,

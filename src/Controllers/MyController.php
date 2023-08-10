@@ -7,11 +7,16 @@ use TripBuilder\Config;
 use TripBuilder\Routs;
 use TripBuilder\Templater;
 
-class HomeController
+class MyController
 {
     public function index()
     {
-        echo 'index';
+        echo 'My::index()';
+    }
+
+    public function bookings()
+    {
+        echo 'My::bookings()';
     }
 
 }

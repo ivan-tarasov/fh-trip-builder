@@ -29,21 +29,21 @@ $config['site'] = [
 
     // Main menu items =================================================================================================
     'main-menu' => [
-        'my-bookings' => [
+        '/my/bookings' => [
             'text'   => 'My bookings',
             'icon'   => 'far fa-address-book',
             'spacer' => 1
         ],
-        'airlines' => [
+        '/airlines' => [
             'text'   => 'Airlines',
             'icon'   => 'fas fa-plane'
         ],
-        'airports' => [
+        '/airports' => [
             'text'   => 'Airports',
             'icon'   => 'fas fa-map-marked-alt',
             'spacer' => 1
         ],
-        'software-tests' => [
+        '/software-tests' => [
             'text'   => 'Software tests',
             'icon'   => 'fas fa-code'
         ],
@@ -161,4 +161,5 @@ $config['site'] = [
         'aria' => 'true',
         'div'  => ' show active'
     ],
+
 ];
