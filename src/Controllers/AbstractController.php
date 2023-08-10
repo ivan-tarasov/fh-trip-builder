@@ -18,27 +18,27 @@ class AbstractController
      */
     public function header(): void
     {
-        $html_mainMenu = '';
-
         $templater = new Templater('header', 'menu-item');
 
         foreach (Config::get('site', 'main-menu') as $link => $params) {
-            $html_mainMenu .= $templater
+            $templater
                 ->setPlaceholder('MENU_ITEM_LINK', $link)
                 ->setPlaceholder('CURRENT_PAGE', Routs::getCurrentPage() == $link ? 'white' : 'secondary')
                 ->setPlaceholder('MENU_ITEM_TEXT', $params['text'])
                 ->setPlaceholder('MENU_ITEM_ICON', $params['icon'])
                 ->setPlaceholder('MENU_ITEM_SPACER', $params['spacer'] ?? 2)
-                ->render();
+                ->save();
         }
 
-        $html_counters = $templater->setFilename('counters')->set()->render();
+        $html_mainMenu = $templater->render();
+
+        $html_counters = $templater->setFilename('counters')->set()->save()->render();
 
         echo $templater->setPath('header')->setFilename('view')->set()
             ->setPlaceholder('PAGE_TITLE', 'Main Page')
             ->setPlaceholder('HEADER_MENU_ITEMS', $html_mainMenu)
             ->setPlaceholder('METRIKA_COUNTERS', $html_counters)
-            ->render();
+            ->save()->render();
     }
 
     /**
@@ -52,39 +52,36 @@ class AbstractController
         $templater = new Templater('footer', 'main-menu-item');
 
         // Building main menu
-        $html_mainMenu = '';
-
         foreach (Config::get('site', 'main-menu') as $url => $params) {
-            $html_mainMenu .= $templater
+            $templater
                 ->setPlaceholder('menu-item-url', $url)
                 ->setPlaceholder('menu-item-title', $params['text'])
-                ->render();
+                ->save();
         }
+        $html_mainMenu = $templater->render();
 
         // Building social links menu
-        $html_socialMenu = '';
-
         foreach (Config::get('site', 'footer-social') as $title => $params) {
-            $html_socialMenu .= $templater
+            $templater
                 ->setFilename('social-menu-item')->set()
                 ->setPlaceholder('menu-item-title', $title)
                 ->setPlaceholder('menu-item-url', $params['url'])
                 ->setPlaceholder('menu-item-icon', $params['ico'])
-                ->render();
+                ->save();
         }
+        $html_socialMenu = $templater->render();
 
         // Building social links menu
-        $html_gitMenu = '';
-
         foreach (Config::get('site', 'footer-git') as $title => $url) {
-            $html_gitMenu .= $templater
+            $templater
                 ->setFilename('git-menu-item')->set()
                 ->setPlaceholder('menu-item-title', $title)
                 ->setPlaceholder('menu-item-url', $url)
-                ->render();
+                ->save();
         }
+        $html_gitMenu = $templater->render();
 
-        // Building application version string
+            // Building application version string
         $gitInfo = Helper::getGitInfo();
 
         $html_appVersion = $templater
@@ -99,7 +96,7 @@ class AbstractController
                 $gitInfo['commit_hash']
             ))
             ->setPlaceholder('item-posted-at', 'posted at ' . $gitInfo['commit_date'])
-            ->render();
+            ->save()->render();
 
         echo $templater->setPath('footer')->setFilename('view')->set()
             ->setPlaceholder('APP_VERSION', $html_appVersion)
@@ -110,7 +107,7 @@ class AbstractController
             ->setPlaceholder('FOOTER_MENU_MAIN', $html_mainMenu)
             ->setPlaceholder('FOOTER_MENU_SOCIAL', $html_socialMenu)
             ->setPlaceholder('FOOTER_MENU_GIT', $html_gitMenu)
-            ->render();
+            ->save()->render();
     }
 
 }
