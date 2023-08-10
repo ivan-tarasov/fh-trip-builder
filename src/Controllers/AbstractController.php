@@ -3,10 +3,12 @@
 namespace TripBuilder\Controllers;
 
 use TripBuilder\Config;
+use TripBuilder\DataBase\MySql;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Helper;
 use TripBuilder\Routs;
 use TripBuilder\Templater;
+use TripBuilder\Timer;
 
 class AbstractController
 {
@@ -100,14 +102,38 @@ class AbstractController
 
         echo $templater->setPath('footer')->setFilename('view')->set()
             ->setPlaceholder('APP_VERSION', $html_appVersion)
-            ->setPlaceholder('EXECUTION_TIMER', 0)   // FIXME: here should be real timer
+            ->setPlaceholder('EXECUTION_TIMER', self::getExecutionTime())
             ->setPlaceholder('DATABASE_REQUESTS', 0) // FIXME: here should be real DB requests count
-            ->setPlaceholder('FLIGHTS_COUNT', 0)     // FIXME: here should be real flight count from DB
+            ->setPlaceholder('FLIGHTS_COUNT', number_format(self::getFlightsCount()))
             ->setPlaceholder('API_CALLS_COUNT', 0)   // FIXME: DO WE NEED IT ???
             ->setPlaceholder('FOOTER_MENU_MAIN', $html_mainMenu)
             ->setPlaceholder('FOOTER_MENU_SOCIAL', $html_socialMenu)
             ->setPlaceholder('FOOTER_MENU_GIT', $html_gitMenu)
             ->save()->render();
+    }
+
+    /**
+     * @return string
+     * @throws \Exception
+     */
+    private static function getFlightsCount(): string
+    {
+        $db = MySql::connect();
+
+        $count = $db->getOne('flights', 'count(*) as flights');
+
+        return $count['flights'];
+    }
+
+    /**
+     * @return mixed
+     * @throws \Exception
+     */
+    private static function getExecutionTime()
+    {
+        Timer::stop();
+
+        return Timer::getExecutionTime();
     }
 
 }

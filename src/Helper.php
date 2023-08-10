@@ -35,7 +35,7 @@ class Helper
         $git_commitHash = 'git log --pretty="%h" -n1 HEAD';
         $git_commitDate = 'git log -n1 --pretty=%ci HEAD';
 
-        echo $git_branch     = trim(exec($git_branch));
+        $git_branch     = trim(exec($git_branch));
         $git_tag        = trim(exec($git_tag));
         $git_commitHash = trim(exec($git_commitHash));
 

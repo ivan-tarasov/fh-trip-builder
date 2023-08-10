@@ -9,10 +9,13 @@
 
 require_once 'vendor/autoload.php';
 
+use TripBuilder\Timer;
 use TripBuilder\Routs;
 use TripBuilder\Controllers\AbstractController;
 
 try {
+    Timer::start();
+
     // Enable .env file variables
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
     $dotenv->load();
