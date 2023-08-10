@@ -17,6 +17,8 @@ class Templater
 
     private array $placeholders = [];
 
+    private string $content = '';
+
     /**
      * @param string $path
      * @param string $filename
@@ -50,21 +52,9 @@ class Templater
     }
 
     /**
-     * @param string $key
-     * @param mixed $value
-     * @return static
+     * @return $this
      */
-    public function setPlaceholder(string $key, mixed $value): static
-    {
-        $this->placeholders[$key] = $value;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function render(): string
+    public function save(): static
     {
         $replacements = [];
 
@@ -85,7 +75,33 @@ class Templater
             $this->templateContent
         );
 
-        return strtr($this->templateContent, $replacements);
+        $this->content .= strtr($this->templateContent, $replacements);
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function render(): string
+    {
+        $content = $this->content;
+
+        $this->content = '';
+
+        return $content;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return static
+     */
+    public function setPlaceholder(string $key, mixed $value): static
+    {
+        $this->placeholders[$key] = $value;
+
+        return $this;
     }
 
     /**
