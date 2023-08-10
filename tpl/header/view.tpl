@@ -7,7 +7,7 @@
   <meta name="author" content="Ivan Tarasov <ivan@tarasov.ca>" />
   <meta name="keywords" content="Trip Builder, FlightHub, assignment, php">
 
-  <title>%PAGE_TITLE% - Trip Builder</title>
+  <title>{{PAGE_TITLE}} - Trip Builder</title>
 
   <!-- Icons font CSS-->
   <link href="frontend/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all">
@@ -30,7 +30,7 @@
   <!-- Jquery JS-->
   <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
 
-  %METRIKA_COUNTERS%
+  <!-- {{METRIKA_COUNTERS}} -->
 </head>
 
 <body class="bg-light d-flex flex-column h-100">
@@ -45,7 +45,7 @@
         <!-- End / Header logo -->
         <!-- Main menu items -->
         <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-          %HEADER_MENU_ITEMS%
+          {{HEADER_MENU_ITEMS}}
         </ul>
         <!-- End / Main menu items -->
         <!-- Right menu items -->

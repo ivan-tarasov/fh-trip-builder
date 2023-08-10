@@ -7,14 +7,16 @@ class Routs
     const ENABLED_ROUTS = [
         /*
         |--------------------------------------------------------------------------
-        | Index controller
+        | Index controller with root pages
         |--------------------------------------------------------------------------
         */
-        '/' => 'Home@index',
+        '/'            => 'Home@index',
+        '/my'          => 'My@index',
+        '/my/bookings' => 'My@bookings',
 
         /*
         |--------------------------------------------------------------------------
-        | Index controller
+        | API controller with endpoints
         |--------------------------------------------------------------------------
         */
         '/api'          => 'Api@index',
@@ -24,5 +26,24 @@ class Routs
     ];
 
     const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';
+
+    private static string $currentPage;
+
+    /**
+     * @param $page
+     * @return void
+     */
+    public static function setCurrentPage($page): void
+    {
+        self::$currentPage = $page;
+    }
+
+    /**
+     * @return string
+     */
+    public static function getCurrentPage(): string
+    {
+        return self::$currentPage;
+    }
 
 }
