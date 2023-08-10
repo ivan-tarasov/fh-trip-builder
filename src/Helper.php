@@ -23,6 +23,20 @@ class Helper
     }
 
     /**
+     * @param string $source
+     * @return string
+     */
+    public static function getGitRepo(string $source = 'github'): string
+    {
+        return sprintf(
+            'https://%s/%s/%s',
+            Config::get('app', "git.$source.url"),
+            Config::get('app', "git.$source.user"),
+            Config::get('app', "git.$source.repo"),
+        );
+    }
+
+    /**
      * Get git information
      *
      * @return array

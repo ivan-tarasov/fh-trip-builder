@@ -7,23 +7,21 @@
                     <a href="/"
                        class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none me-5 pb-3">
                         <i class="fas fa-2x fa-plane-departure pe-3"></i>
-                        <strong class="lead">Trip Builder</strong>
+                        <strong class="lead">{{ app-name }}</strong>
                     </a>
                     <ul class="list-unstyled small">
                         <li class="mb-2">
-                            Software made by <a href="https://tarasov.ca/" target="_blank" class="link-light">Ivan
-                                Tarasov</a> as <a href="https://www.flighthub.com/" target="_blank" class="link-light">FlightHub</a>
-                            PHP Coding <a href="Trip_Builder_1.pdf" target="_blank" class="link-light">Assignment</a>.
-                            Code licensed <a href="https://bitbucket.org/karapuzoff/trip-builder/src/master/LICENSE.txt"
-                                             target="_blank" class="link-light" rel="license noopener">MIT</a>, docs are
-                            available <a href="https://bitbucket.org/karapuzoff/trip-builder/src/master/README.md"
-                                         target="_blank" class="link-light">here</a>.
-                            <i class="far fa-lg fa-copyright pe-1"></i>2023
+                            Software made by <a href="{{ app-author-website }}" target="_blank" class="link-light">{{ app-author-name }}</a>
+                            as <a href="https://www.flighthub.com/" target="_blank" class="link-light">FlightHub</a>
+                            PHP Coding <a href="Trip_Builder_1.pdf" target="_blank" class="link-light">Assessment</a>.
+                            Code licensed <a href="{{ app-license-url }}" target="_blank" class="link-light" rel="license noopener">{{ app-license-type }}</a>,
+                            documentation are available <a href="{{ app-documentation-url }}" target="_blank" class="link-light">here</a>.
+                            <i class="far fa-lg fa-copyright pe-1"></i>{{ copyright-years }}
                         </li>
-                        <li class="mb-2">Generated in <code>{{ EXECUTION_TIMER }} seconds</code>,
-                            <!--DB requests: {{ DATABASE_REQUESTS }}, API calls: {{ API_CALLS_COUNT }}, -->flights in DB: <code>{{ FLIGHTS_COUNT }}</code>
+                        <li class="mb-2">Generated in <code>{{ execution-time }} seconds</code>,
+                            DB requests: <code>{{ database-requests }}</code>, flights in DB: <code>{{ flights-count }}</code>
                         </li>
-                        <li class="mb-2">Currently {{ APP_VERSION }}</li>
+                        <li class="mb-2">Currently {{ app-version }}</li>
                     </ul>
                 </div>
                 <!-- End / Info cell -->
@@ -31,7 +29,7 @@
                 <div class="col-6 col-lg-2 offset-lg-1 mb-4 text-white">
                     <h5>Navigation</h5>
                     <ul class="list-unstyled pt-3">
-                        {{ FOOTER_MENU_MAIN }}
+                        {{ main-menu }}
                     </ul>
                 </div>
                 <!-- End / Main menu cell -->
@@ -39,7 +37,7 @@
                 <div class="col-6 col-lg-2 mb-4 text-white">
                     <h5>Repository</h5>
                     <ul class="list-unstyled pt-3">
-                        {{ FOOTER_MENU_GIT }}
+                        {{ git-menu }}
                     </ul>
                 </div>
                 <!-- End / ... cell -->
@@ -47,14 +45,13 @@
                 <div class="col-6 col-lg-2 mb-3 text-white">
                     <h5>Socials</h5>
                     <ul class="list-unstyled pt-3">
-                        {{ FOOTER_MENU_SOCIAL }}
+                        {{ social-menu }}
                     </ul>
                 </div>
                 <!-- End / ... cell -->
                 <!-- Go to top link -->
                 <div class="col-6 col-lg-1 mb-3 text-end">
-                    <a id="linktotop" title="Back to form" alt="Back to form"><i
-                                class="fas fa-3x fa-level-up-alt ps-2 mb-2"></i></a>
+                    <a id="linktotop" title="Back to form" alt="Back to form"><i class="fas fa-3x fa-level-up-alt ps-2 mb-2"></i></a>
                 </div>
                 <!-- End / Go to top link -->
             </div>

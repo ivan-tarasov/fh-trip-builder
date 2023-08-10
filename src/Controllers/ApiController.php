@@ -7,11 +7,11 @@ use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\Airports;
 use TripBuilder\Api\Airlines;
 
-class ApiController extends AbstractApi
+class ApiController extends AbstractController
 {
     public function index(): void
     {
-        $this->sendResponse(200, ['All works']);
+        // $this->sendResponse(200, ['All works']);
     }
 
     /**

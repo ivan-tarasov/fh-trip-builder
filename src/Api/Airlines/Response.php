@@ -12,11 +12,9 @@ class Response extends AbstractApi
      */
     public function get(): void
     {
-        $db = MySql::connect();
+        $this->db->orderBy('traffic', 'desc');
 
-        $db->orderBy('traffic', 'desc');
-
-        $airlines = $db->get('airlines');
+        $airlines = $this->db->get('airlines');
 
         $this->sendResponse(200, $airlines);
     }

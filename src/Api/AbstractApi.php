@@ -2,10 +2,11 @@
 
 namespace TripBuilder\Api;
 
+use TripBuilder\Controllers\AbstractController;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Helper;
 
-class AbstractApi
+class AbstractApi extends AbstractController
 {
     const HEADER_AUTH_KEY = 'Authorization';
 
@@ -34,6 +35,8 @@ class AbstractApi
 
     public function __construct()
     {
+        parent::__construct();
+
         $this->guardUnauthorizedAccess();
         $this->guardNotAllowedRequestMethod();
     }

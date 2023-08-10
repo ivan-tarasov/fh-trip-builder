@@ -12,6 +12,23 @@ use TripBuilder\Timer;
 
 class AbstractController
 {
+    public $db;
+
+    public function __construct()
+    {
+        $this->dbConnect();
+    }
+
+    /**
+     * @return void
+     */
+    private function dbConnect(): void
+    {
+        $this->db = MySql::connect();
+
+        $this->db->setTrace(true);
+    }
+
     /**
      * Render header
      *
@@ -37,9 +54,14 @@ class AbstractController
         $html_counters = $templater->setFilename('counters')->set()->save()->render();
 
         echo $templater->setPath('header')->setFilename('view')->set()
-            ->setPlaceholder('PAGE_TITLE', 'Main Page')
-            ->setPlaceholder('HEADER_MENU_ITEMS', $html_mainMenu)
-            ->setPlaceholder('METRIKA_COUNTERS', $html_counters)
+            ->setPlaceholder('app-name', Config::get('app', 'name'))
+            ->setPlaceholder('page-title', 'Main Page')
+            ->setPlaceholder('app-meta-description', Config::get('app', 'meta.description'))
+            ->setPlaceholder('app-meta-keywords', implode(', ', Config::get('app', 'meta.keywords')))
+            ->setPlaceholder('app-meta-author-name', Config::get('app', 'author.name'))
+            ->setPlaceholder('app-meta-author-email', Config::get('app', 'author.email'))
+            ->setPlaceholder('menu-items', $html_mainMenu)
+            ->setPlaceholder('metric-counters', $html_counters)
             ->save()->render();
     }
 
@@ -88,12 +110,12 @@ class AbstractController
 
         $html_appVersion = $templater
             ->setFilename('app-version')->set()
-            ->setPlaceholder('item-url', Config::get('site', 'git') . $gitInfo['commit_hash'])
+            ->setPlaceholder('item-url', sprintf('%s/commit/%s', Helper::getGitRepo(), $gitInfo['commit_hash']))
             ->setPlaceholder('item-title', sprintf(
                 '%s.%s.%s-%s-%s',
-                Config::get('site', 'version.major'),
-                Config::get('site', 'version.minor'),
-                Config::get('site', 'version.patch'),
+                Config::get('app', 'version.major'),
+                Config::get('app', 'version.minor'),
+                Config::get('app', 'version.patch'),
                 $gitInfo['branch'],
                 $gitInfo['commit_hash']
             ))
@@ -101,35 +123,57 @@ class AbstractController
             ->save()->render();
 
         echo $templater->setPath('footer')->setFilename('view')->set()
-            ->setPlaceholder('APP_VERSION', $html_appVersion)
-            ->setPlaceholder('EXECUTION_TIMER', self::getExecutionTime())
-            ->setPlaceholder('DATABASE_REQUESTS', 0) // FIXME: here should be real DB requests count
-            ->setPlaceholder('FLIGHTS_COUNT', number_format(self::getFlightsCount()))
-            ->setPlaceholder('API_CALLS_COUNT', 0)   // FIXME: DO WE NEED IT ???
-            ->setPlaceholder('FOOTER_MENU_MAIN', $html_mainMenu)
-            ->setPlaceholder('FOOTER_MENU_SOCIAL', $html_socialMenu)
-            ->setPlaceholder('FOOTER_MENU_GIT', $html_gitMenu)
+            ->setPlaceholder('app-name', Config::get('app', 'name'))
+            ->setPlaceholder('app-author-name', Config::get('app', 'author.name'))
+            ->setPlaceholder('app-author-website', Config::get('app', 'author.website'))
+            ->setPlaceholder('app-license-type', Config::get('app', 'license.type'))
+            ->setPlaceholder('app-license-url', Config::get('app', 'license.url'))
+            ->setPlaceholder('app-documentation-url', Config::get('app', 'documentation'))
+            ->setPlaceholder('copyright-years', $this->copyrightYears())
+            ->setPlaceholder('app-version', $html_appVersion)
+            ->setPlaceholder('main-menu', $html_mainMenu)
+            ->setPlaceholder('social-menu', $html_socialMenu)
+            ->setPlaceholder('git-menu', $html_gitMenu)
+            ->setPlaceholder('flights-count', number_format($this->getFlightsCount()))
+            ->setPlaceholder('database-requests', $this->getDbRequestCount())
+            ->setPlaceholder('execution-time', $this->getExecutionTime())
             ->save()->render();
+    }
+
+    private function copyrightYears()
+    {
+        $appYear     = Config::get('app', 'year');
+        $currentYear = date('Y');
+
+        return $appYear == $currentYear
+            ? $currentYear
+            : $appYear . '–' . $currentYear;
     }
 
     /**
      * @return string
      * @throws \Exception
      */
-    private static function getFlightsCount(): string
+    private function getFlightsCount(): string
     {
-        $db = MySql::connect();
-
-        $count = $db->getOne('flights', 'count(*) as flights');
+        $count = $this->db->getOne('flights', 'count(*) as flights');
 
         return $count['flights'];
     }
 
     /**
-     * @return mixed
+     * @return int
+     */
+    private function getDbRequestCount(): int
+    {
+        return count($this->db->trace);
+    }
+
+    /**
+     * @return string
      * @throws \Exception
      */
-    private static function getExecutionTime()
+    private function getExecutionTime(): string
     {
         Timer::stop();
 

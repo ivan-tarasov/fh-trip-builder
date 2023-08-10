@@ -35,13 +35,13 @@ class Response extends AbstractApi
     {
         parent::__construct();
 
-        $db = MySql::connect();
+        // $db = MySql::connect();
 
-        $db->where('a.enabled', 1);
-        $db->join('countries c', 'a.country_code=c.code', 'LEFT');
-        $db->orderBy('a.title', 'asc');
+        $this->db->where('a.enabled', 1);
+        $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
+        $this->db->orderBy('a.title', 'asc');
 
-        $this->airports = $db->get('airports a', null, $this->columns);
+        $this->airports = $this->db->get('airports a', null, $this->columns);
     }
 
     /**
