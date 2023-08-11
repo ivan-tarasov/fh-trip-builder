@@ -14,8 +14,8 @@ class Routs
         '/my'          => 'My@index',
         '/my/bookings' => 'My@bookings',
         '/airlines'    => 'Airlines@index',
-        '/airports'    => 'Airports@index',
-        '/about'       => 'About@index',
+        // '/airports'    => 'Airports@index',
+        // '/about'       => 'About@index',
 
         /*
         |--------------------------------------------------------------------------
