@@ -42,7 +42,7 @@ class AbstractController
         foreach (Config::get('site', 'main-menu') as $link => $params) {
             $templater
                 ->setPlaceholder('MENU_ITEM_LINK', $link)
-                ->setPlaceholder('CURRENT_PAGE', Routs::getCurrentPage() == $link ? 'white' : 'secondary')
+                ->setPlaceholder('CURRENT_PAGE', Routs::getCurrentPage() == rtrim($link, '/') ? 'white' : 'secondary')
                 ->setPlaceholder('MENU_ITEM_TEXT', $params['text'])
                 ->setPlaceholder('MENU_ITEM_ICON', $params['icon'])
                 ->setPlaceholder('MENU_ITEM_SPACER', $params['spacer'] ?? 2)
