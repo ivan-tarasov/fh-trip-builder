@@ -41,10 +41,10 @@ class AirlinesController
                     ->save();
             }
 
-            $airline_card = $templater->render();
+            $airline_cards = $templater->render();
 
             echo $templater->setFilename('view')->set()
-                ->setPlaceholder('airlines-cards', $airline_card)
+                ->setPlaceholder('airlines-cards', $airline_cards)
                 ->save()->render();
         } catch (\Exception $e) {
             echo "Error: " . $e->getMessage();
