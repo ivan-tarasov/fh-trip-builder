@@ -1,61 +1,16 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Main configs
-|--------------------------------------------------------------------------
-*/
-$config['app'] = [
-    // Application name ================================================================================================
-    'name' => 'Trip Builder',
+return [
 
-    // Application version =============================================================================================
-    'version' => [
-        'major' => 1,
-        'minor' => 4,
-        'patch' => 17,
-    ],
+    /*
+    |--------------------------------------------------------------------------
+    | Fake API
+    |--------------------------------------------------------------------------
+    |
+    | Fake Flight API credentials
+    |
+    */
 
-    'year' => 2023,
-
-    'license' => [
-        'type' => 'MIT',
-        'url'  => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/LICENSE.txt',
-    ],
-
-    'documentation' => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/README.md',
-
-    'meta' => [
-        'description' => 'FlightHub PHP Coding Assignment',
-        'keywords' => [
-            'FlightHub',
-            'assessment',
-            'php',
-        ],
-    ],
-
-    'author' => [
-        'name'    => 'Ivan Tarasov',
-        'website' => 'https://tarasov.ca',
-        'email'   => 'ivan@tarasov.ca',
-    ],
-
-    // Git settings ====================================================================================================
-    'git' => [
-        'github' => [
-            'url'  => 'github.com',
-            'user' => 'ivan-tarasov',
-            'repo' => 'fh-trip-builder'
-        ],
-    ],
-];
-
-/*
-|--------------------------------------------------------------------------
-| Main configs
-|--------------------------------------------------------------------------
-*/
-$config['site'] = [
     // Where MySQL credentials saved ===================================================================================
     'mysql' => 'config.mysql.php',
 
@@ -211,15 +166,4 @@ $config['site'] = [
         'div'  => ' show active'
     ],
 
-];
-
-/*
-|--------------------------------------------------------------------------
-| Fake Flight API credentials
-|--------------------------------------------------------------------------
-*/
-$config['FlightAPI'] = [
-    // FIXME: dev credentials
-    'url'   => 'http://localhost:8888/api',
-    'token' => 'SomeAPItoken_$ecretWORD---orHASH',
 ];

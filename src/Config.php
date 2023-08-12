@@ -4,7 +4,7 @@
  *
  * @author    Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   0.3.2
+ * @version   1.0.1
  */
 
 namespace TripBuilder;
@@ -15,44 +15,80 @@ class Config
 {
     const CONFIG_DIRECTORY = 'config';
 
-    const CONFIG_FILE = 'config.php';
+    protected static array $configData = [];
 
     /**
-     * @param $class
-     * @param $key
-     * @param $default
-     * @return mixed|null
+     * @throws \Exception
      */
-    public static function get($class = null, $key = null, $default = null): mixed
+    public function __construct()
     {
-        require sprintf(
-            '%s/%s/%s/%s',
+        $directory = sprintf(
+            '%s/%s/%s',
             Helper::getRootDir(),
             self::CONFIG_DIRECTORY,
-            $_ENV['APP_ENV'],
-            self::CONFIG_FILE
+            $_ENV['APP_ENV']
         );
 
-        if (isset($config[$class])) {
-            if (empty($key)) {
-                return $config[$class];
-            }
+        if (is_dir($directory)) {
+            $configFiles = scandir($directory);
 
-            $keys  = explode('.', $key);
-            $value = $config[$class];
+            foreach ($configFiles as $file) {
+                if ($file !== '.' && $file !== '..' && pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+                    $configName = pathinfo($file, PATHINFO_FILENAME);
+                    $configPath = $directory . DIRECTORY_SEPARATOR . $file;
 
-            foreach ($keys as $key) {
-                if (is_array($value) && isset($value[$key])) {
-                    $value = $value[$key];
-                } else {
-                    return $default;
+                    self::$configData[$configName] = require $configPath;
                 }
             }
+        } else {
+            throw new \Exception("Config directory not found: $directory");
+        }
+    }
 
-            return $value;
+    /**
+     * @param null $key
+     * @param null $default
+     * @return mixed|null
+     */
+    public static function get($key = null, $default = null): mixed
+    {
+        if ($key === null) {
+            return static::$configData;
         }
 
-        return $config;
+        $segments = explode('.', $key);
+        $value    = static::$configData;
+
+        foreach ($segments as $segment) {
+            if (isset($value[$segment])) {
+                $value = $value[$segment];
+            } else {
+                return $default;
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param $key
+     * @param $value
+     * @return void
+     */
+    public static function set($key, $value): void
+    {
+        $segments = explode('.', $key);
+        $config =& static::$configData;
+
+        foreach ($segments as $segment) {
+            if (!isset($config[$segment]) || !is_array($config[$segment])) {
+                $config[$segment] = [];
+            }
+
+            $config =& $config[$segment];
+        }
+
+        $config = $value;
     }
 
 }

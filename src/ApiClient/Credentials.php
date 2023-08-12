@@ -8,7 +8,7 @@ class Credentials
 {
     public static function getBearer()
     {
-        return 'Bearer ' . Config::get('FlightAPI', 'token');
+        return 'Bearer ' . Config::get('api.fake.token');
     }
 
 }

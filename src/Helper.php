@@ -30,9 +30,9 @@ class Helper
     {
         return sprintf(
             'https://%s/%s/%s',
-            Config::get('app', "git.$source.url"),
-            Config::get('app', "git.$source.user"),
-            Config::get('app', "git.$source.repo"),
+            Config::get("git.$source.url"),
+            Config::get("git.$source.user"),
+            Config::get("git.$source.repo"),
         );
     }
 

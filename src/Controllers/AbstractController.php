@@ -39,7 +39,7 @@ class AbstractController
     {
         $templater = new Templater('header', 'menu-item');
 
-        foreach (Config::get('site', 'main-menu') as $link => $params) {
+        foreach (Config::get('site.main-menu') as $link => $params) {
             $templater
                 ->setPlaceholder('MENU_ITEM_LINK', $link)
                 ->setPlaceholder('CURRENT_PAGE', Routs::getCurrentPage() == rtrim($link, '/') ? 'white' : 'secondary')
@@ -54,12 +54,12 @@ class AbstractController
         $html_counters = $templater->setFilename('counters')->set()->save()->render();
 
         echo $templater->setPath('header')->setFilename('view')->set()
-            ->setPlaceholder('app-name', Config::get('app', 'name'))
+            ->setPlaceholder('app-name', Config::get('app.name'))
             ->setPlaceholder('page-title', 'Main Page')
-            ->setPlaceholder('app-meta-description', Config::get('app', 'meta.description'))
-            ->setPlaceholder('app-meta-keywords', implode(', ', Config::get('app', 'meta.keywords')))
-            ->setPlaceholder('app-meta-author-name', Config::get('app', 'author.name'))
-            ->setPlaceholder('app-meta-author-email', Config::get('app', 'author.email'))
+            ->setPlaceholder('app-meta-description', Config::get('meta.description'))
+            ->setPlaceholder('app-meta-keywords', implode(', ', Config::get('meta.keywords')))
+            ->setPlaceholder('app-meta-author-name', Config::get('meta.author.name'))
+            ->setPlaceholder('app-meta-author-email', Config::get('meta.author.email'))
             ->setPlaceholder('menu-items', $html_mainMenu)
             ->setPlaceholder('metric-counters', $html_counters)
             ->save()->render();
@@ -76,7 +76,7 @@ class AbstractController
         $templater = new Templater('footer', 'main-menu-item');
 
         // Building main menu
-        foreach (Config::get('site', 'main-menu') as $url => $params) {
+        foreach (Config::get('site.main-menu') as $url => $params) {
             $templater
                 ->setPlaceholder('menu-item-url', $url)
                 ->setPlaceholder('menu-item-title', $params['text'])
@@ -85,7 +85,7 @@ class AbstractController
         $html_mainMenu = $templater->render();
 
         // Building social links menu
-        foreach (Config::get('site', 'footer-social') as $title => $params) {
+        foreach (Config::get('site.footer-social') as $title => $params) {
             $templater
                 ->setFilename('social-menu-item')->set()
                 ->setPlaceholder('menu-item-title', $title)
@@ -96,7 +96,7 @@ class AbstractController
         $html_socialMenu = $templater->render();
 
         // Building social links menu
-        foreach (Config::get('site', 'footer-git') as $title => $url) {
+        foreach (Config::get('site.footer-git') as $title => $url) {
             $templater
                 ->setFilename('git-menu-item')->set()
                 ->setPlaceholder('menu-item-title', $title)
@@ -113,9 +113,9 @@ class AbstractController
             ->setPlaceholder('item-url', sprintf('%s/commit/%s', Helper::getGitRepo(), $gitInfo['commit_hash']))
             ->setPlaceholder('item-title', sprintf(
                 '%s.%s.%s-%s-%s',
-                Config::get('app', 'version.major'),
-                Config::get('app', 'version.minor'),
-                Config::get('app', 'version.patch'),
+                Config::get('app.version.major'),
+                Config::get('app.version.minor'),
+                Config::get('app.version.patch'),
                 $gitInfo['branch'],
                 $gitInfo['commit_hash']
             ))
@@ -123,12 +123,12 @@ class AbstractController
             ->save()->render();
 
         echo $templater->setPath('footer')->setFilename('view')->set()
-            ->setPlaceholder('app-name', Config::get('app', 'name'))
-            ->setPlaceholder('app-author-name', Config::get('app', 'author.name'))
-            ->setPlaceholder('app-author-website', Config::get('app', 'author.website'))
-            ->setPlaceholder('app-license-type', Config::get('app', 'license.type'))
-            ->setPlaceholder('app-license-url', Config::get('app', 'license.url'))
-            ->setPlaceholder('app-documentation-url', Config::get('app', 'documentation'))
+            ->setPlaceholder('app-name', Config::get('app.name'))
+            ->setPlaceholder('app-author-name', Config::get('app.author.name'))
+            ->setPlaceholder('app-author-website', Config::get('app.author.website'))
+            ->setPlaceholder('app-license-type', Config::get('app.license.type'))
+            ->setPlaceholder('app-license-url', Config::get('app.license.url'))
+            ->setPlaceholder('app-documentation-url', Config::get('app.documentation'))
             ->setPlaceholder('copyright-years', $this->copyrightYears())
             ->setPlaceholder('app-version', $html_appVersion)
             ->setPlaceholder('main-menu', $html_mainMenu)
@@ -145,7 +145,7 @@ class AbstractController
      */
     private function copyrightYears(): int|string
     {
-        $appYear     = Config::get('app', 'year');
+        $appYear     = Config::get('app.year');
         $currentYear = date('Y');
 
         return $appYear == $currentYear

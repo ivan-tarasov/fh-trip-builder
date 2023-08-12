@@ -9,9 +9,11 @@
 
 require_once 'vendor/autoload.php';
 
+use TripBuilder\Config;
 use TripBuilder\Timer;
 use TripBuilder\Routs;
 use TripBuilder\Controllers\AbstractController;
+use TripBuilder\Debug\dBug;
 
 try {
     Timer::start();
@@ -19,6 +21,9 @@ try {
     // Enable .env file variables
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
     $dotenv->load();
+
+    // Building config
+    new Config();
 
     // Get the current URL and put it to Routs class
     $url = rtrim($_SERVER['REQUEST_URI'], '/') ?: '/';
@@ -40,7 +45,7 @@ try {
     // Build and show page header
     in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER) ?: $abstractController->header();
 
-    // Activate requested controller
+    // Handle dynamic parameters if present
     $controller->$actionName();
 
     // Build and show page footer

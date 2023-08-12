@@ -14,10 +14,15 @@ class HomeController
         $templater = new Templater('index', 'view');
 
         echo $templater
-            ->setPlaceholder('PAGE_TITLE', 'Home')
-            ->setPlaceholder('MAIN_BG_IMAGE', rand(1,10))
-            ->setPlaceholder('API_PATH_AIRPORTS', Config::get('FlightAPI', 'url') . '/airports/autofill')
+            ->setPlaceholder('index-background-image', rand(1,10))
+            ->setPlaceholder('search-page-url', '/search/')
+            ->setPlaceholder('api-airports-autofill', Config::get('api.fake.url') . '/airports/autofill')
             ->save()->render();
+    }
+
+    public function test($params)
+    {
+        new dBug($params);
     }
 
 }

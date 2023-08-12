@@ -25,7 +25,7 @@ class AirportsController
      */
     public function index(): void
     {
-        $apiClient = new Api(Config::get('FlightAPI', 'url'));
+        $apiClient = new Api(Config::get('api.fake.url'));
 
         try {
             $headers = [
