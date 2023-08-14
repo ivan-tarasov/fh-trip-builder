@@ -1,10 +1,13 @@
 <?php
 namespace TripBuilder\Cron\Inserter;
 
+use Dotenv\Dotenv;
 use TripBuilder\Config;
+use TripBuilder\Debug\dBug;
+use TripBuilder\Helper;
 
 class Flights {
-    const FLIGHTS_COUNT       = 5000;
+    const FLIGHTS_COUNT       = 1000;
     const FLIGHT_NUMBERS_POOL = 9999;
     const ATTEMPTS_LIMIT      = 10;
     const PRICE_MULTIPLIER    = 8;
@@ -44,6 +47,9 @@ class Flights {
 
     function __construct()
     {
+        $dotenv = Dotenv::createImmutable(Helper::getRootDir());
+        $dotenv->load();
+
         $this->connectMySQL();
     }
 
@@ -327,10 +333,11 @@ class Flights {
     protected function setDb(): \MysqliDb
     {
         return $this->db = new \MysqliDb(
-            Config::get('mysql')['host'],
-            Config::get('mysql')['user'],
-            Config::get('mysql')['pass'],
-            Config::get('mysql')['db']
+            '127.0.0.1',
+            $_ENV['DB_USERNAME'],
+            $_ENV['DB_PASSWORD'],
+            $_ENV['DB_DATABASE'],
+            $_ENV['DB_PORT']
         );
     }
 

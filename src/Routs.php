@@ -11,11 +11,24 @@ class Routs
         |--------------------------------------------------------------------------
         */
         '/'            => 'Home@index',
-        '/my'          => 'My@index',
-        '/my/bookings' => 'My@bookings',
         '/airlines'    => 'Airlines@index',
         '/airports'    => 'Airports@index',
         // '/about'       => 'About@index',
+
+        /*
+        |--------------------------------------------------------------------------
+        | Personal user pages
+        |--------------------------------------------------------------------------
+        */
+        '/my'          => 'My@index',
+        '/my/bookings' => 'My@bookings',
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search controller
+        |--------------------------------------------------------------------------
+        */
+        '/search' => 'Search@index',
 
         /*
         |--------------------------------------------------------------------------
@@ -27,6 +40,7 @@ class Routs
         '/api/airports'          => 'Api@airports',
         '/api/airports/autofill' => 'Api@airportsAutofill',
         '/api/airlines'          => 'Api@airlines',
+        '/api/flights'           => 'Api@flights',
     ];
 
     const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';

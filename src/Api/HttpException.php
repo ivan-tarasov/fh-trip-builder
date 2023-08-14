@@ -98,6 +98,15 @@ class HttpException
      * @param string|null $message
      * @return void
      */
+    public static function badRequest(string $message = null): void
+    {
+        self::sendResponse(400, $message);
+    }
+
+    /**
+     * @param string|null $message
+     * @return void
+     */
     public static function unauthorizedAccess(string $message = null): void
     {
         self::sendResponse(401, $message);

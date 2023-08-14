@@ -37,7 +37,7 @@ class Api
 
             return json_decode($response->getBody(), true);
         } catch (RequestException $e) {
-            throw new \Exception("GET request failed: " . $e->getMessage(), $e->getCode(), $e);
+            throw new \Exception('GET request failed: ' . $e->getMessage(), $e->getCode(), $e);
         }
     }
 
@@ -58,7 +58,7 @@ class Api
 
             return json_decode($response->getBody(), true);
         } catch (RequestException $e) {
-            throw new \Exception("POST request failed: " . $e->getMessage(), $e->getCode(), $e);
+            throw new \Exception('POST request failed: ' . $e->getMessage(), $e->getCode(), $e);
         }
     }
 

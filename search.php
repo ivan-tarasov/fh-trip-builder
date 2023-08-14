@@ -7,40 +7,40 @@
  * @version   0.2.3
  */
 
-require_once 'vendor/autoload.php';
+//require_once 'vendor/autoload.php';
 
-use TripBuilder\Debug\dBug;
+//use TripBuilder\Debug\dBug;
 
-if (!defined('__ROOT__')) {
-    define('__ROOT__', dirname(__FILE__));
-}
+//if (!defined('__ROOT__')) {
+//    define('__ROOT__', dirname(__FILE__));
+//}
 
 // if (empty($_GET['from']) && empty($_GET['to']))
-if (empty($_GET['hash'])) {
-    header('Location: /');
-}
+//if (empty($_GET['hash'])) {
+//    header('Location: /');
+//}
 
-include(__ROOT__ . '/header.inc.php');
+//include(__ROOT__ . '/header.inc.php');
 
 // Initializing API connector
-require_once __ROOT__ . '/class/api.class.php';
+//require_once __ROOT__ . '/class/api.class.php';
 
 $api = new APIConnector(Config::get('api')['url'], Config::get('api')['token']);
 
-$query_hash = Functions::hash($_GET['hash']);
+//$query_hash = Functions::hash($_GET['hash']);
 
 /**
  * Setting up variables and filters
  */
-if (!empty($query_hash['returning_date'])) {
-    $activetab['roundtrip'] = Config::$site['tab_active'];
-} else {
-    $activetab['oneway'] = Config::$site['tab_active'];
-}
+//if (!empty($query_hash['returning_date'])) {
+//    $activetab['roundtrip'] = Config::$site['tab_active'];
+//} else {
+//    $activetab['oneway'] = Config::$site['tab_active'];
+//}
 
-if (!empty($_POST['sortBy'])) {
-    $_SESSION['sortBy'] = $_POST['sortBy'];
-}
+//if (!empty($_POST['sortBy'])) {
+//    $_SESSION['sortBy'] = $_POST['sortBy'];
+//}
 
 if (array_key_first($activetab) == 'roundtrip') {
     if (! empty($_SESSION['sortBy']) && Config::$site['sort'][$_SESSION['sortBy']]['roundtrip'] != 1) {

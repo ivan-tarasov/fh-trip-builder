@@ -29,12 +29,12 @@
 
             $("#"+this.id+"_value")
                 .attr('data-value', query)
-                .val(moment(query).format('YYMMDD'));
+                .val(moment(query).format('YYYY-MM-DD'));
         });
 
         $(singleDate).on('apply.daterangepicker', function(ev, picker) {
             $("#"+this.id+"_value")
-                .val(picker.startDate.format('YYMMDD'))
+                .val(picker.startDate.format('YYYY-MM-DD'))
                 .attr('data-value', picker.startDate.format('YYYY-MM-DD'));
             });
 
@@ -131,20 +131,22 @@
         $('[data-toggle="tooltip"]').tooltip();
     });
 
-    $('.btn-submit').click(function() {
-        var form_id = $(this).data('form');
-        var values = [];
-
-        $(`#${form_id} input[type="hidden"]:not('.query_hash')`).sort(function(a, b) {
-            return $(a).data('order') - $(b).data('order');
-        }).each(function() {
-            values.push($(this).val());
-        });
-
-        var combinedValue = values.join('');
-
-        $(`#${form_id} .query_hash`).val(combinedValue);
-    });
+//    $('.btn-submit').click(function() {
+//        var form_id = $(this).data('form');
+//        var values = [];
+//
+//        $(`#${form_id} input[type="hidden"]:not('.query_hash')`).sort(function(a, b) {
+//            return $(a).data('order') - $(b).data('order');
+//        }).each(function() {
+//            values.push($(this).val());
+//        });
+//
+//        var combinedValue = values.join('');
+//
+//        // console.log(combinedValue);
+//
+//        $(`#${form_id} .query_hash`).val(combinedValue);
+//    });
 
     $("#airlinesSelectAll").click(function() {
         $('input:checkbox[name="filterAirlines[]"]').attr('checked','checked');
