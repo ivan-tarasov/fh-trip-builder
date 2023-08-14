@@ -6,15 +6,21 @@ use TripBuilder\Api\Server;
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\Airports;
 use TripBuilder\Api\Airlines;
+use TripBuilder\Api\Flights;
+use TripBuilder\Debug\dBug;
 
 class ApiController extends AbstractController
 {
+    /**
+     * @return void
+     */
     public function index(): void
     {
         // $this->sendResponse(200, ['All works']);
     }
 
     /**
+     * @return void
      * @throws \Exception
      */
     public function server(): void
@@ -25,6 +31,7 @@ class ApiController extends AbstractController
     }
 
     /**
+     * @return void
      * @throws \Exception
      */
     public function airports(): void
@@ -34,21 +41,37 @@ class ApiController extends AbstractController
         $airports->get();
     }
 
+    /**
+     * @return void
+     * @throws \Exception
+     */
     public function airportsAutofill(): void
     {
-        $airports = new Airports\Response();
+        $airports = new Airports\Response(AbstractApi::REQUEST_METHOD_GET);
 
         $airports->getAutofill();
     }
 
     /**
+     * @return void
      * @throws \Exception
      */
     public function airlines(): void
     {
-        $airports = new Airlines\Response();
+        $airlines = new Airlines\Response();
 
-        $airports->get();
+        $airlines->get();
+    }
+
+    /**
+     * @return void
+     * @throws \Exception
+     */
+    public function flights(): void
+    {
+        $flights = new Flights\Response();
+
+        $flights->get();
     }
 
 }
