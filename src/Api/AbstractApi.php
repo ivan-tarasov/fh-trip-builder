@@ -10,7 +10,13 @@ class AbstractApi extends AbstractController
 {
     const HEADER_AUTH_KEY = 'Authorization';
 
-    const HEADER_ALLOWED_METHODS = ['POST','GET'];
+    const REQUEST_METHOD_GET     = 'GET',
+          REQUEST_METHOD_POST    = 'POST',
+          REQUEST_METHOD_PUT     = 'PUT',
+          REQUEST_METHOD_PATCH   = 'PATCH',
+          REQUEST_METHOD_DELETE  = 'DELETE',
+          REQUEST_METHOD_HEAD    = 'HEAD',
+          REQUEST_METHOD_OPTIONS = 'OPTIONS';
 
     const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
         '/api/airports/autofill',
@@ -33,9 +39,14 @@ class AbstractApi extends AbstractController
 
     private array $headers = [];
 
-    public function __construct()
+    private string $allowedMethod;
+
+    public function __construct($method = false)
     {
         parent::__construct();
+
+        // By default we accept only POST request method if not provided another one
+        $this->setAllowedMethod($method ?: self::REQUEST_METHOD_POST);
 
         $this->guardUnauthorizedAccess();
         $this->guardNotAllowedRequestMethod();
@@ -68,8 +79,8 @@ class AbstractApi extends AbstractController
      */
     private function guardNotAllowedRequestMethod(): void
     {
-        if (! in_array($this->getRequestMethod(), self::HEADER_ALLOWED_METHODS)) {
-            HttpException::methodNotAllowed(self::HEADER_ALLOWED_METHODS);
+        if ($this->getRequestMethod() !== $this->getAllowedMethod()) {
+            HttpException::methodNotAllowed([$this->getAllowedMethod()]);
         }
     }
 
@@ -82,12 +93,12 @@ class AbstractApi extends AbstractController
     }
 
     /**
-     * @param $statusCode
-     * @param $data
-     * @param $headers
+     * @param int   $statusCode
+     * @param array $data
+     * @param null  $headers
      * @return void
      */
-    public function sendResponse($statusCode, $data = null, $headers = null)
+    public function sendResponse(int $statusCode, array $data = [], array $headers = []): void
     {
         // Sending response code
         http_response_code($statusCode);
@@ -99,14 +110,15 @@ class AbstractApi extends AbstractController
         // For some endpoints we not using typical output and return raw data
         if (! in_array(Helper::getUrlPath(), self::RAW_RESPONSE_ENDPOINTS)) {
             // Building response array
-            $response = json_encode([
-                'status' => $statusCode,
-                'endpoint' => Helper::getUrlPath(),
-                'method' => $this->getRequestMethod(),
+            $response = [
+                'status'    => $statusCode,
+                'endpoint'  => Helper::getUrlPath(),
+                'method'    => $this->getRequestMethod(),
                 'timestamp' => date('Y-m-d H:i:s'),
-                'count' => count($data),
-                'data' => $data ?? [],
-            ]);
+                'data'      => $data ?? [],
+            ];
+
+            $response = json_encode($response);
         } else {
             $response = json_encode($data, JSON_PRETTY_PRINT);
         }
@@ -116,14 +128,12 @@ class AbstractApi extends AbstractController
         self::addHeader('Access-Control-Max-Age', 3600);
         self::addHeader('Content-Length', strlen($response));
 
-        if ($headers) {
+        if (!empty($headers)) {
             // array_walk($headers, [$this, 'addHeader']);
             array_map([$this, 'addHeader'], array_keys($headers), $headers);
         }
 
         echo $response;
-
-        die();
     }
 
     /**
@@ -131,17 +141,24 @@ class AbstractApi extends AbstractController
      * @param string|int $value
      * @return void
      */
-    private static function addHeader(string $key, string|int $value)
+    private static function addHeader(string $key, string|int $value): void
     {
         header(sprintf('%s: %s', $key, $value));
     }
 
-    private function getRequestHeaders()
+    /**
+     * @return void
+     */
+    private function getRequestHeaders(): void
     {
         $this->setHeaders(getallheaders() ?? []);
     }
 
-    private function setHeaders($headers)
+    /**
+     * @param $headers
+     * @return void
+     */
+    private function setHeaders($headers): void
     {
         $this->headers = $headers;
     }
@@ -152,6 +169,23 @@ class AbstractApi extends AbstractController
     private function getHeaders(): array
     {
         return $this->headers;
+    }
+
+    /**
+     * @param $method
+     * @return void
+     */
+    public function setAllowedMethod($method): void
+    {
+        $this->allowedMethod = $method;
+    }
+
+    /**
+     * @return string
+     */
+    private function getAllowedMethod(): string
+    {
+        return $this->allowedMethod;
     }
 
 }

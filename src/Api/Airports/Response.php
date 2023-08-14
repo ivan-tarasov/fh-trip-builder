@@ -31,11 +31,9 @@ class Response extends AbstractApi
     /**
      * @throws \Exception
      */
-    public function __construct()
+    public function __construct($method = false)
     {
-        parent::__construct();
-
-        // $db = MySql::connect();
+        parent::__construct($method);
 
         $this->db->where('a.enabled', 1);
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
