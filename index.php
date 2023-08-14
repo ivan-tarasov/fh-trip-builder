@@ -26,7 +26,7 @@ try {
     new Config();
 
     // Get the current URL and put it to Routs class
-    $url = rtrim($_SERVER['REQUEST_URI'], '/') ?: '/';
+    $url = rtrim(strtok($_SERVER['REQUEST_URI'], '?'), '/') ?: '/';
     Routs::setCurrentPage($url);
 
     // Find the corresponding controller and action
