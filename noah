@@ -1,0 +1,27 @@
+#!/usr/bin/env php
+<?php
+/*
+|--------------------------------------------------------------------------
+| Noah v0.0.2
+|--------------------------------------------------------------------------
+*/
+
+require_once 'vendor/autoload.php';
+
+use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+
+// Enable .env file variables
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$output = new ConsoleOutput();
+$errorStyle = new OutputFormatterStyle('white', 'red');
+$output->getFormatter()->setStyle('error', $errorStyle);
+
+if (! isset($argv[1])) {
+    $output->writeln('<error>Error:</error> No command provided.');
+    die();
+}
+
+new \TripBuilder\Noah\Init($argv[1]);

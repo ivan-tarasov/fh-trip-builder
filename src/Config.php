@@ -20,13 +20,16 @@ class Config
     /**
      * @throws \Exception
      */
-    public function __construct()
+    public function __construct($environment = false)
     {
+        // Clear data array to prevent mixing data with multiple time using
+        self::$configData = [];
+
         $directory = sprintf(
             '%s/%s/%s',
             Helper::getRootDir(),
             self::CONFIG_DIRECTORY,
-            $_ENV['APP_ENV']
+            $environment ?: $_ENV['APP_ENV']
         );
 
         if (is_dir($directory)) {
