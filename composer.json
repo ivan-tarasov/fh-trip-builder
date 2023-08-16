@@ -10,6 +10,7 @@
         "thingengineer/mysqli-database-class": "dev-master",
         "ext-json": "*",
         "vlucas/phpdotenv": "^5.5",
-        "guzzlehttp/guzzle": "^7.7"
+        "guzzlehttp/guzzle": "^7.7",
+        "symfony/console": "^6.3"
     }
 }
