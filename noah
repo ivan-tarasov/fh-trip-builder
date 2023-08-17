@@ -9,11 +9,14 @@
 require_once 'vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
-use TripBuilder\Noah\Db\Install;
+
+use TripBuilder\Noah\Db\Install as DatabaseInstall;
+use TripBuilder\Noah\Db\Clear as DatabaseClear;
 
 $application = new Application();
 
-$application->add(new Install());
+$application->add(new DatabaseInstall());
+$application->add(new DatabaseClear());
 
 try {
     $application->run();

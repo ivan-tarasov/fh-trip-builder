@@ -25,6 +25,9 @@ class Install extends AbstractCommand
     const CONFIG_DIR_TABLES = 'noah/db/tables';
     const CONFIG_DIR_SEEDERS = 'noah/db/seeders';
 
+    const MESSAGE_CREATING_TABLE = 'Creating `%s` table',
+          MESSAGE_SEEDING_TABLE  = 'Seeding `%s` table';
+
     /**
      * Execute the command
      *
@@ -56,7 +59,7 @@ class Install extends AbstractCommand
 
         // Creating DB tables
         foreach (Config::get() as $table => $data) {
-            $action = sprintf('Creating `%s` table', $table);
+            $action = sprintf(self::MESSAGE_CREATING_TABLE, $table);
 
             if ($this->db->tableExists($table)) {
                 $this->formatOutput($action, 'exist', 'info');
@@ -116,7 +119,7 @@ class Install extends AbstractCommand
         new Config(self::CONFIG_DIR_SEEDERS);
 
         foreach (Config::get() as $table => $data) {
-            $action = sprintf('Seeding `%s` table', $table);
+            $action = sprintf(self::MESSAGE_SEEDING_TABLE, $table);
 
             $columns = $data['columns'];
 

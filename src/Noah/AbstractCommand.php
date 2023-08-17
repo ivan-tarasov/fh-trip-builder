@@ -113,6 +113,29 @@ abstract class AbstractCommand extends Command
     }
 
     /**
+     * @return array
+     */
+    protected function getAllDatabaseTables(): array
+    {
+        $request = sprintf(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND table_type = 'BASE TABLE'",
+            $_ENV['DB_DATABASE']
+        );
+
+        $response = $this->db->rawQuery($request);
+
+        $tables = [];
+
+        foreach ($response as $table) {
+            if (isset($table['table_name'])) {
+                $tables[] = $table['table_name'];
+            }
+        }
+
+        return $tables;
+    }
+
+    /**
      * @return void
      */
     private function buildFormats(): void
