@@ -2,32 +2,48 @@
 
 namespace TripBuilder\Noah\Db;
 
-use Dotenv\Dotenv;
+use Symfony\Component\Console\Command\Command;
+use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Config;
-use TripBuilder\Debug\dBug;
-use TripBuilder\Helper;
 
-class Install
+class Install extends AbstractCommand
 {
+    /**
+     * The name of the command.
+     *
+     * @var string
+     */
+    protected static $defaultName = 'install';
+
+    /**
+     * The command description shown when running `list` command.
+     *
+     * @var string
+     */
+    protected static $defaultDescription = 'Installing necessary database tables and seeding it with data';
+
     const CONFIG_DIR_TABLES = 'noah/db/tables';
     const CONFIG_DIR_SEEDERS = 'noah/db/seeders';
 
-    protected $db;
-
     /**
-     * @return void
+     * Execute the command
+     *
+     * @param  $input
+     * @param  $output
+     * @return int 0 if everything went fine, or an exit code.
      * @throws \Exception
      */
-    public function run(): void
+    protected function execute($input, $output): int
     {
-        // Initializing DB connection
-        $this->connectDb();
-
         // Creating DB tables
         $this->createTables();
 
         // Seeding database tables
         $this->seedingTables();
+
+        $this->io->newLine();
+
+        return Command::SUCCESS;
     }
 
     /**
@@ -40,9 +56,10 @@ class Install
 
         // Creating DB tables
         foreach (Config::get() as $table => $data) {
-            if ($this->db->tableExists($table)) {
-                echo 'EXIST' . PHP_EOL;
+            $action = sprintf('Creating `%s` table', $table);
 
+            if ($this->db->tableExists($table)) {
+                $this->formatOutput($action, 'exist', 'info');
                 continue;
             }
 
@@ -80,18 +97,27 @@ class Install
 
             $this->db->rawQueryOne($query);
 
-            echo $this->db->getLastErrno() === 0
-                ? 'Table create successful' . PHP_EOL
-                : 'Update failed. Error: ' . $this->db->getLastError() . PHP_EOL;
+            if ($this->db->getLastErrno() === 0) {
+                $this->formatOutput($action, 'created', 'success');
+            } else {
+                $this->formatOutput($action, 'failed', 'danger');
+            }
         }
+
+        $this->io->newLine();
     }
 
-    private function seedingTables()
+    /**
+     * @return void
+     */
+    private function seedingTables(): void
     {
         // Build config from DB tables directory
         new Config(self::CONFIG_DIR_SEEDERS);
 
         foreach (Config::get() as $table => $data) {
+            $action = sprintf('Seeding `%s` table', $table);
+
             $columns = $data['columns'];
 
             foreach ($data['seeds'] as $seed) {
@@ -103,33 +129,14 @@ class Install
                 $id = $this->db->insert($table, array_combine($columns, $values));
 
                 if (! $id) {
-                    echo 'insert failed: ' . $this->db->getLastError();
+                    // $this->db->getLastError();
+                    $this->formatOutput($action, 'failed', 'danger');
+                    break;
                 }
             }
+
+            $this->formatOutput($action, 'done', 'success');
         }
-    }
-
-    /**
-     * @return void
-     */
-    private function connectDb(): void
-    {
-        $dotenv = Dotenv::createImmutable(Helper::getRootDir());
-        $dotenv->load();
-
-        $this->db = new \MysqliDb(
-            '127.0.0.1', // FIXME: for some reason `localhost` not working on local machine
-            $_ENV['DB_USERNAME'],
-            $_ENV['DB_PASSWORD'],
-            $_ENV['DB_DATABASE'],
-            $_ENV['DB_PORT']
-        );
-    }
-
-    public function __destruct()
-    {
-        // Disconnecting from DB
-        $this->db->disconnect();
     }
 
 }
