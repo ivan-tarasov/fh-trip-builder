@@ -11,8 +11,6 @@
                     <dd class="col-sm-8">{{ airport-city }}</dd>
                     <dt class="col-sm-4">IATA code</dt>
                     <dd class="col-sm-8">{{ airport-iata-code }}</dd>
-                    <dt class="col-sm-4">Region code</dt>
-                    <dd class="col-sm-8">{{ airport-region-code }}</dd>
                     <dt class="col-sm-4">Timezone</dt>
                     <dd class="col-sm-8">{{ airport-timezone }}</dd>
                     <dt class="col-sm-4">Coordinates</dt>
@@ -22,6 +20,8 @@
                             {{ airport-latitude }}, {{ airport-longitude }}
                         </a>
                     </dd>
+                    <dt class="col-sm-4">Altitude</dt>
+                    <dd class="col-sm-8">{{ airport-altitude }} meters</dd>
                 </dl>
             </div>
         </div>

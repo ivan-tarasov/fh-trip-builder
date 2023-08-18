@@ -24,12 +24,18 @@ class AirlinesController
         $apiClient = new Api(Config::get('api.fake.url'));
 
         try {
+            // Setting-up request headers
             $headers = [
                 'Authorization' => Credentials::getBearer(),
                 'Accept'        => 'application/json',
             ];
 
-            $getResponse = $apiClient->post('airlines', $headers);
+            // Setting-up request data
+            $data = [
+                'major' => true,
+            ];
+
+            $getResponse = $apiClient->post('airlines', $headers, $data);
 
             $templater = new Templater('airlines', 'card');
 

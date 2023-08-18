@@ -39,6 +39,8 @@ class AbstractApi extends AbstractController
 
     private array $headers = [];
 
+    protected array $data = [];
+
     private string $allowedMethod;
 
     public function __construct($method = false)
@@ -50,16 +52,8 @@ class AbstractApi extends AbstractController
 
         $this->guardUnauthorizedAccess();
         $this->guardNotAllowedRequestMethod();
-    }
 
-    /**
-     * @return string
-     */
-    private function getAuthToken(): string
-    {
-        return preg_match('/Bearer\s+(\S+)\b/i', getallheaders()[self::HEADER_AUTH_KEY] ?? '', $matches)
-            ? $matches[1]
-            : '';
+        $this->setRequestData();
     }
 
     /**
@@ -85,17 +79,9 @@ class AbstractApi extends AbstractController
     }
 
     /**
-     * @return string
-     */
-    private function getRequestMethod(): string
-    {
-        return $_SERVER['REQUEST_METHOD'] ?? '';
-    }
-
-    /**
      * @param int   $statusCode
      * @param array $data
-     * @param null  $headers
+     * @param array $headers
      * @return void
      */
     public function sendResponse(int $statusCode, array $data = [], array $headers = []): void
@@ -120,7 +106,10 @@ class AbstractApi extends AbstractController
 
             $response = json_encode($response);
         } else {
-            $response = json_encode($data, JSON_PRETTY_PRINT);
+            // Handle data
+            // $data = str_replace("\n", '', $data);
+
+            $response = json_encode($data);
         }
 
         // Setting up response headers
@@ -147,11 +136,40 @@ class AbstractApi extends AbstractController
     }
 
     /**
+     * @return string
+     */
+    private function getRequestMethod(): string
+    {
+        return $_SERVER['REQUEST_METHOD'] ?? '';
+    }
+
+    /**
+     * @return string
+     */
+    private function getAuthToken(): string
+    {
+        return preg_match('/Bearer\s+(\S+)\b/i', getallheaders()[self::HEADER_AUTH_KEY] ?? '', $matches)
+            ? $matches[1]
+            : '';
+    }
+
+    /**
      * @return void
      */
     private function getRequestHeaders(): void
     {
         $this->setHeaders(getallheaders() ?? []);
+    }
+
+    private function setRequestData(): void
+    {
+        $data = file_get_contents('php://input');
+
+        if (empty($data)) {
+            return;
+        }
+
+        $this->data = json_decode($data, true);
     }
 
     /**

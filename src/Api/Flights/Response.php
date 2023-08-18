@@ -59,8 +59,8 @@ class Response extends AbstractApi
      */
     public function get(): void
     {
-        $data = file_get_contents('php://input');
-        $data = json_decode($data, true);
+        // $data = file_get_contents('php://input');
+        // $data = json_decode($data, true);
 
         // Throw Bad Request Exception if data or one of necessary params is empty
         if (empty($data)

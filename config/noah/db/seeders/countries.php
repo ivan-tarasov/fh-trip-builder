@@ -12,7 +12,9 @@ return [
     */
 
     'columns' => [
-        'code', 'code_iso_3', 'title'
+        'code',
+        'code_iso_3',
+        'title',
     ],
 
     'seeds' => [

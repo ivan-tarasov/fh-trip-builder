@@ -28,25 +28,31 @@ class AirportsController
         $apiClient = new Api(Config::get('api.fake.url'));
 
         try {
+            // Setting-up request headers
             $headers = [
                 'Authorization' => Credentials::getBearer(),
                 'Accept'        => 'application/json',
             ];
 
-            $getResponse = $apiClient->post('airports', $headers);
+            // Setting-up request data
+            $data = [
+                'major' => true,
+            ];
+
+            $getResponse = $apiClient->post('airports', $headers, $data);
 
             $templater = new Templater('airports', 'card');
 
             foreach ($getResponse['data'] as $airport) {
                 $templater
                     ->setPlaceholder('airport-iata-code', $airport['code'])
-                    ->setPlaceholder('airport-region-code', $airport['region_code'])
-                    ->setPlaceholder('airport-timezone', $airport['timezone'])
                     ->setPlaceholder('airport-title', $airport['title'])
                     ->setPlaceholder('airport-country', $airport['country'])
                     ->setPlaceholder('airport-city', $airport['city'])
+                    ->setPlaceholder('airport-timezone', $airport['timezone_name'])
                     ->setPlaceholder('airport-latitude', $airport['latitude'])
                     ->setPlaceholder('airport-longitude', $airport['longitude'])
+                    ->setPlaceholder('airport-altitude', number_format($airport['altitude']))
                     ->setPlaceholder('airport-map-img', $this->getAirportMap($airport['latitude'], $airport['longitude']))
                     ->save();
             }

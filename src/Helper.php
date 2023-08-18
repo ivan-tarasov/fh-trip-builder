@@ -2,6 +2,8 @@
 
 namespace TripBuilder;
 
+use TripBuilder\Debug\dBug;
+
 class Helper
 {
     /**
@@ -21,6 +23,21 @@ class Helper
     {
         return parse_url($_SERVER['REQUEST_URI'] ?? '/')['path'];
     }
+
+    /**
+     * @param $offset
+     * @return string
+     */
+    public static function getUTCTime($offset): string
+    {
+        $hours = floor(abs($offset));
+        $minutes = abs($offset) * 60 % 60;
+
+        $sign = ($offset >= 0) ? '+' : '-';
+
+        return sprintf("GMT%s%02d:%02d", $sign, $hours, $minutes);
+    }
+
 
     /**
      * @param string $source

@@ -61,6 +61,15 @@ return [
             'auto_inc' => false,
             'comment' => false,
         ],
+        [
+            'name' => 'is_major',
+            'type' => 'tinyint',
+            'length' => 1,
+            'default' => 0,
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
     ],
 
 ];

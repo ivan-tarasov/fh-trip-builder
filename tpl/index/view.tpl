@@ -10,7 +10,7 @@
                                 aria-selected="true">
                             <i class="fas fa-exchange"></i>
                             round-trip
-                            </a>
+                        </button>
                     </li>
                     <li class="tab-list__item">
                         <button class="nav-link tab-list__link" id="tab_oneway" data-bs-toggle="tab"
