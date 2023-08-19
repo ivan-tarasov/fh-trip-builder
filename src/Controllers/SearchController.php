@@ -51,7 +51,7 @@ class SearchController
                 'depart_date' => $_GET[Config::get('search.form.input.depart_date')],
                 'return_date' => $_GET[Config::get('search.form.input.return_date')] ?: '',
                 'adult_count' => 1, // FIXME: now we provide only 1 adult count
-                'child_count' => 0, // FIXME: now we provide only 1 child count
+                'child_count' => 0, // FIXME: now we provide only 0 child count
             ];
 
             $getResponse = $apiClient->post('flights', $headers, $data);

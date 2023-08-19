@@ -63,31 +63,31 @@ class Response extends AbstractApi
         // $data = json_decode($data, true);
 
         // Throw Bad Request Exception if data or one of necessary params is empty
-        if (empty($data)
-            || empty($data[self::DATA_TRIPTYPE])
-            || empty($data[self::DATA_DEPART])
-            || empty($data[self::DATA_ARRIVE])
-            || empty($data[self::DATA_DEPART_DATE])
-            || empty($data[self::DATA_ADULT_COUNT])
+        if (empty($this->data)
+            || empty($this->data[self::DATA_TRIPTYPE])
+            || empty($this->data[self::DATA_DEPART])
+            || empty($this->data[self::DATA_ARRIVE])
+            || empty($this->data[self::DATA_DEPART_DATE])
+            || empty($this->data[self::DATA_ADULT_COUNT])
         ) {
              HttpException::badRequest();
         }
 
-        $this->setFrom($data[self::DATA_DEPART])
-            ->setTo($data[self::DATA_ARRIVE])
-            ->setDepartDate($data[self::DATA_DEPART_DATE])
-            ->setReturnDate($data[self::DATA_RETURN_DATE] ?: '')
-            ->setAdultNum($data[self::DATA_ADULT_COUNT])
-            ->setChildNum($data[self::DATA_CHILD_COUNT]);
+        $this->setFrom($this->data[self::DATA_DEPART])
+            ->setTo($this->data[self::DATA_ARRIVE])
+            ->setDepartDate($this->data[self::DATA_DEPART_DATE])
+            ->setReturnDate($this->data[self::DATA_RETURN_DATE] ?: '')
+            ->setAdultNum($this->data[self::DATA_ADULT_COUNT])
+            ->setChildNum($this->data[self::DATA_CHILD_COUNT]);
 
-        $flights = match ($data[self::DATA_TRIPTYPE]) {
+        $flights = match ($this->data[self::DATA_TRIPTYPE]) {
             self::TRIPTYPE_ONEWAY    => $this->getOnewayFlights(),
             self::TRIPTYPE_ROUNDTRIP => $this->getRoundtripFlights(),
             default => [],
         };
 
         $this->sendResponse(200, [
-            'triptype' => $data[self::DATA_TRIPTYPE],
+            'triptype' => $this->data[self::DATA_TRIPTYPE],
             'count'    => $this->db->count,
             'flights'  => $flights
         ]);
@@ -107,14 +107,15 @@ class Response extends AbstractApi
             'da.title          AS departure_airport_title',
             'da.city           AS departure_airport_city',
             'f.departure_time  AS departure_time',
-            'da.timezone       AS departure_airport_timezone',
+            'da.timezone_name  AS departure_airport_timezone',
             'aa.code           AS arrival_airport_code',
             'aa.title          AS arrival_airport_title',
             'aa.city           AS arrival_airport_city',
             'f.arrival_time    AS arrival_time',
-            'aa.timezone       AS arrival_airport_timezone',
+            'aa.timezone_name  AS arrival_airport_timezone',
             'f.duration        AS flight_duration',
-            'f.price           AS flight_price',
+            'f.price_base      AS flight_price_base',
+            'f.price_tax       AS flight_price_tax',
             'f.rating          AS flight_rating',
         ];
 

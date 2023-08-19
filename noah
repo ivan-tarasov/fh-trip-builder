@@ -2,7 +2,7 @@
 <?php
 /*
 |--------------------------------------------------------------------------
-| Noah v0.2.1
+| Noah v0.3.1
 |--------------------------------------------------------------------------
 */
 
@@ -12,13 +12,60 @@ use Symfony\Component\Console\Application;
 
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
-
-$application = new Application();
-
-$application->add(new DatabaseInstall());
-$application->add(new DatabaseClear());
+use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 
 try {
+    /*
+    |--------------------------------------------------------------------------
+    | Application instance
+    |--------------------------------------------------------------------------
+    */
+
+    $application = new Application();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Install Database
+    |--------------------------------------------------------------------------
+    |
+    | Adding tables from config files in `config/noah/db/tables` to database
+    | and seeding tables with data from config files in `config/noah/db/seeders`
+    |
+    */
+
+    $application->add(new DatabaseInstall());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Clear DB
+    |--------------------------------------------------------------------------
+    |
+    | Purge all data from existing tables in database.
+    |
+    */
+
+    $application->add(new DatabaseClear());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generate flights
+    |--------------------------------------------------------------------------
+    |
+    | Generating flights data using existing airports and airlines data,
+    | calculating duration between airports, flight time, arrival date and
+    | time, base price, taxes and rating. All generated data writing to
+    | `flights` table in database.
+    |
+    */
+
+    $application->add(new GenerateFlights());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Run application
+    |--------------------------------------------------------------------------
+    */
+
     $application->run();
 } catch (Exception $e) {
     // Do nothing

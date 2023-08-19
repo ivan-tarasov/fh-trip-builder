@@ -13,7 +13,7 @@ use TripBuilder\Helper;
 
 abstract class AbstractCommand extends Command
 {
-    const NOAH_VERSION = 'v0.2.1';
+    const NOAH_VERSION = 'v0.3.1';
 
     /**
      * Color presets
