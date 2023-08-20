@@ -36,7 +36,7 @@ class Generate extends AbstractCommand
     const DATE_ADD         = [1, 30];
     const FLIGHT_SPEED     = [750, 900];
 
-    const PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s%\n %message%",
+    const PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory%\n %message%",
           PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>',
           PROGRESS_CHARACTER_CURRENT = '<fg=green>▓</>',
           PROGRESS_CHARACTER_DONE = '<fg=green>▓</>';
@@ -308,11 +308,10 @@ class Generate extends AbstractCommand
 
             $this->db->where('airline', $this->airline);
             $this->db->where('number', $flightNumber);
-            $this->db->where('DATE(departure_time)', $this->departureDateTime);
-            $this->db->get('flights');
+            $this->db->where('DATE(departure_time)', date('Y-m-d', strtotime($this->departureDateTime)));
 
             // If we have the same airline with the same flight number in this date - we skip it
-            if ($this->db->count != 1) {
+            if ($this->db->getValue('flights', 'count(1)') == 0) {
                 $this->setFlightNumber($flightNumber);
                 return;
             }

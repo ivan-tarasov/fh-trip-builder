@@ -110,6 +110,9 @@ abstract class AbstractCommand extends Command
             $_ENV['DB_DATABASE'],
             $_ENV['DB_PORT']
         );
+
+        // Enable tracer
+        $this->db->setTrace (true);
     }
 
     /**
