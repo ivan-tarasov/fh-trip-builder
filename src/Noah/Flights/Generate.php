@@ -3,6 +3,11 @@
 namespace TripBuilder\Noah\Flights;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
+use TripBuilder\Config;
+use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
 class Generate extends AbstractCommand
@@ -21,25 +26,41 @@ class Generate extends AbstractCommand
      */
     protected static $defaultDescription = 'Generate flights to database';
 
-    const DEFAULT_FLIGHTS_COUNT       = 1000;
-    const FLIGHT_NUMBERS_POOL = 9999;
-    const ATTEMPTS_LIMIT      = 10;
-    const PRICE_MULTIPLIER    = 8;
-    const PRICE_ADD_MIN       = 5;
-    const PRICE_ADD_MAX       = 800;
-    const PRICE_TAX_PERCENT   = 10;
-    const DURATION_ADD_MIN    = 10;
-    const DURATION_ADD_MAX    = 55;
-    const DATE_ADD_MIN        = 1;
-    const DATE_ADD_MAX        = 30;
+    const FLIGHTS_COUNT    = 1000;
+    const NUMBERS_POOL     = 9999;
+    const ATTEMPTS_LIMIT   = 10;
+    const PRICE_MULTIPLIER = 8;
+    const PRICE_ADD        = [5, 800];
+    const PRICE_TAX        = [5, 90];
+    const DURATION_ADD     = [10, 55];
+    const DATE_ADD         = [1, 30];
+    const FLIGHT_SPEED     = [750, 900];
 
-    const COUNT_IDENTICAL_AIRPORTS = 'identical_airports',
-          COUNT_SAME_FLIGHT_NUMBER = 'same_flight_number',
-          COUNT_TOTAL = 'total';
+    const PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s%\n %message%",
+          PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>',
+          PROGRESS_CHARACTER_CURRENT = '<fg=green>▓</>',
+          PROGRESS_CHARACTER_DONE = '<fg=green>▓</>';
+
+    const PROGRESS_MSG_BREAK = 300,
+          PROGRESS_MSG_FORMAT = '> %s...';
+
+    const PROGRESS_MSG_POOL = [
+        'Raising the ailerons',
+        'Removing the flaps',
+        'Removing the chassis',
+        'Refueling the fuel',
+        'Distributing snacks',
+        'Selling the tickets',
+        'Passing registration',
+        'Starting taxiing',
+        'Joining the "10k" club',
+    ];
+
+    const COUNT_SAME_NUM = 'same_flight_number',
+          COUNT_TOTAL    = 'total';
 
     private array $count = [
-        self::COUNT_IDENTICAL_AIRPORTS => 0,
-        self::COUNT_SAME_FLIGHT_NUMBER => 0,
+        self::COUNT_SAME_NUM => 0,
         self::COUNT_TOTAL => 0,
     ];
 
@@ -66,6 +87,16 @@ class Generate extends AbstractCommand
     private float $rating;
 
     /**
+     * Configure command
+     *
+     * @return void
+     */
+    protected function configure(): void
+    {
+        $this->addArgument('flights', InputArgument::OPTIONAL, 'Flights to add');
+    }
+
+    /**
      * Execute the command
      *
      * @param  $input
@@ -75,13 +106,16 @@ class Generate extends AbstractCommand
      */
     protected function execute($input, $output): int
     {
-        $flightsToAdd = $this->io->ask('Number of flights to add', self::DEFAULT_FLIGHTS_COUNT, function (string $number): int {
-            if (!is_numeric($number)) {
-                throw new \RuntimeException('You must type a number.');
-            }
+        // If flights to add not provided – ask
+        $flightsToAdd = $input->getArgument('flights') ?? $this->io->ask(
+            'Number of flights to add', self::FLIGHTS_COUNT, function (string $number): int {
+                if (!is_numeric($number)) {
+                    throw new \RuntimeException('You must type a number.');
+                }
 
-            return (int) $number;
-        });
+                return (int) $number;
+            }
+        );
 
         // Get airlines from database
         $airlinesResponse = $this->db->get('airlines');
@@ -90,22 +124,22 @@ class Generate extends AbstractCommand
         $this->db->where('enabled', 1);
         $airportsResponse = $this->db->get('airports');
 
-        // Do the magic
-        for ($flightNumber = 1; $flightNumber <= $flightsToAdd; $flightNumber++) {
+        // Show progress bar
+        $progressBar = new ProgressBar($output, $flightsToAdd);
+        $progressBar->setBarCharacter(self::PROGRESS_CHARACTER_DONE);
+        $progressBar->setEmptyBarCharacter(self::PROGRESS_CHARACTER_EMPTY);
+        $progressBar->setProgressCharacter(self::PROGRESS_CHARACTER_CURRENT);
+        $progressBar->setFormat(self::PROGRESS_FORMAT);
+        $progressBar->setMessage(sprintf(self::PROGRESS_MSG_FORMAT, 'Starting'));
+        $progressBar->start();
+
+        // Do the magic..
+        while (++$this->count[self::COUNT_TOTAL] < $flightsToAdd) {
             // Get 2 random airports
             $rand_keys = array_rand($airportsResponse, 2);
 
-            // Departure airport and arrival airport SHOULD be different
-            if ($rand_keys[0] === $rand_keys[1]) {
-                $this->count[self::COUNT_IDENTICAL_AIRPORTS]++;
-                continue;
-            }
-
             // Get random airline
             $this->setAirline($airlinesResponse[rand(0, count($airlinesResponse) - 1)]['code']);
-
-            // Faking flight number
-            $this->fakeFlightNumber();
 
             // Depart airport code
             $this->setDepartAirport($airportsResponse[$rand_keys[0]]);
@@ -124,16 +158,13 @@ class Generate extends AbstractCommand
             );
 
             // Calculating flight duration between airports
-            $this->setDuration(
-                $this->getDistanceFromDuration($this->distance) +
-                rand(self::DURATION_ADD_MIN, self::DURATION_ADD_MAX)
-            );
+            $this->setDuration($this->getDistanceFromDuration($this->distance) + Helper::random(self::DURATION_ADD));
 
             // Render departure date and time (UNIX timestamps for random day)
             $this->setDepartureDateTime(
                 date('Y-m-d H:i:s',
                     strtotime(
-                        sprintf('+ %d days', rand(self::DATE_ADD_MIN, self::DATE_ADD_MAX)),
+                        sprintf('+ %d days', Helper::random(self::DATE_ADD)),
                         rand(
                             strtotime(date('Y-m-d') . ' 00:00:01'),
                             strtotime(date('Y-m-d') . ' 23:59:59')
@@ -150,15 +181,16 @@ class Generate extends AbstractCommand
             );
 
             // Faking base price
-            $this->setPriceBase(
-                ($this->distance * self::PRICE_MULTIPLIER / 100) + rand(self::PRICE_ADD_MIN, self::PRICE_ADD_MAX)
-            );
+            $this->setPriceBase(($this->distance * self::PRICE_MULTIPLIER / 100) + Helper::random(self::PRICE_ADD));
 
             // Calculate tax price
-            $this->setPriceTax($this->priceBase * (self::PRICE_TAX_PERCENT / 100));
+            $this->setPriceTax($this->priceBase * (Helper::random(self::PRICE_TAX) / 100));
 
             // Faking flight rating
             $this->setRating(rand(1, 4) + rand(0, 100) / 100);
+
+            // Faking flight number
+            $this->fakeFlightNumber();
 
             // Inserting row to MySQL table
             if (! $this->db->insertMulti(
@@ -195,9 +227,21 @@ class Generate extends AbstractCommand
                 echo 'insert failed: ' . $this->db->getLastError();
             }
 
-            $this->count['total']++;
+            // Show random messages every X loop
+            if ($this->count[self::COUNT_TOTAL] % self::PROGRESS_MSG_BREAK == 0) {
+                $progressBar->setMessage(sprintf(self::PROGRESS_MSG_FORMAT, $this->getRandomProgressMessage()));
+            }
+
+            $progressBar->advance();
         }
 
+        $progressBar->setMessage(sprintf(self::PROGRESS_MSG_FORMAT, 'Landing'));
+        $progressBar->finish();
+
+        $this->io->newLine(2);
+
+        // Show statistic
+        $this->io->writeln('<primary> Summary: </primary>');
         foreach ($this->count as $key => $count) {
             $this->formatOutput($key, number_format($count), 'info');
         }
@@ -243,9 +287,7 @@ class Generate extends AbstractCommand
      */
     public function getDistanceFromDuration($distance): int
     {
-        $speed = [750, 900];
-
-        $time    = $distance / rand($speed[0], $speed[1]);
+        $time    = $distance / Helper::random(self::FLIGHT_SPEED);
         $hours   = intval($time);
         $minutes = ($time - $hours) * 60;
 
@@ -261,14 +303,12 @@ class Generate extends AbstractCommand
     {
         $check = 0;
 
-        while (true) {
-            $check++;
-
-            $flightNumber = rand(1, self::FLIGHT_NUMBERS_POOL);
+        while (++$check < self::ATTEMPTS_LIMIT) {
+            $flightNumber = rand(1, self::NUMBERS_POOL);
 
             $this->db->where('airline', $this->airline);
             $this->db->where('number', $flightNumber);
-            // $this->db->where('departure_time', 'John%', 'like'); // TODO: add date check
+            $this->db->where('DATE(departure_time)', $this->departureDateTime);
             $this->db->get('flights');
 
             // If we have the same airline with the same flight number in this date - we skip it
@@ -276,13 +316,19 @@ class Generate extends AbstractCommand
                 $this->setFlightNumber($flightNumber);
                 return;
             }
-
-            $this->count[self::COUNT_SAME_FLIGHT_NUMBER]++;
-
-            if ($check > self::ATTEMPTS_LIMIT) {
-                throw new \Exception('All flight numbers is given. Limit per one airline is ' . self::FLIGHT_NUMBERS_POOL);
-            }
         }
+
+        $this->count[self::COUNT_SAME_NUM]++;
+
+        throw new \Exception('All flight numbers is given. Limit per one airline is ' . self::NUMBERS_POOL);
+    }
+
+    /**
+     * @return string
+     */
+    private function getRandomProgressMessage(): string
+    {
+        return self::PROGRESS_MSG_POOL[rand(0,count(self::PROGRESS_MSG_POOL)-1)];
     }
 
     /**

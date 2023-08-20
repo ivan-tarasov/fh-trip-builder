@@ -81,4 +81,15 @@ class Helper
         ];
     }
 
+    /**
+     * Return random number from provided range
+     *
+     * @param array $range
+     * @return int
+     */
+    public static function random(array $range): int
+    {
+        return rand($range[0], $range[1]);
+    }
+
 }
