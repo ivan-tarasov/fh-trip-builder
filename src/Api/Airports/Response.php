@@ -70,6 +70,7 @@ class Response extends AbstractApi
         $this->db->where('a.enabled', 1);
         $this->db->where ('a.code', $query, 'like');
         $this->db->orWhere ('a.title', $query, 'like');
+        $this->db->orWhere ('a.city_code', $query, 'like');
         $this->db->orWhere ('a.city', $query, 'like');
 
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
