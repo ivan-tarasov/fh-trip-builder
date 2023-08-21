@@ -39,7 +39,8 @@ class Response extends AbstractApi
           RESPONSE_FLIGHT_CARRIER      = 'carrier',
           RESPONSE_CABIN_CODE          = 'cabin_code',
           RESPONSE_DURATION            = 'duration',
-          RESPONSE_PRICE               = 'price',
+          RESPONSE_PRICE_BASE          = 'priceBase',
+          RESPONSE_PRICE_TAX           = 'priceTax',
           RESPONSE_RATING              = 'rating';
 
     private string $from;
@@ -123,15 +124,16 @@ class Response extends AbstractApi
         $this->db->join('airports aa', 'f.arrival_airport = aa.code');
         $this->db->join('airlines al', 'f.airline = al.code');
 
-        $this->db->where ('(da.code = ? or da.city_code = ?)', array_fill(0, 2, $this->getFrom()));
-        $this->db->where ('(aa.code = ? or aa.city_code = ?)', array_fill(0, 2, $this->getTo()));
-        $this->db->where ('DATE(f.departure_time) = ?', [$this->getDepartDate()]);
+        $this->db->where('(da.code = ? or da.city_code = ?)', array_fill(0, 2, $this->from));
+        $this->db->where('(aa.code = ? or aa.city_code = ?)', array_fill(0, 2, $this->to));
+        $this->db->where('DATE(f.departure_time)', $this->departDate);
 
-        $flights = $this->db->get('flights f', null, $columns) ?: [];
+        $flights = $this->db->get('flights f', null, $columns);
 
         return array_map(function($flight) {
             return [
-                self::RESPONSE_PRICE => $flight['flight_price'],
+                self::RESPONSE_PRICE_BASE => $flight['flight_price_base'],
+                self::RESPONSE_PRICE_TAX  => $flight['flight_price_tax'],
                 self::RESPONSE_OUTBOUND => [
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['flight_airline_code'] . $flight['flight_number'],
                     self::RESPONSE_DEPART_AIRPORT_CODE => $flight['departure_airport_code'],
@@ -197,23 +199,23 @@ class Response extends AbstractApi
         $this->db->join('airlines out_airline', 'out_flight.airline = out_airline.code');
 
         $this->db->join('flights in_flight', 'out_flight.arrival_airport = in_flight.departure_airport');
-        $this->db->joinWhere('flights in_flight', 'DATE(in_flight.departure_time)', $this->getReturnDate());
+        $this->db->joinWhere('flights in_flight', 'DATE(in_flight.departure_time)', $this->returnDate);
 
         $this->db->join('airports in_airport', 'in_flight.departure_airport = in_airport.code');
         $this->db->join('airports in_arrival_airport', 'in_flight.arrival_airport = in_arrival_airport.code');
         $this->db->join('airlines in_airline', 'in_flight.airline = in_airline.code');
 
-        $this->db->where('(out_airport.code = ? OR out_airport.city_code = ?)', array_fill(0, 2, $this->getFrom()));
-        $this->db->where('(out_arrival_airport.code = ? OR out_arrival_airport.city_code = ?)', array_fill(0, 2, $this->getTo()));
-        $this->db->where('(in_airport.code = ? OR in_airport.city_code = ?)', array_fill(0, 2, $this->getTo()));
-        $this->db->where('(in_arrival_airport.code = ? OR in_arrival_airport.city_code = ?)', array_fill(0, 2, $this->getFrom()));
-        $this->db->where('DATE(out_flight.departure_time) = ?', [$this->getDepartDate()]);
+        $this->db->where('(out_airport.code = ? OR out_airport.city_code = ?)', array_fill(0, 2, $this->from));
+        $this->db->where('(out_arrival_airport.code = ? OR out_arrival_airport.city_code = ?)', array_fill(0, 2, $this->to));
+        $this->db->where('(in_airport.code = ? OR in_airport.city_code = ?)', array_fill(0, 2, $this->to));
+        $this->db->where('(in_arrival_airport.code = ? OR in_arrival_airport.city_code = ?)', array_fill(0, 2, $this->from));
+        $this->db->where('DATE(out_flight.departure_time) = ?', [$this->departDate]);
 
         $flights = $this->db->get('flights AS out_flight', null, $columns);
 
         return array_map(function($flight) {
             return [
-                self::RESPONSE_PRICE => $flight['outbound_price'] + $flight['return_price'],
+                self::RESPONSE_PRICE_BASE => $flight['outbound_price'] + $flight['return_price'],
                 self::RESPONSE_OUTBOUND => [
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['outbound_airline_code'] . $flight['outbound_flight_number'],
                     self::RESPONSE_DEPART_AIRPORT_CODE => $flight['outbound_departure_airport_code'],
@@ -260,14 +262,6 @@ class Response extends AbstractApi
     }
 
     /**
-     * @return string
-     */
-    private function getFrom(): string
-    {
-        return $this->from;
-    }
-
-    /**
      * @param $to
      * @return $this
      */
@@ -276,14 +270,6 @@ class Response extends AbstractApi
         $this->to = $to;
 
         return $this;
-    }
-
-    /**
-     * @return string
-     */
-    private function getTo(): string
-    {
-        return $this->to;
     }
 
     /**
@@ -298,14 +284,6 @@ class Response extends AbstractApi
     }
 
     /**
-     * @return string
-     */
-    private function getDepartDate(): string
-    {
-        return $this->departDate;
-    }
-
-    /**
      * @param $returnDate
      * @return $this
      */
@@ -314,14 +292,6 @@ class Response extends AbstractApi
         $this->returnDate = $returnDate;
 
         return $this;
-    }
-
-    /**
-     * @return string
-     */
-    private function getReturnDate(): string
-    {
-        return $this->returnDate;
     }
 
     /**

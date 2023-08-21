@@ -56,11 +56,13 @@ class Generate extends AbstractCommand
         'Joining the "10k" club',
     ];
 
-    const COUNT_SAME_NUM = 'same_flight_number',
-          COUNT_TOTAL    = 'total';
+    const COUNT_SAME_NUMBERS  = 'same_flight_number',
+          COUNT_SAME_AIRPORTS = 'same_airports',
+          COUNT_TOTAL         = 'total';
 
     private array $count = [
-        self::COUNT_SAME_NUM => 0,
+        self::COUNT_SAME_NUMBERS => 0,
+        self::COUNT_SAME_AIRPORTS => 0,
         self::COUNT_TOTAL => 0,
     ];
 
@@ -122,6 +124,7 @@ class Generate extends AbstractCommand
 
         // Get enabled airports from database
         $this->db->where('enabled', 1);
+        $this->db->where('is_major', 1);
         $airportsResponse = $this->db->get('airports');
 
         // Show progress bar
@@ -136,7 +139,16 @@ class Generate extends AbstractCommand
         // Do the magic..
         while (++$this->count[self::COUNT_TOTAL] < $flightsToAdd) {
             // Get 2 random airports
-            $rand_keys = array_rand($airportsResponse, 2);
+            $rand_keys = [
+                array_rand($airportsResponse, 1),
+                array_rand($airportsResponse, 1)
+            ];
+
+            // Departure and arrival airports should be different
+            if ($rand_keys[0] === $rand_keys[1]) {
+                $this->count[self::COUNT_SAME_AIRPORTS]++;
+                continue;
+            }
 
             // Get random airline
             $this->setAirline($airlinesResponse[rand(0, count($airlinesResponse) - 1)]['code']);
@@ -317,7 +329,7 @@ class Generate extends AbstractCommand
             }
         }
 
-        $this->count[self::COUNT_SAME_NUM]++;
+        $this->count[self::COUNT_SAME_NUMBERS]++;
 
         throw new \Exception('All flight numbers is given. Limit per one airline is ' . self::NUMBERS_POOL);
     }
