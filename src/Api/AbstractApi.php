@@ -5,6 +5,7 @@ namespace TripBuilder\Api;
 use TripBuilder\Controllers\AbstractController;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Helper;
+use TripBuilder\Routs;
 
 class AbstractApi extends AbstractController
 {
@@ -61,7 +62,7 @@ class AbstractApi extends AbstractController
      */
     private function guardUnauthorizedAccess(): void
     {
-        if (! in_array(Helper::getUrlPath(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS) &&
+        if (! in_array(Routs::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS) &&
             ! in_array($this->getAuthToken(), $this->authorizedTokens)
         ) {
             HttpException::unauthorizedAccess();
@@ -94,7 +95,7 @@ class AbstractApi extends AbstractController
         header_remove();
 
         // For some endpoints we not using typical output and return raw data
-        if (! in_array(Helper::getUrlPath(), self::RAW_RESPONSE_ENDPOINTS)) {
+        if (! in_array(Routs::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
             // Building response array
             $response = [
                 'status'    => $statusCode,

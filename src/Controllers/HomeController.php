@@ -19,7 +19,7 @@ class HomeController
         echo $templater
             ->setPlaceholder('index-background-image', rand(1,10))
             ->setPlaceholder('search-page-url', '/search/')
-            ->setPlaceholder('api-airports-autofill', Config::get('api.fake.url') . '/airports/autofill')
+            ->setPlaceholder('api-airports-autofill', Config::get('api.fake.url') . '/airports/autofill/?query=')
             ->setPlaceholder('form-input-triptype', Config::get('search.form.input.triptype'))
             ->setPlaceholder('form-input-triptype-roundtrip', Config::get('search.triptype.roundtrip'))
             ->setPlaceholder('form-input-triptype-oneway', Config::get('search.triptype.oneway'))

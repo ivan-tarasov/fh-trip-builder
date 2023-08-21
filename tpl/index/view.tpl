@@ -34,7 +34,7 @@
                                 <input type="text"
                                        id="round_departing_airport"
                                        class="input--style-1"
-                                       data-prefetch="{{ api-airports-autofill }}"
+                                       data-filter="{{ api-airports-autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"
@@ -43,7 +43,7 @@
                                 <i class="zmdi zmdi-search input-group-symbol"></i>
                                 <script>
                                     document.addEventListener('DOMContentLoaded', e => {
-                                      $('#round_departing_airport').autocomplete()
+                                        $('#round_departing_airport').autocomplete()
                                     }, false);
                                 </script>
                             </div>
@@ -52,7 +52,7 @@
                                 <input type="text"
                                        id="round_arrival_airport"
                                        class="input--style-1"
-                                       data-prefetch="{{ api-airports-autofill }}"
+                                       data-filter="{{ api-airports-autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"
@@ -123,7 +123,7 @@
                                 <input type="text"
                                        id="oneway_departing_airport"
                                        class="input--style-1"
-                                       data-prefetch="{{ api-airports-autofill }}"
+                                       data-filter="{{ api-airports-autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"
@@ -141,7 +141,7 @@
                                 <input type="text"
                                        id="oneway_arrival_airport"
                                        class="input--style-1"
-                                       data-prefetch="{{ api-airports-autofill }}"
+                                       data-filter="{{ api-airports-autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"

@@ -233,7 +233,7 @@
     prefetch: null,
     filter: null,
     filterDelay: 300,
-    filterMinChars: 1,
+    filterMinChars: 3,
     filterRelation: null,
     maxResult: 5,
     onPick: null,

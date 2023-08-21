@@ -3,6 +3,7 @@
 namespace TripBuilder\Api\Airports;
 
 use TripBuilder\Api\AbstractApi;
+use TripBuilder\Api\HttpException;
 use TripBuilder\DataBase\MySql;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Helper;
@@ -30,13 +31,15 @@ class Response extends AbstractApi
 
     private array $airports = [];
 
+    public function __construct($method = false) {
+        parent::__construct($method);
+    }
+
     /**
      * @throws \Exception
      */
-    public function __construct($method = false)
+    public function get(): void
     {
-        parent::__construct($method);
-
         if (! empty($this->data['major']) && $this->data['major']) {
             $this->db->where('is_major', 1);
         }
@@ -46,13 +49,7 @@ class Response extends AbstractApi
         $this->db->orderBy('a.title', 'asc');
 
         $this->airports = $this->db->get('airports a', null, $this->columns);
-    }
 
-    /**
-     * @throws \Exception
-     */
-    public function get(): void
-    {
         $this->sendResponse(200, $this->airports);
     }
 
@@ -62,6 +59,24 @@ class Response extends AbstractApi
      */
     public function getAutofill(): void
     {
+        $query = $_GET['query'] ?? '';
+
+        if (empty($query) || strlen($query) < 3) {
+            HttpException::badRequest();
+        }
+
+        $query = '%' . $query . '%';
+
+        $this->db->where('a.enabled', 1);
+        $this->db->where ('a.code', $query, 'like');
+        $this->db->orWhere ('a.title', $query, 'like');
+        $this->db->orWhere ('a.city', $query, 'like');
+
+        $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
+        $this->db->orderBy('a.title', 'asc');
+
+        $this->airports = $this->db->get('airports a', null, $this->columns);
+
         $airportsGroups =
         $response       = [];
 
