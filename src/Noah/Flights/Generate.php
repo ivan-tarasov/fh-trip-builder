@@ -138,26 +138,18 @@ class Generate extends AbstractCommand
 
         // Do the magic..
         while (++$this->count[self::COUNT_TOTAL] < $flightsToAdd) {
-            // Get 2 random airports
-            $rand_keys = [
-                array_rand($airportsResponse, 1),
-                array_rand($airportsResponse, 1)
-            ];
+            // Get 2 random airports. Depart and arrive airports should be different
+            shuffle($airportsResponse);
+            $airkey = array_rand($airportsResponse, 2);
 
-            // Departure and arrival airports should be different
-            if ($rand_keys[0] === $rand_keys[1]) {
-                $this->count[self::COUNT_SAME_AIRPORTS]++;
-                continue;
-            }
+            // Depart airport code
+            $this->setDepartAirport($airportsResponse[$airkey[0]]);
+
+            // Arrive airport code
+            $this->setArriveAirport($airportsResponse[$airkey[1]]);
 
             // Get random airline
             $this->setAirline($airlinesResponse[rand(0, count($airlinesResponse) - 1)]['code']);
-
-            // Depart airport code
-            $this->setDepartAirport($airportsResponse[$rand_keys[0]]);
-
-            // Arrive airport code
-            $this->setArriveAirport($airportsResponse[$rand_keys[1]]);
 
             // Calculating flight distance between airports
             $this->setDistance(
