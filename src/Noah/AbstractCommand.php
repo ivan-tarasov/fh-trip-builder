@@ -79,18 +79,18 @@ abstract class AbstractCommand extends Command
      */
     private function headerMessage(): void
     {
-        $section = $this->output->section();
-        $table = new Table($section);
-
-        $table->addRow([
-            sprintf(
-                'Noah <primary>%s</primary><warning>%s</warning>',
-                '#StandWith',
-                'Ukraine'
-            )
-        ]);
-        $table->render();
-        $table->appendRow([self::NOAH_VERSION]);
+        $this->io->writeln('
+ ███╗   ██╗ ██████╗  █████╗ ██╗  ██╗
+ ████╗  ██║██╔═══██╗██╔══██╗██║  ██║
+ ██╔██╗ ██║██║   ██║███████║███████║
+ ██║╚██╗██║██║   ██║██╔══██║██╔══██║
+ ██║ ╚████║╚██████╔╝██║  ██║██║  ██║
+ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ' . self::NOAH_VERSION);
+        $this->io->writeln(sprintf(
+            ' <primary>%s</primary><warning>%s</warning>',
+            '#StandWith',
+            'Ukraine'
+        ));
 
         $this->io->newLine();
     }
