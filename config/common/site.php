@@ -4,130 +4,93 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Fake API
+    | Static content
     |--------------------------------------------------------------------------
     |
-    | Fake Flight API credentials
+    | Settings for static content. In this case we using Amazon S3 bucket
     |
     */
 
-    // Where MySQL credentials saved ===================================================================================
-    'mysql' => 'config.mysql.php',
+    'static' => [
+        'url' => '//static.tarasov.ca/trip-builder',
+        'endpoint' => [
+            'images' => 'images',
+            'css'    => 'css',
+            'js'     => 'js',
+            'vendor' => 'vendor',
+        ],
+    ],
 
-    // Pagination settings: search page and booking page ===============================================================
+    /*
+    |--------------------------------------------------------------------------
+    | User avatar
+    |--------------------------------------------------------------------------
+    */
+
+    'avatar' => '//github.com/ivan-tarasov.png?size=32',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pagination
+    |--------------------------------------------------------------------------
+    |
+    | Search page and booking page pagination settings
+    |
+    */
+
     'pagination' => [
         'search'  => 7,
         'booking' => 100
     ],
 
-    // Templates for some places =======================================================================================
-    'templates' => [
-        'sidebar' => [
-            'sort' => 'list-group-checkable'
-        ],
-    ],
+    /*
+    |--------------------------------------------------------------------------
+    | Main Menu
+    |--------------------------------------------------------------------------
+    |
+    | Main menu settings
+    |
+    */
 
-    // Main menu items =================================================================================================
     'main-menu' => [
         '/my/bookings/' => [
-            'text'   => 'My bookings',
-            'icon'   => 'far fa-address-book',
-            'spacer' => 3
+            'text'    => 'My bookings',
+            'icon'    => 'far fa-address-book',
+            'spacer'  => 3,
+            'enabled' => true,
         ],
-        '/airlines/' => [
-            'text'   => 'Airlines',
-            'icon'   => 'fas fa-plane'
+        '/airlines/'  => [
+            'text'    => 'Airlines',
+            'icon'    => 'fas fa-plane',
+            'enabled' => true,
         ],
-        '/airports/' => [
-            'text'   => 'Airports',
-            'icon'   => 'fas fa-map-marked-alt',
-            'spacer' => 3
+        '/airports/'  => [
+            'text'    => 'Airports',
+            'icon'    => 'fas fa-map-marked-alt',
+            'spacer'  => 3,
+            'enabled' => true,
         ],
         '/about/' => [
-            'text'   => 'About project',
-            'icon'   => 'fas fa-circle-info',
+            'text'    => 'About project',
+            'icon'    => 'fas fa-circle-info',
+            'enabled' => true,
         ],
-//        '/software-tests/' => [
-//            'text'   => 'Software tests',
-//            'icon'   => 'fas fa-code'
-//        ],
-    ],
-
-    // Sorting section of search sidebar ===============================================================================
-    'sort' => [
-        'rating' => [
-            'id'        => 'Popular',
-            'text'      => 'Popular first',
-            'note'      => 'First we show tickets with higher rating',
-            'order'     => 'desc',
-            'roundtrip' => 1,
-            'oneway'    => 1,
-            'badge' => [
-                'id'    => 'rating',
-                'text'  => 'Top rated',
-                'icon'  => 'star',
-                'color' => 'danger'
-            ]
-        ],
-        'price' => [
-            'id'        => 'Price',
-            'text'      => 'Cheap ones first',
-            'note'      => 'Easy way to find most cheaper tickets',
-            'order'     => 'asc',
-            'roundtrip' => 1,
-            'oneway'    => 1,
-            'badge' => [
-                'id'    => 'price',
-                'text'  => 'Cheapest price',
-                'icon'  => 'check-circle',
-                'color' => 'success'
-            ]
-        ],
-        'duration' => [
-            'id'        => 'FlightTime',
-            'text'      => 'Flight time',
-            'note'      => 'We show lowest duration flights first',
-            'order'     => 'asc',
-            'roundtrip' => 1,
-            'oneway'    => 1,
-            'badge' => [
-                'id'    => 'duration',
-                'text'  => 'Fastest flight',
-                'icon'  => 'rocket',
-                'color' => 'primary'
-            ]
-        ],
-        'departure_time' => [
-            'id'        => 'Departure',
-            'text'      => 'Departure time',
-            'note'      => 'Tickets with earlier departure time will at the top of the list',
-            'order'     => 'asc',
-            'roundtrip' => 0,
-            'oneway'    => 1,
-            'badge' => [
-                'id'    => 'departure_time',
-                'text'  => 'Earlier departure',
-                'icon'  => 'plane-departure',
-                'color' => 'badge-bd-indigo-200'
-            ]
-        ],
-        'arrival_time' => [
-            'id'        => 'Arrival',
-            'text'      => 'Arrival time',
-            'note'      => 'Tickets with earlier arrival time will at the top of the list',
-            'order'     => 'asc',
-            'roundtrip' => 0,
-            'oneway'    => 1,
-            'badge' => [
-                'id'    => 'arrival_time',
-                'text'  => 'Earlier arrival',
-                'icon'  => 'plane-arrival',
-                'color' => 'dark'
-            ],
+        '/software-tests/' => [
+            'text'    => 'Software tests',
+            'icon'    => 'fas fa-code',
+            'enabled' => false,
         ],
     ],
 
-    // Social networks menu items ======================================================================================
+    /*
+    |--------------------------------------------------------------------------
+    | Social Networks
+    |--------------------------------------------------------------------------
+    |
+    | Social networks menu items
+    |
+    */
+
     'footer-social' => [
         'LinkedIn' => [
             'url' => 'https://linkedin.com/in/ivan-tarasov-ca',
@@ -151,7 +114,15 @@ return [
         ],
     ],
 
-    // Git menu items ==================================================================================================
+    /*
+    |--------------------------------------------------------------------------
+    | Git Menu
+    |--------------------------------------------------------------------------
+    |
+    | Git menu menu items
+    |
+    */
+
     'footer-git' => [
         'Explore the docs' => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/README.md',
         'Report Bug'       => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
@@ -159,7 +130,15 @@ return [
         'Pull requests'    => 'https://github.com/ivan-tarasov/fh-trip-builder/pulls'
     ],
 
-    // Search forms active tab settings (frontend) =====================================================================
+    /*
+    |--------------------------------------------------------------------------
+    | Tab settings
+    |--------------------------------------------------------------------------
+    |
+    | Search forms active tab settings
+    |
+    */
+
     'tab_active' => [
         'btn'  => ' active',
         'aria' => 'true',

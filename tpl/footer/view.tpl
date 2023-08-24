@@ -60,25 +60,25 @@
 </footer>
 
 <!-- Bootstrap -->
-<script src="//cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
-        crossorigin="anonymous"></script>
+<script type="module">
+    import bootstrap from 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/+esm';
+</script>
 
 <!-- Vendor JS-->
-<script src="/frontend/vendor/select2/select2.min.js"></script>
-<script src="/frontend/vendor/jquery-validate/jquery.validate.min.js"></script>
-<script src="/frontend/vendor/bootstrap-wizard/jquery.bootstrap.wizard.min.js"></script>
-<script src="/frontend/vendor/datepicker/moment.min.js"></script>
-<script src="/frontend/vendor/datepicker/daterangepicker.js"></script>
-<script src="/frontend/vendor/autocomplete/bootstrap-autocomplete.js"></script>
+<!--script src="{{ app_vendor_folder }}/select2/select2.min.js"></script-->
+<script src="{{ app_vendor_folder }}/jquery-validate/jquery.validate.min.js"></script>
+<script src="{{ app_vendor_folder }}/bootstrap-wizard/jquery.bootstrap.wizard.min.js"></script>
+<script src="{{ app_vendor_folder }}/datepicker/moment.min.js"></script>
+<script src="{{ app_vendor_folder }}/datepicker/daterangepicker.js"></script>
+<script src="{{ app_vendor_folder }}/autocomplete/bootstrap-autocomplete.js"></script>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/js/ion.rangeSlider.min.js"></script>
 <script src="//use.fontawesome.com/releases/v6.1.1/js/all.js" type="text/javascript" defer
         integrity="sha384-xBXmu0dk1bEoiwd71wOonQLyH+VpgR1XcDH3rtxrLww5ajNTuMvBdL5SOiFZnNdp"
         crossorigin="anonymous"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/js/ion.rangeSlider.min.js"></script>
 
 <!-- Main JS-->
-<script src="/frontend/js/global.js"></script>
+<script src="{{ app_js_folder }}/global.js"></script>
 
 </body>
 </html>

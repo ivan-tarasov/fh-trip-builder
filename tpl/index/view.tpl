@@ -1,4 +1,9 @@
-<div class="bg-img-{{ index-background-image }} py-5">
+<style>
+    .bg-img-{{ bg_image_id }} {
+        background: url("{{ bg_image_url }}") center center/cover no-repeat;
+    }
+</style>
+<div class="bg-img-{{ bg_image_id }} py-5">
     <div class="wrapper wrapper--w680">
         <div class="card card-4">
             <div class="card-body">
@@ -27,19 +32,19 @@
                     <!-- ROUND TRIP -->
                     <div class="tab-pane fade show active" id="roundtrip" role="tabpanel" aria-labelledby="home-tab"
                          tabindex="0">
-                        <form method="get" action="{{ search-page-url }}" id="searchFormRound">
+                        <form method="get" action="{{ form_action }}" id="searchFormRound">
                             <!--input type="hidden" name="hash" id="round_query_hash" class="query_hash"/-->
                             <div class="input-group input-group-big">
                                 <label class="label">From:</label>
                                 <input type="text"
                                        id="round_departing_airport"
                                        class="input--style-1"
-                                       data-filter="{{ api-airports-autofill }}#QUERY#"
+                                       data-filter="{{ api_airports_autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"
                                 />
-                                <input type="hidden" id="round_departing_airport_value" name="{{ form-input-from }}" value="" data-order="1"/>
+                                <input type="hidden" id="round_departing_airport_value" name="{{ input_from }}" value="" data-order="1"/>
                                 <i class="zmdi zmdi-search input-group-symbol"></i>
                                 <script>
                                     document.addEventListener('DOMContentLoaded', e => {
@@ -52,12 +57,12 @@
                                 <input type="text"
                                        id="round_arrival_airport"
                                        class="input--style-1"
-                                       data-filter="{{ api-airports-autofill }}#QUERY#"
+                                       data-filter="{{ api_airports_autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"
                                 />
-                                <input type="hidden" id="round_arrival_airport_value" name="{{ form-input-to }}" value="" data-order="3"/>
+                                <input type="hidden" id="round_arrival_airport_value" name="{{ input_to }}" value="" data-order="3"/>
                                 <i class="zmdi zmdi-search input-group-symbol"></i>
                                 <script>
                                     document.addEventListener('DOMContentLoaded', e => {
@@ -77,7 +82,7 @@
                                                autocomplete="off"
                                                required="required"
                                         />
-                                        <input type="hidden" id="round_departing_date_value" name="{{ form-input-from-date }}" value="" data-order="2"/>
+                                        <input type="hidden" id="round_departing_date_value" name="{{ input_from_date }}" value="" data-order="2"/>
                                         <div class="dropdown-datepicker" id="dropdown-datepicker1"></div>
                                     </div>
                                 </div>
@@ -92,12 +97,12 @@
                                                autocomplete="off"
                                                required="required"
                                         />
-                                        <input type="hidden" id="round_returning_date_value" name="{{ form-input-to-date }}" value="" data-order="4"/>
+                                        <input type="hidden" id="round_returning_date_value" name="{{ input_to_date }}" value="" data-order="4"/>
                                         <div class="dropdown-datepicker" id="dropdown-datepicker2"></div>
                                     </div>
                                 </div>
                             </div>
-                            <input type="hidden" name="{{ form-input-triptype }}" value="{{ form-input-triptype-roundtrip }}" />
+                            <input type="hidden" name="{{ input_triptype }}" value="{{ input_triptype_roundtrip }}" />
                             <div class="radio-row">
                                 <label class="radio-container m-r-45">
                                     Economy
@@ -123,12 +128,12 @@
                                 <input type="text"
                                        id="oneway_departing_airport"
                                        class="input--style-1"
-                                       data-filter="{{ api-airports-autofill }}#QUERY#"
+                                       data-filter="{{ api_airports_autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"
                                 />
-                                <input type="hidden" id="oneway_departing_airport_value" name="{{ form-input-from }}" value="" data-order="1"/>
+                                <input type="hidden" id="oneway_departing_airport_value" name="{{ input_from }}" value="" data-order="1"/>
                                 <i class="zmdi zmdi-search input-group-symbol"></i>
                                 <script>
                                     document.addEventListener('DOMContentLoaded', e => {
@@ -141,12 +146,12 @@
                                 <input type="text"
                                        id="oneway_arrival_airport"
                                        class="input--style-1"
-                                       data-filter="{{ api-airports-autofill }}#QUERY#"
+                                       data-filter="{{ api_airports_autofill }}#QUERY#"
                                        placeholder="Start typing..."
                                        required="required"
                                        autocomplete="off"
                                 />
-                                <input type="hidden" id="oneway_arrival_airport_value" name="{{ form-input-to }}" value="" data-order="3"/>
+                                <input type="hidden" id="oneway_arrival_airport_value" name="{{ input_to }}" value="" data-order="3"/>
                                 <i class="zmdi zmdi-search input-group-symbol"></i>
                                 <script>
                                     document.addEventListener('DOMContentLoaded', e => {
@@ -164,10 +169,10 @@
                                        autocomplete="off"
                                        required="required"
                                 />
-                                <input type="hidden" id="oneway_departing_date_value" name="{{ form-input-from-date }}" value="" data-order="2" />
+                                <input type="hidden" id="oneway_departing_date_value" name="{{ input_from_date }}" value="" data-order="2" />
                                 <div class="dropdown-datepicker" id="dropdown-datepicker3"></div>
                             </div>
-                            <input type="hidden" name="{{ form-input-triptype }}" value="{{ form-input-triptype-oneway }}" />
+                            <input type="hidden" name="{{ input_triptype }}" value="{{ input_triptype_oneway }}" />
                             <div class="radio-row">
                                 <label class="radio-container m-r-45">
                                     Economy

@@ -1,4 +1,4 @@
-<link href="/frontend/css/404.css" rel="stylesheet" media="all" />
+<link href="{{ app_css_folder }}/404.css" rel="stylesheet" media="all" />
 <div class="wrapper">
     <div class="text_group">
         <p class="text_404">404</p>

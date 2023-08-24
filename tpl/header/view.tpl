@@ -10,21 +10,20 @@
     <title>{{ page-title}} - {{ app-name }}</title>
 
     <!-- Icons font CSS-->
-    <link href="/frontend/vendor/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all" />
+    <link href="{{ app_vendor_folder }}/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all" />
     <link href="//use.fontawesome.com/releases/v6.1.1/css/all.css" rel="stylesheet" type='text/css'
           integrity="sha384-/frq1SRXYH/bSyou/HUp/hib7RVN1TawQYja658FEOodR/FQBKVqT9Ol+Oz3Olq5" crossorigin="anonymous" />
 
     <!-- Bootstrap -->
-    <link href="//cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous" />
+    <link href="//cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
 
     <!-- Vendor CSS-->
-    <link href="/frontend/vendor/select2/select2.min.css" rel="stylesheet" media="all" />
-    <link href="/frontend/vendor/datepicker/daterangepicker.css" rel="stylesheet" media="all" />
+    <!--link href="{{ app_vendor_folder }}/select2/select2.min.css" rel="stylesheet" media="all" /-->
+    <link href="{{ app_vendor_folder }}/datepicker/daterangepicker.css" rel="stylesheet" media="all" />
     <link href="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/css/ion.rangeSlider.min.css" rel="stylesheet" />
 
     <!-- Main CSS-->
-    <link href="/frontend/css/main.css" rel="stylesheet" media="all" />
+    <link href="{{ app_css_folder }}/main.css" rel="stylesheet" media="all" />
 
     <!-- Jquery JS-->
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
@@ -52,7 +51,7 @@
             <!-- Right menu items -->
             <div class="text-end">
                 <button type="button" class="btn btn-dark empty-link text-white">
-                    <img src="/frontend/images/user/avatar-01.jpg" width="32" class="rounded-circle me-2"
+                    <img src="{{ user_avatar }}" width="32" class="rounded-circle me-2"
                          alt="User profile avatar"/>
                     User profile
                 </button>

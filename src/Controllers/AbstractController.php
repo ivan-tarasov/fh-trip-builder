@@ -14,9 +14,13 @@ class AbstractController
 {
     public $db;
 
+    private string $staticUrl;
+
     public function __construct()
     {
         $this->dbConnect();
+
+        $this->staticUrl = Config::get('site.static.url');
     }
 
     /**
@@ -40,13 +44,15 @@ class AbstractController
         $templater = new Templater('header', 'menu-item');
 
         foreach (Config::get('site.main-menu') as $link => $params) {
-            $templater
-                ->setPlaceholder('MENU_ITEM_LINK', $link)
-                ->setPlaceholder('CURRENT_PAGE', Routs::getCurrentPage() == rtrim($link, '/') ? 'white' : 'secondary')
-                ->setPlaceholder('MENU_ITEM_TEXT', $params['text'])
-                ->setPlaceholder('MENU_ITEM_ICON', $params['icon'])
-                ->setPlaceholder('MENU_ITEM_SPACER', $params['spacer'] ?? 2)
-                ->save();
+            if ($params['enabled']) {
+                $templater
+                    ->setPlaceholder('MENU_ITEM_LINK',   $link)
+                    ->setPlaceholder('CURRENT_PAGE',     Routs::getCurrentPage() == rtrim($link, '/') ? 'white' : 'secondary')
+                    ->setPlaceholder('MENU_ITEM_TEXT',   $params['text'])
+                    ->setPlaceholder('MENU_ITEM_ICON',   $params['icon'])
+                    ->setPlaceholder('MENU_ITEM_SPACER', $params['spacer'] ?? 2)
+                    ->save();
+            }
         }
 
         $html_mainMenu = $templater->render();
@@ -54,14 +60,17 @@ class AbstractController
         $html_counters = $templater->setFilename('counters')->set()->save()->render();
 
         echo $templater->setPath('header')->setFilename('view')->set()
-            ->setPlaceholder('app-name', Config::get('app.name'))
-            ->setPlaceholder('page-title', 'Main Page')
-            ->setPlaceholder('app-meta-description', Config::get('meta.description'))
-            ->setPlaceholder('app-meta-keywords', implode(', ', Config::get('meta.keywords')))
-            ->setPlaceholder('app-meta-author-name', Config::get('meta.author.name'))
+            ->setPlaceholder('app-name',              Config::get('app.name'))
+            ->setPlaceholder('page-title',            'Main Page')
+            ->setPlaceholder('app-meta-description',  Config::get('meta.description'))
+            ->setPlaceholder('app-meta-keywords',     implode(', ', Config::get('meta.keywords')))
+            ->setPlaceholder('app-meta-author-name',  Config::get('meta.author.name'))
             ->setPlaceholder('app-meta-author-email', Config::get('meta.author.email'))
-            ->setPlaceholder('menu-items', $html_mainMenu)
-            ->setPlaceholder('metric-counters', $html_counters)
+            ->setPlaceholder('app_vendor_folder',     sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
+            ->setPlaceholder('app_css_folder',        sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.css')))
+            ->setPlaceholder('menu-items',            $html_mainMenu)
+            ->setPlaceholder('user_avatar',           Config::get('site.avatar'))
+            ->setPlaceholder('metric-counters',       $html_counters)
             ->save()->render();
     }
 
@@ -71,7 +80,7 @@ class AbstractController
      * @return void
      * @throws \Exception
      */
-    public function footer()
+    public function footer(): void
     {
         $templater = new Templater('footer', 'main-menu-item');
 
@@ -123,20 +132,22 @@ class AbstractController
             ->save()->render();
 
         echo $templater->setPath('footer')->setFilename('view')->set()
-            ->setPlaceholder('app-name', Config::get('app.name'))
-            ->setPlaceholder('app-author-name', Config::get('app.author.name'))
-            ->setPlaceholder('app-author-website', Config::get('app.author.website'))
-            ->setPlaceholder('app-license-type', Config::get('app.license.type'))
-            ->setPlaceholder('app-license-url', Config::get('app.license.url'))
+            ->setPlaceholder('app-name',              Config::get('app.name'))
+            ->setPlaceholder('app-author-name',       Config::get('app.author.name'))
+            ->setPlaceholder('app-author-website',    Config::get('app.author.website'))
+            ->setPlaceholder('app-license-type',      Config::get('app.license.type'))
+            ->setPlaceholder('app-license-url',       Config::get('app.license.url'))
             ->setPlaceholder('app-documentation-url', Config::get('app.documentation'))
-            ->setPlaceholder('copyright-years', $this->copyrightYears())
-            ->setPlaceholder('app-version', $html_appVersion)
-            ->setPlaceholder('main-menu', $html_mainMenu)
-            ->setPlaceholder('social-menu', $html_socialMenu)
-            ->setPlaceholder('git-menu', $html_gitMenu)
-            ->setPlaceholder('flights-count', number_format($this->getFlightsCount()))
-            ->setPlaceholder('database-requests', $this->getDbRequestCount())
-            ->setPlaceholder('execution-time', $this->getExecutionTime())
+            ->setPlaceholder('copyright-years',       $this->copyrightYears())
+            ->setPlaceholder('app-version',           $html_appVersion)
+            ->setPlaceholder('main-menu',             $html_mainMenu)
+            ->setPlaceholder('social-menu',           $html_socialMenu)
+            ->setPlaceholder('git-menu',              $html_gitMenu)
+            ->setPlaceholder('flights-count',         number_format($this->getFlightsCount()))
+            ->setPlaceholder('database-requests',     $this->getDbRequestCount())
+            ->setPlaceholder('execution-time',        $this->getExecutionTime())
+            ->setPlaceholder('app_vendor_folder',     sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
+            ->setPlaceholder('app_js_folder',         sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.js')))
             ->save()->render();
     }
 
