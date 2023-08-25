@@ -13,7 +13,7 @@ use TripBuilder\Helper;
 
 abstract class AbstractCommand extends Command
 {
-    const NOAH_VERSION = 'v0.3.1';
+    const NOAH_VERSION = 'v0.3.3';
 
     /**
      * Color presets
@@ -70,6 +70,9 @@ abstract class AbstractCommand extends Command
         // Show welcome message
         $this->headerMessage();
 
+        // Show command information
+        $this->commandInformation();
+
         // Connecting to MySQL database
         $this->databaseConnect();
     }
@@ -90,6 +93,19 @@ abstract class AbstractCommand extends Command
             ' <primary>%s</primary><warning>%s</warning>',
             '#StandWith',
             'Ukraine'
+        ));
+
+        $this->io->newLine();
+    }
+
+    /**
+     * @return void
+     */
+    private function commandInformation(): void
+    {
+        $this->io->writeln(sprintf(
+            ' <info>  %s </info>',
+            $this->getDescription()
         ));
 
         $this->io->newLine();
