@@ -35,7 +35,7 @@ abstract class AbstractCommand extends Command
         'dark'      => ['white', 'black'],
     ];
 
-    const SPINNER = [
+    const INDICATOR_SPINNER = [
         ['⠏', '⠛', '⠹', '⢸', '⣰', '⣤', '⣆', '⡇'],
         ['▁','▂','▃','▄','▅','▆','▇','█','▇','▆','▅','▄','▃','▁'],
         ['◜','◝','◞','◟'],
@@ -155,19 +155,28 @@ abstract class AbstractCommand extends Command
      * @param string $color
      * @return void
      */
-    protected function formatOutput(string $text, string $status, string $color = self::FORMAT_OUTPUT_DEFAULT_COLOR): void
+    protected function formatOutput(
+        string $text,
+        string $status,
+        string $color = self::FORMAT_OUTPUT_DEFAULT_COLOR,
+        bool $newline = false
+    ): void
     {
         $times = strlen($status);
 
         $dots = str_repeat('.', self::FORMAT_OUTPUT_LINE_LENGTH - strlen($text) - $times);
 
         $this->output->writeln(sprintf(
-            '%1$s %2$s <%4$s> %3$s </%4$s>',
+            ' %1$s %2$s <%4$s> %3$s </%4$s>',
             $text,
             $dots,
             strtoupper($status),
             $color
         ));
+
+        if ($newline) {
+            $this->io->newLine();
+        }
     }
 
 }

@@ -4,6 +4,7 @@ namespace TripBuilder\Noah\Flights;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Helper\ProgressIndicator;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use TripBuilder\Config;
@@ -28,7 +29,6 @@ class Generate extends AbstractCommand
 
     const FLIGHTS_COUNT    = 1000;
     const NUMBERS_POOL     = 9999;
-    const ATTEMPTS_LIMIT   = 10;
     const PRICE_MULTIPLIER = 8;
     const PRICE_ADD        = [5, 800];
     const PRICE_TAX        = [5, 90];
@@ -56,13 +56,11 @@ class Generate extends AbstractCommand
         'Joining the "10k" club',
     ];
 
-    const COUNT_SAME_NUMBERS  = 'same_flight_number',
-          COUNT_SAME_AIRPORTS = 'same_airports',
-          COUNT_TOTAL         = 'total';
+    const COUNT_DUPLICATES = 'Deleted duplicate flights',
+          COUNT_TOTAL      = 'Total added';
 
     private array $count = [
-        self::COUNT_SAME_NUMBERS => 0,
-        self::COUNT_SAME_AIRPORTS => 0,
+        self::COUNT_DUPLICATES => 0,
         self::COUNT_TOTAL => 0,
     ];
 
@@ -244,11 +242,17 @@ class Generate extends AbstractCommand
 
         $this->io->newLine(2);
 
+        // Deleting duplicates
+        $this->removeDuplicates();
+
         // Show statistic
         $this->io->writeln('<primary> Summary: </primary>');
         foreach ($this->count as $key => $count) {
             $this->formatOutput($key, number_format($count), 'info');
         }
+
+        // Total rows in flights table
+        $this->formatOutput('Total in Database', number_format($this->db->getValue('flights', 'count(1)')), 'info', true);
 
         return Command::SUCCESS;
     }
@@ -305,25 +309,9 @@ class Generate extends AbstractCommand
      */
     public function fakeFlightNumber(): void
     {
-        $check = 0;
+        $flightNumber = rand(1000, self::NUMBERS_POOL);
 
-        while (++$check < self::ATTEMPTS_LIMIT) {
-            $flightNumber = rand(1, self::NUMBERS_POOL);
-
-            $this->db->where('airline', $this->airline);
-            $this->db->where('number', $flightNumber);
-            $this->db->where('DATE(departure_time)', date('Y-m-d', strtotime($this->departureDateTime)));
-
-            // If we have the same airline with the same flight number in this date - we skip it
-            if ($this->db->getValue('flights', 'count(1)') == 0) {
-                $this->setFlightNumber($flightNumber);
-                return;
-            }
-        }
-
-        $this->count[self::COUNT_SAME_NUMBERS]++;
-
-        throw new \Exception('All flight numbers is given. Limit per one airline is ' . self::NUMBERS_POOL);
+        $this->setFlightNumber($flightNumber);
     }
 
     /**
@@ -332,6 +320,54 @@ class Generate extends AbstractCommand
     private function getRandomProgressMessage(): string
     {
         return self::PROGRESS_MSG_POOL[rand(0,count(self::PROGRESS_MSG_POOL)-1)];
+    }
+
+    private function removeDuplicates()
+    {
+        $tempTable = 'TempTable';
+
+        $progressIndicator = new ProgressIndicator($this->output, 'very_verbose', 100, ['>','>']);
+        $progressIndicator->start('Deleting duplicates...');
+
+        // 1. Creating temporary table to keep duplicates
+        $progressIndicator->advance();
+        $query = sprintf(
+            'CREATE TEMPORARY TABLE %s AS
+            SELECT airline, number, DATE(departure_time) AS flight_date, MIN(id) AS min_id
+            FROM flights
+            GROUP BY airline, number, DATE(departure_time)
+            HAVING COUNT(*) > 1;',
+            $tempTable
+        );
+        $this->db->rawQueryOne($query);
+
+        $progressIndicator->advance();
+        $this->count[self::COUNT_DUPLICATES] = $this->db->getValue($tempTable, 'count(*)');
+        $this->count[self::COUNT_TOTAL] -= $this->count[self::COUNT_DUPLICATES];
+
+        // 2. Deleting duplicate rows from flights table
+        $progressIndicator->advance();
+        $query = sprintf(
+            'DELETE flight FROM flights flight
+            JOIN %s temp ON
+            flight.airline = temp.airline AND flight.number = temp.number AND
+            DATE(flight.departure_time) = temp.flight_date
+            WHERE flight.id <> temp.min_id',
+            $tempTable
+        );
+        $this->db->rawQueryOne($query);
+
+        // 3. Deleting temporary table
+        $progressIndicator->advance();
+        $query = sprintf(
+            'DROP TEMPORARY TABLE IF EXISTS %s',
+            $tempTable
+        );
+        $this->db->rawQueryOne($query);
+
+        $progressIndicator->finish('Done');
+
+        $this->io->newLine();
     }
 
     /**
