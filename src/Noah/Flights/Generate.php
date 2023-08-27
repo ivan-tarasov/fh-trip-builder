@@ -27,7 +27,7 @@ class Generate extends AbstractCommand
      */
     protected static $defaultDescription = 'Generate flights to database';
 
-    const FLIGHTS_COUNT    = 1000;
+    const FLIGHTS_COUNT    = 10000;
     const NUMBERS_POOL     = 9999;
     const PRICE_MULTIPLIER = 8;
     const PRICE_ADD        = [5, 800];
