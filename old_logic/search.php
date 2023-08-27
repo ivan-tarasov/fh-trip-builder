@@ -25,7 +25,7 @@
 // Initializing API connector
 //require_once __ROOT__ . '/class/api.class.php';
 
-$api = new APIConnector(Config::get('api')['url'], Config::get('api')['token']);
+//$api = new APIConnector(Config::get('api')['url'], Config::get('api')['token']);
 
 //$query_hash = Functions::hash($_GET['hash']);
 
@@ -297,100 +297,100 @@ if (0 != $flights_total) {
 /**
  * Adding small search form
  */
-$params_search_form = [
-    '%API_PATH_AIRPORTS%'     => Config::$api['url'] . '/airports.php',
-    '%SEARCH_CITY_DEPARTURE%' => trim(html_entity_decode($query_hash['from'])),
-    '%SEARCH_CITY_ARRIVAL%'   => trim(html_entity_decode($query_hash['to'])),
-    '%SEARCH_DATE_DEPARTURE%' => trim(html_entity_decode($query_hash['departure_date'])),
-    '%SEARCH_DATE_RETURNING%' => !empty($query_hash['returning_date']) ? trim(html_entity_decode($query_hash['returning_date'])) : null,
-    '%TAB_ROUNDTRIP_BTN%'     => @$activetab['roundtrip']['btn'],
-    '%TAB_ROUNDTRIP_ARIA%'    => @$activetab['roundtrip']['aria'],
-    '%TAB_ROUNDTRIP_DIV%'     => @$activetab['roundtrip']['div'],
-    '%TAB_ONEWAY_BTN%'        => @$activetab['oneway']['btn'],
-    '%TAB_ONEWAY_ARIA%'       => @$activetab['oneway']['aria'],
-    '%TAB_ONEWAY_DIV%'        => @$activetab['oneway']['div']
-];
-
-$html .= Functions::template('search-form-up', $params_search_form, 'search');
+//$params_search_form = [
+//    '%API_PATH_AIRPORTS%'     => Config::$api['url'] . '/airports.php',
+//    '%SEARCH_CITY_DEPARTURE%' => trim(html_entity_decode($query_hash['from'])),
+//    '%SEARCH_CITY_ARRIVAL%'   => trim(html_entity_decode($query_hash['to'])),
+//    '%SEARCH_DATE_DEPARTURE%' => trim(html_entity_decode($query_hash['departure_date'])),
+//    '%SEARCH_DATE_RETURNING%' => !empty($query_hash['returning_date']) ? trim(html_entity_decode($query_hash['returning_date'])) : null,
+//    '%TAB_ROUNDTRIP_BTN%'     => @$activetab['roundtrip']['btn'],
+//    '%TAB_ROUNDTRIP_ARIA%'    => @$activetab['roundtrip']['aria'],
+//    '%TAB_ROUNDTRIP_DIV%'     => @$activetab['roundtrip']['div'],
+//    '%TAB_ONEWAY_BTN%'        => @$activetab['oneway']['btn'],
+//    '%TAB_ONEWAY_ARIA%'       => @$activetab['oneway']['aria'],
+//    '%TAB_ONEWAY_DIV%'        => @$activetab['oneway']['div']
+//];
+//
+//$html .= Functions::template('search-form-up', $params_search_form, 'search');
 
 /**
  * SIDEBAR
  */
 
 // Airlines filter
-$airlinesItems = null;
-
-foreach ($airlines as $airline) {
-    $params_airlines = [
-        '%AIRLINE_IATA%' => $airline['code'],
-        '%AIRLINE_NAME%' => $airline['title'],
-        '%AIR_CHECKED%'  => empty($filterAirlines) || in_array($airline['code'], $filterAirlines) ? ' checked' : null
-    ];
-
-    $airlinesItems .= Functions::template('airlines', $params_airlines, 'search/sidebar');
-}
+//$airlinesItems = null;
+//
+//foreach ($airlines as $airline) {
+//    $params_airlines = [
+//        '%AIRLINE_IATA%' => $airline['code'],
+//        '%AIRLINE_NAME%' => $airline['title'],
+//        '%AIR_CHECKED%'  => empty($filterAirlines) || in_array($airline['code'], $filterAirlines) ? ' checked' : null
+//    ];
+//
+//    $airlinesItems .= Functions::template('airlines', $params_airlines, 'search/sidebar');
+//}
 
 // Combine all sorting methods
-$sortItems = '';
-
-foreach (Config::$site['sort'] as $sort => $values) {
-    $params_sort = [
-        '%SORT_ID%'        => $values['id'],
-        '%SORT_VALUE%'     => $sort,
-        '%SORT_TEXT%'      => $values['text'],
-        '%SORT_NOTE%'      => $values['note'],
-        '%HIDE_SORT_ITEM%' => $values[array_key_first($activetab)] !== 1 ? ' d-none' : null,
-        '%SORT_CHECKED%'   => $flights_departure['total'] != 0 && $flights_departure['sort_by'] == $sort
-            ? ' checked'
-            : null,
-    ];
-
-    $sortItems .= Functions::template(Config::$site['templates']['sidebar']['sort'], $params_sort, 'search/sidebar/sort');
-}
+//$sortItems = '';
+//
+//foreach (Config::$site['sort'] as $sort => $values) {
+//    $params_sort = [
+//        '%SORT_ID%'        => $values['id'],
+//        '%SORT_VALUE%'     => $sort,
+//        '%SORT_TEXT%'      => $values['text'],
+//        '%SORT_NOTE%'      => $values['note'],
+//        '%HIDE_SORT_ITEM%' => $values[array_key_first($activetab)] !== 1 ? ' d-none' : null,
+//        '%SORT_CHECKED%'   => $flights_departure['total'] != 0 && $flights_departure['sort_by'] == $sort
+//            ? ' checked'
+//            : null,
+//    ];
+//
+//    $sortItems .= Functions::template(Config::$site['templates']['sidebar']['sort'], $params_sort, 'search/sidebar/sort');
+//}
 
 // After filter applying always show 1st page
-$_GET['page'] = 1;
+//$_GET['page'] = 1;
 
 // Range script
-$params_range_script = [
-    '%CLOCK_RANGE%'          => Functions::generateTimeRange(),
-    '%RANGE_FROM_DEPARTING%' => date('H:i', strtotime($search['date_departure']['start'])),
-    '%RANGE_TO_DEPARTING%'   => date('H:i', strtotime($search['date_departure']['end'])),
-    '%RANGE_FROM_RETURNING%' => array_key_first($activetab) == 'roundtrip'
-        ? date('H:i', strtotime($search['date_returning']['start']))
-        : null,
-    '%RANGE_TO_RETURNING%'   => array_key_first($activetab) == 'roundtrip'
-        ? date('H:i', strtotime($search['date_returning']['end']))
-        : null,
-];
+//$params_range_script = [
+//    '%CLOCK_RANGE%'          => Functions::generateTimeRange(),
+//    '%RANGE_FROM_DEPARTING%' => date('H:i', strtotime($search['date_departure']['start'])),
+//    '%RANGE_TO_DEPARTING%'   => date('H:i', strtotime($search['date_departure']['end'])),
+//    '%RANGE_FROM_RETURNING%' => array_key_first($activetab) == 'roundtrip'
+//        ? date('H:i', strtotime($search['date_returning']['start']))
+//        : null,
+//    '%RANGE_TO_RETURNING%'   => array_key_first($activetab) == 'roundtrip'
+//        ? date('H:i', strtotime($search['date_returning']['end']))
+//        : null,
+//];
+//
+//$html_range_script = Functions::template('range', $params_range_script, 'search/sidebar');
 
-$html_range_script = Functions::template('range', $params_range_script, 'search/sidebar');
+//$params_sidebar = [
+//    '%SHOW_TRIP_OPTIONS%' => null,
+//    '%GET_URI_STRING%'    => $_SERVER['PHP_SELF'] . '?' . http_build_query($_GET),
+////    '%AIRLINES_ITEMS%'    => $airlinesItems,
+//    '%AIRLINES_SHOW%'     => !empty($filterAirlines)
+//        ? ' show'
+//        : null,
+////    '%SORT_ITEMS%'        => $sortItems,
+////    '%BUTTON_UPDATE%'     => '<div class="d-grid gap-2"><button class="btn btn-primary btn-sm btn-block mt-3" type="submit">Update</button></div>',
+//    '%DEPARTURE_CITY%'    => $flight['departure']['departure_city'] ?? null,
+//    '%ARRIVAL_CITY%'      => $flight['departure']['arrival_city'] ?? null,
+//    '%HIDE_RETURN_RANGE%' => array_key_first($activetab) == 'oneway'
+//        ? 'd-none'
+//        : null,
+////    '%RANGE_SCRIPT%'      => $html_range_script
+//];
 
-$params_sidebar = [
-    '%SHOW_TRIP_OPTIONS%' => null,
-    '%GET_URI_STRING%'    => $_SERVER['PHP_SELF'] . '?' . http_build_query($_GET),
-    '%AIRLINES_ITEMS%'    => $airlinesItems,
-    '%AIRLINES_SHOW%'     => !empty($filterAirlines)
-        ? ' show'
-        : null,
-    '%SORT_ITEMS%'        => $sortItems,
-    '%BUTTON_UPDATE%'     => '<div class="d-grid gap-2"><button class="btn btn-primary btn-sm btn-block mt-3" type="submit">Update</button></div>',
-    '%DEPARTURE_CITY%'    => $flight['departure']['departure_city'] ?? null,
-    '%ARRIVAL_CITY%'      => $flight['departure']['arrival_city'] ?? null,
-    '%HIDE_RETURN_RANGE%' => array_key_first($activetab) == 'oneway'
-        ? 'd-none'
-        : null,
-    '%RANGE_SCRIPT%'      => $html_range_script
-];
-
-$params_index = [
-    '%SEARCH_SIDEBAR%'      => Functions::template('index', $params_sidebar, 'search/sidebar'),
-    '%FLIGHT_CARDS%'        => $flights_total != 0
-        ? Functions::template('index', $params_cards, 'search/cards')
-        : Functions::template('no-result', null, 'search'),
-    '%QUERY_FLIGHTS_COUNT%' => $flights_total
-];
-
-$html .= Functions::template('index', $params_index, 'search');
-
-include(__ROOT__ . '/footer.inc.php');
+//$params_index = [
+//    '%SEARCH_SIDEBAR%'      => Functions::template('index', $params_sidebar, 'search/sidebar'),
+//    '%FLIGHT_CARDS%'        => $flights_total != 0
+//        ? Functions::template('index', $params_cards, 'search/cards')
+//        : Functions::template('no-result', null, 'search'),
+//    '%QUERY_FLIGHTS_COUNT%' => $flights_total
+//];
+//
+//$html .= Functions::template('index', $params_index, 'search');
+//
+//include(__ROOT__ . '/footer.inc.php');

@@ -2,11 +2,11 @@
 <nav class="mt-5" aria-label="Pagination of flight">
   <ul class="pagination justify-content-end">
 
-    %PAGE_PREV%
+    {{ button_prev }}
 
-    %PAGES%
+    {{ buttons_pages }}
 
-    %PAGE_NEXT%
+    {{ button_next }}
 
   </ul>
 </nav>

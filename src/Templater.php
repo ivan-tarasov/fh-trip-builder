@@ -20,12 +20,14 @@ class Templater
     private string $content = '';
 
     /**
-     * @param string $path
-     * @param string $filename
+     * @param string|null $path
+     * @param string|null $filename
      * @throws \Exception
      */
-    public function __construct(string $path, string $filename) {
-        $this->setPath($path)->setFilename($filename)->set();
+    public function __construct(?string $path = null, ?string $filename = null) {
+        if ($path !== null && $filename !== null) {
+            $this->setPath($path)->setFilename($filename)->set();
+        }
     }
 
     /**

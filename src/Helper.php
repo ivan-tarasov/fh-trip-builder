@@ -92,4 +92,20 @@ class Helper
         return rand($range[0], $range[1]);
     }
 
+    /**
+     * @param $number
+     * @param $singular
+     * @return string
+     */
+    public static function plural($number, $singular, $showNumber = false): string
+    {
+        if ($number === 1) {
+            $result = $singular;
+        } else {
+            $result = $singular . 's';
+        }
+
+        return $showNumber ? sprintf('%s %s', $number, $result) : $result;
+    }
+
 }

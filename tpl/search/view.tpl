@@ -1,9 +1,9 @@
 <div class="container py-5">
   <div class="row">
 
-    %SEARCH_SIDEBAR%
+    {{ sidebar-panel }}
 
-    %FLIGHT_CARDS%
+    {{ flight-cards }}
 
   </div>
 </div>
