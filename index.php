@@ -18,6 +18,9 @@ use TripBuilder\Debug\dBug;
 try {
     Timer::start();
 
+    // We using sessions here...
+    session_start();
+
     // Enable .env file variables
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
     $dotenv->load();
