@@ -5,6 +5,7 @@ namespace TripBuilder\ApiClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
+use TripBuilder\Debug\dBug;
 
 class Api
 {
@@ -45,10 +46,10 @@ class Api
      * @param string $endpoint
      * @param array  $headers
      * @param array  $params
-     * @return array
-     * @throws \Exception|GuzzleException
+     * @return \stdClass
+     * @throws GuzzleException
      */
-    public function post(string $endpoint, array $headers = [], array $params = []): array
+    public function post(string $endpoint, array $headers = [], array $params = []): \stdClass
     {
         try {
             $response = $this->client->post($endpoint, [
@@ -56,7 +57,7 @@ class Api
                 'headers' => $headers,
             ]);
 
-            return json_decode($response->getBody(), true);
+            return json_decode($response->getBody(), false);
         } catch (RequestException $e) {
             throw new \Exception('POST request failed: ' . $e->getMessage(), $e->getCode(), $e);
         }

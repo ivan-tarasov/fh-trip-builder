@@ -8,24 +8,30 @@ use TripBuilder\Debug\dBug;
 
 class Response extends AbstractApi
 {
-    /**
-     * @var string Data array keys
-     */
-    const DATA_TRIPTYPE    = 'trip_type',
-          DATA_DEPART      = 'from',
-          DATA_ARRIVE      = 'to',
-          DATA_DEPART_DATE = 'depart_date',
-          DATA_RETURN_DATE = 'return_date',
-          DATA_ADULT_COUNT = 'adult_count',
-          DATA_CHILD_COUNT = 'child_count';
+    const PER_PAGE_LIMIT           = 10;
 
-    /**
-     * @var string Trip types
-     */
-    const TRIPTYPE_ROUNDTRIP = 'roundtrip',
-          TRIPTYPE_ONEWAY    = 'oneway';
+    const HASH_SALT                = 'Estoy_FeliZ';
 
-    const RESPONSE_OUTBOUND        = 'outbound',
+    const DATA_PAGE                = 'page',
+          DATA_SORT                = 'sort',
+          DATA_TRIPTYPE            = 'trip_type',
+          DATA_DEPART              = 'from',
+          DATA_ARRIVE              = 'to',
+          DATA_DEPART_DATE         = 'depart_date',
+          DATA_RETURN_DATE         = 'return_date',
+          DATA_ADULT_COUNT         = 'adult_count',
+          DATA_CHILD_COUNT         = 'child_count';
+
+    const TRIPTYPE_ROUNDTRIP       = 'roundtrip',
+          TRIPTYPE_ONEWAY          = 'oneway';
+
+    const RESPONSE_FLIGHT_HASH     = 'hash',
+          RESPONSE_CURRENT_PAGE    = 'current_page',
+          RESPONSE_TOTAL_PAGES     = 'total_pages',
+          RESPONSE_PER_PAGE        = 'per_page',
+          RESPONSE_TOTAL_FLIGHTS   = 'total_flights',
+          RESPONSE_FLIGHTS         = 'flights',
+          RESPONSE_OUTBOUND        = 'outbound',
           RESPONSE_RETURNING       = 'returning',
           RESPONSE_DEPART          = 'depart',
           RESPONSE_ARRIVE          = 'arrive',
@@ -34,7 +40,7 @@ class Response extends AbstractApi
           RESPONSE_AIRPORT_NAME    = 'airport_name',
           RESPONSE_AIRPORT_COUNTRY = 'airport_country',
           RESPONSE_AIRPORT_CITY    = 'airport_city',
-          RESPONSE_DATE_TIME       = 'dateTime',
+          RESPONSE_DATE_TIME       = 'date_time',
           RESPONSE_FLIGHT_CARRIER  = 'carrier',
           RESPONSE_CABIN_CODE      = 'cabin_code',
           RESPONSE_DISTANCE        = 'distance',
@@ -42,6 +48,31 @@ class Response extends AbstractApi
           RESPONSE_PRICE_BASE      = 'price_base',
           RESPONSE_PRICE_TAX       = 'price_tax',
           RESPONSE_RATING          = 'rating';
+
+    const SORT_METHOD_PRICE        = 'price',
+          SORT_METHOD_DURATION     = 'duration',
+          SORT_METHOD_DEPART       = 'depart_time',
+          SORT_METHOD_ARRIVE       = 'arrive_time',
+          SORT_METHOD_RATING       = 'rating';
+
+    const SORT_ONEWAY = [
+        self::SORT_METHOD_PRICE    => '(flight_price_base + flight_price_tax)',
+        self::SORT_METHOD_DURATION => 'flight_duration',
+        self::SORT_METHOD_DEPART   => 'departure_time',
+        self::SORT_METHOD_ARRIVE   => 'arrival_time',
+        self::SORT_METHOD_RATING   => 'flight_rating',
+    ];
+    const SORT_ROUNDTRIP = [
+        self::SORT_METHOD_PRICE    => '(outbound_price_base + outbound_price_tax + return_price_base + return_price_tax)',
+        self::SORT_METHOD_DURATION => '(outbound_duration + return_duration)',
+        self::SORT_METHOD_RATING   => '(outbound_rating + return_rating',
+    ];
+
+    private int $currentPage;
+
+    private string $sort;
+
+    private int $totalPages;
 
     private string $from;
 
@@ -54,6 +85,8 @@ class Response extends AbstractApi
     private int $adultNum;
 
     private int $childNum;
+
+    private int $totalFlights;
 
     /**
      * @throws \Exception
@@ -71,12 +104,26 @@ class Response extends AbstractApi
              HttpException::badRequest();
         }
 
-        $this->setFrom($this->data[self::DATA_DEPART])
+        $this->setCurrentPage($this->data[self::DATA_PAGE] ?? 1)
+            ->setSort($this->data[self::DATA_SORT] ?? self::SORT_METHOD_PRICE)
+            ->setFrom($this->data[self::DATA_DEPART])
             ->setTo($this->data[self::DATA_ARRIVE])
             ->setDepartDate($this->data[self::DATA_DEPART_DATE])
             ->setReturnDate($this->data[self::DATA_RETURN_DATE] ?: '')
             ->setAdultNum($this->data[self::DATA_ADULT_COUNT])
             ->setChildNum($this->data[self::DATA_CHILD_COUNT]);
+
+        // Get depart city
+        $this->db->where('code', $this->from);
+        $this->db->orWhere('city_code', $this->from);
+        $airport = $this->db->getValue('airports', 'city');
+        $cities[self::RESPONSE_DEPART] = sprintf('%s (%s)', $airport, $this->from);
+
+        // Get arrive city
+        $this->db->where('code', $this->to);
+        $this->db->orWhere('city_code', $this->to);
+        $airport = $this->db->getValue('airports', 'city');
+        $cities[self::RESPONSE_ARRIVE] = sprintf('%s (%s)', $airport, $this->to);
 
         $flights = match ($this->data[self::DATA_TRIPTYPE]) {
             self::TRIPTYPE_ONEWAY    => $this->getOnewayFlights(),
@@ -85,9 +132,16 @@ class Response extends AbstractApi
         };
 
         $this->sendResponse(200, [
-            'triptype' => $this->data[self::DATA_TRIPTYPE],
-            'count'    => $this->db->count,
-            'flights'  => $flights
+            self::RESPONSE_CURRENT_PAGE  => $this->currentPage,
+            self::RESPONSE_TOTAL_PAGES   => ceil($this->totalFlights / self::PER_PAGE_LIMIT),
+            self::RESPONSE_PER_PAGE      => self::PER_PAGE_LIMIT,
+            self::RESPONSE_TOTAL_FLIGHTS => $this->totalFlights,
+            self::DATA_TRIPTYPE          => $this->data[self::DATA_TRIPTYPE],
+            self::RESPONSE_DEPART        => $cities[self::RESPONSE_DEPART],
+            self::RESPONSE_ARRIVE        => $cities[self::RESPONSE_ARRIVE],
+            self::DATA_ADULT_COUNT       => $this->adultNum,
+            self::DATA_CHILD_COUNT       => $this->childNum,
+            self::RESPONSE_FLIGHTS       => $flights,
         ]);
     }
 
@@ -130,13 +184,23 @@ class Response extends AbstractApi
         $this->db->where('(arrive_airport.code = ? or arrive_airport.city_code = ?)', array_fill(0, 2, $this->to));
         $this->db->where('DATE(flight.departure_time)', $this->departDate);
 
-        $flights = $this->db->get('flights flight', null, $columns);
+        $total = $this->db->copy();
+        $this->setTotalFlights($total->getValue('flights flight', 'count(1)'));
+
+        $this->db->orderBy(self::SORT_ONEWAY[$this->sort], 'asc');
+
+        $flights = $this->db->get(
+            'flights flight',
+            [($this->currentPage - 1) * self::PER_PAGE_LIMIT, self::PER_PAGE_LIMIT],
+            $columns
+        );
 
         return array_map(function($flight) {
             return [
-                self::RESPONSE_PRICE_BASE => (float) $flight['flight_price_base'],
-                self::RESPONSE_PRICE_TAX  => (float) $flight['flight_price_tax'],
+                self::RESPONSE_PRICE_BASE  => $flight['flight_price_base'],
+                self::RESPONSE_PRICE_TAX   => $flight['flight_price_tax'],
                 self::RESPONSE_OUTBOUND => [
+                    self::RESPONSE_FLIGHT_HASH         => md5($flight['flight_id'].self::HASH_SALT),
                     self::RESPONSE_FLIGHT_CARRIER      => $flight['flight_airline_code'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['flight_airline_code'] . $flight['flight_number'],
                     self::RESPONSE_DEPART => [
@@ -233,17 +297,26 @@ class Response extends AbstractApi
         $this->db->where('(in_arrival_airport.code = ? OR in_arrival_airport.city_code = ?)', array_fill(0, 2, $this->from));
         $this->db->where('DATE(out_flight.departure_time) = ?', [$this->departDate]);
 
-        $flights = $this->db->get('flights AS out_flight', null, $columns);
+        $total = $this->db->copy();
+        $this->setTotalFlights($total->getValue('flights AS out_flight', 'count(1)'));
 
+        $this->db->orderBy(self::SORT_ROUNDTRIP[$this->sort] ?? self::SORT_ROUNDTRIP[self::SORT_METHOD_PRICE], 'asc');
+
+        $flights = $this->db->get(
+            'flights AS out_flight',
+            [($this->currentPage - 1) * self::PER_PAGE_LIMIT, self::PER_PAGE_LIMIT],
+            $columns
+        );
 
         return array_map(function($flight) {
-            $price_base = (float) number_format($flight['outbound_price_base'] + $flight['return_price_base'], 2);
-            $price_tax  = (float) number_format($flight['outbound_price_tax'] + $flight['return_price_tax'], 2);
+            $price_base = $flight['outbound_price_base'] + $flight['return_price_base'];
+            $price_tax  = round($flight['outbound_price_tax'] + $flight['return_price_tax'], 2);
 
             return [
                 self::RESPONSE_PRICE_BASE => $price_base,
                 self::RESPONSE_PRICE_TAX  => $price_tax,
                 self::RESPONSE_OUTBOUND => [
+                    self::RESPONSE_FLIGHT_HASH         => md5($flight['outbound_flight_id'].self::HASH_SALT),
                     self::RESPONSE_FLIGHT_CARRIER      => $flight['outbound_airline_code'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['outbound_airline_code'] . $flight['outbound_flight_number'],
                     self::RESPONSE_DEPART => [
@@ -266,6 +339,7 @@ class Response extends AbstractApi
                     self::RESPONSE_RATING              => (float) $flight['outbound_rating'],
                 ],
                 self::RESPONSE_RETURNING => [
+                    self::RESPONSE_FLIGHT_HASH         => md5($flight['return_flight_id'].self::HASH_SALT),
                     self::RESPONSE_FLIGHT_CARRIER      => $flight['return_airline_code'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['return_airline_code'] . $flight['return_flight_number'],
                     self::RESPONSE_DEPART => [
@@ -289,6 +363,37 @@ class Response extends AbstractApi
                 ],
             ];
         }, $flights);
+    }
+
+    /**
+     * @param $page
+     * @return $this
+     */
+    private function setCurrentPage($page): static
+    {
+        $this->currentPage = $page;
+
+        return $this;
+    }
+
+    /**
+     * @param $method
+     * @return $this
+     */
+    private function setSort($method): static
+    {
+        $this->sort = $method;
+
+        return $this;
+    }
+
+    /**
+     * @param $count
+     * @return void
+     */
+    private function setTotalPages($count): void
+    {
+        $this->totalPages = $count;
     }
 
     /**
@@ -355,6 +460,15 @@ class Response extends AbstractApi
         $this->childNum = $childNum;
 
         return $this;
+    }
+
+    /**
+     * @param $count
+     * @return void
+     */
+    private function setTotalFlights($count): void
+    {
+        $this->totalFlights = $count;
     }
 
 }

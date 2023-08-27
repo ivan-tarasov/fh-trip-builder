@@ -62,16 +62,15 @@ class Response extends AbstractApi
         $query = $_GET['query'] ?? '';
 
         if (empty($query) || strlen($query) < 3) {
-            HttpException::badRequest();
+            $this->sendResponse(200);
+            return;
         }
 
-        $query = '%' . $query . '%';
-
         $this->db->where('a.enabled', 1);
-        $this->db->where ('a.code', $query, 'like');
-        $this->db->orWhere ('a.title', $query, 'like');
-        $this->db->orWhere ('a.city_code', $query, 'like');
-        $this->db->orWhere ('a.city', $query, 'like');
+        $this->db->where ('a.code', '%' . $query . '%', 'like');
+        $this->db->orWhere ('a.title', '%' . $query . '%', 'like');
+        $this->db->orWhere ('a.city_code', '%' . $query . '%', 'like');
+        $this->db->orWhere ('a.city', '%' . $query . '%', 'like');
 
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
         $this->db->orderBy('a.title', 'asc');

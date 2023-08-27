@@ -8,16 +8,25 @@ use TripBuilder\Debug\dBug;
 
 class Response extends AbstractApi
 {
+    const DATA_KEY_SELECTED = 'selected',
+          DATA_KEY_MAJOR    = 'major';
+
     /**
      * @throws \Exception
      */
     public function get(): void
     {
-        if (! empty($this->data['major']) && $this->data['major']) {
+        // Request only provided airlines
+        if (! empty($this->data[self::DATA_KEY_SELECTED])) {
+            $this->db->where('code', explode(',', $this->data[self::DATA_KEY_SELECTED]), 'IN');
+        }
+
+        // Request only major airlines
+        if (! empty($this->data[self::DATA_KEY_MAJOR]) && $this->data[self::DATA_KEY_MAJOR]) {
             $this->db->where('is_major', 1);
         }
 
-        $this->db->orderBy('traffic', 'desc');
+        $this->db->orderBy('title', 'asc');
 
         $airlines = $this->db->get('airlines');
 
