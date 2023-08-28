@@ -41,8 +41,6 @@
                     <div class="tab-pane fade{{ tab_rt_div }}" id="roundtrip" role="tabpanel"
                          aria-labelledby="home-tab">
                         <form method="get" action="{{ search_page_url }}" id="searchFormRound">
-                            <input type="hidden" name="hash" id="round_query_hash" class="query_hash"/>
-
                             <div class="row row-space">
 
                                 <div class="col-xl-6">
@@ -59,7 +57,8 @@
                                         />
                                         <input type="hidden"
                                                id="round_departing_airport_value"
-                                               value="{{ depart_city }}"
+                                               name="{{ input_from }}"
+                                               value="{{ depart_code }}"
                                                data-order="1"
                                         />
                                         <i class="zmdi zmdi-search input-group-symbol"></i>
@@ -74,11 +73,19 @@
                                 <div class="col-xl-6">
                                     <div class="input-group input-group-big">
                                         <label class="label">destination:</label>
-                                        <input class="input--style-1" type="text" id="round_arrival_airport"
-                                               value="{{ arrive_city }}" data-filter="{{ airports_autofill }}#QUERY#"
-                                               placeholder="City or airport" required="required" autocomplete="off"/>
-                                        <input type="hidden" id="round_arrival_airport_value"
-                                               value="{{ arrive_city }}" data-order="3"/>
+                                        <input type="text"
+                                               value="{{ arrive_city }}"
+                                               id="round_arrival_airport"
+                                               class="input--style-1"
+                                               data-filter="{{ airports_autofill }}#QUERY#"
+                                               placeholder="City or airport"
+                                               required="required"
+                                               autocomplete="off"/>
+                                        <input type="hidden"
+                                               id="round_arrival_airport_value"
+                                               name="{{ input_to }}"
+                                               value="{{ arrive_code }}"
+                                               data-order="3"/>
                                         <i class="zmdi zmdi-search input-group-symbol"></i>
                                         <script>
                                             document.addEventListener('DOMContentLoaded', e => {
@@ -95,7 +102,7 @@
                                                id="round_departing_date" data-value="{{ depart_date }}"
                                                placeholder="yyyy-mm-dd" data-drop="1" autocomplete="off"
                                                required="required"/>
-                                        <input type="hidden" id="round_departing_date_value" value="" data-value=""
+                                        <input type="hidden" id="round_departing_date_value" name="{{ input_from_date }}" value="" data-value=""
                                                data-order="2"/>
                                         <div class="dropdown-datepicker" id="dropdown-datepicker1"></div>
                                     </div>
@@ -107,12 +114,12 @@
                                                id="round_returning_date" data-value="{{ return_date }}"
                                                placeholder="yyyy-mm-dd" data-drop="2" autocomplete="off"
                                                required="required"/>
-                                        <input type="hidden" id="round_returning_date_value" value="" data-value=""
+                                        <input type="hidden" id="round_returning_date_value" name="{{ input_to_date }}" value="" data-value=""
                                                data-order="4"/>
                                         <div class="dropdown-datepicker" id="dropdown-datepicker2"></div>
                                     </div>
                                 </div>
-
+                                <input type="hidden" name="{{ input_triptype }}" value="{{ input_triptype_roundtrip }}" />
                             </div>
 
                             <div class="row radio-row">
@@ -151,7 +158,7 @@
                                                value="{{ depart_city }}" data-filter="{{ airports_autofill }}#QUERY#"
                                                placeholder="City or airport" required="required" autocomplete="off"/>
                                         <input type="hidden" id="oneway_departing_airport_value"
-                                               value="{{ depart_city }}" data-order="1"/>
+                                               name="{{ input_from }}" value="{{ depart_code }}" data-order="1"/>
                                         <i class="zmdi zmdi-search input-group-symbol"></i>
                                         <script>
                                             document.addEventListener('DOMContentLoaded', e => {
@@ -168,7 +175,7 @@
                                                value="{{ arrive_city }}" data-filter="{{ airports_autofill }}#QUERY#"
                                                placeholder="City or airport" required="required" autocomplete="off"/>
                                         <input type="hidden" id="oneway_arrival_airport_value"
-                                               value="{{ arrive_city }}" data-order="3"/>
+                                               name="{{ input_to }}" value="{{ arrive_code }}" data-order="3"/>
                                         <i class="zmdi zmdi-search input-group-symbol"></i>
                                         <script>
                                             document.addEventListener('DOMContentLoaded', e => {
@@ -184,11 +191,11 @@
                                         <input class="input--style-1 js-single-datepicker" type="text"
                                                id="oneway_departing_date" placeholder="yyyy-mm-dd"
                                                value="{{ depart_date }}" data-drop="3" required="required"/>
-                                        <input type="hidden" id="oneway_departing_date_value" value="" data-order="2"/>
+                                        <input type="hidden" id="oneway_departing_date_value" name="{{ input_from_date }}" value="" data-order="2"/>
                                         <div class="dropdown-datepicker" id="dropdown-datepicker3"></div>
                                     </div>
                                 </div>
-
+                                <input type="hidden" name="{{ input_triptype }}" value="{{ input_triptype_oneway }}" />
                             </div>
 
                             <div class="row radio-row">
