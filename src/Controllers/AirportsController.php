@@ -39,21 +39,21 @@ class AirportsController
                 'major' => true,
             ];
 
-            $getResponse = $apiClient->post('airports', $headers, $data);
+            $response = $apiClient->post('airports', $headers, $data);
 
             $templater = new Templater('airports', 'card');
 
-            foreach ($getResponse['data'] as $airport) {
+            foreach ($response->data as $airport) {
                 $templater
-                    ->setPlaceholder('airport-iata-code', $airport['code'])
-                    ->setPlaceholder('airport-title', $airport['title'])
-                    ->setPlaceholder('airport-country', $airport['country'])
-                    ->setPlaceholder('airport-city', $airport['city'])
-                    ->setPlaceholder('airport-timezone', $airport['timezone_name'])
-                    ->setPlaceholder('airport-latitude', $airport['latitude'])
-                    ->setPlaceholder('airport-longitude', $airport['longitude'])
-                    ->setPlaceholder('airport-altitude', number_format($airport['altitude']))
-                    ->setPlaceholder('airport-map-img', $this->getAirportMap($airport['latitude'], $airport['longitude']))
+                    ->setPlaceholder('airport-iata-code', $airport->code)
+                    ->setPlaceholder('airport-title', $airport->title)
+                    ->setPlaceholder('airport-country', $airport->country)
+                    ->setPlaceholder('airport-city', $airport->city)
+                    ->setPlaceholder('airport-timezone', $airport->timezone_name)
+                    ->setPlaceholder('airport-latitude', $airport->latitude)
+                    ->setPlaceholder('airport-longitude', $airport->longitude)
+                    ->setPlaceholder('airport-altitude', number_format($airport->altitude))
+                    ->setPlaceholder('airport-map-img', $this->getAirportMap($airport->latitude, $airport->longitude))
                     ->save();
             }
 

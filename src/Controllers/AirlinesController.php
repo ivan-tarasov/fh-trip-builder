@@ -2,6 +2,7 @@
 
 namespace TripBuilder\Controllers;
 
+use TripBuilder\AmazonS3;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Config;
@@ -35,15 +36,19 @@ class AirlinesController
                 'major' => true,
             ];
 
-            $getResponse = $apiClient->post('airlines', $headers, $data);
+            $response = $apiClient->post('airlines', $headers, $data);
 
             $templater = new Templater('airlines', 'card');
 
-            foreach ($getResponse['data'] as $airline) {
+            foreach ($response->data as $airline) {
                 $templater
-                    ->setPlaceholder('airline-logo-img', $this->getAirlineLogoFromIATA($airline['code']))
-                    ->setPlaceholder('airline-title', $airline['title'])
-                    ->setPlaceholder('airline-traffic', $airline['traffic'])
+                    ->setPlaceholder('airline-logo-img', AmazonS3::getUrl(sprintf(
+                        '%s/suppliers/%s.png',
+                        Config::get('site.static.endpoint.images'),
+                        $airline->code
+                    )))
+                    ->setPlaceholder('airline-title', $airline->title)
+                    ->setPlaceholder('airline-traffic', $airline->traffic)
                     ->save();
             }
 
@@ -55,20 +60,6 @@ class AirlinesController
         } catch (\Exception $e) {
             echo "Error: " . $e->getMessage();
         }
-    }
-
-    /**
-     * @param $code
-     * @return string
-     */
-    private function getAirlineLogoFromIATA($code): string
-    {
-        $pathReal  = sprintf('/%s/%s.%s', self::AIRLINES_LOGO_PATH, $code, self::AIRLINES_LOGO_EXT);
-        $pathNoImg = sprintf('/%s/%s.%s', self::AIRLINES_LOGO_PATH, self::AIRLINES_LOGO_NO_IMG, self::AIRLINES_LOGO_EXT);
-
-        return file_exists(sprintf('%s/%s', Helper::getRootDir(), $pathReal))
-            ? $pathReal
-            : $pathNoImg;
     }
 
 }

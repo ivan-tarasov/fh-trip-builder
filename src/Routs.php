@@ -56,6 +56,14 @@ class Routs
 
         '/ajax/add-trip' => 'Ajax@addTrip',
 
+        /*
+        |--------------------------------------------------------------------------
+        | Debug controller
+        |--------------------------------------------------------------------------
+        */
+
+        '/__debug-it' => 'Debug@index',
+
     ];
 
     const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';
@@ -63,6 +71,7 @@ class Routs
     const EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
+        'Debug',
     ];
 
     private static string $currentPage;

@@ -3,6 +3,7 @@
 namespace TripBuilder\Controllers;
 
 use GuzzleHttp\Exception\GuzzleException;
+use TripBuilder\AmazonS3;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Debug\dBug;
@@ -423,12 +424,11 @@ class SearchController
             ->set()
             ->setPlaceholder('flight_number', null) // FIXME: real flight number
             ->setPlaceholder('airline_title', null) // FIXME: real airline title
-            ->setPlaceholder('logo_url', sprintf(
-                '%s/%s/suppliers/%s.png',
-                Config::get('site.static.url'),
+            ->setPlaceholder('logo_url', AmazonS3::getUrl(sprintf(
+                '%s/suppliers/%s.png',
                 Config::get('site.static.endpoint.images'),
                 $carrier
-            ))
+            )))
             ->save()
             ->render();
     }
