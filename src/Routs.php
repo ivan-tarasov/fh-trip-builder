@@ -5,11 +5,13 @@ namespace TripBuilder;
 class Routs
 {
     const ENABLED_ROUTS = [
+
         /*
         |--------------------------------------------------------------------------
         | Index controller with root pages
         |--------------------------------------------------------------------------
         */
+
         '/'            => 'Home@index',
         '/airlines'    => 'Airlines@index',
         '/airports'    => 'Airports@index',
@@ -20,6 +22,7 @@ class Routs
         | Personal user pages
         |--------------------------------------------------------------------------
         */
+
         '/my'          => 'My@index',
         '/my/bookings' => 'My@bookings',
 
@@ -28,6 +31,7 @@ class Routs
         | Search controller
         |--------------------------------------------------------------------------
         */
+
         '/search' => 'Search@index',
 
         /*
@@ -35,18 +39,30 @@ class Routs
         | API controller with endpoints
         |--------------------------------------------------------------------------
         */
+
         '/api'                   => 'Api@index',
         '/api/server'            => 'Api@server',
         '/api/airports'          => 'Api@airports',
         '/api/airports/autofill' => 'Api@airportsAutofill',
         '/api/airlines'          => 'Api@airlines',
         '/api/flights'           => 'Api@flights',
+        '/api/flights/one'       => 'Api@flightsOne',
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search controller
+        |--------------------------------------------------------------------------
+        */
+
+        '/ajax/add-trip' => 'Ajax@addTrip',
+
     ];
 
     const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';
 
     const EXCLUDE_HEADER_FOOTER = [
         'Api',
+        'Ajax',
     ];
 
     private static string $currentPage;

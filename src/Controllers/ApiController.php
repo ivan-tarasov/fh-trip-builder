@@ -74,4 +74,15 @@ class ApiController extends AbstractController
         $flights->get();
     }
 
+    /**
+     * @return void
+     * @throws \Exception
+     */
+    public function flightsOne(): void
+    {
+        $flights = new Flights\Response();
+
+        $flights->getOne();
+    }
+
 }

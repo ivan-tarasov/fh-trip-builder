@@ -2,16 +2,13 @@
 
 namespace TripBuilder\Controllers;
 
-use Aws\S3\Exception\S3Exception;
 use GuzzleHttp\Exception\GuzzleException;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Config;
 use TripBuilder\Helper;
-use TripBuilder\Routs;
 use TripBuilder\Templater;
-use Aws\S3\S3Client;
 
 class SearchController
 {
@@ -396,8 +393,8 @@ class SearchController
                 ->setPath('search/cards')
                 ->setFilename('body')
                 ->set()
-                ->setPlaceholder('outbound_hash',      $flight->outbound->hash)
-                ->setPlaceholder('returning_hash',     $flight->returning->hash ?? null)
+                ->setPlaceholder('outbound_id',        $flight->outbound->id)
+                ->setPlaceholder('returning_id',       $flight->returning->id ?? null)
                 ->setPlaceholder('flight_price_total', number_format($flight->price_base + $flight->price_tax, 2))
                 ->setPlaceholder('flight_price_base',  number_format($flight->price_base, 2))
                 ->setPlaceholder('flight_price_tax',   number_format($flight->price_tax, 2))

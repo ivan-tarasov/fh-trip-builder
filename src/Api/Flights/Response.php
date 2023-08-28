@@ -10,8 +10,6 @@ class Response extends AbstractApi
 {
     const PER_PAGE_LIMIT           = 10;
 
-    const HASH_SALT                = 'Estoy_FeliZ';
-
     const DATA_PAGE                = 'page',
           DATA_SORT                = 'sort',
           DATA_TRIPTYPE            = 'trip_type',
@@ -20,12 +18,13 @@ class Response extends AbstractApi
           DATA_DEPART_DATE         = 'depart_date',
           DATA_RETURN_DATE         = 'return_date',
           DATA_ADULT_COUNT         = 'adult_count',
-          DATA_CHILD_COUNT         = 'child_count';
+          DATA_CHILD_COUNT         = 'child_count',
+          DATA_FLIGHT_ID           = 'id';
 
     const TRIPTYPE_ROUNDTRIP       = 'roundtrip',
           TRIPTYPE_ONEWAY          = 'oneway';
 
-    const RESPONSE_FLIGHT_HASH     = 'hash',
+    const RESPONSE_FLIGHT_ID       = 'id',
           RESPONSE_CURRENT_PAGE    = 'current_page',
           RESPONSE_TOTAL_PAGES     = 'total_pages',
           RESPONSE_PER_PAGE        = 'per_page',
@@ -146,9 +145,31 @@ class Response extends AbstractApi
     }
 
     /**
+     * @return void
+     */
+    public function getOne(): void
+    {
+        // Throw Bad Request Exception if depart_id is empty
+        if (empty($this->data) || empty($this->data[self::DATA_FLIGHT_ID])
+        ) {
+            HttpException::badRequest();
+        }
+
+        $response = $this->getOnewayFlights($this->data[self::DATA_FLIGHT_ID])[0];
+
+        $flight = array_merge($response['outbound'], [
+            'price_base' => (float) $response['price_base'],
+            'price_tax'  => (float) $response['price_tax'],
+        ]);
+
+        $this->sendResponse(200, $flight);
+    }
+
+    /**
+     * @param int|null $flight_id
      * @return array
      */
-    private function getOnewayFlights(): array
+    private function getOnewayFlights(?int $flight_id = null): array
     {
         $columns = [
             'flight.id                     AS flight_id',
@@ -180,27 +201,33 @@ class Response extends AbstractApi
         $this->db->join('countries depart_country', 'depart_airport.country_code = depart_country.code');
         $this->db->join('countries arrive_country', 'arrive_airport.country_code = arrive_country.code');
 
-        $this->db->where('(depart_airport.code = ? or depart_airport.city_code = ?)', array_fill(0, 2, $this->from));
-        $this->db->where('(arrive_airport.code = ? or arrive_airport.city_code = ?)', array_fill(0, 2, $this->to));
-        $this->db->where('DATE(flight.departure_time)', $this->departDate);
+        if (empty($flight_id)) {
+            $this->db->where('(depart_airport.code = ? or depart_airport.city_code = ?)', array_fill(0, 2, $this->from));
+            $this->db->where('(arrive_airport.code = ? or arrive_airport.city_code = ?)', array_fill(0, 2, $this->to));
+            $this->db->where('DATE(flight.departure_time)', $this->departDate);
 
-        $total = $this->db->copy();
-        $this->setTotalFlights($total->getValue('flights flight', 'count(1)'));
+            $total = $this->db->copy();
+            $this->setTotalFlights($total->getValue('flights flight', 'count(1)'));
 
-        $this->db->orderBy(self::SORT_ONEWAY[$this->sort], 'asc');
+            $this->db->orderBy(self::SORT_ONEWAY[$this->sort], 'asc');
 
-        $flights = $this->db->get(
-            'flights flight',
-            [($this->currentPage - 1) * self::PER_PAGE_LIMIT, self::PER_PAGE_LIMIT],
-            $columns
-        );
+            $flights = $this->db->get(
+                'flights flight',
+                [($this->currentPage - 1) * self::PER_PAGE_LIMIT, self::PER_PAGE_LIMIT],
+                $columns
+            );
+        } else {
+            $this->db->where('flight.id', $flight_id);
+
+            $flights = $this->db->get('flights flight', null, $columns);
+        }
 
         return array_map(function($flight) {
             return [
                 self::RESPONSE_PRICE_BASE  => $flight['flight_price_base'],
                 self::RESPONSE_PRICE_TAX   => $flight['flight_price_tax'],
                 self::RESPONSE_OUTBOUND => [
-                    self::RESPONSE_FLIGHT_HASH         => md5($flight['flight_id'].self::HASH_SALT),
+                    self::RESPONSE_FLIGHT_ID           => $flight['flight_id'],
                     self::RESPONSE_FLIGHT_CARRIER      => $flight['flight_airline_code'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['flight_airline_code'] . $flight['flight_number'],
                     self::RESPONSE_DEPART => [
@@ -316,7 +343,7 @@ class Response extends AbstractApi
                 self::RESPONSE_PRICE_BASE => $price_base,
                 self::RESPONSE_PRICE_TAX  => $price_tax,
                 self::RESPONSE_OUTBOUND => [
-                    self::RESPONSE_FLIGHT_HASH         => md5($flight['outbound_flight_id'].self::HASH_SALT),
+                    self::RESPONSE_FLIGHT_ID           => $flight['outbound_flight_id'],
                     self::RESPONSE_FLIGHT_CARRIER      => $flight['outbound_airline_code'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['outbound_airline_code'] . $flight['outbound_flight_number'],
                     self::RESPONSE_DEPART => [
@@ -339,7 +366,7 @@ class Response extends AbstractApi
                     self::RESPONSE_RATING              => (float) $flight['outbound_rating'],
                 ],
                 self::RESPONSE_RETURNING => [
-                    self::RESPONSE_FLIGHT_HASH         => md5($flight['return_flight_id'].self::HASH_SALT),
+                    self::RESPONSE_FLIGHT_ID           => $flight['return_flight_id'],
                     self::RESPONSE_FLIGHT_CARRIER      => $flight['return_airline_code'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['return_airline_code'] . $flight['return_flight_number'],
                     self::RESPONSE_DEPART => [

@@ -45,8 +45,8 @@ return [
         ],
         [
             'name' => 'flight_a',
-            'type' => 'int',
-            'length' => 6,
+            'type' => 'json',
+            'length' => null,
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -54,8 +54,8 @@ return [
         ],
         [
             'name' => 'flight_b',
-            'type' => 'int',
-            'length' => 6,
+            'type' => 'json',
+            'length' => null,
             'default' => ['NULL'],
             'nullable' => true,
             'auto_inc' => false,

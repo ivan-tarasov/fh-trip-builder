@@ -29,9 +29,9 @@
                 <!-- Buy button -->
                 <div class="d-lg-grid gap-2">
                     <button type="button" class="btn btn-buy btn-block my-4"
-                            id="addTrip_{{ outbound_hash }}_{{ returning_hash }}"
-                            data-flight-departing-id="{{ outbound_hash }}"
-                            data-flight-returning-id="{{ returning_hash }}">
+                            id="addTrip_{{ outbound_id }}_{{ returning_id }}"
+                            data-flight-departing-id="{{ outbound_id }}"
+                            data-flight-returning-id="{{ returning_id }}">
                         <i class="fas fa-xl fa-plus-circle float-end"></i>
                         Buy ticket
                     </button>
