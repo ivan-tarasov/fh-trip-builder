@@ -67,7 +67,7 @@ class Install extends AbstractCommand
             }
 
             $query = sprintf(
-                'CREATE TABLE %s (%s, PRIMARY KEY (%s)) ENGINE=%s DEFAULT CHARSET=%s;',
+                'CREATE TABLE %s (%s, PRIMARY KEY (%s)) ENGINE=%s DEFAULT CHARSET=%s%s;',
                 $table,
                 implode(', ', array_map(function ($column) {
                     return sprintf(
@@ -95,7 +95,10 @@ class Install extends AbstractCommand
                 }, $data['columns'])),
                 $data['primary'],
                 $data['engine'],
-                $data['charset']
+                $data['charset'],
+                isset($data['auto_increment'])
+                    ? ' AUTO_INCREMENT=' . $data['auto_increment']
+                    : null
             );
 
             $this->db->rawQueryOne($query);

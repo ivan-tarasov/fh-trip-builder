@@ -108,4 +108,24 @@ class Helper
         return $showNumber ? sprintf('%s %s', $number, $result) : $result;
     }
 
+    /**
+     * @param $id
+     * @return string
+     */
+    public static function bookingIdToString($id): string
+    {
+        $numberStr = strval($id);
+        $length = strlen($numberStr);
+
+        $formattedNumber = '';
+        for ($i = 0; $i < $length; $i++) {
+            if ($i > 0 && ($length - $i) % 3 === 0) {
+                $formattedNumber .= '-';
+            }
+            $formattedNumber .= $numberStr[$i];
+        }
+
+        return $formattedNumber;
+    }
+
 }

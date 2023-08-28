@@ -7,6 +7,7 @@ use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Config;
+use TripBuilder\Helper;
 
 class AjaxController extends AbstractController
 {
@@ -21,11 +22,11 @@ class AjaxController extends AbstractController
         //header('Content-type: application/json; charset=utf-8');
 
         $this->setGet([
-            'flight_a' => $_GET['depart_id'] ?? null,
-            'flight_b' => $_GET['return_id'] ?? null,
+            'flight_outbound' => $_GET['depart_id'] ?? null,
+            'flight_return' => $_GET['return_id'] ?? null,
         ]);
 
-        if (! $this->get['flight_a']) {
+        if (! $this->get['flight_outbound']) {
             echo json_encode([
                 'status'  => 'error',
                 'message' => 'Wrong format'
@@ -54,7 +55,7 @@ class AjaxController extends AbstractController
 
             $response = $apiClient->post('flights/one', $headers, ['id' => $flight_id,]);
 
-            if ($field == 'flight_a') {
+            if ($field == 'flight_outbound') {
                 $request['departure_time'] = $response->data->depart->date_time;
             }
 
@@ -64,7 +65,7 @@ class AjaxController extends AbstractController
         $id = $this->db->insert('bookings', $request);
 
         if ($id) {
-            $json = ['status' => 'success','message' => 'Trip added with id ' . $id];
+            $json = ['status' => 'success','message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
         } else {
             $json = ['status' => 'error',  'message' => 'insert failed: ' . $this->db->getLastError()];
         }

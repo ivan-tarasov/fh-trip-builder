@@ -14,6 +14,7 @@ return [
     'primary' => 'id',
     'engine' => 'InnoDB',
     'charset' => 'utf8',
+    'auto_increment' => 100001,
 
     'columns' => [
         [
@@ -44,7 +45,7 @@ return [
             'comment' => false,
         ],
         [
-            'name' => 'flight_a',
+            'name' => 'flight_outbound',
             'type' => 'json',
             'length' => null,
             'default' => false,
@@ -53,7 +54,7 @@ return [
             'comment' => false,
         ],
         [
-            'name' => 'flight_b',
+            'name' => 'flight_return',
             'type' => 'json',
             'length' => null,
             'default' => ['NULL'],
