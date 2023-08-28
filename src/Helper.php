@@ -93,11 +93,12 @@ class Helper
     }
 
     /**
-     * @param $number
-     * @param $singular
+     * @param      $number
+     * @param      $singular
+     * @param bool $showNumber
      * @return string
      */
-    public static function plural($number, $singular, $showNumber = false): string
+    public static function plural($number, $singular, bool $showNumber = false): string
     {
         if ($number === 1) {
             $result = $singular;
@@ -126,6 +127,133 @@ class Helper
         }
 
         return $formattedNumber;
+    }
+
+    /**
+     * FIXME: should be rewrite
+     *
+     * Calculating taxes
+     *
+     * @param $amount
+     * @param $province
+     * @return mixed
+     */
+    public static function calculateTax($amount, $province = 'QC')
+    {
+        $tax = [
+            // Newfoundland and Labrador
+            'NL' => [
+                'GST' => 0,
+                'PST' => 0,
+                'HST' => 15,
+                'QST' => 0
+            ],
+            // Prince Edward Island
+            'PE' => [
+                'GST' => 0,
+                'PST' => 0,
+                'HST' => 15,
+                'QST' => 0
+            ],
+            // Nova Scotia
+            'NS' => [
+                'GST' => 0,
+                'PST' => 0,
+                'HST' => 15,
+                'QST' => 0
+            ],
+            // New Brunswick
+            'NB' => [
+                'GST' => 0,
+                'PST' => 0,
+                'HST' => 15,
+                'QST' => 0
+            ],
+            // Quebec
+            'QC' => [
+                'GST' => 5,
+                'PST' => 0,
+                'HST' => 0,
+                'QST' => 9.975
+            ],
+            // Ontario
+            'ON' => [
+                'GST' => 0,
+                'PST' => 0,
+                'HST' => 13,
+                'QST' => 0
+            ],
+            // Manitoba
+            'MB' => [
+                'GST' => 5,
+                'PST' => 7,
+                'HST' => 0,
+                'QST' => 0
+            ],
+            // Saskatchewan
+            'SK' => [
+                'GST' => 5,
+                'PST' => 6,
+                'HST' => 0,
+                'QST' => 0
+            ],
+            // Alberta
+            'AB' => [
+                'GST' => 5,
+                'PST' => 0,
+                'HST' => 0,
+                'QST' => 0
+            ],
+            // British Columbia
+            'BC' => [
+                'GST' => 5,
+                'PST' => 7,
+                'HST' => 0,
+                'QST' => 0
+            ],
+            // Yukon
+            'YT' => [
+                'GST' => 5,
+                'PST' => 0,
+                'HST' => 0,
+                'QST' => 0
+            ],
+            // Northwest Territories
+            'NT' => [
+                'GST' => 5,
+                'PST' => 0,
+                'HST' => 0,
+                'QST' => 0
+            ],
+            // Nunavut
+            'NU' => [
+                'GST' => 5,
+                'PST' => 0,
+                'HST' => 0,
+                'QST' => 0
+            ],
+        ];
+
+        foreach ($tax[$province] as $abbr => $value) {
+            if ($abbr === array_key_first($tax[$province])) {
+                $tax[$province]['taxes'] = 0;
+            }
+
+            $total_tax = $amount / 100 * $value;
+            $total_tax = number_format(round($total_tax, 2), 2);
+
+            $tax[$province][$abbr] = $total_tax;
+
+            if ($abbr !== array_key_last($tax[$province])) {
+                $tax[$province]['taxes'] += $total_tax;
+            }
+        }
+
+        $tax[$province]['total']  = number_format(round($amount + $tax[$province]['taxes'], 2), 2);
+        $tax[$province]['amount'] = number_format(round($amount, 2), 2);
+        $tax[$province]['taxes']  = number_format(round($tax[$province]['taxes'], 2), 2);
+
+        return $tax[$province];
     }
 
 }
