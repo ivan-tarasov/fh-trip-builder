@@ -8,7 +8,7 @@
 
   <div class="row">
     <div class="col-md-6 offset-md-6">
-      <img src="/images/software-tests.png" class="img-fluid" />
+      <img src="/frontend/images/software-tests.png" class="img-fluid" />
     </div>
   </div>
 

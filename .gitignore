@@ -1,6 +1,18 @@
-# git
+# Git folder
 .git
-.idea
+
+# Env file
+.env
+
+# PHPStorm project configurations
+.idea/
+
+# config for vscode project
+.eslintrc.json
+.vscode/*
+
+# Composer controlled vendor directory
+/vendor/
 
 # Log files
 *.log

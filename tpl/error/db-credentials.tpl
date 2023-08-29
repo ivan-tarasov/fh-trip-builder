@@ -7,5 +7,5 @@
   Please check <span class="strong">MySQL credentials section</span> in config
   file and correct it.
 </p>
-<p class="output img"><img src="/images/db-credentials.png" /></p>
+<p class="output img"><img src="/frontend/images/db-credentials.png" /></p>
 <p class="output">Good luck.</p>

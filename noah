@@ -1,0 +1,90 @@
+#!/usr/bin/env php
+<?php
+/*
+|--------------------------------------------------------------------------
+| Noah Commander
+|--------------------------------------------------------------------------
+*/
+
+require_once 'vendor/autoload.php';
+
+use Symfony\Component\Console\Application;
+
+use TripBuilder\Noah\Db\Install as DatabaseInstall;
+use TripBuilder\Noah\Db\Clear as DatabaseClear;
+use TripBuilder\Noah\Flights\Generate as GenerateFlights;
+use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
+
+use TripBuilder\Noah\Grab\Suppliers as GrabSuppliers;
+
+try {
+    /*
+    |--------------------------------------------------------------------------
+    | Application instance
+    |--------------------------------------------------------------------------
+    */
+
+    $application = new Application();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Install Database
+    |--------------------------------------------------------------------------
+    |
+    | Adding tables from config files in `config/noah/db/tables` to database
+    | and seeding tables with data from config files in `config/noah/db/seeders`
+    |
+    */
+
+    $application->add(new DatabaseInstall());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Clear DB
+    |--------------------------------------------------------------------------
+    |
+    | Purge all data from existing tables in database.
+    |
+    */
+
+    $application->add(new DatabaseClear());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generate flights
+    |--------------------------------------------------------------------------
+    |
+    | Generating flights data using existing airports and airlines data,
+    | calculating duration between airports, flight time, arrival date and
+    | time, base price, taxes and rating. All generated data writing to
+    | `flights` table in database.
+    |
+    */
+
+    $application->add(new GenerateFlights());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cleaning flights
+    |--------------------------------------------------------------------------
+    |
+    | Deleting old flights data from `flights` table in database.
+    | All flights older then current date will be deleted.
+    |
+    */
+
+    $application->add(new CleaningFlights());
+
+    // FIXME: for image grabbing
+    // $application->add(new GrabSuppliers());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Run application
+    |--------------------------------------------------------------------------
+    */
+
+    $application->run();
+} catch (Exception $e) {
+    // Do nothing
+}

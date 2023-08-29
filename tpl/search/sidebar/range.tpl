@@ -1,7 +1,7 @@
 <script>
 $( document ).ready(function() {
-  var clock_range = [%CLOCK_RANGE%];
-  var range = ['%RANGE_FROM_DEPARTING%', '%RANGE_TO_DEPARTING%', '%RANGE_FROM_RETURNING%', '%RANGE_TO_RETURNING%'];
+  var clock_range = [{{ clock_range }}];
+  var range = ['{{ range_depart_from }}', '{{ range_depart_to }}', '{{ range_return_from }}', '{{ range_return_to }}'];
 
   $("#time_range_departure").ionRangeSlider({
     skin: "round",
