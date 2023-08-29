@@ -1,5 +1,5 @@
 <!-- Booking ID and date created -->
-<h3 class="justify-content-between align-items-center fs-6 %ROUNDTRIP_HIDE_ID%">
+<h3 class="justify-content-between align-items-center fs-6 pt-3">
     <span class="text-muted"><i class="fas fa-hashtag pr-1"></i>{{ booking_id }}</span>
 </h3>
 <!-- End / Booking ID and date created -->
@@ -8,7 +8,7 @@
     <!-- Airline logo -->
     <div class="align-items-start">
         <button type="button" class="btn btn-link px-0 me-3 mt-1" data-toggle="tooltip" data-placement="top" title="%AIRLINE_TITLE%">
-            <img src="%AIRLINE_LOGO%" class="rounded-circle" style="max-height: 48px;"/>
+            <img src="{{ airline_logo_url }}" class="rounded-circle" style="max-height: 48px;" />
         </button>
     </div>
     <!-- End / Airline logo -->

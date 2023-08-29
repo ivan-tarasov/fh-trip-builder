@@ -3,7 +3,7 @@
     <!-- Airline logo -->
 	<div class="align-items-start">
         <button type="button" class="btn btn-link px-0 me-3 mt-1" data-toggle="tooltip" data-placement="top" title="%AIRLINE_TITLE%">
-            <img src="%AIRLINE_LOGO%" class="rounded-circle" style="max-height: 48px;"/>
+            <img src="{{ airline_logo_url }}" class="rounded-circle" style="max-height: 48px;"/>
         </button>
 	</div>
     <!-- End / Airline logo -->
