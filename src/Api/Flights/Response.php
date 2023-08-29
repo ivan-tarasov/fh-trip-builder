@@ -8,51 +8,52 @@ use TripBuilder\Debug\dBug;
 
 class Response extends AbstractApi
 {
-    const PER_PAGE_LIMIT           = 10;
+    const PER_PAGE_LIMIT                = 10;
 
-    const DATA_PAGE                = 'page',
-          DATA_SORT                = 'sort',
-          DATA_TRIPTYPE            = 'trip_type',
-          DATA_DEPART              = 'from',
-          DATA_ARRIVE              = 'to',
-          DATA_DEPART_DATE         = 'depart_date',
-          DATA_RETURN_DATE         = 'return_date',
-          DATA_ADULT_COUNT         = 'adult_count',
-          DATA_CHILD_COUNT         = 'child_count',
-          DATA_FLIGHT_ID           = 'id';
+    const DATA_PAGE                     = 'page',
+          DATA_SORT                     = 'sort',
+          DATA_TRIPTYPE                 = 'trip_type',
+          DATA_DEPART                   = 'from',
+          DATA_ARRIVE                   = 'to',
+          DATA_DEPART_DATE              = 'depart_date',
+          DATA_RETURN_DATE              = 'return_date',
+          DATA_ADULT_COUNT              = 'adult_count',
+          DATA_CHILD_COUNT              = 'child_count',
+          DATA_FLIGHT_ID                = 'id';
 
-    const TRIPTYPE_ROUNDTRIP       = 'roundtrip',
-          TRIPTYPE_ONEWAY          = 'oneway';
+    const TRIPTYPE_ROUNDTRIP            = 'roundtrip',
+          TRIPTYPE_ONEWAY               = 'oneway';
 
-    const RESPONSE_FLIGHT_ID       = 'id',
-          RESPONSE_CURRENT_PAGE    = 'current_page',
-          RESPONSE_TOTAL_PAGES     = 'total_pages',
-          RESPONSE_PER_PAGE        = 'per_page',
-          RESPONSE_TOTAL_FLIGHTS   = 'total_flights',
-          RESPONSE_FLIGHTS         = 'flights',
-          RESPONSE_OUTBOUND        = 'outbound',
-          RESPONSE_RETURNING       = 'returning',
-          RESPONSE_DEPART          = 'depart',
-          RESPONSE_ARRIVE          = 'arrive',
-          RESPONSE_FLIGHT_NUMBER   = 'number',
-          RESPONSE_AIRPORT_CODE    = 'airport_code',
-          RESPONSE_AIRPORT_NAME    = 'airport_name',
-          RESPONSE_AIRPORT_COUNTRY = 'airport_country',
-          RESPONSE_AIRPORT_CITY    = 'airport_city',
-          RESPONSE_DATE_TIME       = 'date_time',
-          RESPONSE_FLIGHT_CARRIER  = 'carrier',
-          RESPONSE_CABIN_CODE      = 'cabin_code',
-          RESPONSE_DISTANCE        = 'distance',
-          RESPONSE_DURATION        = 'duration',
-          RESPONSE_PRICE_BASE      = 'price_base',
-          RESPONSE_PRICE_TAX       = 'price_tax',
-          RESPONSE_RATING          = 'rating';
+    const RESPONSE_FLIGHT_ID            = 'id',
+          RESPONSE_CURRENT_PAGE         = 'current_page',
+          RESPONSE_TOTAL_PAGES          = 'total_pages',
+          RESPONSE_PER_PAGE             = 'per_page',
+          RESPONSE_TOTAL_FLIGHTS        = 'total_flights',
+          RESPONSE_FLIGHTS              = 'flights',
+          RESPONSE_OUTBOUND             = 'outbound',
+          RESPONSE_RETURNING            = 'returning',
+          RESPONSE_DEPART               = 'depart',
+          RESPONSE_ARRIVE               = 'arrive',
+          RESPONSE_FLIGHT_NUMBER        = 'number',
+          RESPONSE_AIRPORT_CODE         = 'airport_code',
+          RESPONSE_AIRPORT_NAME         = 'airport_name',
+          RESPONSE_AIRPORT_COUNTRY      = 'airport_country',
+          RESPONSE_AIRPORT_CITY         = 'airport_city',
+          RESPONSE_DATE_TIME            = 'date_time',
+          RESPONSE_FLIGHT_CARRIER_CODE  = 'carrier',
+          RESPONSE_FLIGHT_CARRIER_NAME  = 'carrier_name',
+          RESPONSE_CABIN_CODE           = 'cabin_code',
+          RESPONSE_DISTANCE             = 'distance',
+          RESPONSE_DURATION             = 'duration',
+          RESPONSE_PRICE_BASE           = 'price_base',
+          RESPONSE_PRICE_TAX            = 'price_tax',
+          RESPONSE_RATING               = 'rating';
 
-    const SORT_METHOD_PRICE        = 'price',
-          SORT_METHOD_DURATION     = 'duration',
-          SORT_METHOD_DEPART       = 'depart_time',
-          SORT_METHOD_ARRIVE       = 'arrive_time',
-          SORT_METHOD_RATING       = 'rating';
+    const SORT_METHOD_PRICE             = 'price',
+          SORT_METHOD_DURATION          = 'duration',
+          SORT_METHOD_DEPART            = 'depart_time',
+          SORT_METHOD_ARRIVE            = 'arrive_time',
+          SORT_METHOD_RATING            = 'rating';
 
     const SORT_ONEWAY = [
         self::SORT_METHOD_PRICE    => '(flight_price_base + flight_price_tax)',
@@ -228,7 +229,8 @@ class Response extends AbstractApi
                 self::RESPONSE_PRICE_TAX   => $flight['flight_price_tax'],
                 self::RESPONSE_OUTBOUND => [
                     self::RESPONSE_FLIGHT_ID           => $flight['flight_id'],
-                    self::RESPONSE_FLIGHT_CARRIER      => $flight['flight_airline_code'],
+                    self::RESPONSE_FLIGHT_CARRIER_CODE => $flight['flight_airline_code'],
+                    self::RESPONSE_FLIGHT_CARRIER_NAME => $flight['flight_airline_title'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['flight_airline_code'] . $flight['flight_number'],
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE    => $flight['departure_airport_code'],
@@ -344,7 +346,8 @@ class Response extends AbstractApi
                 self::RESPONSE_PRICE_TAX  => $price_tax,
                 self::RESPONSE_OUTBOUND => [
                     self::RESPONSE_FLIGHT_ID           => $flight['outbound_flight_id'],
-                    self::RESPONSE_FLIGHT_CARRIER      => $flight['outbound_airline_code'],
+                    self::RESPONSE_FLIGHT_CARRIER_CODE => $flight['outbound_airline_code'],
+                    self::RESPONSE_FLIGHT_CARRIER_NAME => $flight['outbound_airline_title'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['outbound_airline_code'] . $flight['outbound_flight_number'],
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE    => $flight['outbound_departure_airport_code'],
@@ -367,7 +370,8 @@ class Response extends AbstractApi
                 ],
                 self::RESPONSE_RETURNING => [
                     self::RESPONSE_FLIGHT_ID           => $flight['return_flight_id'],
-                    self::RESPONSE_FLIGHT_CARRIER      => $flight['return_airline_code'],
+                    self::RESPONSE_FLIGHT_CARRIER_CODE => $flight['return_airline_code'],
+                    self::RESPONSE_FLIGHT_CARRIER_NAME => $flight['return_airline_title'],
                     self::RESPONSE_FLIGHT_NUMBER       => $flight['return_airline_code'] . $flight['return_flight_number'],
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE    => $flight['return_departure_airport_code'],

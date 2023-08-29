@@ -49,6 +49,7 @@ class MyController extends AbstractController
                 ->set()
                 ->setPlaceholder('booking_id', Helper::bookingIdToString($booking['id']))
                 ->setPlaceholder('booking_created', date('Y-m-d H:i', strtotime($booking['created'])))
+                ->setPlaceholder('airline_name', $outbound->carrier_name)
                 ->setPlaceholder('airline_logo_url', AmazonS3::getUrl(sprintf(
                     '%s/suppliers/%s.png',
                     Config::get('site.static.endpoint.images'),
@@ -69,6 +70,7 @@ class MyController extends AbstractController
                     ->setPath('my/bookings')
                     ->setFilename('flight-return')
                     ->set()
+                    ->setPlaceholder('airline_name', $return->carrier_name)
                     ->setPlaceholder('airline_logo_url', AmazonS3::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
