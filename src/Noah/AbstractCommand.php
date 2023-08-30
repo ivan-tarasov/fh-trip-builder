@@ -45,6 +45,9 @@ abstract class AbstractCommand extends Command
     const FORMAT_OUTPUT_LINE_LENGTH   = 60,
           FORMAT_OUTPUT_DEFAULT_COLOR = 'default';
 
+    const CONFIG_DIR_TABLES  = 'noah/db/tables',
+          CONFIG_DIR_SEEDERS = 'noah/db/seeders';
+
     protected $input;
 
     protected $output;

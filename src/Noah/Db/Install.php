@@ -22,9 +22,6 @@ class Install extends AbstractCommand
      */
     protected static $defaultDescription = 'Installing necessary database tables and seeding it with data';
 
-    const CONFIG_DIR_TABLES = 'noah/db/tables';
-    const CONFIG_DIR_SEEDERS = 'noah/db/seeders';
-
     const MESSAGE_CREATING_TABLE = 'Creating `%s` table',
           MESSAGE_SEEDING_TABLE  = 'Seeding `%s` table';
 
