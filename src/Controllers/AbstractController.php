@@ -2,6 +2,7 @@
 
 namespace TripBuilder\Controllers;
 
+use TripBuilder\AmazonS3;
 use TripBuilder\Config;
 use TripBuilder\DataBase\MySql;
 use TripBuilder\Debug\dBug;
@@ -20,7 +21,7 @@ class AbstractController
     {
         $this->dbConnect();
 
-        $this->staticUrl = Config::get('site.static.url');
+        $this->setStaticUrl(AmazonS3::getUrl());
     }
 
     /**
@@ -46,11 +47,11 @@ class AbstractController
         foreach (Config::get('site.main-menu') as $link => $params) {
             if ($params['enabled']) {
                 $templater
-                    ->setPlaceholder('MENU_ITEM_LINK',   $link)
-                    ->setPlaceholder('CURRENT_PAGE',     Routs::getCurrentPage() == rtrim($link, '/') ? 'white' : 'secondary')
-                    ->setPlaceholder('MENU_ITEM_TEXT',   $params['text'])
-                    ->setPlaceholder('MENU_ITEM_ICON',   $params['icon'])
-                    ->setPlaceholder('MENU_ITEM_SPACER', $params['spacer'] ?? 2)
+                    ->setPlaceholder('menu_item_url',        $link)
+                    ->setPlaceholder('menu_item_spacer',     $params['spacer'] ?? 2)
+                    ->setPlaceholder('menu_item_text_style', Routs::getCurrentPage() == rtrim($link, '/') ? 'white' : 'secondary')
+                    ->setPlaceholder('menu_item_icon',       $params['icon'])
+                    ->setPlaceholder('menu_item_text',       $params['text'])
                     ->save();
             }
         }
@@ -192,6 +193,11 @@ class AbstractController
         Timer::stop();
 
         return Timer::getExecutionTime();
+    }
+
+    private function setStaticUrl($url): void
+    {
+        $this->staticUrl = $url;
     }
 
 }
