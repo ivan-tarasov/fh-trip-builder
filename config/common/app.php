@@ -17,6 +17,8 @@ return [
     | Software version
     |--------------------------------------------------------------------------
     |
+    | DEPRECATED: now application using git tag
+    |
     | [major].[minor].[patch]
     |
     | major – can be incremented if there are major changes in software, like

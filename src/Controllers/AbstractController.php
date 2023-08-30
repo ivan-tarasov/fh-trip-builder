@@ -105,7 +105,7 @@ class AbstractController
         }
         $html_socialMenu = $templater->render();
 
-        // Building social links menu
+        // Building git menu
         foreach (Config::get('site.footer-git') as $title => $url) {
             $templater
                 ->setFilename('git-menu-item')->set()
@@ -122,10 +122,8 @@ class AbstractController
             ->setFilename('app-version')->set()
             ->setPlaceholder('item-url', sprintf('%s/commit/%s', Helper::getGitRepo(), $gitInfo['commit_hash']))
             ->setPlaceholder('item-title', sprintf(
-                '%s.%s.%s-%s-%s',
-                Config::get('app.version.major'),
-                Config::get('app.version.minor'),
-                Config::get('app.version.patch'),
+                '%s-%s-%s',
+                $gitInfo['tag'],
                 $gitInfo['branch'],
                 $gitInfo['commit_hash']
             ))
