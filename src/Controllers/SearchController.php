@@ -276,7 +276,11 @@ class SearchController
                     ->setPath('search')
                     ->setFilename('no-result')
                     ->set()
-                    ->setPlaceholder('static_img_dir', sprintf('%s/%s', Config::get('site.static.url'), Config::get('site.static.endpoint.images')))
+                    ->setPlaceholder('not_found_img', AmazonS3::getUrl(sprintf(
+                        '%s/%s',
+                        Config::get('site.static.endpoint.images'),
+                        'no-results.png'
+                    )))
                     ->setPlaceholder('return_date', !empty($this->get[self::GET_RETURN]) ? ' to ' . $this->get[self::GET_RETURN] : null)
                     ->save()
                     ->render();

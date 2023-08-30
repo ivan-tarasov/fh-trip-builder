@@ -11,7 +11,8 @@
             <p class="h5 pb-5">Aww yeah, seems we are not found any flight for this direction. Try to change filter or
                 destination. And, sure, you can always <a href="#">subscribe</a> to this direction to get alert for new
                 flight.</p>
-            <img src="{{ static_img_dir }}/no-results.png" alt="No results found" title="No results found" class="img-fluid" />
+            <!--img src="{{ static_img_dir }}/no-results.png" alt="No results found" title="No results found" class="img-fluid" /-->
+            <img src="{{ not_found_img }}" alt="No results found" title="No results found" class="img-fluid" />
         </div>
     </div>
 </div>
