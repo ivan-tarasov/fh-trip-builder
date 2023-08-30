@@ -7,7 +7,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use TripBuilder\Config;
 use TripBuilder\Noah\AbstractCommand;
-use TripBuilder\Noah\CommandException;
 
 #[AsCommand(
     name:        'db:clear',

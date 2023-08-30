@@ -2,26 +2,20 @@
 
 namespace TripBuilder\Noah\Db;
 
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Config;
 
+#[AsCommand(
+    name:        'app:install',
+    description: 'Installing necessary database tables and seeding it with data.',
+    aliases:     ['install', 'setup', 'app:setup'],
+    hidden:      false
+)]
+
 class Install extends AbstractCommand
 {
-    /**
-     * The name of the command.
-     *
-     * @var string
-     */
-    protected static $defaultName = 'install';
-
-    /**
-     * The command description shown when running `list` command.
-     *
-     * @var string
-     */
-    protected static $defaultDescription = 'Installing necessary database tables and seeding it with data';
-
     const MESSAGE_CREATING_TABLE = 'Creating `%s` table',
           MESSAGE_SEEDING_TABLE  = 'Seeding `%s` table';
 
