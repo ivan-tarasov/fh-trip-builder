@@ -123,7 +123,9 @@ abstract class AbstractCommand extends Command
         $dotenv->load();
 
         $this->db = new \MysqliDb(
-            '127.0.0.1',
+            // TODO: for local tests use 127.0.0.1
+            // '127.0.0.1',
+            $_ENV['DB_HOST'],
             $_ENV['DB_USERNAME'],
             $_ENV['DB_PASSWORD'],
             $_ENV['DB_DATABASE'],
@@ -172,6 +174,7 @@ abstract class AbstractCommand extends Command
      * @param string $text
      * @param string $status
      * @param string $color
+     * @param bool   $newline
      * @return void
      */
     protected function formatOutput(
