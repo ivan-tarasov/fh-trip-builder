@@ -6,12 +6,15 @@ use TripBuilder\Debug\dBug;
 
 class AmazonS3
 {
+    /**
+     * @param string|null $url
+     * @return string
+     */
     public static function getUrl(?string $url = null): string
     {
         return sprintf(
-            '//%s.s3-website.%s.amazonaws.com%s',
-            $_ENV['AWS_BUCKET'],
-            $_ENV['AWS_REGION'],
+            '//%s%s',
+            $_ENV['AWS_CLOUDFRONT'],
             !empty($url)
                 ? '/' . $url
                 : null

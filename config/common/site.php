@@ -12,7 +12,7 @@ return [
     */
 
     'static' => [
-        'url' => '//static.tarasov.ca/trip-builder',
+        'url' => '//d3i7jsp0grgmab.cloudfront.net',
         'endpoint' => [
             'images' => 'images',
             'css'    => 'css',
