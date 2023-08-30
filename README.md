@@ -14,12 +14,6 @@ The Air Trips Builder is an application designed to help users search for one-wa
 
 PHP Coding Assignment for the Backend PHP Developer role at [FlightHub][flighthub-url].
 
-## Features
-- Search one-way and round-trip flights
-- Access to a database of airports, airlines, and countries
-- Flight ordering functionality
-- Personalized user pages to manage ordered flights
-
 ## Built With
 
 [![PHP version][php-logo]][php-url]
@@ -27,6 +21,38 @@ PHP Coding Assignment for the Backend PHP Developer role at [FlightHub][flighthu
 [![Bootstrap][bootstrap-logo]][bootstrap-url]
 [![JQuery][jquery-logo]][jquery-url]
 [![FontAwesome][fontawesome-logo]][fontawesome-url]
+
+## Features
+
+### Flight Search
+Effortlessly search for both one-way and round-trip flights with ease.
+
+### Robust REST API
+Leverage the capabilities of built-in REST API, offered flexibility and convenience in accessing data.
+
+### Autofill Search Form
+Simplify search experience with autofill functionality, which populates search forms with relevant airport data.
+
+### Flexible Flight Sorting
+Sorting search results according to preferences, ensuring to find the ideal flights for any journey.
+
+### Tailored Departure Time
+Customized flights search by specifying preferred departure time, ensuring a travel schedule that suits.
+
+### Airline Filtering
+Efficiently narrowed down search results by filtering airlines, allowing to focus on preferred carriers.
+
+### Paginated Search Results
+Navigate search results effortlessly with paginated display, enhancing readability and user experience.
+
+### Seamless Flight Ordering
+Streamline flight booking process with intuitive flight ordering functionality.
+
+### Personalized User Pages
+Personalized user pages that shows all information about bookings and empower to efficiently manage ordered flights.
+
+### Comprehensive Database
+A comprehensive database containing information about airports, airlines, and countries.
 
 ## Installation
 
@@ -108,17 +134,18 @@ php noah install
    ```bash
    php noah db:clear
    ```
-   or
-   ```bash
-   php noah db:clear 10000
-   ```
-   Tris will generate and add 10,000 flights to database.
 
 #### Flights Management
 1. `flights:add`: Generate flights and add them to the database.
    ```bash
    php noah flights:add
    ```
+   or
+   ```bash
+   php noah flights:add 10000
+   ```
+   Tris will generate and add 10,000 flights to database.
+
 
 2. `flights:cleaning`: cleaning flights
    ```bash
