@@ -65,19 +65,13 @@ class SearchController
                 $_SESSION[self::POST_SORT] = 'price';
             }
 
-//            new dBug([
-//                $this->post,
-//                $_SESSION,
-//            ]); die();
-
             // If one of important params is empty or not provided – redirect to index page
             if (empty($this->get[self::GET_TRIPTYPE])
                 || empty($this->get[self::GET_FROM])
                 || empty($this->get[self::GET_TO])
                 || empty($this->get[self::GET_DEPART])
             ) {
-                // TODO: uncomment after all will be done
-                // echo '<script>window.location.replace("/");</script>';
+                echo '<script>window.location.replace("/");</script>';
             }
 
 
