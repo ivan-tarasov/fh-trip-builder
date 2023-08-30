@@ -2,6 +2,7 @@
 
 namespace TripBuilder\Noah\Flights;
 
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\ProgressIndicator;
@@ -11,22 +12,15 @@ use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
+#[AsCommand(
+    name:        'flights:add',
+    description: 'Generate flights to database.',
+    aliases:     ['flights:generate'],
+    hidden:      false
+)]
+
 class Generate extends AbstractCommand
 {
-    /**
-     * The name of the command.
-     *
-     * @var string
-     */
-    protected static $defaultName = 'flights:add';
-
-    /**
-     * The command description shown when running `list` command.
-     *
-     * @var string
-     */
-    protected static $defaultDescription = 'Generate flights to database';
-
     const FLIGHTS_COUNT    = 10000;
     const NUMBERS_POOL     = 9999;
     const PRICE_MULTIPLIER = 8;
