@@ -231,7 +231,7 @@ class Response extends AbstractApi
                     self::RESPONSE_FLIGHT_ID           => $flight['flight_id'],
                     self::RESPONSE_FLIGHT_CARRIER_CODE => $flight['flight_airline_code'],
                     self::RESPONSE_FLIGHT_CARRIER_NAME => $flight['flight_airline_title'],
-                    self::RESPONSE_FLIGHT_NUMBER       => $flight['flight_airline_code'] . $flight['flight_number'],
+                    self::RESPONSE_FLIGHT_NUMBER       => sprintf('%s-%d', $flight['flight_airline_code'], $flight['flight_number']),
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE    => $flight['departure_airport_code'],
                         self::RESPONSE_AIRPORT_NAME    => $flight['departure_airport_title'],
@@ -348,7 +348,7 @@ class Response extends AbstractApi
                     self::RESPONSE_FLIGHT_ID           => $flight['outbound_flight_id'],
                     self::RESPONSE_FLIGHT_CARRIER_CODE => $flight['outbound_airline_code'],
                     self::RESPONSE_FLIGHT_CARRIER_NAME => $flight['outbound_airline_title'],
-                    self::RESPONSE_FLIGHT_NUMBER       => $flight['outbound_airline_code'] . $flight['outbound_flight_number'],
+                    self::RESPONSE_FLIGHT_NUMBER       => sprintf('%s-%d', $flight['outbound_airline_code'], $flight['outbound_flight_number']),
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE    => $flight['outbound_departure_airport_code'],
                         self::RESPONSE_AIRPORT_NAME    => $flight['outbound_departure_airport_title'],
@@ -372,7 +372,7 @@ class Response extends AbstractApi
                     self::RESPONSE_FLIGHT_ID           => $flight['return_flight_id'],
                     self::RESPONSE_FLIGHT_CARRIER_CODE => $flight['return_airline_code'],
                     self::RESPONSE_FLIGHT_CARRIER_NAME => $flight['return_airline_title'],
-                    self::RESPONSE_FLIGHT_NUMBER       => $flight['return_airline_code'] . $flight['return_flight_number'],
+                    self::RESPONSE_FLIGHT_NUMBER       => sprintf('%s-%d', $flight['return_airline_code'], $flight['return_flight_number']),
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE    => $flight['return_departure_airport_code'],
                         self::RESPONSE_AIRPORT_NAME    => $flight['return_departure_airport_title'],

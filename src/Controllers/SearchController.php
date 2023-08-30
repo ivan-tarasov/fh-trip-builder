@@ -368,7 +368,11 @@ class SearchController
                     continue;
                 }
 
-                $carriers[] = $ticket->carrier;
+                $carriers[] = [
+                    'code'   => $ticket->carrier,
+                    'number' => $ticket->number,
+                    'name'   => $ticket->carrier_name,
+                ];
 
                 $this->templater
                     ->setPath('search/cards')
@@ -429,12 +433,12 @@ class SearchController
             ->setPath('search/cards')
             ->setFilename('airline-logo')
             ->set()
-            ->setPlaceholder('flight_number', null) // FIXME: real flight number
-            ->setPlaceholder('airline_title', null) // FIXME: real airline title
+            ->setPlaceholder('flight_number', $carrier['number'])
+            ->setPlaceholder('airline_title', $carrier['name'])
             ->setPlaceholder('logo_url', AmazonS3::getUrl(sprintf(
                 '%s/suppliers/%s.png',
                 Config::get('site.static.endpoint.images'),
-                $carrier
+                $carrier['code']
             )))
             ->save()
             ->render();
