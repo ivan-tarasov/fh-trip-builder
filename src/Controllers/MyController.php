@@ -25,6 +25,7 @@ class MyController extends AbstractController
     public function bookings(): void
     {
         $this->db->where('session_id', session_id());
+        $this->db->orderBy('departure_time', 'asc');
         $bookings = $this->db->get('bookings');
 
         $templater = new Templater();
