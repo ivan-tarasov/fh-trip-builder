@@ -8,7 +8,7 @@
                 <div class="card-title fs-2">
               <span data-toggle="tooltip"
                     data-placement="top"
-                    title="The final price consists of the ticket price of $%FLIGHT_PRICE% plus taxes: $%FLIGHT_PRICE_GST% GST and $%FLIGHT_PRICE_QST% QST"
+                    title="The final price consists of the ticket base price of ${{ flight_price_base }} plus taxes: ${{ flight_price_tax }}. Also may applied local taxes: GST ${{ flight_price_gst }}, QST ${{ flight_price_qst }}"
               >
                 ${{ flight_price_total }}
               </span>
