@@ -1,5 +1,5 @@
 <li>
-    <a href="{{MENU_ITEM_LINK}}" class="btn btn-dark nav-link px-2 me-{{MENU_ITEM_SPACER}} text-{{CURRENT_PAGE}}">
-        <i class="{{MENU_ITEM_ICON}} fa-lg me-2"></i>{{MENU_ITEM_TEXT}}
+    <a href="{{ menu_item_url }}" class="btn btn-dark nav-link px-2 me-{{ menu_item_spacer }} text-{{ menu_item_text_style }}">
+        <i class="{{ menu_item_icon }} fa-lg me-2"></i>{{ menu_item_text }}
     </a>
 </li>

@@ -73,11 +73,7 @@
 <script src="{{ app_vendor_folder }}/autocomplete/bootstrap-autocomplete.js"></script>
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/js/ion.rangeSlider.min.js"></script>
-<script src="//use.fontawesome.com/releases/v6.1.1/js/all.js" type="text/javascript" defer
-        integrity="sha384-xBXmu0dk1bEoiwd71wOonQLyH+VpgR1XcDH3rtxrLww5ajNTuMvBdL5SOiFZnNdp"
-        crossorigin="anonymous"></script>
-
-<!-- Main JS-->
+<script src="//use.fontawesome.com/releases/v6.1.1/js/all.js" type="text/javascript" defer integrity="sha384-xBXmu0dk1bEoiwd71wOonQLyH+VpgR1XcDH3rtxrLww5ajNTuMvBdL5SOiFZnNdp" crossorigin="anonymous"></script>
 <script src="{{ app_js_folder }}/global.js"></script>
 
 </body>
