@@ -260,6 +260,8 @@ class SearchController
                     ->setPath('search/cards')
                     ->setFilename('view')
                     ->set()
+                    ->setPlaceholder('depart_city', $this->data->depart)
+                    ->setPlaceholder('arrive_city', $this->data->arrive)
                     ->setPlaceholder('total_flights', Helper::plural($total_flights, 'flight', true))
                     ->setPlaceholder('flight_cards', $flight_cards)
                     ->setPlaceholder('pagination_bar', $pagination_bar)
