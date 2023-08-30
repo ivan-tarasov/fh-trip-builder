@@ -29,7 +29,7 @@ return [
     'version' => [
         'major' => 2,
         'minor' => 0,
-        'patch' => 2,
+        'patch' => 7,
     ],
 
     /*
