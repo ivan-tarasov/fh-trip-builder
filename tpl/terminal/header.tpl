@@ -2,9 +2,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="Trip Builder – FlightHub PHP Coding Assignment">
+  <meta name="description" content="Trip Builder – FlightHub PHP Coding Assessment">
   <meta name="author" content="Ivan Tarasov <ivan@tarasov.ca>" />
-  <meta name="keywords" content="Trip Builder, FlightHub, assignment, php">
+  <meta name="keywords" content="Trip Builder, FlightHub, assessment, php">
   <title>Terminal – Trip Builder</title>
   <link href="//cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
   <link href="//use.fontawesome.com/releases/v6.1.1/css/all.css" rel="stylesheet" type='text/css' integrity="sha384-/frq1SRXYH/bSyou/HUp/hib7RVN1TawQYja658FEOodR/FQBKVqT9Ol+Oz3Olq5" crossorigin="anonymous" />

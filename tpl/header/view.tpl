@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="{{ app-name }} – {{ app-meta-description }}" />
-    <meta name="keywords" content="{{ app-name }}, {{ app-meta-keywords }}" />
-    <meta name="author" content="{{ app-meta-author-name }} <{{ app-meta-author-email }}>"/>
+    <meta name="description" content="{{ app_name }} – {{ app_meta_description }}" />
+    <meta name="keywords" content="{{ app_name }}, {{ app_meta_keywords }}" />
+    <meta name="author" content="{{ app_meta_author_name }} <{{ app_meta_author_email }}>"/>
 
-    <title>{{ page-title}} - {{ app-name }}</title>
+    <title>{{ page_title}} - {{ app_name }}</title>
 
     <link href="{{ app_vendor_folder }}/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all" />
     <link href="{{ app_vendor_folder }}/datepicker/daterangepicker.css" rel="stylesheet" media="all" />
@@ -18,7 +18,7 @@
 
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
 
-    <!-- {{ metric-counters }} -->
+    {{ metric_counters }}
 </head>
 
 <body class="bg-light d-flex flex-column h-100">
@@ -28,12 +28,12 @@
             <!-- Header logo -->
             <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none me-5">
                 <i class="fas fa-2x fa-plane-departure pe-3"></i>
-                <strong class="lead">{{ app-name }}</strong>
+                <strong class="lead">{{ app_name }}</strong>
             </a>
             <!-- End / Header logo -->
             <!-- Main menu items -->
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-                {{ menu-items }}
+                {{ menu_items }}
             </ul>
             <!-- End / Main menu items -->
             <!-- Right menu items -->

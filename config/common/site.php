@@ -105,7 +105,7 @@ return [
             'ico' => 'facebook'
         ],
         'Instagram' => [
-            'url' => 'https://instagram.com/karapuzoff',
+            'url' => 'https://instagram.com/tarasov.ca',
             'ico' => 'instagram'
         ],
         'Twitter' => [

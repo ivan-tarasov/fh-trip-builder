@@ -46,7 +46,7 @@ return [
         [
             'name' => 'phone',
             'type' => 'varchar',
-            'length' => 16,
+            'length' => 32,
             'default' => false,
             'nullable' => true,
             'auto_inc' => false,

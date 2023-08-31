@@ -163,7 +163,7 @@ return [
         ['6B', 'TUI fly Nordic', null, '1-800-538-2583', 0, 0],
         ['6C', 'Connect Linhas Aereas', null, null, 0, 0],
         ['6D', 'Pelita Air', null, null, 0, 0],
-        ['6E', 'IndiGo Airlines', null, null, 0, 1],
+        ['6E', 'IndiGo Airlines', 'https://www.goindigo.in/', '+91 (0)124 435 2500', 0, 1],
         ['6F', 'Primera Air Nordic', null, null, 0, 0],
         ['6G', 'Air Wales', null, null, 0, 0],
         ['6H', 'Israir', null, null, 0, 0],
