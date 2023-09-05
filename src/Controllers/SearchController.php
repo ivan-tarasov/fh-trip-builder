@@ -6,14 +6,16 @@ use GuzzleHttp\Exception\GuzzleException;
 use TripBuilder\AmazonS3;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
+use TripBuilder\DataBase\MySql;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
 
-class SearchController
+class SearchController extends AbstractController
 {
-    const GET_FROM        = 'from',
+    const GET_HASH        = 'hash',
+          GET_FROM        = 'from',
           GET_TO          = 'to',
           GET_DEPART      = 'depart',
           GET_RETURN      = 'return',
@@ -27,7 +29,7 @@ class SearchController
 
     private array $get;
 
-    private array $post;
+    private ?array $post;
 
     private Templater $templater;
 
@@ -39,27 +41,34 @@ class SearchController
      */
     public function index(): void
     {
+        $this->templater = new Templater();
+
         try {
             // Handle GET data
             $this->setGet([
-                self::GET_FROM     => $_GET[Config::get('search.form.input.depart_place')] ?? null,
-                self::GET_TO       => $_GET[Config::get('search.form.input.arrive_place')] ?? null,
-                self::GET_DEPART   => $_GET[Config::get('search.form.input.depart_date')]  ?? null,
-                self::GET_RETURN   => $_GET[Config::get('search.form.input.return_date')]  ?? null,
-                self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')]     ?? null,
-                self::GET_CLASS    => $_GET[Config::get('search.form.input.class')]        ?? null,
-                self::GET_PAGE     => $_GET[Config::get('search.form.input.page')]         ?? 1,
+                self::GET_HASH     => $_GET[Config::get('search.form.input.hash')]        ?? null,
+                self::GET_FROM     => strtoupper($_GET[Config::get('search.form.input.depart_place')] ?? ''),
+                self::GET_TO       => strtoupper($_GET[Config::get('search.form.input.arrive_place')] ?? ''),
+                self::GET_DEPART   => $_GET[Config::get('search.form.input.depart_date')] ?? null,
+                self::GET_RETURN   => $_GET[Config::get('search.form.input.return_date')] ?? null,
+                self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')]    ?? null,
+                self::GET_CLASS    => $_GET[Config::get('search.form.input.class')]       ?? null,
+                self::GET_PAGE     => $_GET[Config::get('search.form.input.page')]        ?? 1,
             ]);
+
+            // Convert search hash to url and redirect
+            $this->checkHash();
 
             // Handle POST data
-            $this->setPost([
-                self::POST_SORT       => $_POST[self::POST_SORT]       ?? false,
-                self::POST_TIME_RANGE => $_POST[self::POST_TIME_RANGE] ?? false,
-                self::POST_AIRLINES   => $_POST[self::POST_AIRLINES]   ?? false,
-            ]);
+            $this->setPost($_POST
+                ? [
+                    self::POST_SORT       => $_POST[self::POST_SORT]       ?? false,
+                    self::POST_TIME_RANGE => $_POST[self::POST_TIME_RANGE] ?? false,
+                    self::POST_AIRLINES   => $_POST[self::POST_AIRLINES]   ?? false,
+                ] : null);
 
             // Handle SESSION data
-            if ($this->post[self::POST_SORT]) {
+            if ($this->post && $this->post[self::POST_SORT]) {
                 $_SESSION[self::POST_SORT] = $this->post[self::POST_SORT];
             } elseif (!isset($_SESSION[self::POST_SORT]) || !$this->get[self::GET_PAGE]) {
                 $_SESSION[self::POST_SORT] = 'price';
@@ -73,7 +82,6 @@ class SearchController
             ) {
                 echo '<script>window.location.replace("/");</script>';
             }
-
 
             $activetab[$this->get[self::GET_TRIPTYPE]] = Config::get('site.tab_active');
 
@@ -102,9 +110,10 @@ class SearchController
 
             $this->setData($flights_response->data);
 
-            $total_flights = $this->data->total_flights;
+            // Recording search stat
+            $this->searchStat();
 
-            $this->templater = new Templater();
+            $total_flights = $this->data->total_flights;
 
             /*
             |--------------------------------------------------------------------------
@@ -300,6 +309,79 @@ class SearchController
         } catch (\Exception $e) {
             echo "Error: " . $e->getMessage();
         }
+    }
+
+    /**
+     * @return void
+     * @throws \Exception
+     */
+    private function checkHash(): void
+    {
+        if ($this->get['hash']) {
+            $this->db->where(self::GET_HASH, $this->get['hash']);
+            $search = $this->db->getOne(MySql::TABLE_SEARCH);
+
+            $search_params = http_build_query([
+                self::GET_FROM     => $search[self::GET_FROM.'_code'],
+                self::GET_TO       => $search[self::GET_TO.'_code'],
+                self::GET_DEPART   => $search[self::GET_DEPART],
+                self::GET_RETURN   => $search[self::GET_RETURN],
+                self::GET_TRIPTYPE => $search[self::GET_TRIPTYPE],
+                self::GET_CLASS    => 'economy' // FIXME: we need real class here
+            ]);
+
+            echo $this->templater
+                ->setPath('search')
+                ->setFilename('redirect')
+                ->set()
+                ->setPlaceholder('image_url', AmazonS3::getUrl(sprintf(
+                    '%s/search_redirect.gif',
+                    Config::get('site.static.endpoint.images')
+                )))
+                ->setPlaceholder('search_params', $search_params)
+                ->save()
+                ->render();
+
+            die();
+        }
+    }
+
+    /**
+     * @return void
+     */
+    private function searchStat(): void
+    {
+        // Prevent too many counts from one user
+        if ($this->post || $this->get[self::GET_PAGE] != 1) {
+            return;
+        }
+
+        // Calculating search hash
+        $hash = md5(sprintf(
+            '%s:%s:%s:%s:%s',
+            $this->get[self::GET_FROM],
+            $this->get[self::GET_TO],
+            $this->get[self::GET_DEPART],
+            $this->get[self::GET_RETURN],
+            $this->get[self::GET_TRIPTYPE]
+        ));
+
+        // Insert or update search
+        $this->db->onDuplicate([
+            'search_count' => $this->db->inc(),
+            'last_search' => $this->db->now()
+        ]);
+
+        $this->db->insert(MySql::TABLE_SEARCH, [
+            self::GET_HASH           => $hash,
+            self::GET_FROM . '_code' => $this->get[self::GET_FROM],
+            self::GET_FROM . '_name' => trim(preg_replace('/\([^)]+\)/', '', $this->data->depart)),
+            self::GET_TO . '_code'   => $this->get[self::GET_TO],
+            self::GET_TO . '_name'   => trim(preg_replace('/\([^)]+\)/', '', $this->data->arrive)),
+            self::GET_DEPART         => $this->get[self::GET_DEPART],
+            self::GET_RETURN         => $this->get[self::GET_RETURN],
+            self::GET_TRIPTYPE       => $this->get[self::GET_TRIPTYPE],
+        ]);
     }
 
     /**
@@ -563,14 +645,21 @@ class SearchController
      */
     private function setGet($get): void
     {
+        if (!in_array($get[self::GET_TRIPTYPE], [
+            Config::get('search.triptype.roundtrip'),
+            Config::get('search.triptype.oneway'),
+        ])) {
+            $get[self::GET_TRIPTYPE] = Config::get('search.triptype.oneway');
+        }
+
         $this->get = $get;
     }
 
     /**
-     * @param $post
+     * @param array|null $post
      * @return void
      */
-    private function setPost($post): void
+    private function setPost(?array $post): void
     {
         $this->post = $post;
     }
