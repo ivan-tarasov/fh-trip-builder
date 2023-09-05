@@ -10,7 +10,8 @@
     <title>{{ page-title}} - {{ app-name }}</title>
 
     <link href="{{ app_vendor_folder }}/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all" />
-    <link href="{{ app_vendor_folder }}/datepicker/daterangepicker.css" rel="stylesheet" media="all" />
+    <!--link href="{{ app_vendor_folder }}/datepicker/daterangepicker.css" rel="stylesheet" media="all" /-->
+    <link href="//cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" rel="stylesheet" type="text/css" />
     <link href="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/css/ion.rangeSlider.min.css" rel="stylesheet" />
     <link href="//use.fontawesome.com/releases/v6.1.1/css/all.css" rel="stylesheet" type='text/css' integrity="sha384-/frq1SRXYH/bSyou/HUp/hib7RVN1TawQYja658FEOodR/FQBKVqT9Ol+Oz3Olq5" crossorigin="anonymous" />
     <link href="//cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -22,7 +23,7 @@
 </head>
 
 <body class="bg-light d-flex flex-column h-100">
-<header class="p-3 bg-dark text-white" id="top">
+<header class="p-3 bg-primary text-white" id="top">
     <div class="container">
         <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
             <!-- Header logo -->
@@ -32,7 +33,7 @@
             </a>
             <!-- End / Header logo -->
             <!-- Main menu items -->
-            <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+            <ul class="nav bg-primary col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
                 {{ menu-items }}
             </ul>
             <!-- End / Main menu items -->
