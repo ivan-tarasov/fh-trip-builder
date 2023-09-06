@@ -80,24 +80,6 @@
         console.log(er);
     }
 
-    /*[ Select 2 Config ]
-    ===========================================================*/
-    try {
-        var selectSimple = $('.js-select-simple');
-
-        selectSimple.each(function () {
-            var that = $(this);
-            var selectBox = that.find('select');
-            var selectDropdown = that.find('.select-dropdown');
-            selectBox.select2({
-                dropdownParent: selectDropdown
-            });
-        });
-
-    } catch (err) {
-        console.log(err);
-    }
-
     /*[ Buy tickets AJAX + sweetalert2 ]
     ===========================================================*/
     try {
@@ -159,8 +141,8 @@
 
 
     function scrollToAnchor(aid) {
-        var aTag = $("#top");
-        $('html,body').animate({scrollTop: aTag.offset().top}, 'slow');
+        let aTag = $("#top");
+        $('html,body').animate({scrollTop: aTag.offset().top}, 0);
     }
 
     $("#linktotop").click(function () {

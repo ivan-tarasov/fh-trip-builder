@@ -42,7 +42,7 @@
         .container-between {
             padding-top: 0;
             position: relative;
-            top: -175px;
+            top: -185px;
             max-height: 200px;
             margin-top: 0;
         }
@@ -50,7 +50,7 @@
 </style>
 <div class="bg-primary">
     <div class="container container-up mb-5">
-        <div class="row p-5 mb-0 pe-lg-0 pt-lg-0 align-items-center rounded-4 shadow-lg bg-light bg-img">
+        <div class="row py-2 mb-0 pe-lg-0 pt-lg-0 align-items-center rounded-4 shadow-lg bg-light bg-img">
             <div class="row align-items-center py-5">
                 <div class="col-lg-7 text-center text-lg-start"></div>
                 <div class="col-md-10 mx-auto col-lg-5">
@@ -121,7 +121,7 @@
                         <div class="row g-2 mb-3">
                             <div class="col-md">
                                 <div class="form-floating">
-                                    <select class="form-select form-select-lg" id="passengers_adult">
+                                    <select class="form-select" id="passengers_adt">
                                         <option value="1" selected>1</option>
                                         <option value="2">2</option>
                                         <option value="3">3</option>
@@ -130,14 +130,14 @@
                                         <option value="6">6</option>
                                         <option value="7">7</option>
                                         <option value="8">8</option>
-                                        <option value="9">9 (maximum)</option>
+                                        <option value="9">9 max</option>
                                     </select>
                                     <label for="passengers_adult">Adult <small>(12+)</small></label>
                                 </div>
                             </div>
                             <div class="col-md">
                                 <div class="form-floating">
-                                    <select class="form-select form-select-lg" id="passengers_child">
+                                    <select class="form-select" id="passengers_chd">
                                         <option selected>–</option>
                                         <option value="1">1</option>
                                         <option value="2">2</option>
@@ -147,21 +147,33 @@
                                         <option value="6">6</option>
                                         <option value="7">7</option>
                                         <option value="8">8</option>
-                                        <option value="9">9 (maximum)</option>
+                                        <option value="9">9 max</option>
                                     </select>
                                     <label for="passengers_child">Child <small>(2–11)</small></label>
                                 </div>
                             </div>
                             <div class="col-md">
                                 <div class="form-floating">
-                                    <select class="form-select form-select-lg" id="passengers_infant">
+                                    <select class="form-select" id="passengers_inf">
                                         <option selected>–</option>
                                         <option value="1">1</option>
                                         <option value="2">2</option>
                                         <option value="3">3</option>
-                                        <option value="4">4 – maximum</option>
+                                        <option value="4">4 max</option>
                                     </select>
-                                    <label for="passengers_infant">Infant <small>(under 2)</small></label>
+                                    <label for="passengers_infant">Infants <small>(0-2)</small></label>
+                                </div>
+                            </div>
+                            <div class="col-md">
+                                <div class="form-floating">
+                                    <select class="form-select" id="passengers_inl">
+                                        <option selected>–</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4 max</option>
+                                    </select>
+                                    <label for="passengers_infant">Infants on lap</label>
                                 </div>
                             </div>
                         </div>

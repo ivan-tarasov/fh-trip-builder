@@ -85,7 +85,7 @@
                         <div class="row g-2 mb-3">
                             <div class="col-md">
                                 <div class="form-floating">
-                                    <select class="form-select form-select-lg" id="passengers_adult">
+                                    <select class="form-select" id="passengers_adult">
                                         <option value="1" selected>1</option>
                                         <option value="2">2</option>
                                         <option value="3">3</option>
@@ -101,7 +101,7 @@
                             </div>
                             <div class="col-md">
                                 <div class="form-floating">
-                                    <select class="form-select form-select-lg" id="passengers_child">
+                                    <select class="form-select" id="passengers_child">
                                         <option selected>–</option>
                                         <option value="1">1</option>
                                         <option value="2">2</option>
@@ -118,7 +118,7 @@
                             </div>
                             <div class="col-md">
                                 <div class="form-floating">
-                                    <select class="form-select form-select-lg" id="passengers_infant">
+                                    <select class="form-select" id="passengers_infant">
                                         <option selected>–</option>
                                         <option value="1">1</option>
                                         <option value="2">2</option>
