@@ -1,228 +1,159 @@
 <div class="bg-black">
     <div class="wrapper">
         <div class="card card-4 container">
-            <div class="">
-
-                <!-- Tab links panel -->
-                <ul class="nav tab-list" id="myTab" role="tablist">
-                    <li class="tab-list__item">
-                        <button class="nav-link tab-list__link{{ tab_rt_button }}"
-                                id="tab_roundtrip"
-                                data-bs-toggle="tab"
-                                data-bs-target="#roundtrip"
-                                type="button"
-                                role="tab"
-                                aria-controls="home"
-                                aria-selected="{{ tab_rt_aria }}"
-                        >
-                            <i class="fas fa-exchange"></i>
-                            round-trip
-                        </button>
-                    </li>
-                    <li class="tab-list__item">
-                        <button class="nav-link tab-list__link{{ tab_ow_button }}"
-                                id="tab_oneway"
-                                data-bs-toggle="tab"
-                                data-bs-target="#oneway"
-                                type="button"
-                                role="tab"
-                                aria-controls="home"
-                                aria-selected="{{ tab_ow_aria }}"
-                        >
-                            <i class="fas fa-plane-arrival"></i>
-                            one-way trip
-                        </button>
-                    </li>
-                </ul>
-                <!-- End / Tab links panel -->
-
-                <div class="tab-content">
-                    <!-- ROUND TRIP -->
-                    <div class="tab-pane fade{{ tab_rt_div }}" id="roundtrip" role="tabpanel"
-                         aria-labelledby="home-tab">
-                        <form method="get" action="{{ search_page_url }}" id="searchFormRound">
-                            <div class="row row-space">
-
-                                <div class="col-xl-6">
-                                    <div class="input-group input-group-big">
-                                        <label class="label">origin:</label>
-                                        <input type="text"
-                                               value="{{ depart_city }}"
-                                               id="round_departing_airport"
-                                               class="input--style-1"
-                                               data-filter="{{ airports_autofill }}#QUERY#"
-                                               placeholder="City or airport"
-                                               required="required"
-                                               autocomplete="off"
-                                        />
-                                        <input type="hidden"
-                                               id="round_departing_airport_value"
-                                               name="{{ input_from }}"
-                                               value="{{ depart_code }}"
-                                               data-order="1"
-                                        />
-                                        <i class="zmdi zmdi-search input-group-symbol"></i>
-                                        <script>
-                                            document.addEventListener('DOMContentLoaded', e => {
-                                              $('#round_departing_airport').autocomplete()
-                                            }, false);
-                                        </script>
-                                    </div>
-                                </div>
-
-                                <div class="col-xl-6">
-                                    <div class="input-group input-group-big">
-                                        <label class="label">destination:</label>
-                                        <input type="text"
-                                               value="{{ arrive_city }}"
-                                               id="round_arrival_airport"
-                                               class="input--style-1"
-                                               data-filter="{{ airports_autofill }}#QUERY#"
-                                               placeholder="City or airport"
-                                               required="required"
-                                               autocomplete="off"/>
-                                        <input type="hidden"
-                                               id="round_arrival_airport_value"
-                                               name="{{ input_to }}"
-                                               value="{{ arrive_code }}"
-                                               data-order="3"/>
-                                        <i class="zmdi zmdi-search input-group-symbol"></i>
-                                        <script>
-                                            document.addEventListener('DOMContentLoaded', e => {
-                                              $('#round_arrival_airport').autocomplete()
-                                            }, false);
-                                        </script>
-                                    </div>
-                                </div>
-
-                                <div class="col-6">
-                                    <div class="input-group input-group-big">
-                                        <label class="label">Departing date:</label>
-                                        <input class="input--style-1 js-single-datepicker" type="text"
-                                               id="round_departing_date" data-value="{{ depart_date }}"
-                                               placeholder="yyyy-mm-dd" data-drop="1" autocomplete="off"
-                                               required="required"/>
-                                        <input type="hidden" id="round_departing_date_value" name="{{ input_from_date }}" value="" data-value=""
-                                               data-order="2"/>
-                                        <div class="dropdown-datepicker" id="dropdown-datepicker1"></div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="input-group input-group-big">
-                                        <label class="label">Returning date:</label>
-                                        <input class="input--style-1 js-single-datepicker" type="text"
-                                               id="round_returning_date" data-value="{{ return_date }}"
-                                               placeholder="yyyy-mm-dd" data-drop="2" autocomplete="off"
-                                               required="required"/>
-                                        <input type="hidden" id="round_returning_date_value" name="{{ input_to_date }}" value="" data-value=""
-                                               data-order="4"/>
-                                        <div class="dropdown-datepicker" id="dropdown-datepicker2"></div>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="{{ input_triptype }}" value="{{ input_triptype_roundtrip }}" />
-                            </div>
-
-                            <div class="row radio-row">
-                                <div class="col-xl-4 pt-1">
-                                    <label class="radio-container m-r-45">
-                                        Economy
-                                        <input type="radio" checked="checked" name="class" value="economy">
-                                        <span class="radio-checkmark"></span>
-                                    </label>
-                                    <label class="radio-container">
-                                        Business
-                                        <input type="radio" name="class">
-                                        <span class="radio-checkmark"></span>
-                                    </label>
-                                </div>
-                                <div class="col-xl-8">
-                                    <button class="btn-submit btn-submit-small" type="submit"
-                                            data-form="searchFormRound">search
-                                    </button>
-                                </div>
-                            </div>
-
-                        </form>
-                    </div>
-
-                    <!-- ONE-WAY -->
-                    <div class="tab-pane fade{{ tab_ow_div }}" id="oneway" role="tabpanel" aria-labelledby="home-tab">
-                        <form method="get" action="{{ search_page_url }}" id="searchFormOneway">
-                            <input type="hidden" name="hash" id="oneway_query_hash" class="query_hash"/>
-
-                            <div class="row row-space">
-                                <div class="col-xl-4">
-                                    <div class="input-group input-group-big">
-                                        <label class="label">origin:</label>
-                                        <input class="input--style-1" type="text" id="oneway_departing_airport"
-                                               value="{{ depart_city }}" data-filter="{{ airports_autofill }}#QUERY#"
-                                               placeholder="City or airport" required="required" autocomplete="off"/>
-                                        <input type="hidden" id="oneway_departing_airport_value"
-                                               name="{{ input_from }}" value="{{ depart_code }}" data-order="1"/>
-                                        <i class="zmdi zmdi-search input-group-symbol"></i>
-                                        <script>
-                                            document.addEventListener('DOMContentLoaded', e => {
-                                              $('#oneway_departing_airport').autocomplete()
-                                            }, false);
-                                        </script>
-                                    </div>
-                                </div>
-
-                                <div class="col-xl-4">
-                                    <div class="input-group input-group-big">
-                                        <label class="label">destination:</label>
-                                        <input class="input--style-1" type="text" id="oneway_arrival_airport"
-                                               value="{{ arrive_city }}" data-filter="{{ airports_autofill }}#QUERY#"
-                                               placeholder="City or airport" required="required" autocomplete="off"/>
-                                        <input type="hidden" id="oneway_arrival_airport_value"
-                                               name="{{ input_to }}" value="{{ arrive_code }}" data-order="3"/>
-                                        <i class="zmdi zmdi-search input-group-symbol"></i>
-                                        <script>
-                                            document.addEventListener('DOMContentLoaded', e => {
-                                              $('#oneway_arrival_airport').autocomplete()
-                                            }, false);
-                                        </script>
-                                    </div>
-                                </div>
-
-                                <div class="col-xl-4">
-                                    <div class="input-group input-group-big">
-                                        <label class="label">Departing date:</label>
-                                        <input class="input--style-1 js-single-datepicker" type="text"
-                                               id="oneway_departing_date" placeholder="yyyy-mm-dd"
-                                               value="{{ depart_date }}" data-drop="3" required="required"/>
-                                        <input type="hidden" id="oneway_departing_date_value" name="{{ input_from_date }}" value="" data-order="2"/>
-                                        <div class="dropdown-datepicker" id="dropdown-datepicker3"></div>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="{{ input_triptype }}" value="{{ input_triptype_oneway }}" />
-                            </div>
-
-                            <div class="row radio-row">
-                                <div class="col-xl-4 pt-1">
-                                    <label class="radio-container m-r-45">
-                                        Economy
-                                        <input type="radio" checked="checked" name="class" value="economy">
-                                        <span class="radio-checkmark"></span>
-                                    </label>
-                                    <label class="radio-container">
-                                        Business
-                                        <input type="radio" name="class">
-                                        <span class="radio-checkmark"></span>
-                                    </label>
-                                </div>
-                                <div class="col-xl-8">
-                                    <button class="btn-submit btn-submit-small" type="submit"
-                                            data-form="searchFormOneway">search
-                                    </button>
-                                </div>
-                            </div>
-
-                        </form>
-                    </div>
-
+            <nav class="mx-2 my-3">
+                <div class="nav nav-pills" id="nav-tab" role="tablist">
+                    <button class="nav-link text-uppercase text-white{{ tab_rt_button }}" id="tab-roundtrip" data-bs-toggle="tab" data-bs-target="#roundtrip" type="button" role="tab" aria-controls="roundtrip" aria-selected="{{ tab_rt_aria }}">
+                        <i class="fas fa-exchange pe-1"></i>
+                        Round trip
+                    </button>
+                    <button class="nav-link text-uppercase text-white{{ tab_ow_button }}" id="tab-oneway" data-bs-toggle="tab" data-bs-target="#oneway" type="button" role="tab" aria-controls="oneway" aria-selected="{{ tab_ow_aria }}">
+                        <i class="fas fa-plane-arrival pe-1"></i>
+                        One way
+                    </button>
                 </div>
-            </div>
+            </nav>
+
+            <form method="get" action="{{ search_page_url }}" id="searchForm" class="py-1">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-floating">
+                            <input type="text"
+                                   value="{{ depart_city }}"
+                                   class="form-control"
+                                   id="departing_airport"
+                                   data-filter="{{ airports_autofill }}#QUERY#"
+                                   placeholder="Start typing..."
+                                   required="required"
+                                   autocomplete="off"/>
+                            <input type="hidden" id="departing_airport_value" name="{{ input_from }}" value="{{ depart_code }}" />
+                            <label for="departing_airport">From:</label>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-floating">
+                            <input type="text"
+                                   value="{{ arrive_city }}"
+                                   class="form-control"
+                                   id="arrival_airport"
+                                   data-filter="{{ airports_autofill }}#QUERY#"
+                                   placeholder="Start typing..."
+                                   required="required"
+                                   autocomplete="off"/>
+                            <input type="hidden"
+                                   id="arrival_airport_value"
+                                   name="{{ input_to }}"
+                                   value="{{ arrive_code }}" />
+                            <label for="arrival_airport">To</label>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <div class="tab-content" id="nav-tabContent">
+                            <div class="tab-pane p-0 m-0{{ tab_rt_div }}" id="roundtrip" role="tabpanel" aria-labelledby="roundtrip-tab" tabindex="0">
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control js-single-datepicker"
+                                                   id="roundtrip_dates" placeholder="yyyy-mm-dd" data-drop="1"
+                                                   data-startDate="2023-09-09"
+                                                   autocomplete="off" required="required" />
+                                            <label for="roundtrip_dates">Depart and Return dates</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane p-0 m-0{{ tab_ow_div }}" id="oneway" role="tabpanel" aria-labelledby="oneway-tab" tabindex="0">
+                                <div class="form-floating pb-3">
+                                    <div class="form-floating">
+                                        <!--div class="dropdown-datepicker" id="dropdown-datepicker3"></div-->
+                                        <input type="text" class="form-control js-single-datepicker"
+                                               id="oneway_depart_date"
+                                               placeholder="yyyy-mm-dd" data-drop="3" autocomplete="off"
+                                               data-value="{{ depart_date }}"
+                                               required="required"/>
+                                        <label for="oneway_depart_date">Depart date</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md">
+                                <div class="form-floating">
+                                    <select class="form-select form-select-lg" id="passengers_adult">
+                                        <option value="1" selected>1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="7">7</option>
+                                        <option value="8">8</option>
+                                        <option value="9">9 (maximum)</option>
+                                    </select>
+                                    <label for="passengers_adult">Adult</label>
+                                </div>
+                            </div>
+                            <div class="col-md">
+                                <div class="form-floating">
+                                    <select class="form-select form-select-lg" id="passengers_child">
+                                        <option selected>–</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="7">7</option>
+                                        <option value="8">8</option>
+                                        <option value="9">9 (maximum)</option>
+                                    </select>
+                                    <label for="passengers_child">Child</label>
+                                </div>
+                            </div>
+                            <div class="col-md">
+                                <div class="form-floating">
+                                    <select class="form-select form-select-lg" id="passengers_infant">
+                                        <option selected>–</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4 – maximum</option>
+                                    </select>
+                                    <label for="passengers_infant">Infant</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <div class="form-floating mb-3">
+                            <select class="form-select" id="floatingSelectGrid">
+                                <option selected>Economy</option>
+                                <option value="1">Premium Economy</option>
+                                <option value="2">Business</option>
+                                <option value="3">First</option>
+                            </select>
+                            <label for="floatingSelectGrid">Cabin class</label>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <button class="w-100 btn btn-lg btn-primary" type="submit">
+                            Search flights
+                            <i class="fa-solid fa-plane ps-2"></i>
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" id="depart_date_value" name="{{ input_from_date }}" value="{{ depart_date }}"/>
+                <input type="hidden" id="return_date_value" name="{{ input_to_date }}" value="{{ return_date }}"/>
+                <input type="hidden" id="hidden_triptype" name="triptype" value="{{ search_triptype }}"/>
+            </form>
         </div>
     </div>
 </div>

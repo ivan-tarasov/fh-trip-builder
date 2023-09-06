@@ -109,6 +109,7 @@ class HomeController extends AbstractController
             ->setPlaceholder('input_to',                 Config::get('search.form.input.arrive_place'))
             ->setPlaceholder('input_from_date',          Config::get('search.form.input.depart_date'))
             ->setPlaceholder('input_to_date',            Config::get('search.form.input.return_date'))
+            ->setPlaceholder('today_date',               date('Y-m-d'))
             ->setPlaceholder('poi_cards',                $poi_cards)
             ->setPlaceholder('top_searches',             $top_searches)
             ->setPlaceholder('top_airlines',             $top_airlines)

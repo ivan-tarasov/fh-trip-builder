@@ -52,10 +52,7 @@
     <div class="container container-up mb-5">
         <div class="row p-5 mb-0 pe-lg-0 pt-lg-0 align-items-center rounded-4 shadow-lg bg-light bg-img">
             <div class="row align-items-center py-5">
-                <div class="col-lg-7 text-center text-lg-start">
-                    <!--h1 class="display-4 fw-bold lh-1 text-body-emphasis mb-3">Vertically centered hero sign-up form</h1>
-                    <p class="col-lg-10 fs-4">Below is an example form built entirely with Bootstrap’s form controls. Each required form group has a validation state that can be triggered by attempting to submit the form without completing it.</p-->
-                </div>
+                <div class="col-lg-7 text-center text-lg-start"></div>
                 <div class="col-md-10 mx-auto col-lg-5">
 
                     <nav class="mx-2">
@@ -179,7 +176,7 @@
                             <label for="floatingSelectGrid">Cabin class</label>
                         </div>
 
-                        <input type="hidden" id="depart_date_value" name="{{ input_from_date }}" value=""/>
+                        <input type="hidden" id="depart_date_value" name="{{ input_from_date }}" value="{{ today_date }}"/>
                         <input type="hidden" id="return_date_value" name="{{ input_to_date }}" value=""/>
                         <input type="hidden" id="hidden_triptype" name="triptype" value="roundtrip"/>
 

@@ -3,30 +3,36 @@
 
     try {
         const singleDatePickers = $('.js-single-datepicker');
+        const inputDateFormat = 'YYYY-MM-DD';
+        const showDateFormat  = 'MMMM D, YYYY';
+
+        let inputStart = $("#depart_date_value").val();
+        let startDate  = inputStart
+            ? moment(inputStart).format(showDateFormat)
+            : moment().format(showDateFormat);
+
+        let inputEnd   = $("#return_date_value").val();
+        let endDate    = inputEnd
+            ? moment(inputEnd).format(showDateFormat)
+            : moment(inputStart).add(1, 'day').format(showDateFormat);
 
         singleDatePickers.each(function () {
             const $this = $(this);
             const elementID = $this.attr('id');
             const dropId = $this.data('drop');
-            const today = moment().format('MMMM D, YYYY');
-            let query = $this.data('value');
-
-            if (!query) {
-                query = moment($("#round_departing_date_value").data('value')).format('MMMM D, YYYY');
-            } else {
-                query = moment(query).format('MMMM D, YYYY');
-            }
+            const today = moment().format(showDateFormat);
 
             const commonConfig = {
                 autoApply: true,
                 showCustomRangeLabel: false,
                 autoUpdateInput: true,
-                startDate: query,
+                startDate: startDate,
+                endDate: endDate,
                 minDate: today,
                 opens: "center",
                 drops: "auto",
                 locale: {
-                    format: 'MMMM D, YYYY',
+                    format: showDateFormat,
                     separator: " – ",
                     firstDay: 1
                 }
@@ -39,15 +45,15 @@
         });
 
         $(singleDatePickers).on('apply.daterangepicker', function (ev, picker) {
-            $("#depart_date_value").val(picker.startDate.format('YYYY-MM-DD'));
+            $("#depart_date_value").val(picker.startDate.format(inputDateFormat));
 
             if (ev.target.id == 'roundtrip_dates') {
-                $("#return_date_value").val(picker.endDate.format('YYYY-MM-DD'));
+                $("#return_date_value").val(picker.endDate.format(inputDateFormat));
             }
         });
 
-        let departDate_roundtrip = '';
-        let departDate_oneway = '';
+        let departDate_roundtrip = $('#depart_date_value').val();
+        let departDate_oneway = $('#depart_date_value').val();
 
         $('#tab-roundtrip').click(function () {
             $('#tab-roundtrip').prop('disabled', true);

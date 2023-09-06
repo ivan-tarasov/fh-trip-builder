@@ -130,6 +130,7 @@ class SearchController extends AbstractController
                 ->set()
                 ->setPlaceholder('search_page_url',          '/search/')
                 ->setPlaceholder('airports_autofill',        Config::get('api.fake.url') . '/airports/autofill/?query=')
+                ->setPlaceholder('search_triptype',          $this->get[self::GET_TRIPTYPE])
                 ->setPlaceholder('input_triptype',           Config::get('search.form.input.triptype'))
                 ->setPlaceholder('input_triptype_roundtrip', Config::get('search.triptype.roundtrip'))
                 ->setPlaceholder('input_triptype_oneway',    Config::get('search.triptype.oneway'))
