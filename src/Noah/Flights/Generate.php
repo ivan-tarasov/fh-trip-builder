@@ -7,8 +7,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\ProgressIndicator;
 use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputOption;
-use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
@@ -103,12 +101,12 @@ class Generate extends AbstractCommand
         // If flights to add not provided – ask
         $flightsToAdd = $input->getArgument('flights') ?? $this->io->ask(
             'Number of flights to add', self::FLIGHTS_COUNT, function (string $number): int {
-                if (!is_numeric($number)) {
-                    throw new \RuntimeException('You must type a number.');
-                }
-
-                return (int) $number;
+            if (!is_numeric($number)) {
+                throw new \RuntimeException('You must type a number.');
             }
+
+            return (int) $number;
+        }
         );
 
         // Get airlines from database
@@ -154,7 +152,7 @@ class Generate extends AbstractCommand
             );
 
             // Calculating flight duration between airports
-            $this->setDuration($this->getDistanceFromDuration($this->distance) + Helper::random(self::DURATION_ADD));
+            $this->setDuration($this->getDurationFromDistance($this->distance) + Helper::random(self::DURATION_ADD));
 
             // Render departure date and time (UNIX timestamps for random day)
             $this->setDepartureDateTime(
@@ -171,8 +169,11 @@ class Generate extends AbstractCommand
 
             // Calculating arrival date and time
             $this->setArrivalDateTime(
-                date('Y-m-d H:i:s',
-                    strtotime(sprintf('+ %d minutes', $this->duration), strtotime($this->departureDateTime))
+                $this->calculateArriveTime(
+                    $this->departureDateTime,
+                    $this->departAirport['timezone_name'],
+                    $this->arriveAirport['timezone_name'],
+                    $this->duration
                 )
             );
 
@@ -260,7 +261,7 @@ class Generate extends AbstractCommand
      * @param float $lonTo   End point longitude (degrees decimal)
      * @return float|int     Distance between points in metres
      */
-    public function distanceOnEarthSurface(float $latFrom, float $lonFrom, float $latTo, float $lonTo): float|int
+    private function distanceOnEarthSurface(float $latFrom, float $lonFrom, float $latTo, float $lonTo): float|int
     {
         $earthRadius = 6371000;
 
@@ -287,13 +288,33 @@ class Generate extends AbstractCommand
      * @param $distance
      * @return int
      */
-    public function getDistanceFromDuration($distance): int
+    private function getDurationFromDistance($distance): int
     {
         $time    = $distance / Helper::random(self::FLIGHT_SPEED);
         $hours   = intval($time);
         $minutes = ($time - $hours) * 60;
 
         return round($time * 60);
+    }
+
+    /**
+     * @param $departDateTime
+     * @param $departTimezone
+     * @param $arriveTimezone
+     * @param $duration
+     * @return string
+     * @throws \Exception
+     */
+    private function calculateArriveTime($departDateTime, $departTimezone, $arriveTimezone, $duration): string
+    {
+        $departDate = new \DateTime($departDateTime, new \DateTimeZone($departTimezone));
+
+        $arrivalDate = clone $departDate;
+        $arrivalDate->add(new \DateInterval("PT{$duration}M"));
+
+        $arrivalDate->setTimezone(new \DateTimeZone($arriveTimezone));
+
+        return $arrivalDate->format('Y-m-d H:i');
     }
 
     /**
@@ -316,7 +337,10 @@ class Generate extends AbstractCommand
         return self::PROGRESS_MSG_POOL[rand(0,count(self::PROGRESS_MSG_POOL)-1)];
     }
 
-    private function removeDuplicates()
+    /**
+     * @return void
+     */
+    private function removeDuplicates(): void
     {
         $tempTable = 'TempTable';
 
