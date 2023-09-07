@@ -113,16 +113,19 @@ class Response extends AbstractApi
             ->setAdultNum($this->data[self::DATA_ADULT_COUNT])
             ->setChildNum($this->data[self::DATA_CHILD_COUNT]);
 
+        // Updating search stats
+        $this->updateSearchStats(self::DB_TABLE_AIRPORTS, [$this->from, $this->to]);
+
         // Get depart city
         $this->db->where('code', $this->from);
         $this->db->orWhere('city_code', $this->from);
-        $airport = $this->db->getValue('airports', 'city');
+        $airport = $this->db->getValue(self::DB_TABLE_AIRPORTS, 'city');
         $cities[self::RESPONSE_DEPART] = sprintf('%s (%s)', $airport, $this->from);
 
         // Get arrive city
         $this->db->where('code', $this->to);
         $this->db->orWhere('city_code', $this->to);
-        $airport = $this->db->getValue('airports', 'city');
+        $airport = $this->db->getValue(self::DB_TABLE_AIRPORTS, 'city');
         $cities[self::RESPONSE_ARRIVE] = sprintf('%s (%s)', $airport, $this->to);
 
         $flights = match ($this->data[self::DATA_TRIPTYPE]) {
@@ -163,6 +166,9 @@ class Response extends AbstractApi
             'price_tax'  => (float) $response['price_tax'],
         ]);
 
+        // Updating search stats
+        $this->updateSearchStats(self::DB_TABLE_AIRLINES, [$flight['carrier']]);
+
         $this->sendResponse(200, $flight);
     }
 
@@ -196,11 +202,11 @@ class Response extends AbstractApi
             'flight.rating                 AS flight_rating',
         ];
 
-        $this->db->join('airports depart_airport',  'flight.departure_airport = depart_airport.code');
-        $this->db->join('airports arrive_airport',  'flight.arrival_airport = arrive_airport.code');
-        $this->db->join('airlines airline',         'flight.airline = airline.code');
-        $this->db->join('countries depart_country', 'depart_airport.country_code = depart_country.code');
-        $this->db->join('countries arrive_country', 'arrive_airport.country_code = arrive_country.code');
+        $this->db->join(sprintf('%s depart_airport', self::DB_TABLE_AIRPORTS),  'flight.departure_airport = depart_airport.code');
+        $this->db->join(sprintf('%s arrive_airport', self::DB_TABLE_AIRPORTS),  'flight.arrival_airport = arrive_airport.code');
+        $this->db->join(sprintf('%s airline',        self::DB_TABLE_AIRLINES),  'flight.airline = airline.code');
+        $this->db->join(sprintf('%s depart_country', self::DB_TABLE_COUNTRIES), 'depart_airport.country_code = depart_country.code');
+        $this->db->join(sprintf('%s arrive_country', self::DB_TABLE_COUNTRIES), 'arrive_airport.country_code = arrive_country.code');
 
         if (empty($flight_id)) {
             $this->db->where('(depart_airport.code = ? or depart_airport.city_code = ?)', array_fill(0, 2, $this->from));
@@ -208,19 +214,19 @@ class Response extends AbstractApi
             $this->db->where('DATE(flight.departure_time)', $this->departDate);
 
             $total = $this->db->copy();
-            $this->setTotalFlights($total->getValue('flights flight', 'count(1)'));
+            $this->setTotalFlights($total->getValue(self::DB_TABLE_FLIGHTS . ' flight', 'count(1)'));
 
             $this->db->orderBy(self::SORT_ONEWAY[$this->sort], 'asc');
 
             $flights = $this->db->get(
-                'flights flight',
+                self::DB_TABLE_FLIGHTS . ' flight',
                 [($this->currentPage - 1) * self::PER_PAGE_LIMIT, self::PER_PAGE_LIMIT],
                 $columns
             );
         } else {
             $this->db->where('flight.id', $flight_id);
 
-            $flights = $this->db->get('flights flight', null, $columns);
+            $flights = $this->db->get(self::DB_TABLE_FLIGHTS . ' flight', null, $columns);
         }
 
         return array_map(function($flight) {
@@ -304,21 +310,21 @@ class Response extends AbstractApi
             'in_flight.rating           AS return_rating',
         ];
 
-        $this->db->join('airports out_airport',          'out_flight.departure_airport = out_airport.code');
-        $this->db->join('airports out_arrival_airport',  'out_flight.arrival_airport = out_arrival_airport.code');
-        $this->db->join('airlines out_airline',          'out_flight.airline = out_airline.code');
-        $this->db->join('countries out_country',         'out_airport.country_code = out_country.code');
+        $this->db->join(sprintf('%s out_airport',         self::DB_TABLE_AIRPORTS),  'out_flight.departure_airport = out_airport.code');
+        $this->db->join(sprintf('%s out_arrival_airport', self::DB_TABLE_AIRPORTS),  'out_flight.arrival_airport = out_arrival_airport.code');
+        $this->db->join(sprintf('%s out_airline',         self::DB_TABLE_AIRLINES),  'out_flight.airline = out_airline.code');
+        $this->db->join(sprintf('%s out_country',         self::DB_TABLE_COUNTRIES), 'out_airport.country_code = out_country.code');
 
-        $this->db->join('flights in_flight',             'out_flight.arrival_airport = in_flight.departure_airport');
-        $this->db->joinWhere('flights in_flight',        'DATE(in_flight.departure_time)', $this->returnDate);
+        $this->db->join(sprintf('%s in_flight',           self::DB_TABLE_FLIGHTS),   'out_flight.arrival_airport = in_flight.departure_airport');
+        $this->db->joinWhere(sprintf('%s in_flight',      self::DB_TABLE_FLIGHTS),   'DATE(in_flight.departure_time)', $this->returnDate);
 
-        $this->db->join('airports in_airport',           'in_flight.departure_airport = in_airport.code');
-        $this->db->join('airports in_arrival_airport',   'in_flight.arrival_airport = in_arrival_airport.code');
-        $this->db->join('airlines in_airline',           'in_flight.airline = in_airline.code');
-        $this->db->join('countries in_country',          'in_airport.country_code = in_country.code');
+        $this->db->join(sprintf('%s in_airport',          self::DB_TABLE_AIRPORTS),  'in_flight.departure_airport = in_airport.code');
+        $this->db->join(sprintf('%s in_arrival_airport',  self::DB_TABLE_AIRPORTS),  'in_flight.arrival_airport = in_arrival_airport.code');
+        $this->db->join(sprintf('%s in_airline',          self::DB_TABLE_AIRLINES),  'in_flight.airline = in_airline.code');
+        $this->db->join(sprintf('%s in_country',          self::DB_TABLE_COUNTRIES), 'in_airport.country_code = in_country.code');
 
-        $this->db->join('countries out_arrival_country', 'out_arrival_airport.country_code = out_arrival_country.code');
-        $this->db->join('countries in_arrival_country',  'in_arrival_airport.country_code = in_arrival_country.code');
+        $this->db->join(sprintf('%s out_arrival_country', self::DB_TABLE_COUNTRIES), 'out_arrival_airport.country_code = out_arrival_country.code');
+        $this->db->join(sprintf('%s in_arrival_country',  self::DB_TABLE_COUNTRIES), 'in_arrival_airport.country_code = in_arrival_country.code');
 
         $this->db->where('(out_airport.code = ? OR out_airport.city_code = ?)', array_fill(0, 2, $this->from));
         $this->db->where('(out_arrival_airport.code = ? OR out_arrival_airport.city_code = ?)', array_fill(0, 2, $this->to));
@@ -327,12 +333,12 @@ class Response extends AbstractApi
         $this->db->where('DATE(out_flight.departure_time) = ?', [$this->departDate]);
 
         $total = $this->db->copy();
-        $this->setTotalFlights($total->getValue('flights AS out_flight', 'count(1)'));
+        $this->setTotalFlights($total->getValue(self::DB_TABLE_FLIGHTS . ' AS out_flight', 'count(1)'));
 
         $this->db->orderBy(self::SORT_ROUNDTRIP[$this->sort] ?? self::SORT_ROUNDTRIP[self::SORT_METHOD_PRICE], 'asc');
 
         $flights = $this->db->get(
-            'flights AS out_flight',
+            self::DB_TABLE_FLIGHTS . ' AS out_flight',
             [($this->currentPage - 1) * self::PER_PAGE_LIMIT, self::PER_PAGE_LIMIT],
             $columns
         );

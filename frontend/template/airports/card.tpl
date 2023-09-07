@@ -10,7 +10,7 @@
                     <dt class="col-sm-4">City</dt>
                     <dd class="col-sm-8">{{ airport_city }}</dd>
                     <dt class="col-sm-4">IATA code</dt>
-                    <dd class="col-sm-8">{{ airport_code }}</dd>
+                    <dd class="col-sm-8">{{ airport_iata_code }}</dd>
                     <dt class="col-sm-4">Timezone</dt>
                     <dd class="col-sm-8">{{ airport_timezone }}</dd>
                     <dt class="col-sm-4">Coordinates</dt>

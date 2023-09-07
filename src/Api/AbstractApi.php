@@ -27,6 +27,12 @@ class AbstractApi extends AbstractController
         '/api/airports/autofill',
     ];
 
+    const DB_TABLE_AIRLINES  = 'airlines',
+          DB_TABLE_AIRPORTS  = 'airports',
+          DB_TABLE_BOOKINGS  = 'bookings',
+          DB_TABLE_COUNTRIES = 'countries',
+          DB_TABLE_FLIGHTS   = 'flights';
+
     /**
      * Minimum security at this time...
      *
@@ -171,6 +177,31 @@ class AbstractApi extends AbstractController
         }
 
         $this->data = json_decode($data, true);
+    }
+
+    /**
+     * @param string $table
+     * @param array  $conditions
+     * @return void
+     */
+    protected function updateSearchStats(string $table, array $conditions): void
+    {
+        $this->db->where('code', $conditions, 'IN');
+
+        if ($table == self::DB_TABLE_AIRPORTS) {
+            $this->db->orWhere('city_code', $conditions, 'IN');
+
+            $this->db->update($table, [
+                'search_count' => $this->db->inc(1),
+                'last_search'  => $this->db->now(),
+            ]);
+        } elseif ($table == self::DB_TABLE_AIRLINES) {
+            $this->db->update($table, [
+                'book_count'  => $this->db->inc(1),
+                'last_search' => $this->db->now(),
+            ]);
+        }
+
     }
 
     /**

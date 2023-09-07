@@ -49,7 +49,7 @@ class AbstractController
                 $templater
                     ->setPlaceholder('menu_item_url',        $link)
                     ->setPlaceholder('menu_item_spacer',     $params['spacer'] ?? 2)
-                    ->setPlaceholder('menu_item_text_style', Routs::getCurrentPage() == rtrim($link, '/') ? 'white' : 'secondary')
+                    ->setPlaceholder('menu_item_active', Routs::getCurrentPage() == rtrim($link, '/') ? ' active' : null)
                     ->setPlaceholder('menu_item_icon',       $params['icon'])
                     ->setPlaceholder('menu_item_text',       $params['text'])
                     ->save();
@@ -71,7 +71,7 @@ class AbstractController
             ->setPlaceholder('app_meta_author_name',  Config::get('meta.author.name'))
             ->setPlaceholder('app_meta_author_email', Config::get('meta.author.email'))
             ->setPlaceholder('app_vendor_folder',     sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
-            ->setPlaceholder('app_css_folder',        sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.css')))
+            ->setPlaceholder('app_css_folder',        Config::get('site.directory.css'))
             ->setPlaceholder('menu_items',            $html_mainMenu)
             ->setPlaceholder('user_avatar',           Config::get('site.avatar'))
             ->setPlaceholder('metric_counters',       $html_counters)
@@ -157,7 +157,7 @@ class AbstractController
             ->setPlaceholder('database_requests',     $this->getDbRequestCount())
             ->setPlaceholder('execution_time',        $this->getExecutionTime())
             ->setPlaceholder('app_vendor_folder',     sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
-            ->setPlaceholder('app_js_folder',         sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.js')))
+            ->setPlaceholder('app_js_folder',         Config::get('site.directory.js'))
             ->save()
             ->render();
     }

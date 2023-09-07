@@ -13,11 +13,12 @@ return [
 
     'form' => [
         'input' => [
-            'triptype'     => 'triptype',
+            'hash'         => 'hash',
             'depart_place' => 'from',
             'arrive_place' => 'to',
             'depart_date'  => 'depart',
             'return_date'  => 'return',
+            'triptype'     => 'triptype',
             'class'        => 'class',
             'page'         => 'page',
         ],

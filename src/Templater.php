@@ -4,7 +4,7 @@ namespace TripBuilder;
 
 class Templater
 {
-    const TEMPLATES_DIRECTORY = 'tpl';
+    const TEMPLATES_DIRECTORY = 'frontend/template';
 
     const TAG_OPEN  = '{{',
           TAG_CLOSE = '}}';
