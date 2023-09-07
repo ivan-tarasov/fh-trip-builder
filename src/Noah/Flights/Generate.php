@@ -25,8 +25,8 @@ class Generate extends AbstractCommand
     const PRICE_ADD        = [5, 800];
     const PRICE_TAX        = [5, 90];
     const DURATION_ADD     = [10, 55];
-    const DATE_ADD         = [1, 30];
-    const FLIGHT_SPEED     = [750, 900];
+    const DATE_ADD         = [1, 90];
+    const FLIGHT_SPEED     = [700, 900];
 
     const PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory%\n %message%",
           PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>',
