@@ -100,13 +100,14 @@ class Generate extends AbstractCommand
     {
         // If flights to add not provided – ask
         $flightsToAdd = $input->getArgument('flights') ?? $this->io->ask(
-            'Number of flights to add', self::FLIGHTS_COUNT, function (string $number): int {
-            if (!is_numeric($number)) {
-                throw new \RuntimeException('You must type a number.');
+            'Number of flights to add',
+            self::FLIGHTS_COUNT,
+            function (string $number): int {
+                if (!is_numeric($number)) {
+                    throw new \RuntimeException('You must type a number.');
+                }
+                return (int) $number;
             }
-
-            return (int) $number;
-        }
         );
 
         // Get airlines from database
@@ -322,7 +323,7 @@ class Generate extends AbstractCommand
      *
      * @throws \Exception
      */
-    public function fakeFlightNumber(): void
+    private function fakeFlightNumber(): void
     {
         $flightNumber = rand(1000, self::NUMBERS_POOL);
 
