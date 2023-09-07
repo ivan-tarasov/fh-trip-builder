@@ -1,1 +1,1 @@
-<li class="mb-2"><a href="{{ menu-item-url }}" class="link-light" target="_blank">{{ menu-item-title }}</a></li>
+<li class="mb-2"><a href="{{ menu_item_url }}" class="link-light" target="_blank">{{ menu_item_title }}</a></li>

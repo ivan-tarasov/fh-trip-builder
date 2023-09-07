@@ -5,9 +5,8 @@
             <p class="lead">Here you can see all added airlines.</p>
         </div>
 
-        <!-- <div class="row row-cols-1 row-cols-md-3">%AIRLINES_CARD%</div> -->
         <div class="row g-4 py-5 row-cols-1 row-cols-lg-3">
-            {{ airlines-cards }}
+            {{ airlines_cards }}
         </div>
     </div>
 </main>

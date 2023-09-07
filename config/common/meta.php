@@ -10,7 +10,7 @@ return [
     |
     */
 
-    'description' => 'FlightHub PHP Coding Assignment',
+    'description' => 'FlightHub PHP Coding Assessment',
 
     'keywords' => [
         'FlightHub',

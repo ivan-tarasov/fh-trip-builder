@@ -12,7 +12,7 @@ The Air Trips Builder is an application designed to help users search for one-wa
 
 ## About The Project
 
-PHP Coding Assignment for the Backend PHP Developer role at [FlightHub][flighthub-url].
+PHP Coding Assessment for the Backend PHP Developer role at [FlightHub][flighthub-url].
 
 ## Built With
 

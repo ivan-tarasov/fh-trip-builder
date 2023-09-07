@@ -8,20 +8,21 @@ use TripBuilder\Config;
 use TripBuilder\Debug\dBug;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
+use GuzzleHttp\Exception\GuzzleException;
 
 class AirportsController
 {
     const DEFAULT_ALTITUDE  = '45.469539',
           DEFAULT_LONGITUDE = '-73.744296';
 
-    const MAP_URL      = 'https://static-maps.yandex.ru/1.x/',
-          MAP_ZOOM     = 10,
-          MAP_LANGUAGE = 'en-US',
-          MAP_SIZE     = '450,200';
+    const MAP_URL           = 'https://static-maps.yandex.ru/1.x/',
+          MAP_ZOOM          = 10,
+          MAP_LANGUAGE      = 'en-US',
+          MAP_SIZE          = '450,200';
 
     /**
      * @return void
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws GuzzleException
      */
     public function index(): void
     {
@@ -45,23 +46,26 @@ class AirportsController
 
             foreach ($response->data as $airport) {
                 $templater
-                    ->setPlaceholder('airport-iata-code', $airport->code)
-                    ->setPlaceholder('airport-title', $airport->title)
-                    ->setPlaceholder('airport-country', $airport->country)
-                    ->setPlaceholder('airport-city', $airport->city)
-                    ->setPlaceholder('airport-timezone', $airport->timezone_name)
-                    ->setPlaceholder('airport-latitude', $airport->latitude)
-                    ->setPlaceholder('airport-longitude', $airport->longitude)
-                    ->setPlaceholder('airport-altitude', number_format($airport->altitude))
-                    ->setPlaceholder('airport-map-img', $this->getAirportMap($airport->latitude, $airport->longitude))
+                    ->setPlaceholder('airport_iata_code', $airport->code)
+                    ->setPlaceholder('airport_title',     $airport->title)
+                    ->setPlaceholder('airport_country',   $airport->country)
+                    ->setPlaceholder('airport_city',      $airport->city)
+                    ->setPlaceholder('airport_timezone',  $airport->timezone_name)
+                    ->setPlaceholder('airport_latitude',  $airport->latitude)
+                    ->setPlaceholder('airport_longitude', $airport->longitude)
+                    ->setPlaceholder('airport_altitude',  number_format($airport->altitude))
+                    ->setPlaceholder('airport_map_img',   $this->getAirportMap($airport->latitude, $airport->longitude))
                     ->save();
             }
 
             $airport_cards = $templater->render();
 
-            echo $templater->setFilename('view')->set()
+            echo $templater
+                ->setFilename('view')
+                ->set()
                 ->setPlaceholder('airport-cards', $airport_cards)
-                ->save()->render();
+                ->save()
+                ->render();
         } catch (\Exception $e) {
             echo "Error: " . $e->getMessage();
         }

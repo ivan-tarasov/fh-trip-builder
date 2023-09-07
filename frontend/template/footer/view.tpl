@@ -24,21 +24,26 @@
                     <a href="/"
                        class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none me-5 pb-3">
                         <i class="fas fa-2x fa-plane-departure pe-3"></i>
-                        <strong class="lead">{{ app-name }}</strong>
+                        <strong class="lead">{{ app_name }}</strong>
                     </a>
                     <ul class="list-unstyled small">
-                        <li class="mb-2">
-                            Software made by <a href="{{ app-author-website }}" target="_blank" class="link-light">{{ app-author-name }}</a>
+                        <li>
+                            Software made by <a href="{{ app_author_website }}" target="_blank" class="link-light">{{ app_author_name }}</a>
                             as <a href="https://www.flighthub.com/" target="_blank" class="link-light">FlightHub</a>
                             PHP Coding <a href="Trip_Builder_1.pdf" target="_blank" class="link-light">Assessment</a>.
-                            Code licensed <a href="{{ app-license-url }}" target="_blank" class="link-light" rel="license noopener">{{ app-license-type }}</a>,
-                            documentation are available <a href="{{ app-documentation-url }}" target="_blank" class="link-light">here</a>.
-                            <i class="far fa-lg fa-copyright pe-1"></i>{{ copyright-years }}
                         </li>
-                        <li class="mb-2">Generated in <code>{{ execution-time }} seconds</code>,
-                            DB requests: <code>{{ database-requests }}</code>, flights in DB: <code>{{ flights-count }}</code>
+                        <li>
+                            Code licensed <a href="{{ app_license_url }}" target="_blank" class="link-light" rel="license noopener">{{ app_license_type }}</a>,
+                            documentation are available <a href="{{ app_documentation_url }}" target="_blank" class="link-light">here</a>.
                         </li>
-                        <li class="mb-2">Currently {{ app-version }}</li>
+                        <li class="my-2">
+                            Generated in <code>{{ execution_time }} seconds</code>,
+                            DB requests: <code>{{ database_requests }}</code>, flights in DB: <code>{{ flights_count }}</code>
+                        </li>
+                        <li>Currently {{ app_version }}</li>
+                        <li class="my-2">
+                            <i class="far fa-lg fa-copyright pe-1"></i>{{ copyright_years }}
+                        </li>
                     </ul>
                 </div>
                 <!-- End / Info cell -->
@@ -46,7 +51,7 @@
                 <div class="col-6 col-lg-2 offset-lg-1 mb-4 text-white">
                     <h5>Navigation</h5>
                     <ul class="list-unstyled pt-3">
-                        {{ main-menu }}
+                        {{ main_menu }}
                     </ul>
                 </div>
                 <!-- End / Main menu cell -->
@@ -54,7 +59,7 @@
                 <div class="col-6 col-lg-2 mb-4 text-white">
                     <h5>Repository</h5>
                     <ul class="list-unstyled pt-3">
-                        {{ git-menu }}
+                        {{ git_menu }}
                     </ul>
                 </div>
                 <!-- End / ... cell -->
@@ -62,7 +67,7 @@
                 <div class="col-6 col-lg-2 mb-3 text-white">
                     <h5>Socials</h5>
                     <ul class="list-unstyled pt-3">
-                        {{ social-menu }}
+                        {{ social_menu }}
                     </ul>
                 </div>
                 <!-- End / ... cell -->

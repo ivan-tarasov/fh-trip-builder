@@ -42,20 +42,21 @@ class AirlinesController
 
             foreach ($response->data as $airline) {
                 $templater
-                    ->setPlaceholder('airline-logo-img', AmazonS3::getUrl(sprintf(
+                    ->setPlaceholder('airline_logo_img', AmazonS3::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
                         $airline->code
                     )))
-                    ->setPlaceholder('airline-title', $airline->title)
-                    ->setPlaceholder('airline-traffic', $airline->traffic)
+                    ->setPlaceholder('airline_title',        $airline->title)
+                    ->setPlaceholder('airline_phone_number', $airline->phone)
+                    ->setPlaceholder('airline_url',          $airline->url)
                     ->save();
             }
 
             $airline_cards = $templater->render();
 
             echo $templater->setFilename('view')->set()
-                ->setPlaceholder('airlines-cards', $airline_cards)
+                ->setPlaceholder('airlines_cards', $airline_cards)
                 ->save()->render();
         } catch (\Exception $e) {
             echo "Error: " . $e->getMessage();
