@@ -62,7 +62,7 @@ class Install extends AbstractCommand
                 $table,
                 implode(', ', array_map(function ($column) {
                     return sprintf(
-                        '%s %s%s%s%s%s%s',
+                        '`%s` %s%s%s%s%s%s',
                         $column['name'],
                         strtoupper($column['type']),
                         $column['length']
@@ -70,8 +70,8 @@ class Install extends AbstractCommand
                             : null,
                         $column['default']
                             ? sprintf(' DEFAULT %s', is_array($column['default'])
-                            ? $column['default'][0]
-                            : sprintf('"%s"', $column['default']))
+                                ? $column['default'][0]
+                                : sprintf('"%s"', $column['default']))
                             : null,
                         $column['nullable']
                             ? null

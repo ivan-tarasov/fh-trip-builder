@@ -19,7 +19,7 @@ return [
         [
             'name' => 'id',
             'type' => 'int',
-            'length' => 6,
+            'length' => 9,
             'default' => false,
             'nullable' => false,
             'auto_inc' => true,

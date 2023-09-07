@@ -23,7 +23,7 @@ class AjaxController extends AbstractController
 
         $this->setGet([
             'flight_outbound' => $_GET['depart_id'] ?? null,
-            'flight_return' => $_GET['return_id'] ?? null,
+            'flight_return'   => $_GET['return_id'] ?? null,
         ]);
 
         if (! $this->get['flight_outbound']) {

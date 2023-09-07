@@ -11,10 +11,16 @@ return [
     |
     */
 
+    'directory' => [
+        'js'  => '/frontend/js',
+        'css' => '/frontend/css',
+    ],
+
     'static' => [
         'url' => '//d3i7jsp0grgmab.cloudfront.net',
         'endpoint' => [
             'images' => 'images',
+            'poi'    => 'images/poi',
             'css'    => 'css',
             'js'     => 'js',
             'vendor' => 'vendor',
@@ -55,7 +61,7 @@ return [
     'main-menu' => [
         '/my/bookings/' => [
             'text'    => 'My bookings',
-            'icon'    => 'far fa-address-book',
+            'icon'    => 'fas fa-bookmark',
             'spacer'  => 3,
             'enabled' => true,
         ],
@@ -143,6 +149,66 @@ return [
         'btn'  => ' active',
         'aria' => 'true',
         'div'  => ' show active'
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Index POI cards
+    |--------------------------------------------------------------------------
+    |
+    | Fake POI cards on index page. Maybe later it becomes real
+    |
+    */
+
+    'poi' => [
+        [
+            'country' => 'Turkey',
+            'city'    => 'Istanbul',
+            'title'   => 'Istanbul Delights: Points of Interest',
+            'image'   => 'istanbul.jpeg',
+        ],
+        [
+            'country' => 'United States',
+            'city'    => 'Miami',
+            'title'   => 'Exploring Miami’s Hidden Gems',
+            'image'   => 'miami-01.jpeg',
+        ],
+        [
+            'country' => 'Canada',
+            'city'    => 'Montréal',
+            'title'   => 'Montreal Magic: Must-See Places',
+            'image'   => 'montreal-01.jpeg',
+        ],
+        [
+            'country' => 'United States',
+            'city'    => 'New York',
+            'title'   => 'New York City’s Top Attractions',
+            'image'   => 'new-york-01.jpeg',
+        ],
+        [
+            'country' => 'France',
+            'city'    => 'Paris',
+            'title'   => 'Parisian Delights: Must-Visit Places in Paris',
+            'image'   => 'paris-01.jpeg',
+        ],
+        [
+            'country' => 'Brasil',
+            'city'    => 'Rio de Janeiro',
+            'title'   => 'Discovering Rio de Janeiro: Iconic Landmarks',
+            'image'   => 'rio-de-janeiro-01.jpeg',
+        ],
+        [
+            'country' => 'Australia',
+            'city'    => 'Sydney',
+            'title'   => 'Sydney’s Spectacular Sights',
+            'image'   => 'sydney-01.jpeg',
+        ],
+        [
+            'country' => 'Japan',
+            'city'    => 'Tokio',
+            'title'   => 'Tokyo’s Iconic Destinations',
+            'image'   => 'tokio-01.jpeg',
+        ],
     ],
 
 ];
