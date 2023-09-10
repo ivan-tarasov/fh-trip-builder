@@ -18,32 +18,15 @@
                 <div class="row">
                     <div class="col">
                         <div class="form-floating">
-                            <input type="text"
-                                   value="{{ depart_city }}"
-                                   class="form-control"
-                                   id="departing_airport"
-                                   data-filter="{{ airports_autofill }}#QUERY#"
-                                   placeholder="Start typing..."
-                                   required="required"
-                                   autocomplete="off"/>
+                            <input type="text" value="{{ depart_city }}" class="form-control auto-clear" id="departing_airport" data-filter="{{ airports_autofill }}#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
                             <input type="hidden" id="departing_airport_value" name="{{ input_from }}" value="{{ depart_code }}" />
                             <label for="departing_airport">From:</label>
                         </div>
                     </div>
                     <div class="col">
                         <div class="form-floating">
-                            <input type="text"
-                                   value="{{ arrive_city }}"
-                                   class="form-control"
-                                   id="arrival_airport"
-                                   data-filter="{{ airports_autofill }}#QUERY#"
-                                   placeholder="Start typing..."
-                                   required="required"
-                                   autocomplete="off"/>
-                            <input type="hidden"
-                                   id="arrival_airport_value"
-                                   name="{{ input_to }}"
-                                   value="{{ arrive_code }}" />
+                            <input type="text" value="{{ arrive_city }}" class="form-control auto-clear" id="arrival_airport" data-filter="{{ airports_autofill }}#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
+                            <input type="hidden" id="arrival_airport_value" name="{{ input_to }}" value="{{ arrive_code }}" />
                             <label for="arrival_airport">To</label>
                         </div>
                     </div>
@@ -54,10 +37,7 @@
                                 <div class="row g-2 mb-3">
                                     <div class="col-md">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control js-single-datepicker"
-                                                   id="roundtrip_dates" placeholder="yyyy-mm-dd" data-drop="1"
-                                                   data-startDate="2023-09-09"
-                                                   autocomplete="off" required="required" />
+                                            <input type="text" class="form-control js-single-datepicker" id="roundtrip_dates" placeholder="yyyy-mm-dd" data-drop="1" autocomplete="off" required="required" />
                                             <label for="roundtrip_dates">Depart and Return dates</label>
                                         </div>
                                     </div>
@@ -66,12 +46,7 @@
                             <div class="tab-pane p-0 m-0{{ tab_ow_div }}" id="oneway" role="tabpanel" aria-labelledby="oneway-tab" tabindex="0">
                                 <div class="form-floating pb-3">
                                     <div class="form-floating">
-                                        <!--div class="dropdown-datepicker" id="dropdown-datepicker3"></div-->
-                                        <input type="text" class="form-control js-single-datepicker"
-                                               id="oneway_depart_date"
-                                               placeholder="yyyy-mm-dd" data-drop="3" autocomplete="off"
-                                               data-value="{{ depart_date }}"
-                                               required="required"/>
+                                        <input type="text" class="form-control js-single-datepicker" id="oneway_depart_date" placeholder="yyyy-mm-dd" data-drop="3" autocomplete="off" data-value="{{ depart_date }}" required="required" />
                                         <label for="oneway_depart_date">Depart date</label>
                                     </div>
                                 </div>
