@@ -57,34 +57,25 @@
 
                     <nav class="mx-2">
                         <div class="nav nav-tabs" id="nav-tab" role="tablist">
-                            <button class="nav-link text-uppercase active" id="tab-roundtrip" data-bs-toggle="tab"
-                                    data-bs-target="#roundtrip" type="button" role="tab" aria-controls="roundtrip"
-                                    aria-selected="true" disabled>
+                            <button class="nav-link text-uppercase active" id="tab-roundtrip" data-bs-toggle="tab" data-bs-target="#roundtrip" type="button" role="tab" aria-controls="roundtrip" aria-selected="true" disabled>
                                 <i class="fas fa-exchange pe-1"></i>
                                 Round trip
                             </button>
-                            <button class="nav-link text-uppercase" id="tab-oneway" data-bs-toggle="tab"
-                                    data-bs-target="#oneway" type="button" role="tab" aria-controls="oneway"
-                                    aria-selected="false">
+                            <button class="nav-link text-uppercase" id="tab-oneway" data-bs-toggle="tab" data-bs-target="#oneway" type="button" role="tab" aria-controls="oneway" aria-selected="false">
                                 <i class="fas fa-plane-arrival pe-1"></i>
                                 One way
                             </button>
                         </div>
                     </nav>
 
-                    <form method="get" action="{{ form_action }}" id="searchForm"
-                          class="p-4 p-md-5 rounded-3 bg-body-tertiary">
+                    <form method="get" action="{{ form_action }}" id="searchForm" class="p-4 p-md-5 rounded-3 bg-body-tertiary">
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control" id="departing_airport"
-                                   data-filter="{{ api_airports_autofill }}#QUERY#" placeholder="Start typing..."
-                                   required="required" autocomplete="off"/>
+                            <input type="text" class="form-control auto-clear" id="departing_airport" data-filter="{{ api_airports_autofill }}#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
                             <input type="hidden" id="departing_airport_value" name="{{ input_from }}" value=""/>
                             <label for="departing_airport">From:</label>
                         </div>
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control" id="arrival_airport"
-                                   data-filter="{{ api_airports_autofill }}#QUERY#" placeholder="Start typing..."
-                                   required="required" autocomplete="off"/>
+                            <input type="text" class="form-control auto-clear" id="arrival_airport" data-filter="{{ api_airports_autofill }}#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
                             <input type="hidden" id="arrival_airport_value" name="{{ input_to }}" value=""/>
                             <label for="arrival_airport">To</label>
                         </div>
@@ -95,9 +86,7 @@
                                 <div class="row g-2 mb-3">
                                     <div class="col-md">
                                         <div class="form-floating">
-                                            <input type="text" class="form-control js-single-datepicker"
-                                                   id="roundtrip_dates" placeholder="yyyy-mm-dd" data-drop="1"
-                                                   autocomplete="off" required="required"/>
+                                            <input type="text" class="form-control js-single-datepicker" id="roundtrip_dates" placeholder="yyyy-mm-dd" data-drop="1" autocomplete="off" required="required" />
                                             <label for="roundtrip_dates">Depart and Return dates</label>
                                         </div>
                                     </div>
@@ -107,11 +96,7 @@
                                  tabindex="0">
                                 <div class="form-floating pb-3">
                                     <div class="form-floating">
-                                        <!--div class="dropdown-datepicker" id="dropdown-datepicker3"></div-->
-                                        <input type="text" class="form-control js-single-datepicker"
-                                               id="oneway_depart_date"
-                                               placeholder="yyyy-mm-dd" data-drop="3" autocomplete="off"
-                                               required="required"/>
+                                        <input type="text" class="form-control js-single-datepicker" id="oneway_depart_date" placeholder="yyyy-mm-dd" data-drop="3" autocomplete="off" required="required" />
                                         <label for="oneway_depart_date">Depart date</label>
                                     </div>
                                 </div>
@@ -196,8 +181,6 @@
                             Search flights
                             <i class="fa-solid fa-plane ps-2"></i>
                         </button>
-                        <!--hr class="my-4">
-                        <small class="text-body-secondary">By clicking Sign up, you agree to the terms of use.</small-->
                     </form>
                 </div>
             </div>

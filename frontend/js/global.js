@@ -139,7 +139,6 @@
         console.log(err);
     }
 
-
     function scrollToAnchor(aid) {
         let aTag = $("#top");
         $('html,body').animate({scrollTop: aTag.offset().top}, 0);
@@ -161,12 +160,33 @@
         $('input:checkbox[name="airlines[]"]').removeAttr('checked');
     });
 
+    $( ".auto-clear" ).on( "focus", function() {
+        $(this).select();
+    } );
+
 })(jQuery);
 
 document.addEventListener('DOMContentLoaded', () => {
     const departingAirportInput = $('#departing_airport');
-    const arrivalAirportInput = $('#arrival_airport');
+    const arrivalAirportInput   = $('#arrival_airport');
+    const roundtripDatesInput   = $('#roundtrip_dates');
+    const onewayDatesInput      = $('#oneway_depart_date');
 
-    departingAirportInput.autocomplete();
-    arrivalAirportInput.autocomplete();
+    // Ugly as hell
+    let nextDateInput = roundtripDatesInput;
+    $('#tab-oneway, #tab-roundtrip').click(function () {
+        nextDateInput = $(this).attr('id') === 'tab-roundtrip' ? roundtripDatesInput : onewayDatesInput;
+    });
+
+    departingAirportInput.autocomplete({
+        onPick(el, item) {
+            arrivalAirportInput.focus();
+        }
+    });
+    arrivalAirportInput.autocomplete({
+        onPick(el, item) {
+            nextDateInput.focus();
+        }
+    });
+
 }, false);
