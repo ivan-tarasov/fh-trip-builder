@@ -1,6 +1,6 @@
 <!-- Booking ID and date created -->
 <h3 class="justify-content-between align-items-center fs-6 pt-3">
-    <span class="text-muted"><i class="fas fa-hashtag pr-1"></i>{{ booking_id }}</span>
+    <span class="text-muted"><i class="fas fa-hashtag pr-1"></i>{{ booking_id_pretty }}</span>
 </h3>
 <!-- End / Booking ID and date created -->
 <!-- TICKETS CARD -->
@@ -30,7 +30,7 @@
         <div class="col-xl-2 pt-2"><i class="fas fa-lg fa-plane-departure pe-2"></i>{{ depart_time }}</div>
         <div class="col-xl-1 pt-2">
 			<div class="small %DISPLAY_NONE%">
-				<p># {{ booking_id }}</p>
+				<p># {{ booking_id_pretty }}</p>
 				<p>{{ booking_created }}</p>
 			</div>
 		</div>
@@ -48,11 +48,11 @@
         <!-- Action buttons -->
         <div class="col-xl-2 border-start ps-4">
             <div class="ps-0 pt-1">
-                <button type="button" class="btn btn-sm btn-link empty-link d-block" id="airlinesSelectClear">
-                    <i class="fas fa-exchange-alt pe-2"></i>Exchange ticket
+                <button type="button" class="btn btn-sm btn-link empty-link d-block" id="exchangeTicket">
+                    <i class="fas fa-exchange-alt pe-2"></i>Exchange Ticket
                 </button>
-                <button type="button" class="btn btn-sm btn-link text-danger empty-link d-block" id="airlinesSelectClear">
-                    <i class="fas fa-lg fa-times pe-2"></i>Return ticket
+                <button type="button" class="btn btn-sm btn-link text-danger d-block" id="deleteBooking_{{ booking_id_raw }}" data-booking-id="{{ booking_id_raw }}">
+                    <i class="fas fa-lg fa-times pe-2"></i>Delete Booking
                 </button>
             </div>
         </div>

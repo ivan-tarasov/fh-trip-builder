@@ -45,21 +45,22 @@ class MyController extends AbstractController
                     ->setPath('my/bookings')
                     ->setFilename('flight-outbound')
                     ->set()
-                    ->setPlaceholder('booking_id', Helper::bookingIdToString($booking['id']))
-                    ->setPlaceholder('booking_created', date('Y-m-d H:i', strtotime($booking['created'])))
-                    ->setPlaceholder('airline_name', $outbound->carrier_name)
-                    ->setPlaceholder('airline_logo_url', AmazonS3::getUrl(sprintf(
+                    ->setPlaceholder('booking_id_raw',    $booking['id'])
+                    ->setPlaceholder('booking_id_pretty', Helper::bookingIdToString($booking['id']))
+                    ->setPlaceholder('booking_created',   date('Y-m-d H:i', strtotime($booking['created'])))
+                    ->setPlaceholder('airline_name',      $outbound->carrier_name)
+                    ->setPlaceholder('airline_logo_url',  AmazonS3::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
                         $outbound->carrier
                     )))
-                    ->setPlaceholder('price_total', number_format($price_total, 2))
-                    ->setPlaceholder('price_base', number_format($price_base, 2))
-                    ->setPlaceholder('price_tax', number_format($price_tax, 2))
-                    ->setPlaceholder('depart_time', date('Y-m-d H:i', strtotime($outbound->depart->date_time)))
-                    ->setPlaceholder('depart_city', $outbound->depart->airport_city)
-                    ->setPlaceholder('arrive_city', $outbound->arrive->airport_city)
-                    ->setPlaceholder('flight_number', $outbound->number)
+                    ->setPlaceholder('price_total',       number_format($price_total, 2))
+                    ->setPlaceholder('price_base',        number_format($price_base, 2))
+                    ->setPlaceholder('price_tax',         number_format($price_tax, 2))
+                    ->setPlaceholder('depart_time',       date('Y-m-d H:i', strtotime($outbound->depart->date_time)))
+                    ->setPlaceholder('depart_city',       $outbound->depart->airport_city)
+                    ->setPlaceholder('arrive_city',       $outbound->arrive->airport_city)
+                    ->setPlaceholder('flight_number',     $outbound->number)
                     ->save();
 
                 // Return flight - roundtrip
@@ -68,16 +69,16 @@ class MyController extends AbstractController
                         ->setPath('my/bookings')
                         ->setFilename('flight-return')
                         ->set()
-                        ->setPlaceholder('airline_name', $return->carrier_name)
+                        ->setPlaceholder('airline_name',     $return->carrier_name)
                         ->setPlaceholder('airline_logo_url', AmazonS3::getUrl(sprintf(
                             '%s/suppliers/%s.png',
                             Config::get('site.static.endpoint.images'),
                             $return->carrier
                         )))
-                        ->setPlaceholder('depart_time', date('Y-m-d H:i', strtotime($return->depart->date_time)))
-                        ->setPlaceholder('depart_city', $return->depart->airport_city)
-                        ->setPlaceholder('arrive_city', $return->arrive->airport_city)
-                        ->setPlaceholder('flight_number', $return->number)
+                        ->setPlaceholder('depart_time',      date('Y-m-d H:i', strtotime($return->depart->date_time)))
+                        ->setPlaceholder('depart_city',      $return->depart->airport_city)
+                        ->setPlaceholder('arrive_city',      $return->arrive->airport_city)
+                        ->setPlaceholder('flight_number',    $return->number)
                         ->save();
                 }
             }
