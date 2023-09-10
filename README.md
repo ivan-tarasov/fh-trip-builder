@@ -205,4 +205,4 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 [pulls-url]: https://github.com/ivan-tarasov/fh-trip-builder/pulls
 
 
-[project-screenshot]: http://static-tripbuilder.tarasov.ca.s3-website.ca-central-1.amazonaws.com/images/git/form.png
+[project-screenshot]: http://static-tripbuilder.tarasov.ca.s3-website.ca-central-1.amazonaws.com/images/git/form_v2.png
