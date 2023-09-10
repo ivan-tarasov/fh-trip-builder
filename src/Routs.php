@@ -54,7 +54,8 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/ajax/add-trip' => 'Ajax@addTrip',
+        '/ajax/add-trip'       => 'Ajax@addTrip',
+        '/ajax/delete-booking' => 'Ajax@deleteBooking',
 
         /*
         |--------------------------------------------------------------------------

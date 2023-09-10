@@ -19,7 +19,7 @@ class AjaxController extends AbstractController
      */
     public function addTrip(): void
     {
-        //header('Content-type: application/json; charset=utf-8');
+        header('Content-type: application/json; charset=utf-8');
 
         $this->setGet([
             'flight_outbound' => $_GET['depart_id'] ?? null,
@@ -68,6 +68,41 @@ class AjaxController extends AbstractController
             $json = ['status' => 'success','message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
         } else {
             $json = ['status' => 'error',  'message' => 'insert failed: ' . $this->db->getLastError()];
+        }
+
+        echo json_encode($json);
+    }
+
+    public function deleteBooking(): void
+    {
+        header('Content-type: application/json; charset=utf-8');
+
+        $this->setGet([
+            'booking_id' => $_GET['booking_id'] ?? null,
+        ]);
+
+        if (! $this->get['booking_id']) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Wrong format'
+            ]);
+
+            return;
+        }
+
+        $this->db->where('id', $this->get['booking_id']);
+        $this->db->where('session_id', session_id());
+
+        if ($this->db->delete('bookings')) {
+            $json = [
+                'status'  => 'success',
+                'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id']))
+            ];
+        } else {
+            $json = [
+                'status'  => 'error',
+                'message' => 'Booking delete failed: ' . $this->db->getLastError()
+            ];
         }
 
         echo json_encode($json);

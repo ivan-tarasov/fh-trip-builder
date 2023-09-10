@@ -92,7 +92,7 @@
         });
 
         $("button[id^=addTrip_]").click(function () {
-            var tripID = [$(this).data('flight-departing-id'), $(this).data('flight-returning-id')];
+            let tripID = [$(this).data('flight-departing-id'), $(this).data('flight-returning-id')];
 
             Swal.fire({
                 title: 'Add this trip?',
@@ -126,6 +126,55 @@
                             showConfirmButton: false,
                             timer: 2000
                         });
+                    } else {
+                        Swal.fire({
+                            title: `${result.value.status} => ${result.value.message}`,
+                            icon: 'error',
+                        })
+                    }
+                }
+            })
+        });
+
+        $("button[id^=deleteBooking_]").click(function () {
+            let bookingID = $(this).data('booking-id');
+
+            Swal.fire({
+                title: "You're about to delete this booking. Are you sure?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Delete booking',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch(`/ajax/delete-booking?booking_id=${bookingID}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(response.statusText)
+                            }
+                            return response.json()
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(
+                                `Request failed: ${error}`
+                            )
+                        });
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (result.value.status == 'success') {
+                        $(this).prop('disabled', true);
+
+                        Swal.fire({
+                            title: `${result.value.message}`,
+                            icon: 'success',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+
+                        setTimeout(function () {
+                            location.reload();
+                        }, 1000);
                     } else {
                         Swal.fire({
                             title: `${result.value.status} => ${result.value.message}`,
