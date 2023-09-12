@@ -65,7 +65,7 @@ class HomeController extends AbstractController
                 ->setPlaceholder('from_name',    $search['from_name'])
                 ->setPlaceholder('to_name',      $search['to_name'])
                 ->setPlaceholder('depart_date',  date('D, F j', strtotime($search['depart'])))
-                ->setPlaceholder('return_date',  $search['return'] ? ' – ' . date('D, F j', strtotime($search['depart'])) : null)
+                ->setPlaceholder('return_date',  $search['return'] ? ' – ' . date('D, F j', strtotime($search['return'])) : null)
                 ->setPlaceholder('search_count', number_format($search['search_count']))
                 ->save();
         }
