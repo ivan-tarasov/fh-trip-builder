@@ -12,10 +12,10 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/'            => 'Home@index',
-        '/airlines'    => 'Airlines@index',
-        '/airports'    => 'Airports@index',
-        // '/about'       => 'About@index',
+        '/' => 'Home@index',
+        '/airlines' => 'Airlines@index',
+        '/airports' => 'Airports@index',
+        // '/about' => 'About@index',
 
         /*
         |--------------------------------------------------------------------------
@@ -23,7 +23,7 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/my'          => 'My@index',
+        '/my' => 'My@index',
         '/my/bookings' => 'My@bookings',
 
         /*
@@ -40,13 +40,13 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/api'                   => 'Api@index',
-        '/api/server'            => 'Api@server',
-        '/api/airports'          => 'Api@airports',
+        '/api' => 'Api@index',
+        '/api/server' => 'Api@server',
+        '/api/airports' => 'Api@airports',
         '/api/airports/autofill' => 'Api@airportsAutofill',
-        '/api/airlines'          => 'Api@airlines',
-        '/api/flights'           => 'Api@flights',
-        '/api/flights/one'       => 'Api@flightsOne',
+        '/api/airlines' => 'Api@airlines',
+        '/api/flights' => 'Api@flights',
+        '/api/flights/one' => 'Api@flightsOne',
 
         /*
         |--------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/ajax/add-trip'       => 'Ajax@addTrip',
+        '/ajax/add-trip' => 'Ajax@addTrip',
         '/ajax/delete-booking' => 'Ajax@deleteBooking',
 
         /*
@@ -77,18 +77,11 @@ class Routs
 
     private static string $currentPage;
 
-    /**
-     * @param $page
-     * @return void
-     */
-    public static function setCurrentPage($page): void
+    public static function setCurrentPage(string $page): void
     {
         self::$currentPage = $page;
     }
 
-    /**
-     * @return string
-     */
     public static function getCurrentPage(): string
     {
         return self::$currentPage;
