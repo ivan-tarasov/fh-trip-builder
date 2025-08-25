@@ -11,7 +11,7 @@ return [
     */
 
     'github' => [
-        'url'  => 'github.com',
+        'url' => 'github.com',
         'user' => 'ivan-tarasov',
         'repo' => 'fh-trip-builder'
     ],
