@@ -2,8 +2,6 @@
 
 namespace TripBuilder;
 
-use TripBuilder\Debug\dBug;
-
 class AmazonS3
 {
     /**
@@ -20,5 +18,4 @@ class AmazonS3
                 : null
         );
     }
-
 }
