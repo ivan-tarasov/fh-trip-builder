@@ -2,14 +2,14 @@
 /**
  * TripBuilder Config Class
  *
- * @author    Ivan Tarasov <ivan@tarasov.ca>
+ * @author Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   1.0.1
+ * @version 1.0.2
  */
 
 namespace TripBuilder;
 
-use TripBuilder\Debug\dBug;
+use Exception;
 
 class Config
 {
@@ -18,18 +18,18 @@ class Config
     protected static array $configData = [];
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function __construct($environment = false)
     {
-        // Clear data array to prevent mixing data with multiple time using
+        // Clear config data array to prevent mixing data with multiple time using
         self::$configData = [];
 
         $directory = sprintf(
             '%s/%s/%s',
             Helper::getRootDir(),
             self::CONFIG_DIRECTORY,
-            $environment ?: $_ENV['APP_ENV']
+            $environment ?: $_ENV['APP_ENV'],
         );
 
         if (is_dir($directory)) {
@@ -44,23 +44,18 @@ class Config
                 }
             }
         } else {
-            throw new \Exception("Config directory not found: $directory");
+            throw new Exception("Config directory not found: $directory");
         }
     }
 
-    /**
-     * @param null $key
-     * @param null $default
-     * @return mixed|null
-     */
-    public static function get($key = null, $default = null): mixed
+    public static function get(?string $key = null, mixed $default = null): mixed
     {
         if ($key === null) {
             return static::$configData;
         }
 
         $segments = explode('.', $key);
-        $value    = static::$configData;
+        $value = static::$configData;
 
         foreach ($segments as $segment) {
             if (isset($value[$segment])) {
@@ -73,12 +68,7 @@ class Config
         return $value;
     }
 
-    /**
-     * @param $key
-     * @param $value
-     * @return void
-     */
-    public static function set($key, $value): void
+    public static function set(string $key, string $value): void
     {
         $segments = explode('.', $key);
         $config =& static::$configData;
@@ -93,5 +83,4 @@ class Config
 
         $config = $value;
     }
-
 }
