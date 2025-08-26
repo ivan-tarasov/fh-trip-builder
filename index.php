@@ -2,9 +2,9 @@
 /**
  * Index page
  *
- * @author    Ivan Tarasov <ivan@tarasov.ca>
+ * @author Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   2.2.1
+ * @version 2.2.2
  */
 
 require_once 'vendor/autoload.php';
@@ -13,7 +13,6 @@ use TripBuilder\Config;
 use TripBuilder\Timer;
 use TripBuilder\Routs;
 use TripBuilder\Controllers\AbstractController;
-use TripBuilder\Debug\dBug;
 
 try {
     Timer::start();
@@ -39,7 +38,7 @@ try {
     $controllerClassName = sprintf(
         '%s\%sController',
         Routs::ROUTS_CONTROLLERS_PATH,
-        ucfirst($controllerName)
+        ucfirst($controllerName),
     );
 
     $abstractController = new AbstractController();
