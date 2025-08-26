@@ -2,26 +2,22 @@
 
 namespace TripBuilder\Noah\Flights;
 
+use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
-    name:        'flights:cleaning',
+    name: 'flights:cleaning',
     description: 'Deleting old flights from database.',
-    aliases:     [],
-    hidden:      false
+    aliases: [],
+    hidden: false,
 )]
 
 class Cleaning extends AbstractCommand
 {
     /**
-     * Execute the command
-     *
-     * @param  $input
-     * @param  $output
-     * @return int 0 if everything went fine, or an exit code.
-     * @throws \Exception
+     * @throws Exception
      */
     protected function execute($input, $output): int
     {
@@ -33,5 +29,4 @@ class Cleaning extends AbstractCommand
 
         return Command::SUCCESS;
     }
-
 }
