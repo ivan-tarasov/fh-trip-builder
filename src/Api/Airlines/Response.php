@@ -4,7 +4,6 @@ namespace TripBuilder\Api\Airlines;
 
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\DataBase\MySql;
-use TripBuilder\Debug\dBug;
 
 class Response extends AbstractApi
 {

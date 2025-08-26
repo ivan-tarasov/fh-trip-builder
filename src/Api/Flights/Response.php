@@ -4,7 +4,6 @@ namespace TripBuilder\Api\Flights;
 
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\HttpException;
-use TripBuilder\Debug\dBug;
 
 class Response extends AbstractApi
 {

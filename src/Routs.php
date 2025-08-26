@@ -57,14 +57,6 @@ class Routs
         '/ajax/add-trip' => 'Ajax@addTrip',
         '/ajax/delete-booking' => 'Ajax@deleteBooking',
 
-        /*
-        |--------------------------------------------------------------------------
-        | Debug controller
-        |--------------------------------------------------------------------------
-        */
-
-        '/__debug-it' => 'Debug@index',
-
     ];
 
     const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';

@@ -3,7 +3,6 @@
 namespace TripBuilder\Api;
 
 use TripBuilder\Controllers\AbstractController;
-use TripBuilder\Debug\dBug;
 use TripBuilder\Helper;
 use TripBuilder\Routs;
 

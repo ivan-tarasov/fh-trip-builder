@@ -5,7 +5,6 @@ namespace TripBuilder\ApiClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
-use TripBuilder\Debug\dBug;
 
 class Api
 {
