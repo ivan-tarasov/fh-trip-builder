@@ -2,37 +2,30 @@
 
 namespace TripBuilder\Noah\Db;
 
+use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Config;
 
 #[AsCommand(
-    name:        'app:install',
+    name: 'app:install',
     description: 'Installing necessary database tables and seeding it with data.',
-    aliases:     ['install', 'setup', 'app:setup'],
-    hidden:      false
+    aliases: ['install', 'setup', 'app:setup'],
+    hidden: false,
 )]
 
 class Install extends AbstractCommand
 {
-    const MESSAGE_CREATING_TABLE = 'Creating `%s` table',
-          MESSAGE_SEEDING_TABLE  = 'Seeding `%s` table';
+    private const MESSAGE_CREATING_TABLE = 'Creating `%s` table';
+    private const MESSAGE_SEEDING_TABLE  = 'Seeding `%s` table';
 
     /**
-     * Execute the command
-     *
-     * @param  $input
-     * @param  $output
-     * @return int 0 if everything went fine, or an exit code.
-     * @throws \Exception
+     * @throws Exception
      */
     protected function execute($input, $output): int
     {
-        // Creating DB tables
         $this->createTables();
-
-        // Seeding database tables
         $this->seedingTables();
 
         $this->io->newLine();
@@ -41,18 +34,17 @@ class Install extends AbstractCommand
     }
 
     /**
-     * @return void
+     * @throws Exception
      */
     private function createTables(): void
     {
-        // Build config from DB tables directory
         new Config(self::CONFIG_DIR_TABLES);
 
         // Creating DB tables
         foreach (Config::get() as $table => $data) {
             $action = sprintf(self::MESSAGE_CREATING_TABLE, $table);
 
-            if ($this->db->tableExists($table)) {
+            if ($this->db->tableExists([$table])) {
                 $this->formatOutput($action, 'exist', 'info');
                 continue;
             }
@@ -105,11 +97,10 @@ class Install extends AbstractCommand
     }
 
     /**
-     * @return void
+     * @throws Exception
      */
     private function seedingTables(): void
     {
-        // Build config from DB tables directory
         new Config(self::CONFIG_DIR_SEEDERS);
 
         foreach (Config::get() as $table => $data) {
@@ -118,14 +109,13 @@ class Install extends AbstractCommand
             $columns = $data['columns'];
 
             foreach ($data['seeds'] as $seed) {
-                // If table already seeded – updating data from seed array
+                // If table already seeded – updating data from a seed array
                 $this->db->onDuplicate($columns);
 
                 $values = array_pad($seed, count($columns), null);
 
                 $id = $this->db->insert($table, array_combine($columns, $values));
-
-                if (! $id) {
+                if (!$id) {
                     // $this->db->getLastError();
                     $this->formatOutput($action, 'failed', 'danger');
                     break;
@@ -135,5 +125,4 @@ class Install extends AbstractCommand
             $this->formatOutput($action, 'done', 'success');
         }
     }
-
 }
