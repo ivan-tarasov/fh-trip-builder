@@ -2,40 +2,26 @@
 
 namespace TripBuilder\Noah\Grab;
 
+use Exception;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputOption;
-use TripBuilder\Config;
-use TripBuilder\Debug\dBug;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
 class Suppliers extends AbstractCommand
 {
-    /**
-     * The name of the command.
-     *
-     * @var string
-     */
-    protected static $defaultName = 'grab:suppliers';
+    private const IMAGE_URL = 'https://mpics.avs.io/al_square/64/64/%s.png';
+    private const LOCAL_IMAGE_PATH = '/frontend/images/suppliers/';
 
-    /**
-     * The command description shown when running `list` command.
-     *
-     * @var string
-     */
+    protected static $defaultName = 'grab:suppliers';
     protected static $defaultDescription = 'Grab suppliers logo from Aviasales';
 
     /**
-     * Execute the command
-     *
-     * @param  $input
-     * @param  $output
-     * @return int 0 if everything went fine, or an exit code.
-     * @throws \Exception
+     * @throws Exception
      */
-    protected function execute($input, $output): int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $codes = $this->db->get('airlines', null, 'code');
 
@@ -48,10 +34,10 @@ class Suppliers extends AbstractCommand
 
         foreach ($codes as $code) {
             // URL of the image you want to download
-            $imageUrl = sprintf('https://mpics.avs.io/al_square/64/64/%s.png', $code['code']);
+            $imageUrl = sprintf(self::IMAGE_URL, $code['code']);
 
             // Folder where you want to save the downloaded image
-            $targetFolder = Helper::getRootDir() . '/frontend/images/suppliers/';
+            $targetFolder = Helper::getRootDir() . self::LOCAL_IMAGE_PATH;
 
             // Extract the filename from the URL
             $filename = basename($imageUrl);
@@ -68,7 +54,7 @@ class Suppliers extends AbstractCommand
                 // Get the HTTP headers of the URL
                 $headers = get_headers($imageUrl);
 
-                if ($headers[0] != 'HTTP/1.1 404 Not Found') {
+                if ($headers[0] !== 'HTTP/1.1 404 Not Found') {
                     // Download the image using cURL
                     $ch = curl_init($imageUrl);
                     $fp = fopen($targetPath, 'wb');
@@ -87,5 +73,4 @@ class Suppliers extends AbstractCommand
 
         return Command::SUCCESS;
     }
-
 }
