@@ -80,7 +80,7 @@ class HttpException
         511 => 'Network Authentication Required',
     ];
 
-    private static function sendResponse(int $statusCode, $message = null)
+    private static function sendResponse(int $statusCode, $message = null): void
     {
         http_response_code($statusCode);
 
@@ -88,49 +88,30 @@ class HttpException
 
         echo json_encode([
             'status' => $statusCode,
-            'data'   => $message ?? self::STATUS_CODE_PHRASES[$statusCode],
+            'data' => $message ?? self::STATUS_CODE_PHRASES[$statusCode],
         ]);
 
         die();
     }
 
-    /**
-     * @param string|null $message
-     * @return void
-     */
-    public static function badRequest(string $message = null): void
+    public static function badRequest(?string $message = null): void
     {
         self::sendResponse(400, $message);
     }
 
-    /**
-     * @param string|null $message
-     * @return void
-     */
-    public static function unauthorizedAccess(string $message = null): void
+    public static function unauthorizedAccess(?string $message = null): void
     {
         self::sendResponse(401, $message);
     }
 
-    /**
-     * @param string|null $message
-     * @return void
-     */
-    public static function notFound(string $message = null): void
+    public static function notFound(?string $message = null): void
     {
         self::sendResponse(404, $message);
     }
 
-    /**
-     * @param array       $allowed
-     * @param string|null $message
-     * @return void
-     */
     public static function methodNotAllowed(array $allowed, string $message = null): void
     {
         header('Access-Control-Allow-Methods: ' . implode(',', $allowed));
-
         self::sendResponse(405, $message);
     }
-
 }

@@ -10,13 +10,13 @@ class AbstractApi extends AbstractController
 {
     const HEADER_AUTH_KEY = 'Authorization';
 
-    const REQUEST_METHOD_GET     = 'GET',
-          REQUEST_METHOD_POST    = 'POST',
-          REQUEST_METHOD_PUT     = 'PUT',
-          REQUEST_METHOD_PATCH   = 'PATCH',
-          REQUEST_METHOD_DELETE  = 'DELETE',
-          REQUEST_METHOD_HEAD    = 'HEAD',
-          REQUEST_METHOD_OPTIONS = 'OPTIONS';
+    const REQUEST_METHOD_GET = 'GET';
+    const REQUEST_METHOD_POST = 'POST';
+    const REQUEST_METHOD_PUT = 'PUT';
+    const REQUEST_METHOD_PATCH = 'PATCH';
+    const REQUEST_METHOD_DELETE = 'DELETE';
+    const REQUEST_METHOD_HEAD = 'HEAD';
+    const REQUEST_METHOD_OPTIONS = 'OPTIONS';
 
     const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
         '/api/airports/autofill',
@@ -26,16 +26,14 @@ class AbstractApi extends AbstractController
         '/api/airports/autofill',
     ];
 
-    const DB_TABLE_AIRLINES  = 'airlines',
-          DB_TABLE_AIRPORTS  = 'airports',
-          DB_TABLE_BOOKINGS  = 'bookings',
-          DB_TABLE_COUNTRIES = 'countries',
-          DB_TABLE_FLIGHTS   = 'flights';
+    const DB_TABLE_AIRLINES = 'airlines';
+    const DB_TABLE_AIRPORTS = 'airports';
+    const DB_TABLE_BOOKINGS = 'bookings';
+    const DB_TABLE_COUNTRIES = 'countries';
+    const DB_TABLE_FLIGHTS = 'flights';
 
     /**
      * Minimum security at this time...
-     *
-     * @var array $authorizedTokens
      */
     private array $authorizedTokens = [
         'SomeAPItoken_$ecretWORD---orHASH',
@@ -44,16 +42,14 @@ class AbstractApi extends AbstractController
     ];
 
     private array $headers = [];
-
     protected array $data = [];
-
     private string $allowedMethod;
 
     public function __construct($method = false)
     {
         parent::__construct();
 
-        // By default we accept only POST request method if not provided another one
+        // By default, we accept only the POST request method if not provided another one
         $this->setAllowedMethod($method ?: self::REQUEST_METHOD_POST);
 
         $this->guardUnauthorizedAccess();
@@ -62,21 +58,15 @@ class AbstractApi extends AbstractController
         $this->setRequestData();
     }
 
-    /**
-     * @return void
-     */
     private function guardUnauthorizedAccess(): void
     {
-        if (! in_array(Routs::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS) &&
-            ! in_array($this->getAuthToken(), $this->authorizedTokens)
+        if (!in_array(Routs::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS)
+            && !in_array($this->getAuthToken(), $this->authorizedTokens)
         ) {
             HttpException::unauthorizedAccess();
         }
     }
 
-    /**
-     * @return void
-     */
     private function guardNotAllowedRequestMethod(): void
     {
         if ($this->getRequestMethod() !== $this->getAllowedMethod()) {
@@ -84,12 +74,6 @@ class AbstractApi extends AbstractController
         }
     }
 
-    /**
-     * @param int   $statusCode
-     * @param array $data
-     * @param array $headers
-     * @return void
-     */
     public function sendResponse(int $statusCode, array $data = [], array $headers = []): void
     {
         // Sending response code
@@ -99,22 +83,19 @@ class AbstractApi extends AbstractController
         ob_clean();
         header_remove();
 
-        // For some endpoints we not using typical output and return raw data
-        if (! in_array(Routs::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
+        // For some endpoints we not using typical output and returning raw data
+        if (!in_array(Routs::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
             // Building response array
             $response = [
-                'status'    => $statusCode,
-                'endpoint'  => Helper::getUrlPath(),
-                'method'    => $this->getRequestMethod(),
+                'status' => $statusCode,
+                'endpoint' => Helper::getUrlPath(),
+                'method' => $this->getRequestMethod(),
                 'timestamp' => date('Y-m-d H:i:s'),
-                'data'      => $data ?? [],
+                'data' => $data ?? [],
             ];
 
             $response = json_encode($response);
         } else {
-            // Handle data
-            // $data = str_replace("\n", '', $data);
-
             $response = json_encode($data);
         }
 
@@ -124,34 +105,22 @@ class AbstractApi extends AbstractController
         self::addHeader('Content-Length', strlen($response));
 
         if (!empty($headers)) {
-            // array_walk($headers, [$this, 'addHeader']);
             array_map([$this, 'addHeader'], array_keys($headers), $headers);
         }
 
         echo $response;
     }
 
-    /**
-     * @param string     $key
-     * @param string|int $value
-     * @return void
-     */
     private static function addHeader(string $key, string|int $value): void
     {
         header(sprintf('%s: %s', $key, $value));
     }
 
-    /**
-     * @return string
-     */
     private function getRequestMethod(): string
     {
         return $_SERVER['REQUEST_METHOD'] ?? '';
     }
 
-    /**
-     * @return string
-     */
     private function getAuthToken(): string
     {
         return preg_match('/Bearer\s+(\S+)\b/i', getallheaders()[self::HEADER_AUTH_KEY] ?? '', $matches)
@@ -159,9 +128,6 @@ class AbstractApi extends AbstractController
             : '';
     }
 
-    /**
-     * @return void
-     */
     private function getRequestHeaders(): void
     {
         $this->setHeaders(getallheaders() ?? []);
@@ -178,11 +144,6 @@ class AbstractApi extends AbstractController
         $this->data = json_decode($data, true);
     }
 
-    /**
-     * @param string $table
-     * @param array  $conditions
-     * @return void
-     */
     protected function updateSearchStats(string $table, array $conditions): void
     {
         $this->db->where('code', $conditions, 'IN');
@@ -200,41 +161,25 @@ class AbstractApi extends AbstractController
                 'last_search' => $this->db->now(),
             ]);
         }
-
     }
 
-    /**
-     * @param $headers
-     * @return void
-     */
-    private function setHeaders($headers): void
+    private function setHeaders(array $headers): void
     {
         $this->headers = $headers;
     }
 
-    /**
-     * @return array
-     */
     private function getHeaders(): array
     {
         return $this->headers;
     }
 
-    /**
-     * @param $method
-     * @return void
-     */
-    public function setAllowedMethod($method): void
+    public function setAllowedMethod(string $method): void
     {
         $this->allowedMethod = $method;
     }
 
-    /**
-     * @return string
-     */
     private function getAllowedMethod(): string
     {
         return $this->allowedMethod;
     }
-
 }

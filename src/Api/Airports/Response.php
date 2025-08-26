@@ -2,19 +2,13 @@
 
 namespace TripBuilder\Api\Airports;
 
+use Exception;
 use TripBuilder\Api\AbstractApi;
-use TripBuilder\Api\HttpException;
-use TripBuilder\DataBase\MySql;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
 
 class Response extends AbstractApi
 {
-    /**
-     * MySQL Airports table columns
-     *
-     * @var array
-     */
     private array $columns = [
         'a.code',
         'a.title',
@@ -27,7 +21,6 @@ class Response extends AbstractApi
         'a.longitude',
         'a.altitude',
     ];
-
     private array $airports = [];
 
     public function __construct($method = false) {
@@ -35,11 +28,11 @@ class Response extends AbstractApi
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function get(): void
     {
-        if (! empty($this->data['major']) && $this->data['major']) {
+        if (!empty($this->data['major']) && $this->data['major']) {
             $this->db->where('is_major', 1);
         }
 
@@ -53,8 +46,7 @@ class Response extends AbstractApi
     }
 
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function getAutofill(): void
     {
@@ -66,23 +58,22 @@ class Response extends AbstractApi
         }
 
         $this->db->where('a.enabled', 1);
-        $this->db->where ('a.code', '%' . $query . '%', 'like');
-        $this->db->orWhere ('a.title', '%' . $query . '%', 'like');
-        $this->db->orWhere ('a.city_code', '%' . $query . '%', 'like');
-        $this->db->orWhere ('a.city', '%' . $query . '%', 'like');
+        $this->db->where('a.code', "%$query%", 'like');
+        $this->db->orWhere('a.title', "%$query%", 'like');
+        $this->db->orWhere('a.city_code', "%$query%", 'like');
+        $this->db->orWhere('a.city', "%$query%", 'like');
 
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
         $this->db->orderBy('a.title', 'asc');
 
         $this->airports = $this->db->get('airports a', null, $this->columns);
 
-        $airportsGroups =
-        $response       = [];
+        $airportsGroups = $response = [];
 
         foreach ($this->airports as $airport) {
-            $airportsGroups[$airport['city']]['code']       = $airport['city_code'];
-            $airportsGroups[$airport['city']]['country']    = $airport['country'];
-            $airportsGroups[$airport['city']]['timezone']   = $airport['timezone'];
+            $airportsGroups[$airport['city']]['code'] = $airport['city_code'];
+            $airportsGroups[$airport['city']]['country'] = $airport['country'];
+            $airportsGroups[$airport['city']]['timezone'] = $airport['timezone'];
             $airportsGroups[$airport['city']]['airports'][] = $airport;
         }
 
@@ -108,5 +99,4 @@ class Response extends AbstractApi
 
         $this->sendResponse(200, $response);
     }
-
 }
