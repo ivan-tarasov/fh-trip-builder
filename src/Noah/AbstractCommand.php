@@ -158,7 +158,7 @@ abstract class AbstractCommand extends Command
         string $text,
         string $status,
         string $color = self::FORMAT_OUTPUT_DEFAULT_COLOR,
-        bool $newline = false
+        bool $newline = false,
     ): void {
         $times = mb_strlen($status);
 

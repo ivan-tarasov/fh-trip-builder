@@ -13,7 +13,7 @@ class Cdn
             $_ENV['AWS_CLOUDFRONT'] ?? '',
             !empty($url)
                 ? '/' . ltrim($url, '/')
-                : ''
+                : '',
         );
     }
 }

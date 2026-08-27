@@ -9,8 +9,8 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Config;
+use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
     name: 'app:install',
@@ -77,7 +77,7 @@ class Install extends AbstractCommand
                             : null,
                         $column['auto_inc']
                             ? ' AUTO_INCREMENT'
-                            : null
+                            : null,
                     );
                 }, $data['columns'])),
                 $data['primary'],
@@ -85,7 +85,7 @@ class Install extends AbstractCommand
                 $data['charset'],
                 isset($data['auto_increment'])
                     ? ' AUTO_INCREMENT=' . $data['auto_increment']
-                    : null
+                    : null,
             );
 
             $this->db->rawQueryOne($query);

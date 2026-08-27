@@ -6,8 +6,8 @@ namespace TripBuilder\Api\Flights;
 
 use Exception;
 use TripBuilder\Api\AbstractApi;
-use TripBuilder\Api\HttpStatus;
 use TripBuilder\Api\ApiResponder;
+use TripBuilder\Api\HttpStatus;
 
 class Response extends AbstractApi
 {
@@ -87,7 +87,7 @@ class Response extends AbstractApi
             || empty($this->data[self::DATA_DEPART_DATE])
             || empty($this->data[self::DATA_ADULT_COUNT])
         ) {
-             ApiResponder::badRequest();
+            ApiResponder::badRequest();
         }
 
         $this->query = new FlightSearchQuery(
@@ -214,7 +214,7 @@ class Response extends AbstractApi
             $flights = $this->db->get(self::DB_TABLE_FLIGHTS . ' flight', null, $columns);
         }
 
-        return array_map(function($flight) {
+        return array_map(function ($flight) {
             return [
                 self::RESPONSE_PRICE_BASE => $flight['flight_price_base'],
                 self::RESPONSE_PRICE_TAX => $flight['flight_price_tax'],
@@ -225,7 +225,7 @@ class Response extends AbstractApi
                     self::RESPONSE_FLIGHT_NUMBER => sprintf(
                         '%s-%d',
                         $flight['flight_airline_code'],
-                        $flight['flight_number']
+                        $flight['flight_number'],
                     ),
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE => $flight['departure_airport_code'],
@@ -299,7 +299,7 @@ class Response extends AbstractApi
         $this->db->join(sprintf('%s out_airport', self::DB_TABLE_AIRPORTS), 'out_flight.departure_airport = out_airport.code');
         $this->db->join(sprintf('%s out_arrival_airport', self::DB_TABLE_AIRPORTS), 'out_flight.arrival_airport = out_arrival_airport.code');
         $this->db->join(sprintf('%s out_airline', self::DB_TABLE_AIRLINES), 'out_flight.airline = out_airline.code');
-        $this->db->join(sprintf('%s out_country', self::DB_TABLE_COUNTRIES),'out_airport.country_code = out_country.code');
+        $this->db->join(sprintf('%s out_country', self::DB_TABLE_COUNTRIES), 'out_airport.country_code = out_country.code');
 
         $this->db->join(sprintf('%s in_flight', self::DB_TABLE_FLIGHTS), 'out_flight.arrival_airport = in_flight.departure_airport');
         $this->db->joinWhere(sprintf('%s in_flight', self::DB_TABLE_FLIGHTS), 'DATE(in_flight.departure_time)', $this->query->returnDate);
@@ -329,7 +329,7 @@ class Response extends AbstractApi
             $columns,
         );
 
-        return array_map(function($flight) {
+        return array_map(function ($flight) {
             $price_base = $flight['outbound_price_base'] + $flight['return_price_base'];
             $price_tax = round($flight['outbound_price_tax'] + $flight['return_price_tax'], 2);
 
@@ -343,7 +343,7 @@ class Response extends AbstractApi
                     self::RESPONSE_FLIGHT_NUMBER => sprintf(
                         '%s-%d',
                         $flight['outbound_airline_code'],
-                        $flight['outbound_flight_number']
+                        $flight['outbound_flight_number'],
                     ),
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE => $flight['outbound_departure_airport_code'],
@@ -371,7 +371,7 @@ class Response extends AbstractApi
                     self::RESPONSE_FLIGHT_NUMBER => sprintf(
                         '%s-%d',
                         $flight['return_airline_code'],
-                        $flight['return_flight_number']
+                        $flight['return_flight_number'],
                     ),
                     self::RESPONSE_DEPART => [
                         self::RESPONSE_AIRPORT_CODE => $flight['return_departure_airport_code'],

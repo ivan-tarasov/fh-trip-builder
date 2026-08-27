@@ -11,10 +11,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
-use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
-use TripBuilder\Noah\Flights\Generate as GenerateFlights;
+use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
+use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 use TripBuilder\Noah\Grab\Suppliers as GrabSuppliers;
 
 try {

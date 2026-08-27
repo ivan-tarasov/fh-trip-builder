@@ -35,7 +35,7 @@ class AjaxController extends AbstractController
         if (! $this->get['flight_outbound']) {
             echo json_encode([
                 'status'  => 'error',
-                'message' => 'Wrong format'
+                'message' => 'Wrong format',
             ]);
 
             return;
@@ -49,7 +49,7 @@ class AjaxController extends AbstractController
         ];
 
         $request = [
-            'session_id' => session_id()
+            'session_id' => session_id(),
         ];
 
         foreach ($this->get as $field => $flight_id) {
@@ -95,7 +95,7 @@ class AjaxController extends AbstractController
         if (! $this->get['booking_id']) {
             echo json_encode([
                 'status'  => 'error',
-                'message' => 'Wrong format'
+                'message' => 'Wrong format',
             ]);
 
             return;
@@ -108,7 +108,7 @@ class AjaxController extends AbstractController
         if ($this->db->delete('bookings') && $this->db->count > 0) {
             $json = [
                 'status'  => 'success',
-                'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id']))
+                'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id'])),
             ];
         } else {
             error_log('Booking delete failed: ' . ($this->db->getLastError() ?: 'no matching booking'));

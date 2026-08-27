@@ -90,9 +90,9 @@ class Response extends AbstractApi
             foreach ($group['airports'] as $airport) {
                 $response[] = $templater->setFilename('airport-span')->set()
                     ->setPlaceholder('airport-code', $airport['code'])
-                    ->setPlaceholder('airport-name',  $airport['title'])
-                    ->setPlaceholder('city-name',  $airport['city'])
-                    ->setPlaceholder('airport-country',  $airport['country'])
+                    ->setPlaceholder('airport-name', $airport['title'])
+                    ->setPlaceholder('city-name', $airport['city'])
+                    ->setPlaceholder('airport-country', $airport['country'])
                     ->save()->render();
             }
         }

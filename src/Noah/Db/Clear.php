@@ -57,7 +57,7 @@ class Clear extends AbstractCommand
 
         if ($chosenTable !== self::ALL_TABLES && !in_array($chosenTable, $existingTables)) {
             throw new InvalidArgumentException(
-                sprintf('Table %s doesn’t exist in database. Try another table.', $chosenTable)
+                sprintf('Table %s doesn’t exist in database. Try another table.', $chosenTable),
             );
         }
 

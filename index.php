@@ -12,9 +12,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 use TripBuilder\Config;
-use TripBuilder\Timer;
-use TripBuilder\Routes;
 use TripBuilder\Controllers\AbstractController;
+use TripBuilder\Routes;
+use TripBuilder\Timer;
 
 try {
     Timer::start();
