@@ -15,7 +15,17 @@ use PDOStatement;
  */
 final class Connection
 {
+    private int $queryCount = 0;
+
     public function __construct(private readonly PDO $pdo) {}
+
+    /**
+     * Number of statements run on this connection (diagnostic).
+     */
+    public function queryCount(): int
+    {
+        return $this->queryCount;
+    }
 
     /**
      * Build a connection from the DB_* environment variables.
@@ -114,6 +124,8 @@ final class Connection
      */
     public function run(string $sql, array $params = []): PDOStatement
     {
+        $this->queryCount++;
+
         $statement = $this->pdo->prepare($sql);
         $statement->execute($params === [] ? null : $params);
 

@@ -10,7 +10,6 @@
       "psr-4": {"TripBuilder\\Tests\\": "tests/"}
     },
     "require": {
-        "thingengineer/mysqli-database-class": "dev-master#5159467ae081adbe96586e45e65a58c0fe7a32ce",
         "vlucas/phpdotenv": "^5.5",
         "guzzlehttp/guzzle": "^7.7",
         "symfony/console": "^6.3"

@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
-use MysqliDb;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
-use TripBuilder\Database\MySql;
+use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
 use TripBuilder\Templater;
@@ -17,29 +16,18 @@ use TripBuilder\Timer;
 
 class AbstractController
 {
-    public MysqliDb $db;
-
     private string $staticUrl;
 
-    // PDO connection for controllers migrated off the legacy MysqliDb query
-    // builder. Lazy so only pages that use it open the connection.
     private ?Connection $connection = null;
 
     public function __construct()
     {
-        $this->dbConnect();
         $this->setStaticUrl(Cdn::getUrl());
     }
 
     protected function connection(): Connection
     {
         return $this->connection ??= Connection::fromEnv();
-    }
-
-    private function dbConnect(): void
-    {
-        $this->db = MySql::connect();
-        $this->db->setTrace(true);
     }
 
     /**
@@ -189,17 +177,12 @@ class AbstractController
      */
     private function getFlightsCount(): int
     {
-        $count = $this->db->getOne('flights', 'count(*) as flights');
-
-        return (int) ($count['flights'] ?? 0);
+        return (int) $this->connection()->fetchValue('SELECT count(*) FROM ' . Table::Flights->value);
     }
 
-    /**
-     * @return int
-     */
     private function getDbRequestCount(): int
     {
-        return count($this->db->trace);
+        return $this->connection()->queryCount();
     }
 
     /**

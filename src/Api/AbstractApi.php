@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Api;
 
-use MysqliDb;
 use TripBuilder\Database\Connection;
-use TripBuilder\Database\MySql;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
@@ -29,21 +27,13 @@ abstract class AbstractApi
     protected const DB_TABLE_COUNTRIES = Table::Countries->value;
     protected const DB_TABLE_FLIGHTS = Table::Flights->value;
 
-    protected MysqliDb $db;
     protected array $data = [];
     private HttpMethod $allowedMethod;
 
-    // PDO connection for endpoints migrated off the legacy MysqliDb query builder.
-    // Lazily created so only migrated endpoints open it during the transition.
     private ?Connection $connection = null;
 
     public function __construct(?HttpMethod $method = null)
     {
-        // API endpoints only need a database handle — not the page layout,
-        // git shell-outs, or CDN wiring that AbstractController pulls in.
-        $this->db = MySql::connect();
-        $this->db->setTrace(true);
-
         // By default, we accept only the POST request method if not provided another one
         $this->setAllowedMethod($method ?? HttpMethod::Post);
 
@@ -166,22 +156,24 @@ abstract class AbstractApi
         $this->data = $decoded;
     }
 
+    /**
+     * @param list<string> $conditions
+     */
     protected function updateSearchStats(string $table, array $conditions): void
     {
-        $this->db->where('code', $conditions, 'IN');
+        $in = implode(', ', array_fill(0, count($conditions), '?'));
 
-        if ($table == self::DB_TABLE_AIRPORTS) {
-            $this->db->orWhere('city_code', $conditions, 'IN');
-
-            $this->db->update($table, [
-                'search_count' => $this->db->inc(1),
-                'last_search'  => $this->db->now(),
-            ]);
-        } elseif ($table == self::DB_TABLE_AIRLINES) {
-            $this->db->update($table, [
-                'book_count'  => $this->db->inc(1),
-                'last_search' => $this->db->now(),
-            ]);
+        if ($table === self::DB_TABLE_AIRPORTS) {
+            $this->connection()->execute(
+                "UPDATE `$table` SET search_count = search_count + 1, last_search = NOW()"
+                . " WHERE code IN ($in) OR city_code IN ($in)",
+                [...$conditions, ...$conditions],
+            );
+        } elseif ($table === self::DB_TABLE_AIRLINES) {
+            $this->connection()->execute(
+                "UPDATE `$table` SET book_count = book_count + 1, last_search = NOW() WHERE code IN ($in)",
+                array_values($conditions),
+            );
         }
     }
 

@@ -13,12 +13,6 @@ parameters:
 			path: src/Api/AbstractApi.php
 
 		-
-			message: '#^Method TripBuilder\\Api\\AbstractApi\:\:updateSearchStats\(\) has parameter \$conditions with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Api/AbstractApi.php
-
-		-
 			message: '#^Property TripBuilder\\Api\\AbstractApi\:\:\$data type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

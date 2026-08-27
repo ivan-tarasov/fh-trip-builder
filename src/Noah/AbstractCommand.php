@@ -6,7 +6,6 @@ namespace TripBuilder\Noah;
 
 use Dotenv\Dotenv;
 use Exception;
-use MysqliDb;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\InputInterface;
@@ -48,9 +47,7 @@ abstract class AbstractCommand extends Command
     protected InputInterface $input;
     protected OutputInterface $output;
     protected SymfonyStyle $io;
-    protected MysqliDb $db;
 
-    // PDO connection for commands migrated off the legacy MysqliDb query builder.
     private ?Connection $connection = null;
 
     protected function connection(): Connection
@@ -78,8 +75,8 @@ abstract class AbstractCommand extends Command
         // Show command information
         $this->commandInformation();
 
-        // Connecting to MySQL database
-        $this->databaseConnect();
+        // Load environment variables so Connection::fromEnv() has DB_* available
+        $this->loadEnvironment();
     }
 
     private function headerMessage(): void
@@ -114,22 +111,9 @@ abstract class AbstractCommand extends Command
         $this->io->newLine();
     }
 
-    private function databaseConnect(): void
+    private function loadEnvironment(): void
     {
-        $dotenv = Dotenv::createImmutable(Helper::getRootDir());
-        $dotenv->load();
-
-        $this->db = new MysqliDb(
-            // TODO: for local tests use 127.0.0.1
-            $_ENV['DB_HOST'],
-            $_ENV['DB_USERNAME'],
-            $_ENV['DB_PASSWORD'],
-            $_ENV['DB_DATABASE'],
-            $_ENV['DB_PORT'],
-        );
-
-        // Enable tracer
-        $this->db->setTrace(true);
+        Dotenv::createImmutable(Helper::getRootDir())->load();
     }
 
     /**
