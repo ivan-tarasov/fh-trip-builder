@@ -82,7 +82,7 @@ class Helper
             'branch' => $git_branch,
             'tag' => $git_tag,
             'commit_hash' => $git_commitHash,
-            'commit_date' => $git_commitDate->format('Y-m-d H:i:s')
+            'commit_date' => $git_commitDate->format('Y-m-d H:i:s'),
         ];
 
         return $info;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use MysqliDb;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
@@ -12,7 +13,6 @@ use TripBuilder\Helper;
 use TripBuilder\Routes;
 use TripBuilder\Templater;
 use TripBuilder\Timer;
-use MysqliDb;
 
 class AbstractController
 {
@@ -45,11 +45,11 @@ class AbstractController
         foreach (Config::get('site.main-menu') as $link => $params) {
             if ($params['enabled']) {
                 $templater
-                    ->setPlaceholder('menu_item_url',        $link)
-                    ->setPlaceholder('menu_item_spacer',     $params['spacer'] ?? 2)
+                    ->setPlaceholder('menu_item_url', $link)
+                    ->setPlaceholder('menu_item_spacer', $params['spacer'] ?? 2)
                     ->setPlaceholder('menu_item_active', Routes::getCurrentPage() == rtrim($link, '/') ? ' active' : null)
-                    ->setPlaceholder('menu_item_icon',       $params['icon'])
-                    ->setPlaceholder('menu_item_text',       $params['text'])
+                    ->setPlaceholder('menu_item_icon', $params['icon'])
+                    ->setPlaceholder('menu_item_text', $params['text'])
                     ->save();
             }
         }
@@ -62,18 +62,18 @@ class AbstractController
             ->setPath('header')
             ->setFilename('view')
             ->set()
-            ->setPlaceholder('app_name',              Config::get('app.name'))
-            ->setPlaceholder('csrf_token',            Csrf::token())
-            ->setPlaceholder('page_title',            'Main Page')
-            ->setPlaceholder('app_meta_description',  Config::get('meta.description'))
-            ->setPlaceholder('app_meta_keywords',     implode(', ', Config::get('meta.keywords')))
-            ->setPlaceholder('app_meta_author_name',  Config::get('meta.author.name'))
+            ->setPlaceholder('app_name', Config::get('app.name'))
+            ->setPlaceholder('csrf_token', Csrf::token())
+            ->setPlaceholder('page_title', 'Main Page')
+            ->setPlaceholder('app_meta_description', Config::get('meta.description'))
+            ->setPlaceholder('app_meta_keywords', implode(', ', Config::get('meta.keywords')))
+            ->setPlaceholder('app_meta_author_name', Config::get('meta.author.name'))
             ->setPlaceholder('app_meta_author_email', Config::get('meta.author.email'))
-            ->setPlaceholder('app_vendor_folder',     sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
-            ->setPlaceholder('app_css_folder',        Config::get('site.directory.css'))
-            ->setPlaceholder('menu_items',            $html_mainMenu)
-            ->setPlaceholder('user_avatar',           Config::get('site.avatar'))
-            ->setPlaceholder('metric_counters',       $html_counters)
+            ->setPlaceholder('app_vendor_folder', sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
+            ->setPlaceholder('app_css_folder', Config::get('site.directory.css'))
+            ->setPlaceholder('menu_items', $html_mainMenu)
+            ->setPlaceholder('user_avatar', Config::get('site.avatar'))
+            ->setPlaceholder('metric_counters', $html_counters)
             ->save()
             ->render();
     }
@@ -120,7 +120,7 @@ class AbstractController
         }
         $html_gitMenu = $templater->render();
 
-            // Building application version string
+        // Building application version string
         $gitInfo = Helper::getGitInfo();
 
         $html_appVersion = $templater
@@ -131,7 +131,7 @@ class AbstractController
                 '%s-%s-%s',
                 $gitInfo['tag'],
                 $gitInfo['branch'],
-                $gitInfo['commit_hash']
+                $gitInfo['commit_hash'],
             ))
             ->setPlaceholder('item_posted_at', 'posted at ' . $gitInfo['commit_date'])
             ->save()
@@ -141,22 +141,22 @@ class AbstractController
             ->setPath('footer')
             ->setFilename('view')
             ->set()
-            ->setPlaceholder('app_name',              Config::get('app.name'))
-            ->setPlaceholder('app_author_name',       Config::get('meta.author.name'))
-            ->setPlaceholder('app_author_website',    Config::get('meta.author.website'))
-            ->setPlaceholder('app_license_type',      Config::get('app.license.type'))
-            ->setPlaceholder('app_license_url',       Config::get('app.license.url'))
+            ->setPlaceholder('app_name', Config::get('app.name'))
+            ->setPlaceholder('app_author_name', Config::get('meta.author.name'))
+            ->setPlaceholder('app_author_website', Config::get('meta.author.website'))
+            ->setPlaceholder('app_license_type', Config::get('app.license.type'))
+            ->setPlaceholder('app_license_url', Config::get('app.license.url'))
             ->setPlaceholder('app_documentation_url', Config::get('app.documentation'))
-            ->setPlaceholder('copyright_years',       $this->copyrightYears())
-            ->setPlaceholder('app_version',           $html_appVersion)
-            ->setPlaceholder('main_menu',             $html_mainMenu)
-            ->setPlaceholder('social_menu',           $html_socialMenu)
-            ->setPlaceholder('git_menu',              $html_gitMenu)
-            ->setPlaceholder('flights_count',         number_format($this->getFlightsCount()))
-            ->setPlaceholder('database_requests',     $this->getDbRequestCount())
-            ->setPlaceholder('execution_time',        $this->getExecutionTime())
-            ->setPlaceholder('app_vendor_folder',     sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
-            ->setPlaceholder('app_js_folder',         Config::get('site.directory.js'))
+            ->setPlaceholder('copyright_years', $this->copyrightYears())
+            ->setPlaceholder('app_version', $html_appVersion)
+            ->setPlaceholder('main_menu', $html_mainMenu)
+            ->setPlaceholder('social_menu', $html_socialMenu)
+            ->setPlaceholder('git_menu', $html_gitMenu)
+            ->setPlaceholder('flights_count', number_format($this->getFlightsCount()))
+            ->setPlaceholder('database_requests', $this->getDbRequestCount())
+            ->setPlaceholder('execution_time', $this->getExecutionTime())
+            ->setPlaceholder('app_vendor_folder', sprintf('%s/%s', $this->staticUrl, Config::get('site.static.endpoint.vendor')))
+            ->setPlaceholder('app_js_folder', Config::get('site.directory.js'))
             ->save()
             ->render();
     }

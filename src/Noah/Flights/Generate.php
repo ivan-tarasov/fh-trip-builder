@@ -148,7 +148,7 @@ class Generate extends AbstractCommand
                         (float) $this->arriveAirport['latitude'],
                         (float) $this->arriveAirport['longitude'],
                     ) / 1000,
-                )
+                ),
             );
 
             // Calculating flight duration between airports
@@ -156,15 +156,16 @@ class Generate extends AbstractCommand
 
             // Render departure date and time (UNIX timestamps for random day)
             $this->setDepartureDateTime(
-                date('Y-m-d H:i:s',
+                date(
+                    'Y-m-d H:i:s',
                     strtotime(
                         sprintf('+ %d days', Helper::random(self::DATE_ADD_DAYS)),
                         rand(
                             strtotime(date('Y-m-d') . ' 00:00:01'),
-                            strtotime(date('Y-m-d') . ' 23:59:59')
-                        )
-                    )
-                )
+                            strtotime(date('Y-m-d') . ' 23:59:59'),
+                        ),
+                    ),
+                ),
             );
 
             // Calculating arrival date and time
@@ -321,15 +322,15 @@ class Generate extends AbstractCommand
         int $durationMinutes,
     ): string {
         try {
-            $tzDepart = $departTimezone instanceof DateTimeZone ? $departTimezone : new DateTimeZone((string)$departTimezone);
-            $tzArrive = $arriveTimezone instanceof DateTimeZone ? $arriveTimezone : new DateTimeZone((string)$arriveTimezone);
+            $tzDepart = $departTimezone instanceof DateTimeZone ? $departTimezone : new DateTimeZone((string) $departTimezone);
+            $tzArrive = $arriveTimezone instanceof DateTimeZone ? $arriveTimezone : new DateTimeZone((string) $arriveTimezone);
 
             // Normalize departure to an immutable instance in the specified departure TZ
             if ($departDateTime instanceof DateTimeInterface) {
                 // Rebase via timestamp to avoid double-parsing and then set the intended depart TZ
                 $depart = (new DateTimeImmutable('@' . $departDateTime->getTimestamp()))->setTimezone($tzDepart);
             } else {
-                $depart = new DateTimeImmutable((string)$departDateTime, $tzDepart);
+                $depart = new DateTimeImmutable((string) $departDateTime, $tzDepart);
             }
 
             // Add minutes (supports negative durations), then convert to arrival TZ
@@ -355,7 +356,7 @@ class Generate extends AbstractCommand
 
     private function getRandomProgressMessage(): string
     {
-        return self::PROGRESS_MSG_POOL[rand(0,count(self::PROGRESS_MSG_POOL)-1)];
+        return self::PROGRESS_MSG_POOL[rand(0, count(self::PROGRESS_MSG_POOL) - 1)];
     }
 
     /**

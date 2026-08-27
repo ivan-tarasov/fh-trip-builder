@@ -6,28 +6,28 @@ namespace TripBuilder\Controllers;
 
 use GuzzleHttp\Exception\GuzzleException;
 use stdClass;
-use TripBuilder\Cdn;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
-use TripBuilder\Database\MySql;
+use TripBuilder\Cdn;
 use TripBuilder\Config;
+use TripBuilder\Database\MySql;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
 
 class SearchController extends AbstractController
 {
     private const GET_HASH        = 'hash',
-          GET_FROM        = 'from',
-          GET_TO          = 'to',
-          GET_DEPART      = 'depart',
-          GET_RETURN      = 'return',
-          GET_TRIPTYPE    = 'triptype',
-          GET_CLASS       = 'class',
-          GET_PAGE        = 'page';
+        GET_FROM        = 'from',
+        GET_TO          = 'to',
+        GET_DEPART      = 'depart',
+        GET_RETURN      = 'return',
+        GET_TRIPTYPE    = 'triptype',
+        GET_CLASS       = 'class',
+        GET_PAGE        = 'page';
 
     private const POST_SORT       = 'sort',
-          POST_TIME_RANGE = 'time_range',
-          POST_AIRLINES   = 'airlines';
+        POST_TIME_RANGE = 'time_range',
+        POST_AIRLINES   = 'airlines';
 
     private array $get;
 
@@ -136,28 +136,28 @@ class SearchController extends AbstractController
                 ->setPath('search')
                 ->setFilename('search-form-up')
                 ->set()
-                ->setPlaceholder('search_page_url',          '/search/')
-                ->setPlaceholder('airports_autofill',        Config::get('api.fake.url') . '/airports/autofill/?query=')
-                ->setPlaceholder('search_triptype',          Helper::escapeHtml($this->get[self::GET_TRIPTYPE]))
-                ->setPlaceholder('input_triptype',           Config::get('search.form.input.triptype'))
+                ->setPlaceholder('search_page_url', '/search/')
+                ->setPlaceholder('airports_autofill', Config::get('api.fake.url') . '/airports/autofill/?query=')
+                ->setPlaceholder('search_triptype', Helper::escapeHtml($this->get[self::GET_TRIPTYPE]))
+                ->setPlaceholder('input_triptype', Config::get('search.form.input.triptype'))
                 ->setPlaceholder('input_triptype_roundtrip', Config::get('search.triptype.roundtrip'))
-                ->setPlaceholder('input_triptype_oneway',    Config::get('search.triptype.oneway'))
-                ->setPlaceholder('input_from',               Config::get('search.form.input.depart_place'))
-                ->setPlaceholder('input_to',                 Config::get('search.form.input.arrive_place'))
-                ->setPlaceholder('input_from_date',          Config::get('search.form.input.depart_date'))
-                ->setPlaceholder('input_to_date',            Config::get('search.form.input.return_date'))
-                ->setPlaceholder('depart_code',              Helper::escapeHtml($this->get[self::GET_FROM]))
-                ->setPlaceholder('arrive_code',              Helper::escapeHtml($this->get[self::GET_TO]))
-                ->setPlaceholder('depart_city',              Helper::escapeHtml($this->data->depart))
-                ->setPlaceholder('arrive_city',              Helper::escapeHtml($this->data->arrive))
-                ->setPlaceholder('depart_date',              Helper::escapeHtml($this->get[self::GET_DEPART]))
-                ->setPlaceholder('return_date',              Helper::escapeHtml($this->get[self::GET_RETURN]))
-                ->setPlaceholder('tab_rt_button',            $activetab[Config::get('search.triptype.roundtrip')]['btn']  ?? '')
-                ->setPlaceholder('tab_rt_aria',              $activetab[Config::get('search.triptype.roundtrip')]['aria'] ?? '')
-                ->setPlaceholder('tab_rt_div',               $activetab[Config::get('search.triptype.roundtrip')]['div']  ?? '')
-                ->setPlaceholder('tab_ow_button',            $activetab[Config::get('search.triptype.oneway')]['btn']     ?? '')
-                ->setPlaceholder('tab_ow_aria',              $activetab[Config::get('search.triptype.oneway')]['aria']    ?? '')
-                ->setPlaceholder('tab_ow_div',               $activetab[Config::get('search.triptype.oneway')]['div']     ?? '')
+                ->setPlaceholder('input_triptype_oneway', Config::get('search.triptype.oneway'))
+                ->setPlaceholder('input_from', Config::get('search.form.input.depart_place'))
+                ->setPlaceholder('input_to', Config::get('search.form.input.arrive_place'))
+                ->setPlaceholder('input_from_date', Config::get('search.form.input.depart_date'))
+                ->setPlaceholder('input_to_date', Config::get('search.form.input.return_date'))
+                ->setPlaceholder('depart_code', Helper::escapeHtml($this->get[self::GET_FROM]))
+                ->setPlaceholder('arrive_code', Helper::escapeHtml($this->get[self::GET_TO]))
+                ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
+                ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
+                ->setPlaceholder('depart_date', Helper::escapeHtml($this->get[self::GET_DEPART]))
+                ->setPlaceholder('return_date', Helper::escapeHtml($this->get[self::GET_RETURN]))
+                ->setPlaceholder('tab_rt_button', $activetab[Config::get('search.triptype.roundtrip')]['btn']  ?? '')
+                ->setPlaceholder('tab_rt_aria', $activetab[Config::get('search.triptype.roundtrip')]['aria'] ?? '')
+                ->setPlaceholder('tab_rt_div', $activetab[Config::get('search.triptype.roundtrip')]['div']  ?? '')
+                ->setPlaceholder('tab_ow_button', $activetab[Config::get('search.triptype.oneway')]['btn']     ?? '')
+                ->setPlaceholder('tab_ow_aria', $activetab[Config::get('search.triptype.oneway')]['aria']    ?? '')
+                ->setPlaceholder('tab_ow_div', $activetab[Config::get('search.triptype.oneway')]['div']     ?? '')
                 ->save()
                 ->render();
 
@@ -183,12 +183,12 @@ class SearchController extends AbstractController
 
             foreach (Config::get('search.sort') as $key => $params) {
                 $this->templater
-                    ->setPlaceholder('sb_sort_item_hide',    $params[array_key_first($activetab)] !== 1 ? ' d-none' : null)
-                    ->setPlaceholder('sb_sort_item_id',      $params['id'])
-                    ->setPlaceholder('sb_sort_item_value',   $key)
+                    ->setPlaceholder('sb_sort_item_hide', $params[array_key_first($activetab)] !== 1 ? ' d-none' : null)
+                    ->setPlaceholder('sb_sort_item_id', $params['id'])
+                    ->setPlaceholder('sb_sort_item_value', $key)
                     ->setPlaceholder('sb_sort_item_checked', $_SESSION[self::POST_SORT] == $key ? 'checked' : null)
-                    ->setPlaceholder('sb_sort_item_title',   $params['title'])
-                    ->setPlaceholder('sb_sort_item_note',    $params['note'])
+                    ->setPlaceholder('sb_sort_item_title', $params['title'])
+                    ->setPlaceholder('sb_sort_item_note', $params['note'])
                     ->save();
             }
 
@@ -200,9 +200,9 @@ class SearchController extends AbstractController
                 ->set()
                 ->setPlaceholder('clock_range', $this->generateTimeRange())
                 ->setPlaceholder('range_depart_from', '00:00')
-                ->setPlaceholder('range_depart_to',   '23:59')
+                ->setPlaceholder('range_depart_to', '23:59')
                 ->setPlaceholder('range_return_from', '00:00')
-                ->setPlaceholder('range_return_to',   '23:59')
+                ->setPlaceholder('range_return_to', '23:59')
                 ->save()
                 ->render();
 
@@ -250,14 +250,14 @@ class SearchController extends AbstractController
                 ->setPlaceholder('form_url', sprintf(
                     '%s?%s',
                     Helper::getUrlPath(),
-                    http_build_query(array_merge($this->get, [self::GET_PAGE => null]))
+                    http_build_query(array_merge($this->get, [self::GET_PAGE => null])),
                 ))
-                ->setPlaceholder('depart_city',         Helper::escapeHtml($this->data->depart))
-                ->setPlaceholder('arrive_city',         Helper::escapeHtml($this->data->arrive))
-                ->setPlaceholder('sb_update_button',    $sb_update_button)
-                ->setPlaceholder('sb_filter_sort',      $sb_filter_sort)
+                ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
+                ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
+                ->setPlaceholder('sb_update_button', $sb_update_button)
+                ->setPlaceholder('sb_filter_sort', $sb_filter_sort)
                 ->setPlaceholder('sb_filter_timerange', $sb_filter_timerange)
-                ->setPlaceholder('sb_filter_airlines',  $sb_filter_airlines)
+                ->setPlaceholder('sb_filter_airlines', $sb_filter_airlines)
                 ->save()
                 ->render();
 
@@ -294,7 +294,7 @@ class SearchController extends AbstractController
                     ->setPlaceholder('not_found_img', Cdn::getUrl(sprintf(
                         '%s/%s',
                         Config::get('site.static.endpoint.images'),
-                        'no-results.png'
+                        'no-results.png',
                     )))
                     ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
                     ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
@@ -336,12 +336,12 @@ class SearchController extends AbstractController
             $search = $this->db->getOne(MySql::TABLE_SEARCH);
 
             $search_params = http_build_query([
-                self::GET_FROM     => $search[self::GET_FROM.'_code'],
-                self::GET_TO       => $search[self::GET_TO.'_code'],
+                self::GET_FROM     => $search[self::GET_FROM . '_code'],
+                self::GET_TO       => $search[self::GET_TO . '_code'],
                 self::GET_DEPART   => $search[self::GET_DEPART],
                 self::GET_RETURN   => $search[self::GET_RETURN],
                 self::GET_TRIPTYPE => $search[self::GET_TRIPTYPE],
-                self::GET_CLASS    => 'economy' // FIXME: we need real class here
+                self::GET_CLASS    => 'economy', // FIXME: we need real class here
             ]);
 
             echo $this->templater
@@ -350,7 +350,7 @@ class SearchController extends AbstractController
                 ->set()
                 ->setPlaceholder('image_url', Cdn::getUrl(sprintf(
                     '%s/search_redirect.gif',
-                    Config::get('site.static.endpoint.images')
+                    Config::get('site.static.endpoint.images'),
                 )))
                 ->setPlaceholder('search_params', $search_params)
                 ->save()
@@ -377,13 +377,13 @@ class SearchController extends AbstractController
             $this->get[self::GET_TO],
             $this->get[self::GET_DEPART],
             $this->get[self::GET_RETURN],
-            $this->get[self::GET_TRIPTYPE]
+            $this->get[self::GET_TRIPTYPE],
         ));
 
         // Insert or update search
         $this->db->onDuplicate([
             'search_count' => $this->db->inc(),
-            'last_search' => $this->db->now()
+            'last_search' => $this->db->now(),
         ]);
 
         $this->db->insert(MySql::TABLE_SEARCH, [
@@ -472,16 +472,16 @@ class SearchController extends AbstractController
                     ->setPath('search/cards')
                     ->setFilename('flight-info')
                     ->set()
-                    ->setPlaceholder('depart_time',     date('H:i', strtotime($ticket->depart->date_time)))
-                    ->setPlaceholder('arrive_time',     date('H:i', strtotime($ticket->arrive->date_time)))
-                    ->setPlaceholder('depart_date',     date('Y-m-d', strtotime($ticket->depart->date_time)))
-                    ->setPlaceholder('arrive_date',     date('Y-m-d', strtotime($ticket->arrive->date_time)))
-                    ->setPlaceholder('depart_city',     $ticket->depart->airport_city)
-                    ->setPlaceholder('arrive_city',     $ticket->arrive->airport_city)
-                    ->setPlaceholder('depart_airport',  $ticket->depart->airport_name)
-                    ->setPlaceholder('arrive_airport',  $ticket->arrive->airport_name)
-                    ->setPlaceholder('depart_code',     $ticket->depart->airport_code)
-                    ->setPlaceholder('arrive_code',     $ticket->arrive->airport_code)
+                    ->setPlaceholder('depart_time', date('H:i', strtotime($ticket->depart->date_time)))
+                    ->setPlaceholder('arrive_time', date('H:i', strtotime($ticket->arrive->date_time)))
+                    ->setPlaceholder('depart_date', date('Y-m-d', strtotime($ticket->depart->date_time)))
+                    ->setPlaceholder('arrive_date', date('Y-m-d', strtotime($ticket->arrive->date_time)))
+                    ->setPlaceholder('depart_city', $ticket->depart->airport_city)
+                    ->setPlaceholder('arrive_city', $ticket->arrive->airport_city)
+                    ->setPlaceholder('depart_airport', $ticket->depart->airport_name)
+                    ->setPlaceholder('arrive_airport', $ticket->arrive->airport_name)
+                    ->setPlaceholder('depart_code', $ticket->depart->airport_code)
+                    ->setPlaceholder('arrive_code', $ticket->arrive->airport_code)
                     ->setPlaceholder('flight_duration', $this->minutesToStringTime($ticket->duration))
                     ->save();
             }
@@ -499,14 +499,14 @@ class SearchController extends AbstractController
                 ->setPath('search/cards')
                 ->setFilename('body')
                 ->set()
-                ->setPlaceholder('outbound_id',        $flight->outbound->id)
-                ->setPlaceholder('returning_id',       $flight->returning->id ?? null)
+                ->setPlaceholder('outbound_id', $flight->outbound->id)
+                ->setPlaceholder('returning_id', $flight->returning->id ?? null)
                 ->setPlaceholder('flight_price_total', number_format((float) $flight->price_base + (float) $flight->price_tax, 2))
-                ->setPlaceholder('flight_price_base',  number_format((float) $flight->price_base, 2))
-                ->setPlaceholder('flight_price_tax',   number_format((float) $flight->price_tax, 2))
-                ->setPlaceholder('flight_price_gst',   number_format(0, 2))
-                ->setPlaceholder('flight_price_qst',   number_format(0, 2))
-                ->setPlaceholder('airline_logos',      $airline_logos)
+                ->setPlaceholder('flight_price_base', number_format((float) $flight->price_base, 2))
+                ->setPlaceholder('flight_price_tax', number_format((float) $flight->price_tax, 2))
+                ->setPlaceholder('flight_price_gst', number_format(0, 2))
+                ->setPlaceholder('flight_price_qst', number_format(0, 2))
+                ->setPlaceholder('airline_logos', $airline_logos)
 
                 ->setPlaceholder('flight_info', $flight_info)
                 ->save()
@@ -530,7 +530,7 @@ class SearchController extends AbstractController
             ->setPlaceholder('logo_url', Cdn::getUrl(sprintf(
                 '%s/suppliers/%s.png',
                 Config::get('site.static.endpoint.images'),
-                $carrier['code']
+                $carrier['code'],
             )))
             ->save()
             ->render();
@@ -552,7 +552,7 @@ class SearchController extends AbstractController
             $url = sprintf(
                 '%s?%s',
                 Helper::getUrlPath(),
-                http_build_query(array_merge($this->get, [self::GET_PAGE => $this->get[self::GET_PAGE] - 1]))
+                http_build_query(array_merge($this->get, [self::GET_PAGE => $this->get[self::GET_PAGE] - 1])),
             );
 
             $button_prev = $this->templater
@@ -571,7 +571,7 @@ class SearchController extends AbstractController
             $url = sprintf(
                 '%s?%s',
                 Helper::getUrlPath(),
-                http_build_query(array_merge($this->get, [self::GET_PAGE => $this->get[self::GET_PAGE] + 1]))
+                http_build_query(array_merge($this->get, [self::GET_PAGE => $this->get[self::GET_PAGE] + 1])),
             );
 
             $button_next = $this->templater
@@ -613,7 +613,7 @@ class SearchController extends AbstractController
                 $url = sprintf(
                     '%s?%s',
                     Helper::getUrlPath(),
-                    http_build_query(array_merge($this->get, [self::GET_PAGE => $i]))
+                    http_build_query(array_merge($this->get, [self::GET_PAGE => $i])),
                 );
 
                 $this->templater
@@ -640,9 +640,9 @@ class SearchController extends AbstractController
             ->setPath('search/pagination')
             ->setFilename('view')
             ->set()
-            ->setPlaceholder('button_prev',   $button_prev)
+            ->setPlaceholder('button_prev', $button_prev)
             ->setPlaceholder('buttons_pages', $button_pages)
-            ->setPlaceholder('button_next',   $button_next)
+            ->setPlaceholder('button_next', $button_next)
             ->save()
             ->render();
     }

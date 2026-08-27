@@ -18,6 +18,5 @@ final readonly class FlightSearchQuery
         public string $returnDate,
         public int $adultNum,
         public int $childNum,
-    ) {
-    }
+    ) {}
 }

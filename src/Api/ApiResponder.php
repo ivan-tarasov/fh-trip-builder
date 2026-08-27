@@ -41,7 +41,7 @@ class ApiResponder
     public static function methodNotAllowed(array $allowed, ?string $message = null): never
     {
         header('Access-Control-Allow-Methods: ' . implode(',', array_map(
-            static fn (HttpMethod $method): string => $method->value,
+            static fn(HttpMethod $method): string => $method->value,
             $allowed,
         )));
 

@@ -18,7 +18,7 @@ class Api
     {
         $this->client = new Client([
             'base_uri' => rtrim($baseUrl, '/') . '/',
-            'timeout'  => self::TIMEOUT
+            'timeout'  => self::TIMEOUT,
         ]);
     }
 

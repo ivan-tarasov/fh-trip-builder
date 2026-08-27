@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\Cdn;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
+use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Templater;
 
@@ -41,11 +41,11 @@ class AirlinesController
                     ->setPlaceholder('airline_logo_img', Cdn::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
-                        $airline->code
+                        $airline->code,
                     )))
-                    ->setPlaceholder('airline_title',        $airline->title)
+                    ->setPlaceholder('airline_title', $airline->title)
                     ->setPlaceholder('airline_phone_number', $airline->phone)
-                    ->setPlaceholder('airline_url',          $airline->url)
+                    ->setPlaceholder('airline_url', $airline->url)
                     ->save();
             }
 

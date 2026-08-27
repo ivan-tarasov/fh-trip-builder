@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\Api\HttpMethod;
-use TripBuilder\Api\Airports;
 use TripBuilder\Api\Airlines;
+use TripBuilder\Api\Airports;
 use TripBuilder\Api\Flights;
+use TripBuilder\Api\HttpMethod;
 
 class ApiController extends AbstractController
 {

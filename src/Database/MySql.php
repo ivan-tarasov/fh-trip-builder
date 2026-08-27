@@ -9,11 +9,11 @@ use MysqliDb;
 class MySql
 {
     public const TABLE_AIRLINES  = 'airlines',
-          TABLE_AIRPORTS  = 'airports',
-          TABLE_BOOKINGS  = 'bookings',
-          TABLE_COUNTRIES = 'countries',
-          TABLE_FLIGHTS   = 'flights',
-          TABLE_SEARCH    = 'search';
+        TABLE_AIRPORTS  = 'airports',
+        TABLE_BOOKINGS  = 'bookings',
+        TABLE_COUNTRIES = 'countries',
+        TABLE_FLIGHTS   = 'flights',
+        TABLE_SEARCH    = 'search';
 
     public static function connect(): MysqliDb
     {
@@ -21,7 +21,7 @@ class MySql
             $_ENV['DB_HOST'],
             $_ENV['DB_USERNAME'],
             $_ENV['DB_PASSWORD'],
-            $_ENV['DB_DATABASE']
+            $_ENV['DB_DATABASE'],
         );
     }
 
