@@ -4,6 +4,7 @@ namespace TripBuilder\Api\Airlines;
 
 use Exception;
 use TripBuilder\Api\AbstractApi;
+use TripBuilder\Api\HttpStatus;
 
 class Response extends AbstractApi
 {
@@ -29,6 +30,6 @@ class Response extends AbstractApi
 
         $airlines = $this->db->get('airlines');
 
-        $this->sendResponse(200, $airlines);
+        $this->sendResponse(HttpStatus::Ok, $airlines);
     }
 }

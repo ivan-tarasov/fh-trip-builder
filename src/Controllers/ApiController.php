@@ -2,7 +2,7 @@
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\Api\AbstractApi;
+use TripBuilder\Api\HttpMethod;
 use TripBuilder\Api\Airports;
 use TripBuilder\Api\Airlines;
 use TripBuilder\Api\Flights;
@@ -26,7 +26,7 @@ class ApiController extends AbstractController
      */
     public function airportsAutofill(): void
     {
-        $airports = new Airports\Response(AbstractApi::REQUEST_METHOD_GET);
+        $airports = new Airports\Response(HttpMethod::Get);
 
         $airports->getAutofill();
     }

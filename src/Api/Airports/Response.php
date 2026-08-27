@@ -4,6 +4,7 @@ namespace TripBuilder\Api\Airports;
 
 use Exception;
 use TripBuilder\Api\AbstractApi;
+use TripBuilder\Api\HttpStatus;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
 
@@ -39,7 +40,7 @@ class Response extends AbstractApi
 
         $this->airports = $this->db->get('airports a', null, self::COLUMNS);
 
-        $this->sendResponse(200, $this->airports);
+        $this->sendResponse(HttpStatus::Ok, $this->airports);
     }
 
     /**
@@ -50,7 +51,7 @@ class Response extends AbstractApi
         $query = $_GET['query'] ?? '';
 
         if (empty($query) || strlen($query) < 3) {
-            $this->sendResponse(200);
+            $this->sendResponse(HttpStatus::Ok);
             return;
         }
 
@@ -94,6 +95,6 @@ class Response extends AbstractApi
             }
         }
 
-        $this->sendResponse(200, $response);
+        $this->sendResponse(HttpStatus::Ok, $response);
     }
 }

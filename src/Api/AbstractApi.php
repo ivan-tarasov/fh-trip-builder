@@ -10,14 +10,6 @@ class AbstractApi extends AbstractController
 {
     private const HEADER_AUTH_KEY = 'Authorization';
 
-    public const REQUEST_METHOD_GET = 'GET';
-    public const REQUEST_METHOD_POST = 'POST';
-    public const REQUEST_METHOD_PUT = 'PUT';
-    public const REQUEST_METHOD_PATCH = 'PATCH';
-    public const REQUEST_METHOD_DELETE = 'DELETE';
-    public const REQUEST_METHOD_HEAD = 'HEAD';
-    public const REQUEST_METHOD_OPTIONS = 'OPTIONS';
-
     private const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
         '/api/airports/autofill',
     ];
@@ -33,14 +25,14 @@ class AbstractApi extends AbstractController
     protected const DB_TABLE_FLIGHTS = 'flights';
 
     protected array $data = [];
-    private string $allowedMethod;
+    private HttpMethod $allowedMethod;
 
-    public function __construct(?string $method = null)
+    public function __construct(?HttpMethod $method = null)
     {
         parent::__construct();
 
         // By default, we accept only the POST request method if not provided another one
-        $this->setAllowedMethod($method ?? self::REQUEST_METHOD_POST);
+        $this->setAllowedMethod($method ?? HttpMethod::Post);
 
         $this->guardUnauthorizedAccess();
         $this->guardNotAllowedRequestMethod();
@@ -74,15 +66,15 @@ class AbstractApi extends AbstractController
 
     private function guardNotAllowedRequestMethod(): void
     {
-        if ($this->getRequestMethod() !== $this->getAllowedMethod()) {
+        if ($this->getRequestMethod() !== $this->getAllowedMethod()->value) {
             ApiResponder::methodNotAllowed([$this->getAllowedMethod()]);
         }
     }
 
-    public function sendResponse(int $statusCode, array $data = [], array $headers = []): void
+    public function sendResponse(HttpStatus $status, array $data = [], array $headers = []): void
     {
         // Sending response code
-        http_response_code($statusCode);
+        http_response_code($status->value);
 
         // Cleaning the output
         if (ob_get_level() > 0) {
@@ -95,7 +87,7 @@ class AbstractApi extends AbstractController
         if (!in_array(Routes::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
             // Building response array
             $response = [
-                'status' => $statusCode,
+                'status' => $status->value,
                 'endpoint' => Helper::getUrlPath(),
                 'method' => $this->getRequestMethod(),
                 'timestamp' => date('Y-m-d H:i:s'),
@@ -175,12 +167,12 @@ class AbstractApi extends AbstractController
         }
     }
 
-    public function setAllowedMethod(string $method): void
+    public function setAllowedMethod(HttpMethod $method): void
     {
         $this->allowedMethod = $method;
     }
 
-    private function getAllowedMethod(): string
+    private function getAllowedMethod(): HttpMethod
     {
         return $this->allowedMethod;
     }

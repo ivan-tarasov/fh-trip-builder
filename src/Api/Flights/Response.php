@@ -4,6 +4,7 @@ namespace TripBuilder\Api\Flights;
 
 use Exception;
 use TripBuilder\Api\AbstractApi;
+use TripBuilder\Api\HttpStatus;
 use TripBuilder\Api\ApiResponder;
 
 class Response extends AbstractApi
@@ -124,7 +125,7 @@ class Response extends AbstractApi
             default => ['error' => 'Wrong trip type'],
         };
 
-        $this->sendResponse(200, [
+        $this->sendResponse(HttpStatus::Ok, [
             self::RESPONSE_CURRENT_PAGE => $this->currentPage,
             self::RESPONSE_TOTAL_PAGES => (int) ceil($this->totalFlights / self::PER_PAGE_LIMIT),
             self::RESPONSE_PER_PAGE => self::PER_PAGE_LIMIT,
@@ -161,7 +162,7 @@ class Response extends AbstractApi
         // Updating search stats
         $this->updateSearchStats(self::DB_TABLE_AIRLINES, [$flight['carrier']]);
 
-        $this->sendResponse(200, $flight);
+        $this->sendResponse(HttpStatus::Ok, $flight);
     }
 
     private function getOnewayFlights(?int $flight_id = null): array
