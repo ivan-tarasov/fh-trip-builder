@@ -3,6 +3,7 @@
 namespace TripBuilder\Controllers;
 
 use GuzzleHttp\Exception\GuzzleException;
+use stdClass;
 use TripBuilder\AmazonS3;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
@@ -13,7 +14,7 @@ use TripBuilder\Templater;
 
 class SearchController extends AbstractController
 {
-    const GET_HASH        = 'hash',
+    private const GET_HASH        = 'hash',
           GET_FROM        = 'from',
           GET_TO          = 'to',
           GET_DEPART      = 'depart',
@@ -22,7 +23,7 @@ class SearchController extends AbstractController
           GET_CLASS       = 'class',
           GET_PAGE        = 'page';
 
-    const POST_SORT       = 'sort',
+    private const POST_SORT       = 'sort',
           POST_TIME_RANGE = 'time_range',
           POST_AIRLINES   = 'airlines';
 
@@ -32,7 +33,7 @@ class SearchController extends AbstractController
 
     private Templater $templater;
 
-    private $data;
+    private ?stdClass $data = null;
 
     /**
      * @return void
@@ -52,7 +53,11 @@ class SearchController extends AbstractController
                 self::GET_RETURN   => $_GET[Config::get('search.form.input.return_date')] ?? null,
                 self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')]    ?? null,
                 self::GET_CLASS    => $_GET[Config::get('search.form.input.class')]       ?? null,
-                self::GET_PAGE     => $_GET[Config::get('search.form.input.page')]        ?? 1,
+                self::GET_PAGE     => filter_var(
+                    $_GET[Config::get('search.form.input.page')] ?? 1,
+                    FILTER_VALIDATE_INT,
+                    ['options' => ['default' => 1, 'min_range' => 1]],
+                ),
             ]);
 
             // Convert search hash to url and redirect
@@ -80,6 +85,8 @@ class SearchController extends AbstractController
                 || empty($this->get[self::GET_DEPART])
             ) {
                 echo '<script>window.location.replace("/");</script>';
+
+                return;
             }
 
             $activetab[$this->get[self::GET_TRIPTYPE]] = Config::get('site.tab_active');
@@ -129,7 +136,7 @@ class SearchController extends AbstractController
                 ->set()
                 ->setPlaceholder('search_page_url',          '/search/')
                 ->setPlaceholder('airports_autofill',        Config::get('api.fake.url') . '/airports/autofill/?query=')
-                ->setPlaceholder('search_triptype',          $this->get[self::GET_TRIPTYPE])
+                ->setPlaceholder('search_triptype',          Helper::escapeHtml($this->get[self::GET_TRIPTYPE]))
                 ->setPlaceholder('input_triptype',           Config::get('search.form.input.triptype'))
                 ->setPlaceholder('input_triptype_roundtrip', Config::get('search.triptype.roundtrip'))
                 ->setPlaceholder('input_triptype_oneway',    Config::get('search.triptype.oneway'))
@@ -137,12 +144,12 @@ class SearchController extends AbstractController
                 ->setPlaceholder('input_to',                 Config::get('search.form.input.arrive_place'))
                 ->setPlaceholder('input_from_date',          Config::get('search.form.input.depart_date'))
                 ->setPlaceholder('input_to_date',            Config::get('search.form.input.return_date'))
-                ->setPlaceholder('depart_code',              $this->get[self::GET_FROM])
-                ->setPlaceholder('arrive_code',              $this->get[self::GET_TO])
-                ->setPlaceholder('depart_city',              $this->data->depart)
-                ->setPlaceholder('arrive_city',              $this->data->arrive)
-                ->setPlaceholder('depart_date',              $this->get[self::GET_DEPART])
-                ->setPlaceholder('return_date',              $this->get[self::GET_RETURN])
+                ->setPlaceholder('depart_code',              Helper::escapeHtml($this->get[self::GET_FROM]))
+                ->setPlaceholder('arrive_code',              Helper::escapeHtml($this->get[self::GET_TO]))
+                ->setPlaceholder('depart_city',              Helper::escapeHtml($this->data->depart))
+                ->setPlaceholder('arrive_city',              Helper::escapeHtml($this->data->arrive))
+                ->setPlaceholder('depart_date',              Helper::escapeHtml($this->get[self::GET_DEPART]))
+                ->setPlaceholder('return_date',              Helper::escapeHtml($this->get[self::GET_RETURN]))
                 ->setPlaceholder('tab_rt_button',            $activetab[Config::get('search.triptype.roundtrip')]['btn']  ?? '')
                 ->setPlaceholder('tab_rt_aria',              $activetab[Config::get('search.triptype.roundtrip')]['aria'] ?? '')
                 ->setPlaceholder('tab_rt_div',               $activetab[Config::get('search.triptype.roundtrip')]['div']  ?? '')
@@ -183,13 +190,7 @@ class SearchController extends AbstractController
                     ->save();
             }
 
-            $sb_filter_sort = $this->templater
-                ->setPlaceholder('form_url', sprintf(
-                    '%s?%s',
-                    Helper::getUrlPath(),
-                    http_build_query(array_merge($this->get, [self::GET_PAGE => null]))
-                ))
-                ->render();
+            $sb_filter_sort = $this->templater->render();
 
             // 3. Building time preferences filter
             $sb_filter_timerange = $this->templater
@@ -244,6 +245,13 @@ class SearchController extends AbstractController
                 ->setPath('search/sidebar')
                 ->setFilename('view')
                 ->set()
+                ->setPlaceholder('form_url', sprintf(
+                    '%s?%s',
+                    Helper::getUrlPath(),
+                    http_build_query(array_merge($this->get, [self::GET_PAGE => null]))
+                ))
+                ->setPlaceholder('depart_city',         Helper::escapeHtml($this->data->depart))
+                ->setPlaceholder('arrive_city',         Helper::escapeHtml($this->data->arrive))
                 ->setPlaceholder('sb_update_button',    $sb_update_button)
                 ->setPlaceholder('sb_filter_sort',      $sb_filter_sort)
                 ->setPlaceholder('sb_filter_timerange', $sb_filter_timerange)
@@ -269,9 +277,9 @@ class SearchController extends AbstractController
                     ->setPath('search/cards')
                     ->setFilename('view')
                     ->set()
-                    ->setPlaceholder('depart_city', $this->data->depart)
-                    ->setPlaceholder('arrive_city', $this->data->arrive)
-                    ->setPlaceholder('total_flights', Helper::plural($total_flights, 'flight', true))
+                    ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
+                    ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
+                    ->setPlaceholder('total_flights', Helper::plural($total_flights, 'flight', showNumber: true))
                     ->setPlaceholder('flight_cards', $flight_cards)
                     ->setPlaceholder('pagination_bar', $pagination_bar)
                     ->save()
@@ -286,7 +294,10 @@ class SearchController extends AbstractController
                         Config::get('site.static.endpoint.images'),
                         'no-results.png'
                     )))
-                    ->setPlaceholder('return_date', !empty($this->get[self::GET_RETURN]) ? ' to ' . $this->get[self::GET_RETURN] : null)
+                    ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
+                    ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
+                    ->setPlaceholder('depart_date', Helper::escapeHtml($this->get[self::GET_DEPART]))
+                    ->setPlaceholder('return_date', !empty($this->get[self::GET_RETURN]) ? ' to ' . Helper::escapeHtml($this->get[self::GET_RETURN]) : null)
                     ->save()
                     ->render();
             }
@@ -307,7 +318,8 @@ class SearchController extends AbstractController
                 ->save()
                 ->render();
         } catch (\Exception $e) {
-            echo "Error: " . $e->getMessage();
+            error_log('Search page failed: ' . $e->getMessage());
+            echo 'Something went wrong while searching for flights. Please try again later.';
         }
     }
 
@@ -406,11 +418,7 @@ class SearchController extends AbstractController
         return "'" . implode("','", $range) . "'";
     }
 
-    /**
-     * @param $minutes
-     * @return string
-     */
-    public function minutesToStringTime($minutes): string
+    public function minutesToStringTime(int $minutes): string
     {
         $seconds = $minutes * 60;
 
@@ -507,11 +515,9 @@ class SearchController extends AbstractController
     }
 
     /**
-     * @param $carrier
-     * @return string
      * @throws \Exception
      */
-    private function getCarrierLogo($carrier): string
+    private function getCarrierLogo(array $carrier): string
     {
         return $this->templater
             ->setPath('search/cards')
@@ -639,11 +645,7 @@ class SearchController extends AbstractController
             ->render();
     }
 
-    /**
-     * @param $get
-     * @return void
-     */
-    private function setGet($get): void
+    private function setGet(array $get): void
     {
         if (!in_array($get[self::GET_TRIPTYPE], [
             Config::get('search.triptype.roundtrip'),
@@ -655,20 +657,12 @@ class SearchController extends AbstractController
         $this->get = $get;
     }
 
-    /**
-     * @param array|null $post
-     * @return void
-     */
     private function setPost(?array $post): void
     {
         $this->post = $post;
     }
 
-    /**
-     * @param $data
-     * @return void
-     */
-    private function setData($data): void
+    private function setData(stdClass $data): void
     {
         $this->data = $data;
     }

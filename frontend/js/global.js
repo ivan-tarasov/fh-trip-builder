@@ -1,6 +1,8 @@
 (function ($) {
     'use strict';
 
+    const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
     try {
         const singleDatePickers = $('.js-single-datepicker');
         const inputDateFormat = 'YYYY-MM-DD';
@@ -101,7 +103,14 @@
                 confirmButtonText: 'Add trip',
                 showLoaderOnConfirm: true,
                 preConfirm: () => {
-                    return fetch(`/ajax/add-trip?depart_id=${tripID[0]}&return_id=${tripID[1]}`)
+                    return fetch('/ajax/add-trip', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRF-Token': csrfToken()
+                        },
+                        body: new URLSearchParams({depart_id: tripID[0] ?? '', return_id: tripID[1] ?? ''})
+                    })
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error(response.statusText)
@@ -146,7 +155,14 @@
                 confirmButtonText: 'Delete booking',
                 showLoaderOnConfirm: true,
                 preConfirm: () => {
-                    return fetch(`/ajax/delete-booking?booking_id=${bookingID}`)
+                    return fetch('/ajax/delete-booking', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRF-Token': csrfToken()
+                        },
+                        body: new URLSearchParams({booking_id: bookingID ?? ''})
+                    })
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error(response.statusText)

@@ -6,7 +6,7 @@
 |--------------------------------------------------------------------------
 */
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
@@ -83,6 +83,7 @@ try {
     */
 
     $application->run();
-} catch (Exception $e) {
-    // Do nothing
+} catch (Throwable $e) {
+    fwrite(STDERR, sprintf('Noah failed: %s: %s%s', $e::class, $e->getMessage(), PHP_EOL));
+    exit(1);
 }

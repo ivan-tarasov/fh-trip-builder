@@ -2,7 +2,6 @@
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\Api\Server;
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\Airports;
 use TripBuilder\Api\Airlines;
@@ -10,17 +9,6 @@ use TripBuilder\Api\Flights;
 
 class ApiController extends AbstractController
 {
-    /**
-     * @return void
-     * @throws \Exception
-     */
-    public function server(): void
-    {
-        $server = new Server\Response();
-
-        $server->get();
-    }
-
     /**
      * @return void
      * @throws \Exception

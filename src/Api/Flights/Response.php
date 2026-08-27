@@ -65,7 +65,7 @@ class Response extends AbstractApi
     private const SORT_ROUNDTRIP = [
         self::SORT_METHOD_PRICE => '(outbound_price_base + outbound_price_tax + return_price_base + return_price_tax)',
         self::SORT_METHOD_DURATION => '(outbound_duration + return_duration)',
-        self::SORT_METHOD_RATING => '(outbound_rating + return_rating',
+        self::SORT_METHOD_RATING => '(outbound_rating + return_rating)',
     ];
 
     private int $currentPage;
@@ -94,14 +94,14 @@ class Response extends AbstractApi
              HttpException::badRequest();
         }
 
-        $this->setCurrentPage($this->data[self::DATA_PAGE] ?? 1)
+        $this->setCurrentPage(max(1, (int) ($this->data[self::DATA_PAGE] ?? 1)))
             ->setSort($this->data[self::DATA_SORT] ?? self::SORT_METHOD_PRICE)
             ->setFrom($this->data[self::DATA_DEPART])
             ->setTo($this->data[self::DATA_ARRIVE])
             ->setDepartDate($this->data[self::DATA_DEPART_DATE])
-            ->setReturnDate($this->data[self::DATA_RETURN_DATE] ?: '')
-            ->setAdultNum($this->data[self::DATA_ADULT_COUNT])
-            ->setChildNum($this->data[self::DATA_CHILD_COUNT]);
+            ->setReturnDate($this->data[self::DATA_RETURN_DATE] ?? '')
+            ->setAdultNum((int) $this->data[self::DATA_ADULT_COUNT])
+            ->setChildNum((int) ($this->data[self::DATA_CHILD_COUNT] ?? 0));
 
         // Updating search stats
         $this->updateSearchStats(self::DB_TABLE_AIRPORTS, [$this->from, $this->to]);
@@ -126,7 +126,7 @@ class Response extends AbstractApi
 
         $this->sendResponse(200, [
             self::RESPONSE_CURRENT_PAGE => $this->currentPage,
-            self::RESPONSE_TOTAL_PAGES => ceil($this->totalFlights / self::PER_PAGE_LIMIT),
+            self::RESPONSE_TOTAL_PAGES => (int) ceil($this->totalFlights / self::PER_PAGE_LIMIT),
             self::RESPONSE_PER_PAGE => self::PER_PAGE_LIMIT,
             self::RESPONSE_TOTAL_FLIGHTS => $this->totalFlights,
             self::DATA_TRIPTYPE => $this->data[self::DATA_TRIPTYPE],
@@ -145,7 +145,12 @@ class Response extends AbstractApi
             HttpException::badRequest();
         }
 
-        $response = $this->getOnewayFlights($this->data[self::DATA_FLIGHT_ID]);
+        $response = $this->getOnewayFlights((int) $this->data[self::DATA_FLIGHT_ID]);
+
+        if (empty($response)) {
+            HttpException::notFound('Flight not found');
+        }
+
         $response = $response[0];
 
         $flight = array_merge($response['outbound'], [
@@ -197,9 +202,9 @@ class Response extends AbstractApi
             $this->db->where('DATE(flight.departure_time)', $this->departDate);
 
             $total = $this->db->copy();
-            $this->setTotalFlights($total->getValue(self::DB_TABLE_FLIGHTS . ' flight', 'count(1)'));
+            $this->setTotalFlights((int) $total->getValue(self::DB_TABLE_FLIGHTS . ' flight', 'count(1)'));
 
-            $this->db->orderBy(self::SORT_ONEWAY[$this->sort], 'asc');
+            $this->db->orderBy(self::SORT_ONEWAY[$this->sort] ?? self::SORT_ONEWAY[self::SORT_METHOD_PRICE], 'asc');
 
             $flights = $this->db->get(
                 self::DB_TABLE_FLIGHTS . ' flight',
@@ -316,7 +321,7 @@ class Response extends AbstractApi
         $this->db->where('DATE(out_flight.departure_time) = ?', [$this->departDate]);
 
         $total = $this->db->copy();
-        $this->setTotalFlights($total->getValue(self::DB_TABLE_FLIGHTS . ' AS out_flight', 'count(1)'));
+        $this->setTotalFlights((int) $total->getValue(self::DB_TABLE_FLIGHTS . ' AS out_flight', 'count(1)'));
 
         $this->db->orderBy(self::SORT_ROUNDTRIP[$this->sort] ?? self::SORT_ROUNDTRIP[self::SORT_METHOD_PRICE], 'asc');
 
@@ -441,11 +446,7 @@ class Response extends AbstractApi
         return $this;
     }
 
-    /**
-     * @param $count
-     * @return void
-     */
-    private function setTotalFlights($count): void
+    private function setTotalFlights(int $count): void
     {
         $this->totalFlights = $count;
     }

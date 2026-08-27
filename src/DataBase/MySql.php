@@ -6,14 +6,14 @@ use MysqliDb;
 
 class MySql
 {
-    const TABLE_AIRLINES  = 'airlines',
+    public const TABLE_AIRLINES  = 'airlines',
           TABLE_AIRPORTS  = 'airports',
           TABLE_BOOKINGS  = 'bookings',
           TABLE_COUNTRIES = 'countries',
           TABLE_FLIGHTS   = 'flights',
           TABLE_SEARCH    = 'search';
 
-    public static function connect()
+    public static function connect(): MysqliDb
     {
         return new MysqliDb(
             $_ENV['DB_HOST'],

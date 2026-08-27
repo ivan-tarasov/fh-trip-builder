@@ -4,15 +4,17 @@ namespace TripBuilder\Controllers;
 
 use TripBuilder\AmazonS3;
 use TripBuilder\Config;
+use TripBuilder\Csrf;
 use TripBuilder\DataBase\MySql;
 use TripBuilder\Helper;
 use TripBuilder\Routs;
 use TripBuilder\Templater;
 use TripBuilder\Timer;
+use MysqliDb;
 
 class AbstractController
 {
-    public $db;
+    public MysqliDb $db;
 
     private string $staticUrl;
 
@@ -22,9 +24,6 @@ class AbstractController
         $this->setStaticUrl(AmazonS3::getUrl());
     }
 
-    /**
-     * @return void
-     */
     private function dbConnect(): void
     {
         $this->db = MySql::connect();
@@ -62,6 +61,7 @@ class AbstractController
             ->setFilename('view')
             ->set()
             ->setPlaceholder('app_name',              Config::get('app.name'))
+            ->setPlaceholder('csrf_token',            Csrf::token())
             ->setPlaceholder('page_title',            'Main Page')
             ->setPlaceholder('app_meta_description',  Config::get('meta.description'))
             ->setPlaceholder('app_meta_keywords',     implode(', ', Config::get('meta.keywords')))
@@ -202,7 +202,7 @@ class AbstractController
         return Timer::getExecutionTime();
     }
 
-    private function setStaticUrl($url): void
+    private function setStaticUrl(string $url): void
     {
         $this->staticUrl = $url;
     }

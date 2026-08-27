@@ -2,6 +2,7 @@
 
 namespace TripBuilder\Controllers;
 
+use stdClass;
 use TripBuilder\AmazonS3;
 use TripBuilder\Config;
 use TripBuilder\Helper;
@@ -24,8 +25,13 @@ class MyController extends AbstractController
         if ($this->db->count > 0) {
             foreach ($bookings as $booking) {
                 // Outbound flight
-                $outbound = json_decode($booking['flight_outbound']);
+                $outbound = json_decode($booking['flight_outbound'] ?? '');
                 $return = json_decode($booking['flight_return'] ?? '');
+
+                // Skip rows whose stored flight JSON is corrupt
+                if (! $outbound instanceof stdClass) {
+                    continue;
+                }
 
                 // Calculating booking price
                 $price_base = $outbound->price_base + ($return->price_base ?? 0);
@@ -55,7 +61,7 @@ class MyController extends AbstractController
                     ->save();
 
                 // Return flight - roundtrip
-                if (!empty($return)) {
+                if ($return instanceof stdClass) {
                     $templater
                         ->setPath('my/bookings')
                         ->setFilename('flight-return')

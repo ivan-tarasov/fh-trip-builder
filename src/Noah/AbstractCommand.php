@@ -158,9 +158,9 @@ abstract class AbstractCommand extends Command
         string $color = self::FORMAT_OUTPUT_DEFAULT_COLOR,
         bool $newline = false
     ): void {
-        $times = strlen($status);
+        $times = mb_strlen($status);
 
-        $dots = str_repeat('.', self::FORMAT_OUTPUT_LINE_LENGTH - strlen($text) - $times);
+        $dots = str_repeat('.', max(0, self::FORMAT_OUTPUT_LINE_LENGTH - mb_strlen($text) - $times));
 
         $this->output->writeln(
             sprintf(

@@ -6,6 +6,7 @@
     <meta name="description" content="{{ app_name }} – {{ app_meta_description }}" />
     <meta name="keywords" content="{{ app_name }}, {{ app_meta_keywords }}" />
     <meta name="author" content="{{ app_meta_author_name }} <{{ app_meta_author_email }}>"/>
+    <meta name="csrf-token" content="{{ csrf_token }}" />
 
     <title>{{ page_title}} - {{ app_name }}</title>
 

@@ -5,6 +5,8 @@ namespace TripBuilder\Noah\Db;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Config;
 
@@ -23,7 +25,7 @@ class Install extends AbstractCommand
     /**
      * @throws Exception
      */
-    protected function execute($input, $output): int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->createTables();
         $this->seedingTables();
@@ -107,6 +109,7 @@ class Install extends AbstractCommand
             $action = sprintf(self::MESSAGE_SEEDING_TABLE, $table);
 
             $columns = $data['columns'];
+            $failed = false;
 
             foreach ($data['seeds'] as $seed) {
                 // If table already seeded – updating data from a seed array
@@ -116,13 +119,15 @@ class Install extends AbstractCommand
 
                 $id = $this->db->insert($table, array_combine($columns, $values));
                 if (!$id) {
-                    // $this->db->getLastError();
+                    $failed = true;
                     $this->formatOutput($action, 'failed', 'danger');
                     break;
                 }
             }
 
-            $this->formatOutput($action, 'done', 'success');
+            if (! $failed) {
+                $this->formatOutput($action, 'done', 'success');
+            }
         }
     }
 }

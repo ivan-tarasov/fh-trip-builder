@@ -16,9 +16,19 @@ class Helper
         return dirname(__FILE__, 2);
     }
 
-    public static function getUrlPath(): mixed
+    public static function getUrlPath(): string
     {
-        return parse_url($_SERVER['REQUEST_URI'] ?? '/')['path'];
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+
+        return is_string($path) ? $path : '/';
+    }
+
+    /**
+     * Escape a value for safe output in an HTML text or attribute context.
+     */
+    public static function escapeHtml(int|float|string|null $value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     public static function getUTCTime(int|float $offset): string

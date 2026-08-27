@@ -6,6 +6,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Config;
+use TripBuilder\Csrf;
 use TripBuilder\Helper;
 
 class AjaxController extends AbstractController
@@ -20,9 +21,13 @@ class AjaxController extends AbstractController
     {
         header('Content-type: application/json; charset=utf-8');
 
+        if (! $this->guardRequest()) {
+            return;
+        }
+
         $this->setGet([
-            'flight_outbound' => $_GET['depart_id'] ?? null,
-            'flight_return'   => $_GET['return_id'] ?? null,
+            'flight_outbound' => filter_var($_POST['depart_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
+            'flight_return'   => filter_var($_POST['return_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
         ]);
 
         if (! $this->get['flight_outbound']) {
@@ -64,9 +69,10 @@ class AjaxController extends AbstractController
         $id = $this->db->insert('bookings', $request);
 
         if ($id) {
-            $json = ['status' => 'success','message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
+            $json = ['status' => 'success', 'message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
         } else {
-            $json = ['status' => 'error',  'message' => 'insert failed: ' . $this->db->getLastError()];
+            error_log('Booking insert failed: ' . $this->db->getLastError());
+            $json = ['status' => 'error', 'message' => 'Could not create the booking. Please try again later.'];
         }
 
         echo json_encode($json);
@@ -76,8 +82,12 @@ class AjaxController extends AbstractController
     {
         header('Content-type: application/json; charset=utf-8');
 
+        if (! $this->guardRequest()) {
+            return;
+        }
+
         $this->setGet([
-            'booking_id' => $_GET['booking_id'] ?? null,
+            'booking_id' => filter_var($_POST['booking_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
         ]);
 
         if (! $this->get['booking_id']) {
@@ -92,28 +102,50 @@ class AjaxController extends AbstractController
         $this->db->where('id', $this->get['booking_id']);
         $this->db->where('session_id', session_id());
 
-        if ($this->db->delete('bookings')) {
+        // delete() returns true even when nothing matched — check affected rows
+        if ($this->db->delete('bookings') && $this->db->count > 0) {
             $json = [
                 'status'  => 'success',
                 'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id']))
             ];
         } else {
+            error_log('Booking delete failed: ' . ($this->db->getLastError() ?: 'no matching booking'));
             $json = [
                 'status'  => 'error',
-                'message' => 'Booking delete failed: ' . $this->db->getLastError()
+                'message' => 'Booking not found or already deleted.',
             ];
         }
 
         echo json_encode($json);
     }
 
-    /**
-     * @param $params
-     * @return void
-     */
-    private function setGet($params): void
+    private function setGet(array $params): void
     {
         $this->get = $params;
+    }
+
+    /**
+     * Reject anything that is not a same-origin POST carrying a valid CSRF token.
+     */
+    private function guardRequest(): bool
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
+
+            return false;
+        }
+
+        $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
+
+        if (! Csrf::isValid($token)) {
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'Invalid or missing CSRF token']);
+
+            return false;
+        }
+
+        return true;
     }
 
 }

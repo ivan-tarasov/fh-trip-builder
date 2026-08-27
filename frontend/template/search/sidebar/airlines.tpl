@@ -7,5 +7,5 @@
          value="{{ airline-iata-code }}"
          {{ airline-checked }}
   />
-  <label class="form-check-label" for="{{ iata-code }}">{{ airline-title }}</label>
+  <label class="form-check-label" for="{{ airline-iata-code }}">{{ airline-title }}</label>
 </div>

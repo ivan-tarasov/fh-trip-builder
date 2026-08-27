@@ -8,48 +8,39 @@ use TripBuilder\Routs;
 
 class AbstractApi extends AbstractController
 {
-    const HEADER_AUTH_KEY = 'Authorization';
+    private const HEADER_AUTH_KEY = 'Authorization';
 
-    const REQUEST_METHOD_GET = 'GET';
-    const REQUEST_METHOD_POST = 'POST';
-    const REQUEST_METHOD_PUT = 'PUT';
-    const REQUEST_METHOD_PATCH = 'PATCH';
-    const REQUEST_METHOD_DELETE = 'DELETE';
-    const REQUEST_METHOD_HEAD = 'HEAD';
-    const REQUEST_METHOD_OPTIONS = 'OPTIONS';
+    public const REQUEST_METHOD_GET = 'GET';
+    public const REQUEST_METHOD_POST = 'POST';
+    public const REQUEST_METHOD_PUT = 'PUT';
+    public const REQUEST_METHOD_PATCH = 'PATCH';
+    public const REQUEST_METHOD_DELETE = 'DELETE';
+    public const REQUEST_METHOD_HEAD = 'HEAD';
+    public const REQUEST_METHOD_OPTIONS = 'OPTIONS';
 
-    const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
+    private const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    const RAW_RESPONSE_ENDPOINTS = [
+    private const RAW_RESPONSE_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    const DB_TABLE_AIRLINES = 'airlines';
-    const DB_TABLE_AIRPORTS = 'airports';
-    const DB_TABLE_BOOKINGS = 'bookings';
-    const DB_TABLE_COUNTRIES = 'countries';
-    const DB_TABLE_FLIGHTS = 'flights';
-
-    /**
-     * Minimum security at this time...
-     */
-    private array $authorizedTokens = [
-        'SomeAPItoken_$ecretWORD---orHASH',
-        'AnotherAPIt0ken-$ecretHash',
-        'And@nothEr_Auth0riz@tionKey',
-    ];
+    protected const DB_TABLE_AIRLINES = 'airlines';
+    protected const DB_TABLE_AIRPORTS = 'airports';
+    protected const DB_TABLE_BOOKINGS = 'bookings';
+    protected const DB_TABLE_COUNTRIES = 'countries';
+    protected const DB_TABLE_FLIGHTS = 'flights';
 
     protected array $data = [];
     private string $allowedMethod;
 
-    public function __construct($method = false)
+    public function __construct(?string $method = null)
     {
         parent::__construct();
 
         // By default, we accept only the POST request method if not provided another one
-        $this->setAllowedMethod($method ?: self::REQUEST_METHOD_POST);
+        $this->setAllowedMethod($method ?? self::REQUEST_METHOD_POST);
 
         $this->guardUnauthorizedAccess();
         $this->guardNotAllowedRequestMethod();
@@ -59,11 +50,26 @@ class AbstractApi extends AbstractController
 
     private function guardUnauthorizedAccess(): void
     {
-        if (!in_array(Routs::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS)
-            && !in_array($this->getAuthToken(), $this->authorizedTokens)
+        if (!in_array(Routs::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS, true)
+            && !$this->isAuthorizedToken($this->getAuthToken())
         ) {
             HttpException::unauthorizedAccess();
         }
+    }
+
+    private function isAuthorizedToken(string $token): bool
+    {
+        if ($token === '') {
+            return false;
+        }
+
+        foreach (explode(',', $_ENV['API_ACCEPTED_TOKENS'] ?? '') as $authorized) {
+            if ($authorized !== '' && hash_equals($authorized, $token)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function guardNotAllowedRequestMethod(): void
@@ -79,7 +85,10 @@ class AbstractApi extends AbstractController
         http_response_code($statusCode);
 
         // Cleaning the output
-        ob_clean();
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+
         header_remove();
 
         // For some endpoints we not using typical output and returning raw data
@@ -104,7 +113,7 @@ class AbstractApi extends AbstractController
         self::addHeader('Content-Length', strlen($response));
 
         if (!empty($headers)) {
-            array_map([$this, 'addHeader'], array_keys($headers), $headers);
+            array_map(self::addHeader(...), array_keys($headers), $headers);
         }
 
         echo $response;
@@ -122,7 +131,10 @@ class AbstractApi extends AbstractController
 
     private function getAuthToken(): string
     {
-        return preg_match('/Bearer\s+(\S+)\b/i', getallheaders()[self::HEADER_AUTH_KEY] ?? '', $matches)
+        // Header names are case-insensitive, so normalize before the lookup
+        $headers = array_change_key_case(getallheaders());
+
+        return preg_match('/Bearer\s+(\S+)\b/i', $headers[strtolower(self::HEADER_AUTH_KEY)] ?? '', $matches)
             ? $matches[1]
             : '';
     }
@@ -135,7 +147,13 @@ class AbstractApi extends AbstractController
             return;
         }
 
-        $this->data = json_decode($data, true);
+        $decoded = json_decode($data, true);
+
+        if (! is_array($decoded)) {
+            HttpException::badRequest('Malformed JSON body');
+        }
+
+        $this->data = $decoded;
     }
 
     protected function updateSearchStats(string $table, array $conditions): void

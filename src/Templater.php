@@ -10,9 +10,9 @@ class Templater
     private const TAG_OPEN  = '{{';
     private const TAG_CLOSE = '}}';
 
-    private string $path;
-    private string $filename;
-    private string $templateContent;
+    private string $path = '';
+    private string $filename = '';
+    private string $templateContent = '';
     private array $placeholders = [];
     private string $content = '';
 
@@ -72,6 +72,10 @@ class Templater
         );
 
         $this->content .= strtr($this->templateContent, $replacements);
+
+        // Placeholders are consumed by save(): every template block must set
+        // all values it needs, instead of silently inheriting stale ones.
+        $this->placeholders = [];
 
         return $this;
     }

@@ -4,7 +4,7 @@ namespace TripBuilder;
 
 class Routs
 {
-    const ENABLED_ROUTS = [
+    public const ENABLED_ROUTS = [
 
         /*
         |--------------------------------------------------------------------------
@@ -39,7 +39,6 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/api/server' => 'Api@server',
         '/api/airports' => 'Api@airports',
         '/api/airports/autofill' => 'Api@airportsAutofill',
         '/api/airlines' => 'Api@airlines',
@@ -57,9 +56,9 @@ class Routs
 
     ];
 
-    const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';
+    public const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';
 
-    const EXCLUDE_HEADER_FOOTER = [
+    public const EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
     ];

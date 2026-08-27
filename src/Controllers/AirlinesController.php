@@ -53,7 +53,8 @@ class AirlinesController
                 ->setPlaceholder('airlines_cards', $airline_cards)
                 ->save()->render();
         } catch (\Exception $e) {
-            echo "Error: " . $e->getMessage();
+            error_log('Airlines page failed: ' . $e->getMessage());
+            echo 'Something went wrong while loading airlines. Please try again later.';
         }
     }
 

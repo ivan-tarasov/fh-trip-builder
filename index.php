@@ -7,7 +7,7 @@
  * @version 2.2.2
  */
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 use TripBuilder\Config;
 use TripBuilder\Timer;
@@ -18,6 +18,11 @@ try {
     Timer::start();
 
     // We using sessions here...
+    session_set_cookie_params([
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure'   => ! empty($_SERVER['HTTPS']),
+    ]);
     session_start();
 
     // Enable .env file variables
@@ -34,6 +39,11 @@ try {
     // Find the corresponding controller and action
     [$controllerName, $actionName] = explode('@', Routs::ENABLED_ROUTS[$url] ?? 'NotFound@index');
 
+    // Unknown route: set the status now, before any layout output locks the headers
+    if (! isset(Routs::ENABLED_ROUTS[$url])) {
+        http_response_code(404);
+    }
+
     // Load and execute the controller action
     $controllerClassName = sprintf(
         '%s\%sController',
@@ -44,16 +54,33 @@ try {
     $abstractController = new AbstractController();
     $controller = new $controllerClassName();
 
-    // Build and show page header
-    in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER) ?: $abstractController->header();
+    $needsLayout = ! in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER);
 
-    // Handle dynamic parameters if present
+    // Build and show page header
+    if ($needsLayout) {
+        $abstractController->header();
+    }
+
     $controller->$actionName();
 
     // Build and show page footer
-    in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER) ?: $abstractController->footer();
+    if ($needsLayout) {
+        $abstractController->footer();
+    }
 
     // This is the end...
-} catch (Exception $e) {
-    // Do something
+} catch (Throwable $e) {
+    error_log(sprintf(
+        'Unhandled %s: %s in %s:%d',
+        $e::class,
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine(),
+    ));
+
+    if (! headers_sent()) {
+        http_response_code(500);
+    }
+
+    echo 'Something went wrong on our side. Please try again later.';
 }

@@ -13,14 +13,14 @@ use Exception;
 
 class Config
 {
-    const CONFIG_DIRECTORY = 'config';
+    private const CONFIG_DIRECTORY = 'config';
 
     protected static array $configData = [];
 
     /**
      * @throws Exception
      */
-    public function __construct($environment = false)
+    public function __construct(?string $environment = null)
     {
         // Clear config data array to prevent mixing data with multiple time using
         self::$configData = [];
@@ -29,7 +29,7 @@ class Config
             '%s/%s/%s',
             Helper::getRootDir(),
             self::CONFIG_DIRECTORY,
-            $environment ?: $_ENV['APP_ENV'],
+            $environment ?? $_ENV['APP_ENV'],
         );
 
         if (is_dir($directory)) {

@@ -8,7 +8,7 @@ use TripBuilder\Templater;
 
 class NotFoundController
 {
-    public function index()
+    public function index(): void
     {
         $templater = new Templater('error', '404-not-found');
 

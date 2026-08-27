@@ -12,6 +12,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\ProgressIndicator;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
@@ -81,7 +83,7 @@ class Generate extends AbstractCommand
     /**
      * @throws Exception
      */
-    protected function execute($input, $output): int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         // If flights to add not provided – ask
         $flightsToAdd = $input->getArgument('flights') ?? $this->io->ask(
@@ -94,6 +96,14 @@ class Generate extends AbstractCommand
                 return (int) $number;
             },
         );
+
+        if (! is_numeric($flightsToAdd) || (int) $flightsToAdd < 1) {
+            $this->io->error('The "flights" argument must be a positive number.');
+
+            return Command::INVALID;
+        }
+
+        $flightsToAdd = (int) $flightsToAdd;
 
         // Get airlines from a database
         $airlinesResponse = $this->db->get('airlines');
@@ -113,7 +123,9 @@ class Generate extends AbstractCommand
         $progressBar->start();
 
         // Do the magic
-        while (++$this->count[self::COUNT_TOTAL] < $flightsToAdd) {
+        while ($this->count[self::COUNT_TOTAL] < $flightsToAdd) {
+            $this->count[self::COUNT_TOTAL]++;
+
             // Get 2 random airports. Depart and arrive airports should be different
             shuffle($airportsResponse);
             $airportKey = array_rand($airportsResponse, 2);
@@ -246,7 +258,7 @@ class Generate extends AbstractCommand
      * @param float $lonTo End point longitude (degrees decimal)
      * @return float|int Distance between points in metres
      */
-    private function distanceOnEarthSurface(float $latFrom, float $lonFrom, float $latTo, float $lonTo): float|int
+    private function distanceOnEarthSurface(float $latFrom, float $lonFrom, float $latTo, float $lonTo): float
     {
         $earthRadius = 6371000;
 

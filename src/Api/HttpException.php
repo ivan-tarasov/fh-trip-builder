@@ -8,7 +8,7 @@ class HttpException
      * @var array Standard HTTP reason phrases
      * @link https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
      */
-    const STATUS_CODE_PHRASES = [
+    private const STATUS_CODE_PHRASES = [
         // 1xx informational response
         100 => 'Continue',
         101 => 'Switching Protocols',
@@ -80,7 +80,7 @@ class HttpException
         511 => 'Network Authentication Required',
     ];
 
-    private static function sendResponse(int $statusCode, $message = null): void
+    private static function sendResponse(int $statusCode, ?string $message = null): never
     {
         http_response_code($statusCode);
 
@@ -94,22 +94,22 @@ class HttpException
         die();
     }
 
-    public static function badRequest(?string $message = null): void
+    public static function badRequest(?string $message = null): never
     {
         self::sendResponse(400, $message);
     }
 
-    public static function unauthorizedAccess(?string $message = null): void
+    public static function unauthorizedAccess(?string $message = null): never
     {
         self::sendResponse(401, $message);
     }
 
-    public static function notFound(?string $message = null): void
+    public static function notFound(?string $message = null): never
     {
         self::sendResponse(404, $message);
     }
 
-    public static function methodNotAllowed(array $allowed, string $message = null): void
+    public static function methodNotAllowed(array $allowed, ?string $message = null): never
     {
         header('Access-Control-Allow-Methods: ' . implode(',', $allowed));
         self::sendResponse(405, $message);

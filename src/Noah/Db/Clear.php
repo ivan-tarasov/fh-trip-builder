@@ -7,6 +7,8 @@ use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use TripBuilder\Config;
 use TripBuilder\Noah\AbstractCommand;
 
@@ -41,7 +43,7 @@ class Clear extends AbstractCommand
     /**
      * @throws Exception
      */
-    protected function execute($input, $output): int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $existingTables = $this->getAllDatabaseTables();
 

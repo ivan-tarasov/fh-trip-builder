@@ -57,7 +57,7 @@ class HomeController extends AbstractController
                 ->setPath('index')
                 ->setFilename('top-searches')
                 ->set()
-                ->setPlaceholder('search_url',   '/search/?hash=' . $search['hash'])
+                ->setPlaceholder('search_url',   '/search/?' . http_build_query(['hash' => $search['hash']]))
                 ->setPlaceholder('search_rank',  $rank + 1)
                 ->setPlaceholder('flight_direction', $search['triptype'] == 'roundtrip' ? 'arrow-left' : 'long')
                 ->setPlaceholder('from_name',    $search['from_name'])

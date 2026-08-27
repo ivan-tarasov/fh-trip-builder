@@ -8,8 +8,8 @@ class Timer
 {
     private const ACCURACY_DEFAULT = 3;
 
-    private static float|string $startTime;
-    private static float|string $endTime;
+    private static ?float $startTime = null;
+    private static ?float $endTime = null;
 
     public static function start(): void
     {
@@ -26,10 +26,10 @@ class Timer
      */
     public static function getExecutionTime(int $accuracy = self::ACCURACY_DEFAULT): string
     {
-        if (self::$startTime && self::$endTime) {
-            return number_format(self::$endTime - self::$startTime, $accuracy);
-        } else {
+        if (self::$startTime === null || self::$endTime === null) {
             throw new Exception('Timer not started or stopped.');
         }
+
+        return number_format(self::$endTime - self::$startTime, $accuracy);
     }
 }

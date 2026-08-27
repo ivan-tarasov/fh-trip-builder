@@ -9,7 +9,7 @@ use TripBuilder\Templater;
 
 class Response extends AbstractApi
 {
-    private array $columns = [
+    private const COLUMNS = [
         'a.code',
         'a.title',
         'c.title AS country',
@@ -21,11 +21,8 @@ class Response extends AbstractApi
         'a.longitude',
         'a.altitude',
     ];
-    private array $airports = [];
 
-    public function __construct($method = false) {
-        parent::__construct($method);
-    }
+    private array $airports = [];
 
     /**
      * @throws Exception
@@ -40,7 +37,7 @@ class Response extends AbstractApi
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
         $this->db->orderBy('a.title', 'asc');
 
-        $this->airports = $this->db->get('airports a', null, $this->columns);
+        $this->airports = $this->db->get('airports a', null, self::COLUMNS);
 
         $this->sendResponse(200, $this->airports);
     }
@@ -66,7 +63,7 @@ class Response extends AbstractApi
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
         $this->db->orderBy('a.title', 'asc');
 
-        $this->airports = $this->db->get('airports a', null, $this->columns);
+        $this->airports = $this->db->get('airports a', null, self::COLUMNS);
 
         $airportsGroups = $response = [];
 

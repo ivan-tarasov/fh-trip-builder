@@ -10,10 +10,10 @@ use GuzzleHttp\Exception\GuzzleException;
 
 class AirportsController
 {
-    const DEFAULT_ALTITUDE  = '45.469539',
+    private const DEFAULT_ALTITUDE  = '45.469539',
           DEFAULT_LONGITUDE = '-73.744296';
 
-    const MAP_URL           = 'https://static-maps.yandex.ru/1.x/',
+    private const MAP_URL           = 'https://static-maps.yandex.ru/1.x/',
           MAP_ZOOM          = 10,
           MAP_LANGUAGE      = 'en-US',
           MAP_SIZE          = '450,200';
@@ -65,7 +65,8 @@ class AirportsController
                 ->save()
                 ->render();
         } catch (\Exception $e) {
-            echo "Error: " . $e->getMessage();
+            error_log('Airports page failed: ' . $e->getMessage());
+            echo 'Something went wrong while loading airports. Please try again later.';
         }
     }
 
