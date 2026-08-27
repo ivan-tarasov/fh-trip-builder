@@ -10,8 +10,8 @@ use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
-use TripBuilder\Database\MySql;
 use TripBuilder\Helper;
+use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Templater;
 
 class SearchController extends AbstractController
@@ -332,8 +332,7 @@ class SearchController extends AbstractController
     private function checkHash(): void
     {
         if ($this->get['hash']) {
-            $this->db->where(self::GET_HASH, $this->get['hash']);
-            $search = $this->db->getOne(MySql::TABLE_SEARCH);
+            $search = (new SearchRepository($this->connection()))->findByHash($this->get['hash']);
 
             $search_params = http_build_query([
                 self::GET_FROM     => $search[self::GET_FROM . '_code'],
@@ -381,21 +380,16 @@ class SearchController extends AbstractController
         ));
 
         // Insert or update search
-        $this->db->onDuplicate([
-            'search_count' => $this->db->inc(),
-            'last_search' => $this->db->now(),
-        ]);
-
-        $this->db->insert(MySql::TABLE_SEARCH, [
-            self::GET_HASH           => $hash,
-            self::GET_FROM . '_code' => $this->get[self::GET_FROM],
-            self::GET_FROM . '_name' => trim(preg_replace('/\([^)]+\)/', '', $this->data->depart)),
-            self::GET_TO . '_code'   => $this->get[self::GET_TO],
-            self::GET_TO . '_name'   => trim(preg_replace('/\([^)]+\)/', '', $this->data->arrive)),
-            self::GET_DEPART         => $this->get[self::GET_DEPART],
-            self::GET_RETURN         => $this->get[self::GET_RETURN],
-            self::GET_TRIPTYPE       => $this->get[self::GET_TRIPTYPE],
-        ]);
+        (new SearchRepository($this->connection()))->record(
+            $hash,
+            $this->get[self::GET_FROM],
+            trim(preg_replace('/\([^)]+\)/', '', $this->data->depart)),
+            $this->get[self::GET_TO],
+            trim(preg_replace('/\([^)]+\)/', '', $this->data->arrive)),
+            $this->get[self::GET_DEPART],
+            $this->get[self::GET_RETURN],
+            $this->get[self::GET_TRIPTYPE],
+        );
     }
 
     /**

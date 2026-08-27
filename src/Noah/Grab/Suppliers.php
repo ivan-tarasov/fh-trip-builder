@@ -10,6 +10,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
@@ -29,7 +30,7 @@ class Suppliers extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $codes = $this->db->get('airlines', null, 'code');
+        $codes = $this->connection()->fetchAll('SELECT code FROM ' . Table::Airlines->value);
 
         $progressBar = new ProgressBar($output, count($codes));
         $progressBar->setBarCharacter('<fg=green>▓</>');

@@ -13,12 +13,6 @@ parameters:
 			path: src/Api/AbstractApi.php
 
 		-
-			message: '#^Method TripBuilder\\Api\\AbstractApi\:\:updateSearchStats\(\) has parameter \$conditions with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Api/AbstractApi.php
-
-		-
 			message: '#^Property TripBuilder\\Api\\AbstractApi\:\:\$data type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -29,12 +23,6 @@ parameters:
 			identifier: booleanAnd.rightAlwaysTrue
 			count: 1
 			path: src/Api/Airlines/Response.php
-
-		-
-			message: '#^Property TripBuilder\\Api\\Airports\\Response\:\:\$airports type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Api/Airports/Response.php
 
 		-
 			message: '#^Right side of && is always true\.$#'
@@ -103,12 +91,6 @@ parameters:
 			path: src/Controllers/AjaxController.php
 
 		-
-			message: '#^Parameter \#1 \$id of static method TripBuilder\\Helper\:\:bookingIdToString\(\) expects int, true given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Controllers/AjaxController.php
-
-		-
 			message: '#^Property TripBuilder\\Controllers\\AjaxController\:\:\$get type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -163,24 +145,6 @@ parameters:
 			path: src/Noah/AbstractCommand.php
 
 		-
-			message: '#^Parameter \#1 \$num of function number_format expects float, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Noah/Flights/Cleaning.php
-
-		-
-			message: '#^Method TripBuilder\\Noah\\Flights\\Generate\:\:setArriveAirportData\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Noah/Flights/Generate.php
-
-		-
-			message: '#^Method TripBuilder\\Noah\\Flights\\Generate\:\:setDepartAirportData\(\) has parameter \$data with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Noah/Flights/Generate.php
-
-		-
 			message: '#^PHPDoc tag @return with type float\|int is not subtype of native type float\.$#'
 			identifier: return.phpDocType
 			count: 1
@@ -193,19 +157,7 @@ parameters:
 			path: src/Noah/Flights/Generate.php
 
 		-
-			message: '#^Property TripBuilder\\Noah\\Flights\\Generate\:\:\$arriveAirport type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Noah/Flights/Generate.php
-
-		-
 			message: '#^Property TripBuilder\\Noah\\Flights\\Generate\:\:\$count type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Noah/Flights/Generate.php
-
-		-
-			message: '#^Property TripBuilder\\Noah\\Flights\\Generate\:\:\$departAirport type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Noah/Flights/Generate.php

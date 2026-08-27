@@ -7,6 +7,7 @@ namespace TripBuilder\Api\Airlines;
 use Exception;
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\HttpStatus;
+use TripBuilder\Repository\AirlineRepository;
 
 class Response extends AbstractApi
 {
@@ -18,19 +19,13 @@ class Response extends AbstractApi
      */
     public function get(): void
     {
-        // Request only provided airlines
-        if (!empty($this->data[self::DATA_KEY_SELECTED])) {
-            $this->db->where('code', explode(',', $this->data[self::DATA_KEY_SELECTED]), 'IN');
-        }
+        $codes = !empty($this->data[self::DATA_KEY_SELECTED])
+            ? explode(',', $this->data[self::DATA_KEY_SELECTED])
+            : null;
 
-        // Request only major airlines
-        if (!empty($this->data[self::DATA_KEY_MAJOR]) && $this->data[self::DATA_KEY_MAJOR]) {
-            $this->db->where('is_major', 1);
-        }
+        $majorOnly = !empty($this->data[self::DATA_KEY_MAJOR]) && $this->data[self::DATA_KEY_MAJOR];
 
-        $this->db->orderBy('title', 'asc');
-
-        $airlines = $this->db->get('airlines');
+        $airlines = (new AirlineRepository($this->connection()))->search($codes, $majorOnly);
 
         $this->sendResponse(HttpStatus::Ok, $airlines);
     }

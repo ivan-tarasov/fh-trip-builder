@@ -48,7 +48,7 @@ class Install extends AbstractCommand
         foreach (Config::get() as $table => $data) {
             $action = sprintf(self::MESSAGE_CREATING_TABLE, $table);
 
-            if ($this->db->tableExists([$table])) {
+            if ($this->tableExists($table)) {
                 $this->formatOutput($action, 'exist', 'info');
                 continue;
             }
@@ -88,16 +88,23 @@ class Install extends AbstractCommand
                     : null,
             );
 
-            $this->db->rawQueryOne($query);
-
-            if ($this->db->getLastErrno() === 0) {
+            try {
+                $this->connection()->pdo()->exec($query);
                 $this->formatOutput($action, 'created', 'success');
-            } else {
+            } catch (\Throwable $e) {
                 $this->formatOutput($action, 'failed', 'danger');
             }
         }
 
         $this->io->newLine();
+    }
+
+    private function tableExists(string $table): bool
+    {
+        return (int) $this->connection()->fetchValue(
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?',
+            [$_ENV['DB_DATABASE'] ?? '', $table],
+        ) > 0;
     }
 
     /**
@@ -111,16 +118,16 @@ class Install extends AbstractCommand
             $action = sprintf(self::MESSAGE_SEEDING_TABLE, $table);
 
             $columns = $data['columns'];
+            $sql = $this->seedStatement($table, $columns);
             $failed = false;
 
             foreach ($data['seeds'] as $seed) {
-                // If table already seeded – updating data from a seed array
-                $this->db->onDuplicate($columns);
-
                 $values = array_pad($seed, count($columns), null);
 
-                $id = $this->db->insert($table, array_combine($columns, $values));
-                if (!$id) {
+                try {
+                    // Insert, or refresh the row's columns if it already exists.
+                    $this->connection()->execute($sql, array_values($values));
+                } catch (\Throwable $e) {
                     $failed = true;
                     $this->formatOutput($action, 'failed', 'danger');
                     break;
@@ -131,5 +138,22 @@ class Install extends AbstractCommand
                 $this->formatOutput($action, 'done', 'success');
             }
         }
+    }
+
+    /**
+     * Build the seed upsert for a table: insert, or refresh every column on a
+     * duplicate key (MySQL 8 row-alias syntax, avoiding the deprecated VALUES()).
+     *
+     * @param list<string> $columns
+     */
+    private function seedStatement(string $table, array $columns): string
+    {
+        $quoted = array_map(static fn(string $c): string => "`$c`", $columns);
+        $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+        $updates = implode(', ', array_map(static fn(string $c): string => "`$c` = new.`$c`", $columns));
+
+        return "INSERT INTO `$table` (" . implode(', ', $quoted) . ")"
+            . " VALUES ($placeholders) AS new"
+            . " ON DUPLICATE KEY UPDATE $updates";
     }
 }

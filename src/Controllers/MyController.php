@@ -8,6 +8,7 @@ use stdClass;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Templater;
 
 class MyController extends AbstractController
@@ -18,13 +19,11 @@ class MyController extends AbstractController
      */
     public function bookings(): void
     {
-        $this->db->where('session_id', session_id());
-        $this->db->orderBy('departure_time', 'asc');
-        $bookings = $this->db->get('bookings');
+        $bookings = (new BookingRepository($this->connection()))->forSession(session_id());
 
         $templater = new Templater();
 
-        if ($this->db->count > 0) {
+        if (count($bookings) > 0) {
             foreach ($bookings as $booking) {
                 // Outbound flight
                 $outbound = json_decode($booking['flight_outbound'] ?? '');

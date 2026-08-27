@@ -82,13 +82,14 @@ class Clear extends AbstractCommand
             new Config(self::CONFIG_DIR_TABLES);
 
             foreach ($clearingTables as $table) {
-                $this->db->rawQuery(sprintf(self::SQL_QUERY_DELETE_FROM, $table));
+                // $table comes from getAllDatabaseTables() (validated above), not user text.
+                $this->connection()->execute(sprintf(self::SQL_QUERY_DELETE_FROM, $table));
 
                 // Altering AUTO_INCREMENT if needed
                 $autoIncrement = Config::get(sprintf('%s.auto_increment', $table));
 
                 if (!empty($autoIncrement)) {
-                    $this->db->rawQuery(sprintf(self::SQL_QUERY_ALTER, $table, $autoIncrement));
+                    $this->connection()->execute(sprintf(self::SQL_QUERY_ALTER, $table, (int) $autoIncrement));
                 }
             }
 

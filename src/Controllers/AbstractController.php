@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
-use MysqliDb;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
-use TripBuilder\Database\MySql;
+use TripBuilder\Database\Connection;
+use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
 use TripBuilder\Templater;
@@ -16,20 +16,18 @@ use TripBuilder\Timer;
 
 class AbstractController
 {
-    public MysqliDb $db;
-
     private string $staticUrl;
+
+    private ?Connection $connection = null;
 
     public function __construct()
     {
-        $this->dbConnect();
         $this->setStaticUrl(Cdn::getUrl());
     }
 
-    private function dbConnect(): void
+    protected function connection(): Connection
     {
-        $this->db = MySql::connect();
-        $this->db->setTrace(true);
+        return $this->connection ??= Connection::fromEnv();
     }
 
     /**
@@ -179,17 +177,12 @@ class AbstractController
      */
     private function getFlightsCount(): int
     {
-        $count = $this->db->getOne('flights', 'count(*) as flights');
-
-        return (int) ($count['flights'] ?? 0);
+        return (int) $this->connection()->fetchValue('SELECT count(*) FROM ' . Table::Flights->value);
     }
 
-    /**
-     * @return int
-     */
     private function getDbRequestCount(): int
     {
-        return count($this->db->trace);
+        return $this->connection()->queryCount();
     }
 
     /**

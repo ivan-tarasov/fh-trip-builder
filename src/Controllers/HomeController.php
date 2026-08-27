@@ -6,7 +6,8 @@ namespace TripBuilder\Controllers;
 
 use TripBuilder\Cdn;
 use TripBuilder\Config;
-use TripBuilder\Database\MySql;
+use TripBuilder\Repository\AirlineRepository;
+use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Templater;
 
 class HomeController extends AbstractController
@@ -52,9 +53,9 @@ class HomeController extends AbstractController
         $poi_cards = $templater->render();
 
         // Render top search list
-        $this->db->orderBy('search_count');
+        $topSearches = (new SearchRepository($this->connection()))->topSearches(5);
 
-        foreach ($this->db->get(MySql::TABLE_SEARCH, 5) as $rank => $search) {
+        foreach ($topSearches as $rank => $search) {
             $templater
                 ->setPath('index')
                 ->setFilename('top-searches')
@@ -73,9 +74,9 @@ class HomeController extends AbstractController
         $top_searches = $templater->render();
 
         // Render top airlines
-        $this->db->orderBy('book_count');
+        $topAirlines = (new AirlineRepository($this->connection()))->mostBooked(7);
 
-        foreach ($this->db->get(MySql::TABLE_AIRLINES, 7) as $airline) {
+        foreach ($topAirlines as $airline) {
             $templater
                 ->setPath('index')
                 ->setFilename('top-airline')
