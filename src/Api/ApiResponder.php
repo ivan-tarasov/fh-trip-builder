@@ -2,7 +2,7 @@
 
 namespace TripBuilder\Api;
 
-class HttpException
+class ApiResponder
 {
     /**
      * @var array Standard HTTP reason phrases

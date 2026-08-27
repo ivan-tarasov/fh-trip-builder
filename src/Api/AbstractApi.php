@@ -4,7 +4,7 @@ namespace TripBuilder\Api;
 
 use TripBuilder\Controllers\AbstractController;
 use TripBuilder\Helper;
-use TripBuilder\Routs;
+use TripBuilder\Routes;
 
 class AbstractApi extends AbstractController
 {
@@ -50,10 +50,10 @@ class AbstractApi extends AbstractController
 
     private function guardUnauthorizedAccess(): void
     {
-        if (!in_array(Routs::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS, true)
+        if (!in_array(Routes::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS, true)
             && !$this->isAuthorizedToken($this->getAuthToken())
         ) {
-            HttpException::unauthorizedAccess();
+            ApiResponder::unauthorizedAccess();
         }
     }
 
@@ -75,7 +75,7 @@ class AbstractApi extends AbstractController
     private function guardNotAllowedRequestMethod(): void
     {
         if ($this->getRequestMethod() !== $this->getAllowedMethod()) {
-            HttpException::methodNotAllowed([$this->getAllowedMethod()]);
+            ApiResponder::methodNotAllowed([$this->getAllowedMethod()]);
         }
     }
 
@@ -92,7 +92,7 @@ class AbstractApi extends AbstractController
         header_remove();
 
         // For some endpoints we not using typical output and returning raw data
-        if (!in_array(Routs::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
+        if (!in_array(Routes::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
             // Building response array
             $response = [
                 'status' => $statusCode,
@@ -150,7 +150,7 @@ class AbstractApi extends AbstractController
         $decoded = json_decode($data, true);
 
         if (! is_array($decoded)) {
-            HttpException::badRequest('Malformed JSON body');
+            ApiResponder::badRequest('Malformed JSON body');
         }
 
         $this->data = $decoded;

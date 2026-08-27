@@ -4,10 +4,10 @@ namespace TripBuilder\Controllers;
 
 use GuzzleHttp\Exception\GuzzleException;
 use stdClass;
-use TripBuilder\AmazonS3;
+use TripBuilder\Cdn;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
-use TripBuilder\DataBase\MySql;
+use TripBuilder\Database\MySql;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
@@ -289,7 +289,7 @@ class SearchController extends AbstractController
                     ->setPath('search')
                     ->setFilename('no-result')
                     ->set()
-                    ->setPlaceholder('not_found_img', AmazonS3::getUrl(sprintf(
+                    ->setPlaceholder('not_found_img', Cdn::getUrl(sprintf(
                         '%s/%s',
                         Config::get('site.static.endpoint.images'),
                         'no-results.png'
@@ -346,7 +346,7 @@ class SearchController extends AbstractController
                 ->setPath('search')
                 ->setFilename('redirect')
                 ->set()
-                ->setPlaceholder('image_url', AmazonS3::getUrl(sprintf(
+                ->setPlaceholder('image_url', Cdn::getUrl(sprintf(
                     '%s/search_redirect.gif',
                     Config::get('site.static.endpoint.images')
                 )))
@@ -525,7 +525,7 @@ class SearchController extends AbstractController
             ->set()
             ->setPlaceholder('flight_number', $carrier['number'])
             ->setPlaceholder('airline_title', $carrier['name'])
-            ->setPlaceholder('logo_url', AmazonS3::getUrl(sprintf(
+            ->setPlaceholder('logo_url', Cdn::getUrl(sprintf(
                 '%s/suppliers/%s.png',
                 Config::get('site.static.endpoint.images'),
                 $carrier['code']

@@ -2,8 +2,8 @@
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\AmazonS3;
-use TripBuilder\DataBase\MySql;
+use TripBuilder\Cdn;
+use TripBuilder\Database\MySql;
 use TripBuilder\Config;
 use TripBuilder\Templater;
 
@@ -80,7 +80,7 @@ class HomeController extends AbstractController
                 ->set()
                 ->setPlaceholder('airline_title',    $airline['title'])
                 ->setPlaceholder('book_count',       $airline['book_count'])
-                ->setPlaceholder('airline_logo_url', AmazonS3::getUrl(sprintf(
+                ->setPlaceholder('airline_logo_url', Cdn::getUrl(sprintf(
                     '%s/%s/%s.png',
                     Config::get('site.static.endpoint.images'),
                     'suppliers',

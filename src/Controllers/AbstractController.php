@@ -2,12 +2,12 @@
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\AmazonS3;
+use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
-use TripBuilder\DataBase\MySql;
+use TripBuilder\Database\MySql;
 use TripBuilder\Helper;
-use TripBuilder\Routs;
+use TripBuilder\Routes;
 use TripBuilder\Templater;
 use TripBuilder\Timer;
 use MysqliDb;
@@ -21,7 +21,7 @@ class AbstractController
     public function __construct()
     {
         $this->dbConnect();
-        $this->setStaticUrl(AmazonS3::getUrl());
+        $this->setStaticUrl(Cdn::getUrl());
     }
 
     private function dbConnect(): void
@@ -45,7 +45,7 @@ class AbstractController
                 $templater
                     ->setPlaceholder('menu_item_url',        $link)
                     ->setPlaceholder('menu_item_spacer',     $params['spacer'] ?? 2)
-                    ->setPlaceholder('menu_item_active', Routs::getCurrentPage() == rtrim($link, '/') ? ' active' : null)
+                    ->setPlaceholder('menu_item_active', Routes::getCurrentPage() == rtrim($link, '/') ? ' active' : null)
                     ->setPlaceholder('menu_item_icon',       $params['icon'])
                     ->setPlaceholder('menu_item_text',       $params['text'])
                     ->save();

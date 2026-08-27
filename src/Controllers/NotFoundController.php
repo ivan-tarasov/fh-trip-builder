@@ -2,7 +2,7 @@
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\AmazonS3;
+use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Templater;
 
@@ -13,7 +13,7 @@ class NotFoundController
         $templater = new Templater('error', '404-not-found');
 
         echo $templater
-            ->setPlaceholder('app_css_folder', sprintf('%s/%s', AmazonS3::getUrl(), Config::get('site.static.endpoint.css')))
+            ->setPlaceholder('app_css_folder', sprintf('%s/%s', Cdn::getUrl(), Config::get('site.static.endpoint.css')))
             ->save()
             ->render();
     }

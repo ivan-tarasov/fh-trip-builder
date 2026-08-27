@@ -1,6 +1,6 @@
 <?php
 
-namespace TripBuilder\DataBase;
+namespace TripBuilder\Database;
 
 use MysqliDb;
 

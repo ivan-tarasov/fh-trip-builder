@@ -2,7 +2,7 @@
 
 namespace TripBuilder\Controllers;
 
-use TripBuilder\AmazonS3;
+use TripBuilder\Cdn;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Config;
@@ -36,7 +36,7 @@ class AirlinesController
 
             foreach ($response->data as $airline) {
                 $templater
-                    ->setPlaceholder('airline_logo_img', AmazonS3::getUrl(sprintf(
+                    ->setPlaceholder('airline_logo_img', Cdn::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
                         $airline->code

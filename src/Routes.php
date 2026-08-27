@@ -2,9 +2,9 @@
 
 namespace TripBuilder;
 
-class Routs
+class Routes
 {
-    public const ENABLED_ROUTS = [
+    public const ENABLED_ROUTES = [
 
         /*
         |--------------------------------------------------------------------------
@@ -56,7 +56,7 @@ class Routs
 
     ];
 
-    public const ROUTS_CONTROLLERS_PATH = 'TripBuilder\Controllers';
+    public const ROUTES_CONTROLLERS_PATH = 'TripBuilder\Controllers';
 
     public const EXCLUDE_HEADER_FOOTER = [
         'Api',

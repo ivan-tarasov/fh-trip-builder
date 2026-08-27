@@ -4,7 +4,7 @@ namespace TripBuilder\Api\Flights;
 
 use Exception;
 use TripBuilder\Api\AbstractApi;
-use TripBuilder\Api\HttpException;
+use TripBuilder\Api\ApiResponder;
 
 class Response extends AbstractApi
 {
@@ -91,7 +91,7 @@ class Response extends AbstractApi
             || empty($this->data[self::DATA_DEPART_DATE])
             || empty($this->data[self::DATA_ADULT_COUNT])
         ) {
-             HttpException::badRequest();
+             ApiResponder::badRequest();
         }
 
         $this->setCurrentPage(max(1, (int) ($this->data[self::DATA_PAGE] ?? 1)))
@@ -142,13 +142,13 @@ class Response extends AbstractApi
     {
         // Throw Bad Request Exception if depart_id is empty
         if (empty($this->data) || empty($this->data[self::DATA_FLIGHT_ID])) {
-            HttpException::badRequest();
+            ApiResponder::badRequest();
         }
 
         $response = $this->getOnewayFlights((int) $this->data[self::DATA_FLIGHT_ID]);
 
         if (empty($response)) {
-            HttpException::notFound('Flight not found');
+            ApiResponder::notFound('Flight not found');
         }
 
         $response = $response[0];

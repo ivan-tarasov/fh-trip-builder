@@ -3,7 +3,7 @@
 namespace TripBuilder\Controllers;
 
 use stdClass;
-use TripBuilder\AmazonS3;
+use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
@@ -46,7 +46,7 @@ class MyController extends AbstractController
                     ->setPlaceholder('booking_id_pretty', Helper::bookingIdToString($booking['id']))
                     ->setPlaceholder('booking_created',   date('Y-m-d H:i', strtotime($booking['created'])))
                     ->setPlaceholder('airline_name',      $outbound->carrier_name)
-                    ->setPlaceholder('airline_logo_url',  AmazonS3::getUrl(sprintf(
+                    ->setPlaceholder('airline_logo_url',  Cdn::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
                         $outbound->carrier
@@ -67,7 +67,7 @@ class MyController extends AbstractController
                         ->setFilename('flight-return')
                         ->set()
                         ->setPlaceholder('airline_name',     $return->carrier_name)
-                        ->setPlaceholder('airline_logo_url', AmazonS3::getUrl(sprintf(
+                        ->setPlaceholder('airline_logo_url', Cdn::getUrl(sprintf(
                             '%s/suppliers/%s.png',
                             Config::get('site.static.endpoint.images'),
                             $return->carrier
@@ -84,7 +84,7 @@ class MyController extends AbstractController
                 ->setPath('my/bookings')
                 ->setFilename('empty')
                 ->set()
-                ->setPlaceholder('not_found_img', AmazonS3::getUrl(sprintf(
+                ->setPlaceholder('not_found_img', Cdn::getUrl(sprintf(
                     '%s/%s',
                     Config::get('site.static.endpoint.images'),
                     'not-found.png'

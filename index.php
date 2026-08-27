@@ -11,7 +11,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use TripBuilder\Config;
 use TripBuilder\Timer;
-use TripBuilder\Routs;
+use TripBuilder\Routes;
 use TripBuilder\Controllers\AbstractController;
 
 try {
@@ -32,29 +32,29 @@ try {
     // Building config
     new Config();
 
-    // Get the current URL and put it to Routs class
+    // Get the current URL and put it to Routes class
     $url = rtrim(strtok($_SERVER['REQUEST_URI'], '?'), '/') ?: '/';
-    Routs::setCurrentPage($url);
+    Routes::setCurrentPage($url);
 
     // Find the corresponding controller and action
-    [$controllerName, $actionName] = explode('@', Routs::ENABLED_ROUTS[$url] ?? 'NotFound@index');
+    [$controllerName, $actionName] = explode('@', Routes::ENABLED_ROUTES[$url] ?? 'NotFound@index');
 
     // Unknown route: set the status now, before any layout output locks the headers
-    if (! isset(Routs::ENABLED_ROUTS[$url])) {
+    if (! isset(Routes::ENABLED_ROUTES[$url])) {
         http_response_code(404);
     }
 
     // Load and execute the controller action
     $controllerClassName = sprintf(
         '%s\%sController',
-        Routs::ROUTS_CONTROLLERS_PATH,
+        Routes::ROUTES_CONTROLLERS_PATH,
         ucfirst($controllerName),
     );
 
     $abstractController = new AbstractController();
     $controller = new $controllerClassName();
 
-    $needsLayout = ! in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER);
+    $needsLayout = ! in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
 
     // Build and show page header
     if ($needsLayout) {
