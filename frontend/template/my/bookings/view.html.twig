@@ -1,0 +1,30 @@
+{% extends 'layout.html.twig' %}
+
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container">
+        <div class="py-5 mx-auto">
+            <h1 class="display-4">My bookings</h1>
+            <p class="lead">Here you can see your booking flights.</p>
+        </div>
+        <!--h4 class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-muted lead">%BOOKINGS_TITLE%</span>
+          <span class="badge badge-secondary badge-pill">%TRIPS_COUNT%</span>
+        </h4-->
+        <!-- <ul class="list-group mb-3"> -->
+        <div class="list-group w-auto">
+            {% if has_rows %}
+                {% for booking in bookings %}
+                    {% include 'my/bookings/flight-outbound.html.twig' %}
+                    {% if booking.return_flight %}
+                        {% include 'my/bookings/flight-return.html.twig' with {'flight': booking.return_flight} %}
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                {% include 'my/bookings/empty.html.twig' %}
+            {% endif %}
+        </div>
+        <!-- </ul> -->
+    </div>
+</main>
+{% endblock %}
