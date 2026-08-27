@@ -12,6 +12,7 @@ use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\SearchRepository;
+use TripBuilder\TripType;
 use TripBuilder\View\TwigRenderer;
 
 class SearchController extends AbstractController
@@ -97,9 +98,7 @@ class SearchController extends AbstractController
             $data = [
                 'page'        => $this->get[self::GET_PAGE] ?? 1,
                 'sort'        => 'price',
-                'trip_type'   => $this->get[self::GET_TRIPTYPE] == Config::get('search.triptype.roundtrip')
-                    ? 'roundtrip'
-                    : 'oneway',
+                'trip_type'   => $this->get[self::GET_TRIPTYPE], // already normalised to a TripType value
                 'from'        => $this->get[self::GET_FROM],
                 'to'          => $this->get[self::GET_TO],
                 'depart_date' => $this->get[self::GET_DEPART],
@@ -410,12 +409,8 @@ class SearchController extends AbstractController
 
     private function setGet(array $get): void
     {
-        if (!in_array($get[self::GET_TRIPTYPE], [
-            Config::get('search.triptype.roundtrip'),
-            Config::get('search.triptype.oneway'),
-        ])) {
-            $get[self::GET_TRIPTYPE] = Config::get('search.triptype.oneway');
-        }
+        // Normalise the trip type, defaulting to one-way for invalid input.
+        $get[self::GET_TRIPTYPE] = TripType::fromRequest($get[self::GET_TRIPTYPE])->value;
 
         $this->get = $get;
     }

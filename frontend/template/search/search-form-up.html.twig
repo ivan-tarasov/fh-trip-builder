@@ -1,6 +1,6 @@
 {% set tab = config('site.tab_active') %}
-{% set rt = triptype == config('search.triptype.roundtrip') %}
-{% set ow = triptype == config('search.triptype.oneway') %}
+{% set rt = triptype == 'roundtrip' %}
+{% set ow = triptype == 'oneway' %}
 <div class="bg-black">
     <div class="wrapper">
         <div class="card card-4 container">

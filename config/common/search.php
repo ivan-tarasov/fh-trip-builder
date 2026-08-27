@@ -24,11 +24,6 @@ return [
         ],
     ],
 
-    'triptype' => [
-        'roundtrip' => 'roundtrip',
-        'oneway' => 'oneway',
-    ],
-
     /*
     |--------------------------------------------------------------------------
     | Search page
