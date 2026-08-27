@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Api;
 
 use MysqliDb;
+use TripBuilder\Database\Connection;
 use TripBuilder\Database\MySql;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
@@ -32,6 +33,10 @@ abstract class AbstractApi
     protected array $data = [];
     private HttpMethod $allowedMethod;
 
+    // PDO connection for endpoints migrated off the legacy MysqliDb query builder.
+    // Lazily created so only migrated endpoints open it during the transition.
+    private ?Connection $connection = null;
+
     public function __construct(?HttpMethod $method = null)
     {
         // API endpoints only need a database handle — not the page layout,
@@ -46,6 +51,11 @@ abstract class AbstractApi
         $this->guardNotAllowedRequestMethod();
 
         $this->setRequestData();
+    }
+
+    protected function connection(): Connection
+    {
+        return $this->connection ??= Connection::fromEnv();
     }
 
     private function guardUnauthorizedAccess(): void
