@@ -1,0 +1,32 @@
+<div class="col mb-4">
+    <div class="card">
+        <img src="https://static-maps.yandex.ru/1.x/?ll={{ airport.longitude }},{{ airport.latitude }}&z=10&l=map&lang=en-US&size=450,200"  alt=""/>
+        <div class="card-body">
+            <h3 class="card-title border-bottom pb-3 mt-2 fs-5">{{ airport.title }}</h3>
+            <div class="card-text">
+                <dl class="row">
+                    <dt class="col-sm-4">Country</dt>
+                    <dd class="col-sm-8">{{ airport.country }}</dd>
+                    <dt class="col-sm-4">City</dt>
+                    <dd class="col-sm-8">{{ airport.city }}</dd>
+                    <dt class="col-sm-4">IATA code</dt>
+                    <dd class="col-sm-8">{{ airport.code }}</dd>
+                    <dt class="col-sm-4">Timezone</dt>
+                    <dd class="col-sm-8">{{ airport.timezone_name }}</dd>
+                    <dt class="col-sm-4">Coordinates</dt>
+                    <dd class="col-sm-8">
+                        <a href="https://www.google.com/maps/place/{{ airport.latitude }}+{{ airport.longitude }}" target="_blank">
+                            <i class="fab fa-google"></i>
+                            {{ airport.latitude }}, {{ airport.longitude }}
+                        </a>
+                    </dd>
+                    <dt class="col-sm-4">Altitude</dt>
+                    <dd class="col-sm-8">{{ airport.altitude|number_format }} meters</dd>
+                </dl>
+            </div>
+        </div>
+        <!--div class="card-footer">
+            <small class="text-muted">Search count: X,XXX</small>
+        </div-->
+    </div>
+</div>

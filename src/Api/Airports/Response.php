@@ -9,7 +9,7 @@ use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\HttpStatus;
 use TripBuilder\Helper;
 use TripBuilder\Repository\AirportRepository;
-use TripBuilder\Templater;
+use TripBuilder\View\TwigRenderer;
 
 class Response extends AbstractApi
 {
@@ -48,23 +48,23 @@ class Response extends AbstractApi
             $airportsGroups[$airport['city']]['airports'][] = $airport;
         }
 
-        $templater = new Templater('api/airports/autofill', 'city-span');
+        $renderer = new TwigRenderer();
 
         foreach ($airportsGroups as $city => $group) {
-            $response[] = $templater->setFilename('city-span')->set()
-                ->setPlaceholder('city-code', $group['code'])
-                ->setPlaceholder('city-name', $city)
-                ->setPlaceholder('country-name', $group['country'])
-                ->setPlaceholder('time-zone', Helper::getUTCTime((float) $group['timezone']))
-                ->save()->render();
+            $response[] = $renderer->render('api/airports/autofill/city-span.html.twig', [
+                'city_code'    => $group['code'],
+                'city_name'    => $city,
+                'country_name' => $group['country'],
+                'time_zone'    => Helper::getUTCTime((float) $group['timezone']),
+            ]);
 
             foreach ($group['airports'] as $airport) {
-                $response[] = $templater->setFilename('airport-span')->set()
-                    ->setPlaceholder('airport-code', $airport['code'])
-                    ->setPlaceholder('airport-name', $airport['title'])
-                    ->setPlaceholder('city-name', $airport['city'])
-                    ->setPlaceholder('airport-country', $airport['country'])
-                    ->save()->render();
+                $response[] = $renderer->render('api/airports/autofill/airport-span.html.twig', [
+                    'airport_code'    => $airport['code'],
+                    'airport_name'    => $airport['title'],
+                    'city_name'       => $airport['city'],
+                    'airport_country' => $airport['country'],
+                ]);
             }
         }
 
