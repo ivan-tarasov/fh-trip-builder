@@ -19,6 +19,9 @@
 /.php-cs-fixer.cache
 /.phpstan.cache/
 
+# Compiled Twig templates
+/var/
+
 # Log files
 *.log
 

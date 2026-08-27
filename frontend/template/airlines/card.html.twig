@@ -1,0 +1,14 @@
+<div class="col d-flex align-items-start mb-4">
+    <div class="icon-square text-body-emphasis d-inline-flex align-items-center justify-content-center fs-4 flex-shrink-0 me-3">
+        <img src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ airline.code ~ '.png') }}" class="rounded-circle me-3" alt="{{ airline.title }}" title="{{ airline.title }}" />
+    </div>
+    <div>
+        <h3 class="fs-2 text-body-emphasis">{{ airline.title }}</h3>
+        <dl class="row mt-2">
+            <dt class="col-sm-1"><i class="fa-solid fa-phone"></i></dt>
+            <dd class="col-sm-11">{{ airline.phone }}</dd>
+            <dt class="col-sm-1"><i class="fa-solid fa-globe"></i></dt>
+            <dd class="col-sm-11"><a href="{{ airline.url }}" target="_blank">{{ airline.url }}</a></dd>
+        </dl>
+    </div>
+</div>
