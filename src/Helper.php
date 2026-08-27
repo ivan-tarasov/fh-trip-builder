@@ -56,6 +56,14 @@ class Helper
      */
     public static function getGitInfo(): array
     {
+        // Four exec() shell-outs feed the footer on every page render; cache
+        // them for the lifetime of the request.
+        static $info = null;
+
+        if ($info !== null) {
+            return $info;
+        }
+
         $git_branch = 'git rev-parse --abbrev-ref HEAD';
         $git_tag = 'git describe --tags --abbrev=0';
         $git_commitHash = 'git log --pretty="%h" -n1 HEAD';
@@ -68,12 +76,14 @@ class Helper
         $git_commitDate = new DateTime(trim(exec($git_commitDate)));
         $git_commitDate->setTimezone(new DateTimeZone('UTC'));
 
-        return [
+        $info = [
             'branch' => $git_branch,
             'tag' => $git_tag,
             'commit_hash' => $git_commitHash,
             'commit_date' => $git_commitDate->format('Y-m-d H:i:s')
         ];
+
+        return $info;
     }
 
     /**

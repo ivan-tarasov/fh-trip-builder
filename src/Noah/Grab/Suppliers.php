@@ -3,6 +3,7 @@
 namespace TripBuilder\Noah\Grab;
 
 use Exception;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
@@ -10,13 +11,16 @@ use Symfony\Component\Console\Output\OutputInterface;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
+#[AsCommand(
+    name: 'grab:suppliers',
+    description: 'Grab suppliers logo from Aviasales',
+    hidden: false,
+)]
+
 class Suppliers extends AbstractCommand
 {
     private const IMAGE_URL = 'https://mpics.avs.io/al_square/64/64/%s.png';
     private const LOCAL_IMAGE_PATH = '/frontend/images/suppliers/';
-
-    protected static $defaultName = 'grab:suppliers';
-    protected static $defaultDescription = 'Grab suppliers logo from Aviasales';
 
     /**
      * @throws Exception
