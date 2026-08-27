@@ -2,11 +2,12 @@
 
 namespace TripBuilder\Api;
 
-use TripBuilder\Controllers\AbstractController;
+use MysqliDb;
+use TripBuilder\Database\MySql;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
 
-class AbstractApi extends AbstractController
+abstract class AbstractApi
 {
     private const HEADER_AUTH_KEY = 'Authorization';
 
@@ -24,12 +25,16 @@ class AbstractApi extends AbstractController
     protected const DB_TABLE_COUNTRIES = 'countries';
     protected const DB_TABLE_FLIGHTS = 'flights';
 
+    protected MysqliDb $db;
     protected array $data = [];
     private HttpMethod $allowedMethod;
 
     public function __construct(?HttpMethod $method = null)
     {
-        parent::__construct();
+        // API endpoints only need a database handle — not the page layout,
+        // git shell-outs, or CDN wiring that AbstractController pulls in.
+        $this->db = MySql::connect();
+        $this->db->setTrace(true);
 
         // By default, we accept only the POST request method if not provided another one
         $this->setAllowedMethod($method ?? HttpMethod::Post);

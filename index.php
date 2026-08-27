@@ -51,22 +51,19 @@ try {
         ucfirst($controllerName),
     );
 
-    $abstractController = new AbstractController();
     $controller = new $controllerClassName();
 
     $needsLayout = ! in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
 
-    // Build and show page header
-    if ($needsLayout) {
-        $abstractController->header();
-    }
+    // The layout renderer opens its own DB connection, so only build it for
+    // routes that actually render the header/footer (not API/Ajax endpoints).
+    $layout = $needsLayout ? new AbstractController() : null;
+
+    $layout?->header();
 
     $controller->$actionName();
 
-    // Build and show page footer
-    if ($needsLayout) {
-        $abstractController->footer();
-    }
+    $layout?->footer();
 
     // This is the end...
 } catch (Throwable $e) {
