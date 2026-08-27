@@ -42,4 +42,17 @@ final class AirlineRepository
 
         return $this->connection->fetchAll($sql, $params);
     }
+
+    /**
+     * The most-booked airlines first (matches the legacy `orderBy('book_count')`
+     * default DESC direction).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function mostBooked(int $limit): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT * FROM ' . Table::Airlines->value . ' ORDER BY book_count DESC LIMIT ' . $limit,
+        );
+    }
 }

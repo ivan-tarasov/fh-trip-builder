@@ -8,6 +8,7 @@ use MysqliDb;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
+use TripBuilder\Database\Connection;
 use TripBuilder\Database\MySql;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
@@ -20,10 +21,19 @@ class AbstractController
 
     private string $staticUrl;
 
+    // PDO connection for controllers migrated off the legacy MysqliDb query
+    // builder. Lazy so only pages that use it open the connection.
+    private ?Connection $connection = null;
+
     public function __construct()
     {
         $this->dbConnect();
         $this->setStaticUrl(Cdn::getUrl());
+    }
+
+    protected function connection(): Connection
+    {
+        return $this->connection ??= Connection::fromEnv();
     }
 
     private function dbConnect(): void
