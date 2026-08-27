@@ -8,12 +8,12 @@ use MysqliDb;
 
 class MySql
 {
-    public const TABLE_AIRLINES  = 'airlines',
-        TABLE_AIRPORTS  = 'airports',
-        TABLE_BOOKINGS  = 'bookings',
-        TABLE_COUNTRIES = 'countries',
-        TABLE_FLIGHTS   = 'flights',
-        TABLE_SEARCH    = 'search';
+    public const TABLE_AIRLINES  = Table::Airlines->value,
+        TABLE_AIRPORTS  = Table::Airports->value,
+        TABLE_BOOKINGS  = Table::Bookings->value,
+        TABLE_COUNTRIES = Table::Countries->value,
+        TABLE_FLIGHTS   = Table::Flights->value,
+        TABLE_SEARCH    = Table::Search->value;
 
     public static function connect(): MysqliDb
     {
