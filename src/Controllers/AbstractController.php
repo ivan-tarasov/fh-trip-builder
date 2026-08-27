@@ -1,36 +1,34 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Controllers;
 
-use TripBuilder\AmazonS3;
+use TripBuilder\Cdn;
 use TripBuilder\Config;
-use TripBuilder\DataBase\MySql;
-use TripBuilder\Debug\dBug;
+use TripBuilder\Csrf;
+use TripBuilder\Database\MySql;
 use TripBuilder\Helper;
-use TripBuilder\Routs;
+use TripBuilder\Routes;
 use TripBuilder\Templater;
 use TripBuilder\Timer;
+use MysqliDb;
 
 class AbstractController
 {
-    public $db;
+    public MysqliDb $db;
 
     private string $staticUrl;
 
     public function __construct()
     {
         $this->dbConnect();
-
-        $this->setStaticUrl(AmazonS3::getUrl());
+        $this->setStaticUrl(Cdn::getUrl());
     }
 
-    /**
-     * @return void
-     */
     private function dbConnect(): void
     {
         $this->db = MySql::connect();
-
         $this->db->setTrace(true);
     }
 
@@ -49,7 +47,7 @@ class AbstractController
                 $templater
                     ->setPlaceholder('menu_item_url',        $link)
                     ->setPlaceholder('menu_item_spacer',     $params['spacer'] ?? 2)
-                    ->setPlaceholder('menu_item_active', Routs::getCurrentPage() == rtrim($link, '/') ? ' active' : null)
+                    ->setPlaceholder('menu_item_active', Routes::getCurrentPage() == rtrim($link, '/') ? ' active' : null)
                     ->setPlaceholder('menu_item_icon',       $params['icon'])
                     ->setPlaceholder('menu_item_text',       $params['text'])
                     ->save();
@@ -65,6 +63,7 @@ class AbstractController
             ->setFilename('view')
             ->set()
             ->setPlaceholder('app_name',              Config::get('app.name'))
+            ->setPlaceholder('csrf_token',            Csrf::token())
             ->setPlaceholder('page_title',            'Main Page')
             ->setPlaceholder('app_meta_description',  Config::get('meta.description'))
             ->setPlaceholder('app_meta_keywords',     implode(', ', Config::get('meta.keywords')))
@@ -176,14 +175,13 @@ class AbstractController
     }
 
     /**
-     * @return string
      * @throws \Exception
      */
-    private function getFlightsCount(): string
+    private function getFlightsCount(): int
     {
         $count = $this->db->getOne('flights', 'count(*) as flights');
 
-        return $count['flights'];
+        return (int) ($count['flights'] ?? 0);
     }
 
     /**
@@ -205,7 +203,7 @@ class AbstractController
         return Timer::getExecutionTime();
     }
 
-    private function setStaticUrl($url): void
+    private function setStaticUrl(string $url): void
     {
         $this->staticUrl = $url;
     }

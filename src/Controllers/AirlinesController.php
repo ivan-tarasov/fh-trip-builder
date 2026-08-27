@@ -1,21 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Controllers;
 
-use TripBuilder\AmazonS3;
+use TripBuilder\Cdn;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Config;
-use TripBuilder\Debug\dBug;
-use TripBuilder\Helper;
 use TripBuilder\Templater;
 
 class AirlinesController
 {
-    const AIRLINES_LOGO_PATH   = 'frontend/images/airlines',
-          AIRLINES_LOGO_EXT    = 'png',
-          AIRLINES_LOGO_NO_IMG = 'no-logo';
-
     /**
      * @return void
      * @throws \GuzzleHttp\Exception\GuzzleException
@@ -42,7 +38,7 @@ class AirlinesController
 
             foreach ($response->data as $airline) {
                 $templater
-                    ->setPlaceholder('airline_logo_img', AmazonS3::getUrl(sprintf(
+                    ->setPlaceholder('airline_logo_img', Cdn::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
                         $airline->code
@@ -59,7 +55,8 @@ class AirlinesController
                 ->setPlaceholder('airlines_cards', $airline_cards)
                 ->save()->render();
         } catch (\Exception $e) {
-            echo "Error: " . $e->getMessage();
+            error_log('Airlines page failed: ' . $e->getMessage());
+            echo 'Something went wrong while loading airlines. Please try again later.';
         }
     }
 

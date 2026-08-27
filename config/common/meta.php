@@ -19,9 +19,9 @@ return [
     ],
 
     'author' => [
-        'name'    => 'Ivan Tarasov',
+        'name' => 'Ivan Tarasov',
         'website' => 'https://tarasov.ca',
-        'email'   => 'ivan@tarasov.ca',
+        'email' => 'ivan@tarasov.ca',
     ],
 
 ];

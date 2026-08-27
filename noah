@@ -1,20 +1,20 @@
 #!/usr/bin/env php
 <?php
+
+declare(strict_types=1);
 /*
 |--------------------------------------------------------------------------
 | Noah Commander
 |--------------------------------------------------------------------------
 */
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
-
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
-
 use TripBuilder\Noah\Grab\Suppliers as GrabSuppliers;
 
 try {
@@ -31,7 +31,7 @@ try {
     | Install Database
     |--------------------------------------------------------------------------
     |
-    | Adding tables from config files in `config/noah/db/tables` to database
+    | Adding tables from config files in `config/noah/db/tables` to a database
     | and seeding tables with data from config files in `config/noah/db/seeders`
     |
     */
@@ -57,7 +57,7 @@ try {
     | Generating flights data using existing airports and airlines data,
     | calculating duration between airports, flight time, arrival date and
     | time, base price, taxes and rating. All generated data writing to
-    | `flights` table in database.
+    | `flights` table in a database.
     |
     */
 
@@ -68,8 +68,8 @@ try {
     | Cleaning flights
     |--------------------------------------------------------------------------
     |
-    | Deleting old flights data from `flights` table in database.
-    | All flights older then current date will be deleted.
+    | Deleting old flights data from `flights` table in a database.
+    | All flights older than the current date will be deleted.
     |
     */
 
@@ -85,6 +85,7 @@ try {
     */
 
     $application->run();
-} catch (Exception $e) {
-    // Do nothing
+} catch (Throwable $e) {
+    fwrite(STDERR, sprintf('Noah failed: %s: %s%s', $e::class, $e->getMessage(), PHP_EOL));
+    exit(1);
 }

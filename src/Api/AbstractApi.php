@@ -1,61 +1,45 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Api;
 
-use TripBuilder\Controllers\AbstractController;
-use TripBuilder\Debug\dBug;
+use MysqliDb;
+use TripBuilder\Database\MySql;
 use TripBuilder\Helper;
-use TripBuilder\Routs;
+use TripBuilder\Routes;
 
-class AbstractApi extends AbstractController
+abstract class AbstractApi
 {
-    const HEADER_AUTH_KEY = 'Authorization';
+    private const HEADER_AUTH_KEY = 'Authorization';
 
-    const REQUEST_METHOD_GET     = 'GET',
-          REQUEST_METHOD_POST    = 'POST',
-          REQUEST_METHOD_PUT     = 'PUT',
-          REQUEST_METHOD_PATCH   = 'PATCH',
-          REQUEST_METHOD_DELETE  = 'DELETE',
-          REQUEST_METHOD_HEAD    = 'HEAD',
-          REQUEST_METHOD_OPTIONS = 'OPTIONS';
-
-    const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
+    private const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    const RAW_RESPONSE_ENDPOINTS = [
+    private const RAW_RESPONSE_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    const DB_TABLE_AIRLINES  = 'airlines',
-          DB_TABLE_AIRPORTS  = 'airports',
-          DB_TABLE_BOOKINGS  = 'bookings',
-          DB_TABLE_COUNTRIES = 'countries',
-          DB_TABLE_FLIGHTS   = 'flights';
+    protected const DB_TABLE_AIRLINES = 'airlines';
+    protected const DB_TABLE_AIRPORTS = 'airports';
+    protected const DB_TABLE_BOOKINGS = 'bookings';
+    protected const DB_TABLE_COUNTRIES = 'countries';
+    protected const DB_TABLE_FLIGHTS = 'flights';
 
-    /**
-     * Minimum security at this time...
-     *
-     * @var array $authorizedTokens
-     */
-    private array $authorizedTokens = [
-        'SomeAPItoken_$ecretWORD---orHASH',
-        'AnotherAPIt0ken-$ecretHash',
-        'And@nothEr_Auth0riz@tionKey',
-    ];
-
-    private array $headers = [];
-
+    protected MysqliDb $db;
     protected array $data = [];
+    private HttpMethod $allowedMethod;
 
-    private string $allowedMethod;
-
-    public function __construct($method = false)
+    public function __construct(?HttpMethod $method = null)
     {
-        parent::__construct();
+        // API endpoints only need a database handle — not the page layout,
+        // git shell-outs, or CDN wiring that AbstractController pulls in.
+        $this->db = MySql::connect();
+        $this->db->setTrace(true);
 
-        // By default we accept only POST request method if not provided another one
-        $this->setAllowedMethod($method ?: self::REQUEST_METHOD_POST);
+        // By default, we accept only the POST request method if not provided another one
+        $this->setAllowedMethod($method ?? HttpMethod::Post);
 
         $this->guardUnauthorizedAccess();
         $this->guardNotAllowedRequestMethod();
@@ -63,59 +47,62 @@ class AbstractApi extends AbstractController
         $this->setRequestData();
     }
 
-    /**
-     * @return void
-     */
     private function guardUnauthorizedAccess(): void
     {
-        if (! in_array(Routs::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS) &&
-            ! in_array($this->getAuthToken(), $this->authorizedTokens)
+        if (!in_array(Routes::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS, true)
+            && !$this->isAuthorizedToken($this->getAuthToken())
         ) {
-            HttpException::unauthorizedAccess();
+            ApiResponder::unauthorizedAccess();
         }
     }
 
-    /**
-     * @return void
-     */
+    private function isAuthorizedToken(string $token): bool
+    {
+        if ($token === '') {
+            return false;
+        }
+
+        foreach (explode(',', $_ENV['API_ACCEPTED_TOKENS'] ?? '') as $authorized) {
+            if ($authorized !== '' && hash_equals($authorized, $token)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function guardNotAllowedRequestMethod(): void
     {
-        if ($this->getRequestMethod() !== $this->getAllowedMethod()) {
-            HttpException::methodNotAllowed([$this->getAllowedMethod()]);
+        if ($this->getRequestMethod() !== $this->getAllowedMethod()->value) {
+            ApiResponder::methodNotAllowed([$this->getAllowedMethod()]);
         }
     }
 
-    /**
-     * @param int   $statusCode
-     * @param array $data
-     * @param array $headers
-     * @return void
-     */
-    public function sendResponse(int $statusCode, array $data = [], array $headers = []): void
+    public function sendResponse(HttpStatus $status, array $data = [], array $headers = []): void
     {
         // Sending response code
-        http_response_code($statusCode);
+        http_response_code($status->value);
 
         // Cleaning the output
-        ob_clean();
+        if (ob_get_level() > 0) {
+            ob_clean();
+        }
+
         header_remove();
 
-        // For some endpoints we not using typical output and return raw data
-        if (! in_array(Routs::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
+        // For some endpoints we not using typical output and returning raw data
+        if (!in_array(Routes::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
             // Building response array
             $response = [
-                'status'    => $statusCode,
-                'endpoint'  => Helper::getUrlPath(),
-                'method'    => $this->getRequestMethod(),
+                'status' => $status->value,
+                'endpoint' => Helper::getUrlPath(),
+                'method' => $this->getRequestMethod(),
                 'timestamp' => date('Y-m-d H:i:s'),
-                'data'      => $data ?? [],
+                'data' => $data,
             ];
 
             $response = json_encode($response);
         } else {
-            // Handle data
-            // $data = str_replace("\n", '', $data);
-
             $response = json_encode($data);
         }
 
@@ -125,47 +112,30 @@ class AbstractApi extends AbstractController
         self::addHeader('Content-Length', strlen($response));
 
         if (!empty($headers)) {
-            // array_walk($headers, [$this, 'addHeader']);
-            array_map([$this, 'addHeader'], array_keys($headers), $headers);
+            array_map(self::addHeader(...), array_keys($headers), $headers);
         }
 
         echo $response;
     }
 
-    /**
-     * @param string     $key
-     * @param string|int $value
-     * @return void
-     */
     private static function addHeader(string $key, string|int $value): void
     {
         header(sprintf('%s: %s', $key, $value));
     }
 
-    /**
-     * @return string
-     */
     private function getRequestMethod(): string
     {
         return $_SERVER['REQUEST_METHOD'] ?? '';
     }
 
-    /**
-     * @return string
-     */
     private function getAuthToken(): string
     {
-        return preg_match('/Bearer\s+(\S+)\b/i', getallheaders()[self::HEADER_AUTH_KEY] ?? '', $matches)
+        // Header names are case-insensitive, so normalize before the lookup
+        $headers = array_change_key_case(getallheaders());
+
+        return preg_match('/Bearer\s+(\S+)\b/i', $headers[strtolower(self::HEADER_AUTH_KEY)] ?? '', $matches)
             ? $matches[1]
             : '';
-    }
-
-    /**
-     * @return void
-     */
-    private function getRequestHeaders(): void
-    {
-        $this->setHeaders(getallheaders() ?? []);
     }
 
     private function setRequestData(): void
@@ -176,14 +146,15 @@ class AbstractApi extends AbstractController
             return;
         }
 
-        $this->data = json_decode($data, true);
+        $decoded = json_decode($data, true);
+
+        if (! is_array($decoded)) {
+            ApiResponder::badRequest('Malformed JSON body');
+        }
+
+        $this->data = $decoded;
     }
 
-    /**
-     * @param string $table
-     * @param array  $conditions
-     * @return void
-     */
     protected function updateSearchStats(string $table, array $conditions): void
     {
         $this->db->where('code', $conditions, 'IN');
@@ -201,41 +172,15 @@ class AbstractApi extends AbstractController
                 'last_search' => $this->db->now(),
             ]);
         }
-
     }
 
-    /**
-     * @param $headers
-     * @return void
-     */
-    private function setHeaders($headers): void
-    {
-        $this->headers = $headers;
-    }
-
-    /**
-     * @return array
-     */
-    private function getHeaders(): array
-    {
-        return $this->headers;
-    }
-
-    /**
-     * @param $method
-     * @return void
-     */
-    public function setAllowedMethod($method): void
+    public function setAllowedMethod(HttpMethod $method): void
     {
         $this->allowedMethod = $method;
     }
 
-    /**
-     * @return string
-     */
-    private function getAllowedMethod(): string
+    private function getAllowedMethod(): HttpMethod
     {
         return $this->allowedMethod;
     }
-
 }

@@ -1,37 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Noah\Flights;
 
+use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
-    name:        'flights:cleaning',
+    name: 'flights:cleaning',
     description: 'Deleting old flights from database.',
-    aliases:     [],
-    hidden:      false
+    aliases: [],
+    hidden: false,
 )]
 
 class Cleaning extends AbstractCommand
 {
     /**
-     * Execute the command
-     *
-     * @param  $input
-     * @param  $output
-     * @return int 0 if everything went fine, or an exit code.
-     * @throws \Exception
+     * @throws Exception
      */
-    protected function execute($input, $output): int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->db->where('DATE(departure_time)', date('Y-m-d'), '<');
 
-        if ($this->db->delete('flights')) {
-            $this->formatOutput('Deleted records', number_format($this->db->count), 'info');
+        if (! $this->db->delete('flights')) {
+            $this->io->error('Deleting old flights failed: ' . $this->db->getLastError());
+
+            return Command::FAILURE;
         }
+
+        $this->formatOutput('Deleted records', number_format($this->db->count), 'info');
 
         return Command::SUCCESS;
     }
-
 }

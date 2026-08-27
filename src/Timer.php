@@ -1,34 +1,37 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder;
+
+use Exception;
 
 class Timer
 {
-    const ACCURACY_DEFAULT = 3;
+    private const ACCURACY_DEFAULT = 3;
 
-    private static $startTime;
+    private static ?float $startTime = null;
+    private static ?float $endTime = null;
 
-    private static $endTime;
-
-    public static function start() {
+    public static function start(): void
+    {
         self::$startTime = microtime(true);
     }
 
-    public static function stop() {
+    public static function stop(): void
+    {
         self::$endTime = microtime(true);
     }
 
     /**
-     * @param int $accuracy
-     * @return string
-     * @throws \Exception
+     * @throws Exception
      */
     public static function getExecutionTime(int $accuracy = self::ACCURACY_DEFAULT): string
     {
-        if (self::$startTime && self::$endTime) {
-            return number_format(self::$endTime - self::$startTime, $accuracy);
-        } else {
-            throw new \Exception("Timer not started or stopped.");
+        if (self::$startTime === null || self::$endTime === null) {
+            throw new Exception('Timer not started or stopped.');
         }
+
+        return number_format(self::$endTime - self::$startTime, $accuracy);
     }
 }

@@ -1,24 +1,30 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Index page
  *
- * @author    Ivan Tarasov <ivan@tarasov.ca>
+ * @author Ivan Tarasov <ivan@tarasov.ca>
  * @copyright Copyright (c) 2023
- * @version   2.2.1
+ * @version 2.2.2
  */
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 use TripBuilder\Config;
 use TripBuilder\Timer;
-use TripBuilder\Routs;
+use TripBuilder\Routes;
 use TripBuilder\Controllers\AbstractController;
-use TripBuilder\Debug\dBug;
 
 try {
     Timer::start();
 
     // We using sessions here...
+    session_set_cookie_params([
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure'   => ! empty($_SERVER['HTTPS']),
+    ]);
     session_start();
 
     // Enable .env file variables
@@ -28,33 +34,52 @@ try {
     // Building config
     new Config();
 
-    // Get the current URL and put it to Routs class
+    // Get the current URL and put it to Routes class
     $url = rtrim(strtok($_SERVER['REQUEST_URI'], '?'), '/') ?: '/';
-    Routs::setCurrentPage($url);
+    Routes::setCurrentPage($url);
 
     // Find the corresponding controller and action
-    [$controllerName, $actionName] = explode('@', Routs::ENABLED_ROUTS[$url] ?? 'NotFound@index');
+    [$controllerName, $actionName] = explode('@', Routes::ENABLED_ROUTES[$url] ?? 'NotFound@index');
+
+    // Unknown route: set the status now, before any layout output locks the headers
+    if (! isset(Routes::ENABLED_ROUTES[$url])) {
+        http_response_code(404);
+    }
 
     // Load and execute the controller action
     $controllerClassName = sprintf(
         '%s\%sController',
-        Routs::ROUTS_CONTROLLERS_PATH,
-        ucfirst($controllerName)
+        Routes::ROUTES_CONTROLLERS_PATH,
+        ucfirst($controllerName),
     );
 
-    $abstractController = new AbstractController();
     $controller = new $controllerClassName();
 
-    // Build and show page header
-    in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER) ?: $abstractController->header();
+    $needsLayout = ! in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
 
-    // Handle dynamic parameters if present
+    // The layout renderer opens its own DB connection, so only build it for
+    // routes that actually render the header/footer (not API/Ajax endpoints).
+    $layout = $needsLayout ? new AbstractController() : null;
+
+    $layout?->header();
+
     $controller->$actionName();
 
-    // Build and show page footer
-    in_array($controllerName, Routs::EXCLUDE_HEADER_FOOTER) ?: $abstractController->footer();
+    $layout?->footer();
 
     // This is the end...
-} catch (Exception $e) {
-    // Do something
+} catch (Throwable $e) {
+    error_log(sprintf(
+        'Unhandled %s: %s in %s:%d',
+        $e::class,
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine(),
+    ));
+
+    if (! headers_sent()) {
+        http_response_code(500);
+    }
+
+    echo 'Something went wrong on our side. Please try again later.';
 }

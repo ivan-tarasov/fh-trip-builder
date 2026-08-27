@@ -1,12 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Controllers;
 
-use TripBuilder\AmazonS3;
-use TripBuilder\DataBase\MySql;
-use TripBuilder\Debug\dBug;
+use TripBuilder\Cdn;
+use TripBuilder\Database\MySql;
 use TripBuilder\Config;
-use TripBuilder\Routs;
 use TripBuilder\Templater;
 
 class HomeController extends AbstractController
@@ -59,7 +59,7 @@ class HomeController extends AbstractController
                 ->setPath('index')
                 ->setFilename('top-searches')
                 ->set()
-                ->setPlaceholder('search_url',   '/search/?hash=' . $search['hash'])
+                ->setPlaceholder('search_url',   '/search/?' . http_build_query(['hash' => $search['hash']]))
                 ->setPlaceholder('search_rank',  $rank + 1)
                 ->setPlaceholder('flight_direction', $search['triptype'] == 'roundtrip' ? 'arrow-left' : 'long')
                 ->setPlaceholder('from_name',    $search['from_name'])
@@ -82,7 +82,7 @@ class HomeController extends AbstractController
                 ->set()
                 ->setPlaceholder('airline_title',    $airline['title'])
                 ->setPlaceholder('book_count',       $airline['book_count'])
-                ->setPlaceholder('airline_logo_url', AmazonS3::getUrl(sprintf(
+                ->setPlaceholder('airline_logo_url', Cdn::getUrl(sprintf(
                     '%s/%s/%s.png',
                     Config::get('site.static.endpoint.images'),
                     'suppliers',

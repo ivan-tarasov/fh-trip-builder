@@ -7,18 +7,14 @@ return [
     | Fake API
     |--------------------------------------------------------------------------
     |
-    | Fake Flight API credentials
+    | Fake Flight API credentials. Values come from the environment (.env) —
+    | never commit real URLs or tokens to this file.
     |
     */
 
     'fake' => [
-        // DEV credentials
-        // 'url'   => 'http://localhost:8888/api',
-        // 'token' => 'SomeAPItoken_$ecretWORD---orHASH',
-
-        // PROD credentials
-        'url'   => 'https://trip-builder.tarasov.ca/api',
-        'token' => 'SomeAPItoken_$ecretWORD---orHASH',
+        'url' => $_ENV['API_URL'] ?? '',
+        'token' => $_ENV['API_TOKEN'] ?? '',
     ],
 
 ];

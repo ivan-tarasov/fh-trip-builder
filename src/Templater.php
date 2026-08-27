@@ -1,28 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder;
+
+use Exception;
 
 class Templater
 {
-    const TEMPLATES_DIRECTORY = 'frontend/template';
+    private const TEMPLATES_DIRECTORY = 'frontend/template';
+    private const TAG_OPEN  = '{{';
+    private const TAG_CLOSE = '}}';
 
-    const TAG_OPEN  = '{{',
-          TAG_CLOSE = '}}';
-
-    private string $path;
-
-    private string $filename;
-
-    private string $templateContent;
-
+    private string $path = '';
+    private string $filename = '';
+    private string $templateContent = '';
     private array $placeholders = [];
-
     private string $content = '';
 
     /**
      * @param string|null $path
      * @param string|null $filename
-     * @throws \Exception
+     * @throws Exception
      */
     public function __construct(?string $path = null, ?string $filename = null) {
         if ($path !== null && $filename !== null) {
@@ -32,7 +31,7 @@ class Templater
 
     /**
      * @return static
-     * @throws \Exception
+     * @throws Exception
      */
     public function set(): static
     {
@@ -41,11 +40,11 @@ class Templater
             Helper::getRootDir(),
             self::TEMPLATES_DIRECTORY,
             $this->path,
-            $this->filename
+            $this->filename,
         );
 
         if (! file_exists($file)) {
-            throw new \Exception("Template file not found: " . $file);
+            throw new Exception("Template file not found: $file");
         }
 
         $this->templateContent = file_get_contents($file);
@@ -53,9 +52,6 @@ class Templater
         return $this;
     }
 
-    /**
-     * @return $this
-     */
     public function save(): static
     {
         $replacements = [];
@@ -65,7 +61,7 @@ class Templater
                 '%s%s%s',
                 self::TAG_OPEN,
                 $key,
-                self::TAG_CLOSE
+                self::TAG_CLOSE,
             );
 
             $replacements[$placeholder] = $value;
@@ -74,17 +70,18 @@ class Templater
         $this->templateContent = preg_replace(
             '/' . preg_quote(self::TAG_OPEN) . '\s*(.*?)\s*' . preg_quote(self::TAG_CLOSE) . '/',
             self::TAG_OPEN . '$1' . self::TAG_CLOSE,
-            $this->templateContent
+            $this->templateContent,
         );
 
         $this->content .= strtr($this->templateContent, $replacements);
 
+        // Placeholders are consumed by save(): every template block must set
+        // all values it needs, instead of silently inheriting stale ones.
+        $this->placeholders = [];
+
         return $this;
     }
 
-    /**
-     * @return string
-     */
     public function render(): string
     {
         $content = $this->content;
@@ -94,38 +91,21 @@ class Templater
         return $content;
     }
 
-    /**
-     * @param string $key
-     * @param mixed $value
-     * @return static
-     */
     public function setPlaceholder(string $key, mixed $value): static
     {
         $this->placeholders[$key] = $value;
-
         return $this;
     }
 
-    /**
-     * @param $path
-     * @return $this
-     */
-    public function setPath($path): static
+    public function setPath(string $path): static
     {
         $this->path = $path;
-
         return $this;
     }
 
-    /**
-     * @param $filename
-     * @return $this
-     */
-    public function setFilename($filename): static
+    public function setFilename(string $filename): static
     {
         $this->filename = $filename;
-
         return $this;
     }
-
 }

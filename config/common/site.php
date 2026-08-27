@@ -20,9 +20,9 @@ return [
         'url' => '//d3i7jsp0grgmab.cloudfront.net',
         'endpoint' => [
             'images' => 'images',
-            'poi'    => 'images/poi',
-            'css'    => 'css',
-            'js'     => 'js',
+            'poi' => 'images/poi',
+            'css' => 'css',
+            'js' => 'js',
             'vendor' => 'vendor',
         ],
     ],
@@ -46,7 +46,7 @@ return [
 
     'pagination' => [
         'search'  => 7,
-        'booking' => 100
+        'booking' => 100,
     ],
 
     /*
@@ -60,30 +60,30 @@ return [
 
     'main-menu' => [
         '/my/bookings/' => [
-            'text'    => 'My bookings',
-            'icon'    => 'fas fa-bookmark',
-            'spacer'  => 3,
+            'text' => 'My bookings',
+            'icon' => 'fas fa-bookmark',
+            'spacer' => 3,
             'enabled' => true,
         ],
-        '/airlines/'  => [
-            'text'    => 'Airlines',
-            'icon'    => 'fas fa-plane',
+        '/airlines/' => [
+            'text' => 'Airlines',
+            'icon' => 'fas fa-plane',
             'enabled' => true,
         ],
-        '/airports/'  => [
-            'text'    => 'Airports',
-            'icon'    => 'fas fa-map-marked-alt',
-            'spacer'  => 3,
+        '/airports/' => [
+            'text' => 'Airports',
+            'icon' => 'fas fa-map-marked-alt',
+            'spacer' => 3,
             'enabled' => true,
         ],
         '/about/' => [
-            'text'    => 'About project',
-            'icon'    => 'fas fa-circle-info',
+            'text' => 'About project',
+            'icon' => 'fas fa-circle-info',
             'enabled' => true,
         ],
         '/software-tests/' => [
-            'text'    => 'Software tests',
-            'icon'    => 'fas fa-code',
+            'text' => 'Software tests',
+            'icon' => 'fas fa-code',
             'enabled' => false,
         ],
     ],
@@ -100,23 +100,23 @@ return [
     'footer-social' => [
         'LinkedIn' => [
             'url' => 'https://linkedin.com/in/ivan-tarasov-ca',
-            'ico' => 'linkedin'
+            'ico' => 'linkedin',
         ],
         'Telegram' => [
             'url' => 'https://t.me/karapuzoff',
-            'ico' => 'telegram'
+            'ico' => 'telegram',
         ],
         'Facebook' => [
             'url' => 'https://facebook.com/karapuzoff',
-            'ico' => 'facebook'
+            'ico' => 'facebook',
         ],
         'Instagram' => [
             'url' => 'https://instagram.com/tarasov.ca',
-            'ico' => 'instagram'
+            'ico' => 'instagram',
         ],
         'Twitter' => [
             'url' => 'https://twitter.com/karapuzoff',
-            'ico' => 'twitter'
+            'ico' => 'twitter',
         ],
     ],
 
@@ -133,7 +133,7 @@ return [
         'Explore the docs' => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/README.md',
         'Report Bug'       => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
         'Request Feature'  => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
-        'Pull requests'    => 'https://github.com/ivan-tarasov/fh-trip-builder/pulls'
+        'Pull requests'    => 'https://github.com/ivan-tarasov/fh-trip-builder/pulls',
     ],
 
     /*
@@ -148,7 +148,7 @@ return [
     'tab_active' => [
         'btn'  => ' active',
         'aria' => 'true',
-        'div'  => ' show active'
+        'div'  => ' show active',
     ],
 
     /*
@@ -156,58 +156,58 @@ return [
     | Index POI cards
     |--------------------------------------------------------------------------
     |
-    | Fake POI cards on index page. Maybe later it becomes real
+    | Fake POI cards on the index page. Maybe later it becomes real
     |
     */
 
     'poi' => [
         [
             'country' => 'Turkey',
-            'city'    => 'Istanbul',
-            'title'   => 'Istanbul Delights: Points of Interest',
-            'image'   => 'istanbul.jpeg',
+            'city' => 'Istanbul',
+            'title' => 'Istanbul Delights: Points of Interest',
+            'image' => 'istanbul.jpeg',
         ],
         [
             'country' => 'United States',
-            'city'    => 'Miami',
-            'title'   => 'Exploring Miami’s Hidden Gems',
-            'image'   => 'miami-01.jpeg',
+            'city' => 'Miami',
+            'title' => 'Exploring Miami’s Hidden Gems',
+            'image' => 'miami-01.jpeg',
         ],
         [
             'country' => 'Canada',
-            'city'    => 'Montréal',
-            'title'   => 'Montreal Magic: Must-See Places',
-            'image'   => 'montreal-01.jpeg',
+            'city' => 'Montréal',
+            'title' => 'Montreal Magic: Must-See Places',
+            'image' => 'montreal-01.jpeg',
         ],
         [
             'country' => 'United States',
-            'city'    => 'New York',
-            'title'   => 'New York City’s Top Attractions',
-            'image'   => 'new-york-01.jpeg',
+            'city' => 'New York',
+            'title' => 'New York City’s Top Attractions',
+            'image' => 'new-york-01.jpeg',
         ],
         [
             'country' => 'France',
-            'city'    => 'Paris',
-            'title'   => 'Parisian Delights: Must-Visit Places in Paris',
-            'image'   => 'paris-01.jpeg',
+            'city' => 'Paris',
+            'title' => 'Parisian Delights: Must-Visit Places in Paris',
+            'image' => 'paris-01.jpeg',
         ],
         [
             'country' => 'Brasil',
-            'city'    => 'Rio de Janeiro',
-            'title'   => 'Discovering Rio de Janeiro: Iconic Landmarks',
-            'image'   => 'rio-de-janeiro-01.jpeg',
+            'city' => 'Rio de Janeiro',
+            'title' => 'Discovering Rio de Janeiro: Iconic Landmarks',
+            'image' => 'rio-de-janeiro-01.jpeg',
         ],
         [
             'country' => 'Australia',
-            'city'    => 'Sydney',
-            'title'   => 'Sydney’s Spectacular Sights',
-            'image'   => 'sydney-01.jpeg',
+            'city' => 'Sydney',
+            'title' => 'Sydney’s Spectacular Sights',
+            'image' => 'sydney-01.jpeg',
         ],
         [
             'country' => 'Japan',
-            'city'    => 'Tokio',
-            'title'   => 'Tokyo’s Iconic Destinations',
-            'image'   => 'tokio-01.jpeg',
+            'city' => 'Tokio',
+            'title' => 'Tokyo’s Iconic Destinations',
+            'image' => 'tokio-01.jpeg',
         ],
     ],
 

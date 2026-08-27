@@ -1,35 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Controllers;
 
-use TripBuilder\Api\Server;
-use TripBuilder\Api\AbstractApi;
+use TripBuilder\Api\HttpMethod;
 use TripBuilder\Api\Airports;
 use TripBuilder\Api\Airlines;
 use TripBuilder\Api\Flights;
-use TripBuilder\Debug\dBug;
 
 class ApiController extends AbstractController
 {
-    /**
-     * @return void
-     */
-    public function index(): void
-    {
-        // $this->sendResponse(200, ['All works']);
-    }
-
-    /**
-     * @return void
-     * @throws \Exception
-     */
-    public function server(): void
-    {
-        $server = new Server\Response();
-
-        $server->get();
-    }
-
     /**
      * @return void
      * @throws \Exception
@@ -47,7 +28,7 @@ class ApiController extends AbstractController
      */
     public function airportsAutofill(): void
     {
-        $airports = new Airports\Response(AbstractApi::REQUEST_METHOD_GET);
+        $airports = new Airports\Response(HttpMethod::Get);
 
         $airports->getAutofill();
     }

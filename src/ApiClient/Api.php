@@ -1,19 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\ApiClient;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Exception\RequestException;
-use TripBuilder\Debug\dBug;
+use GuzzleHttp\Exception\TransferException;
 
 class Api
 {
-    const TIMEOUT = 10;
+    private const TIMEOUT = 10;
 
-    protected $client;
+    private Client $client;
 
-    public function __construct($baseUrl)
+    public function __construct(string $baseUrl)
     {
         $this->client = new Client([
             'base_uri' => rtrim($baseUrl, '/') . '/',
@@ -36,8 +37,14 @@ class Api
                 'headers' => $headers,
             ]);
 
-            return json_decode($response->getBody(), true);
-        } catch (RequestException $e) {
+            $decoded = json_decode((string) $response->getBody(), true);
+
+            if (! is_array($decoded)) {
+                throw new \Exception('GET request returned malformed JSON');
+            }
+
+            return $decoded;
+        } catch (TransferException $e) {
             throw new \Exception('GET request failed: ' . $e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -57,8 +64,14 @@ class Api
                 'headers' => $headers,
             ]);
 
-            return json_decode($response->getBody(), false);
-        } catch (RequestException $e) {
+            $decoded = json_decode((string) $response->getBody(), false);
+
+            if (! $decoded instanceof \stdClass) {
+                throw new \Exception('POST request returned malformed JSON');
+            }
+
+            return $decoded;
+        } catch (TransferException $e) {
             throw new \Exception('POST request failed: ' . $e->getMessage(), $e->getCode(), $e);
         }
     }

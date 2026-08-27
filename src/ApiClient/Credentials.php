@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\ApiClient;
 
 use TripBuilder\Config;
 
 class Credentials
 {
-    public static function getBearer()
+    public static function getBearer(): string
     {
         return 'Bearer ' . Config::get('api.fake.token');
     }

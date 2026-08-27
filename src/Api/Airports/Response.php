@@ -1,22 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Api\Airports;
 
+use Exception;
 use TripBuilder\Api\AbstractApi;
-use TripBuilder\Api\HttpException;
-use TripBuilder\DataBase\MySql;
-use TripBuilder\Debug\dBug;
+use TripBuilder\Api\HttpStatus;
 use TripBuilder\Helper;
 use TripBuilder\Templater;
 
 class Response extends AbstractApi
 {
-    /**
-     * MySQL Airports table columns
-     *
-     * @var array
-     */
-    private array $columns = [
+    private const COLUMNS = [
         'a.code',
         'a.title',
         'c.title AS country',
@@ -31,16 +27,12 @@ class Response extends AbstractApi
 
     private array $airports = [];
 
-    public function __construct($method = false) {
-        parent::__construct($method);
-    }
-
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function get(): void
     {
-        if (! empty($this->data['major']) && $this->data['major']) {
+        if (!empty($this->data['major']) && $this->data['major']) {
             $this->db->where('is_major', 1);
         }
 
@@ -48,42 +40,40 @@ class Response extends AbstractApi
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
         $this->db->orderBy('a.title', 'asc');
 
-        $this->airports = $this->db->get('airports a', null, $this->columns);
+        $this->airports = $this->db->get('airports a', null, self::COLUMNS);
 
-        $this->sendResponse(200, $this->airports);
+        $this->sendResponse(HttpStatus::Ok, $this->airports);
     }
 
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function getAutofill(): void
     {
         $query = $_GET['query'] ?? '';
 
         if (empty($query) || strlen($query) < 3) {
-            $this->sendResponse(200);
+            $this->sendResponse(HttpStatus::Ok);
             return;
         }
 
         $this->db->where('a.enabled', 1);
-        $this->db->where ('a.code', '%' . $query . '%', 'like');
-        $this->db->orWhere ('a.title', '%' . $query . '%', 'like');
-        $this->db->orWhere ('a.city_code', '%' . $query . '%', 'like');
-        $this->db->orWhere ('a.city', '%' . $query . '%', 'like');
+        $this->db->where('a.code', "%$query%", 'like');
+        $this->db->orWhere('a.title', "%$query%", 'like');
+        $this->db->orWhere('a.city_code', "%$query%", 'like');
+        $this->db->orWhere('a.city', "%$query%", 'like');
 
         $this->db->join('countries c', 'a.country_code=c.code', 'LEFT');
         $this->db->orderBy('a.title', 'asc');
 
-        $this->airports = $this->db->get('airports a', null, $this->columns);
+        $this->airports = $this->db->get('airports a', null, self::COLUMNS);
 
-        $airportsGroups =
-        $response       = [];
+        $airportsGroups = $response = [];
 
         foreach ($this->airports as $airport) {
-            $airportsGroups[$airport['city']]['code']       = $airport['city_code'];
-            $airportsGroups[$airport['city']]['country']    = $airport['country'];
-            $airportsGroups[$airport['city']]['timezone']   = $airport['timezone'];
+            $airportsGroups[$airport['city']]['code'] = $airport['city_code'];
+            $airportsGroups[$airport['city']]['country'] = $airport['country'];
+            $airportsGroups[$airport['city']]['timezone'] = $airport['timezone'];
             $airportsGroups[$airport['city']]['airports'][] = $airport;
         }
 
@@ -94,7 +84,7 @@ class Response extends AbstractApi
                 ->setPlaceholder('city-code', $group['code'])
                 ->setPlaceholder('city-name', $city)
                 ->setPlaceholder('country-name', $group['country'])
-                ->setPlaceholder('time-zone', Helper::getUTCTime($group['timezone']))
+                ->setPlaceholder('time-zone', Helper::getUTCTime((float) $group['timezone']))
                 ->save()->render();
 
             foreach ($group['airports'] as $airport) {
@@ -107,7 +97,6 @@ class Response extends AbstractApi
             }
         }
 
-        $this->sendResponse(200, $response);
+        $this->sendResponse(HttpStatus::Ok, $response);
     }
-
 }
