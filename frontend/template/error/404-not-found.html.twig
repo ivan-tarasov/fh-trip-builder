@@ -1,3 +1,6 @@
+{% extends 'layout.html.twig' %}
+
+{% block content %}
 <link href="{{ app_css_folder }}/404.css" rel="stylesheet" media="all" />
 <div class="wrapper">
     <div class="text_group">
@@ -17,3 +20,4 @@
         starContainer.innerHTML += '<div class="star"></div>';
     }
 </script>
+{% endblock %}

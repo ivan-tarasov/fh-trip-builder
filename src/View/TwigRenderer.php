@@ -21,6 +21,8 @@ final class TwigRenderer
 {
     private readonly Environment $twig;
 
+    private readonly LayoutData $layout;
+
     public function __construct()
     {
         $loader = new FilesystemLoader(Helper::getRootDir() . '/frontend/template');
@@ -32,16 +34,38 @@ final class TwigRenderer
             'autoescape' => 'html',
         ]);
 
-        // Helpers the templates need (CDN asset URLs and config lookups).
+        $this->layout = new LayoutData();
+
+        // Helpers the templates need (CDN asset URLs and config lookups)...
         $this->twig->addFunction(new TwigFunction('cdn', Cdn::getUrl(...)));
         $this->twig->addFunction(new TwigFunction('config', Config::get(...)));
+
+        // ...and the dynamic header/footer data (see LayoutData).
+        $this->twig->addFunction(new TwigFunction('current_page', $this->layout->currentPage(...)));
+        $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
+        $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));
+        $this->twig->addFunction(new TwigFunction('git_repo', $this->layout->gitRepo(...)));
+        $this->twig->addFunction(new TwigFunction('copyright_years', $this->layout->copyrightYears(...)));
     }
 
     /**
+     * Render a template fragment (no base layout).
+     *
      * @param array<string, mixed> $context
      */
     public function render(string $template, array $context = []): string
     {
         return $this->twig->render($template, $context);
+    }
+
+    /**
+     * Render a full page: merges the request-scoped layout stats so templates
+     * extending layout.html.twig get a populated header/footer.
+     *
+     * @param array<string, mixed> $context
+     */
+    public function renderPage(string $template, array $context = []): string
+    {
+        return $this->render($template, $context + $this->layout->stats());
     }
 }
