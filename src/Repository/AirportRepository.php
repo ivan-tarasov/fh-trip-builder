@@ -37,6 +37,19 @@ final class AirportRepository
     }
 
     /**
+     * City name for an airport code or city code (first match), or null.
+     */
+    public function cityByCode(string $code): ?string
+    {
+        $city = $this->connection->fetchValue(
+            'SELECT city FROM ' . Table::Airports->value . ' WHERE code = ? OR city_code = ? LIMIT 1',
+            [$code, $code],
+        );
+
+        return $city === null ? null : (string) $city;
+    }
+
+    /**
      * Autofill search across code/title/city.
      *
      * NOTE: the WHERE clause deliberately has no parentheses, reproducing the
