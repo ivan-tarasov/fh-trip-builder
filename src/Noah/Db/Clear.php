@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Noah\Db;
 
 use Exception;

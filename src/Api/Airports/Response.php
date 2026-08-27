@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Api\Airports;
 
 use Exception;
@@ -82,7 +84,7 @@ class Response extends AbstractApi
                 ->setPlaceholder('city-code', $group['code'])
                 ->setPlaceholder('city-name', $city)
                 ->setPlaceholder('country-name', $group['country'])
-                ->setPlaceholder('time-zone', Helper::getUTCTime($group['timezone']))
+                ->setPlaceholder('time-zone', Helper::getUTCTime((float) $group['timezone']))
                 ->save()->render();
 
             foreach ($group['airports'] as $airport) {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Noah\Flights;
 
 use DateTimeImmutable;
@@ -141,10 +143,10 @@ class Generate extends AbstractCommand
             $this->setDistance(
                 intval(
                     $this->distanceOnEarthSurface(
-                        $this->departAirport['latitude'],
-                        $this->departAirport['longitude'],
-                        $this->arriveAirport['latitude'],
-                        $this->arriveAirport['longitude'],
+                        (float) $this->departAirport['latitude'],
+                        (float) $this->departAirport['longitude'],
+                        (float) $this->arriveAirport['latitude'],
+                        (float) $this->arriveAirport['longitude'],
                     ) / 1000,
                 )
             );
@@ -240,11 +242,11 @@ class Generate extends AbstractCommand
         // Show statistic
         $this->io->writeln('<primary> Summary: </primary>');
         foreach ($this->count as $key => $count) {
-            $this->formatOutput($key, number_format($count), 'info');
+            $this->formatOutput($key, number_format((int) $count), 'info');
         }
 
         // Total rows in the flight table
-        $this->formatOutput('Total in Database', number_format($this->db->getValue('flights', 'count(1)')), 'info', true);
+        $this->formatOutput('Total in Database', number_format((int) $this->db->getValue('flights', 'count(1)')), 'info', true);
 
         return Command::SUCCESS;
     }

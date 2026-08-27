@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Controllers;
 
 use GuzzleHttp\Exception\GuzzleException;
@@ -499,9 +501,9 @@ class SearchController extends AbstractController
                 ->set()
                 ->setPlaceholder('outbound_id',        $flight->outbound->id)
                 ->setPlaceholder('returning_id',       $flight->returning->id ?? null)
-                ->setPlaceholder('flight_price_total', number_format($flight->price_base + $flight->price_tax, 2))
-                ->setPlaceholder('flight_price_base',  number_format($flight->price_base, 2))
-                ->setPlaceholder('flight_price_tax',   number_format($flight->price_tax, 2))
+                ->setPlaceholder('flight_price_total', number_format((float) $flight->price_base + (float) $flight->price_tax, 2))
+                ->setPlaceholder('flight_price_base',  number_format((float) $flight->price_base, 2))
+                ->setPlaceholder('flight_price_tax',   number_format((float) $flight->price_tax, 2))
                 ->setPlaceholder('flight_price_gst',   number_format(0, 2))
                 ->setPlaceholder('flight_price_qst',   number_format(0, 2))
                 ->setPlaceholder('airline_logos',      $airline_logos)

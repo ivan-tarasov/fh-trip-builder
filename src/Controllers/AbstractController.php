@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace TripBuilder\Controllers;
 
 use TripBuilder\Cdn;
@@ -173,14 +175,13 @@ class AbstractController
     }
 
     /**
-     * @return string
      * @throws \Exception
      */
-    private function getFlightsCount(): string
+    private function getFlightsCount(): int
     {
         $count = $this->db->getOne('flights', 'count(*) as flights');
 
-        return $count['flights'];
+        return (int) ($count['flights'] ?? 0);
     }
 
     /**
