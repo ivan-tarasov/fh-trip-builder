@@ -35,9 +35,9 @@ final class LayoutData
         $flightsCount = $this->flightsCount();
 
         return [
-            'flights_count'     => number_format($flightsCount),
+            'flights_count' => number_format($flightsCount),
             'database_requests' => $this->connection()->queryCount(),
-            'execution_time'    => $this->executionTime(),
+            'execution_time' => $this->executionTime(),
         ];
     }
 
@@ -67,7 +67,7 @@ final class LayoutData
 
     public function copyrightYears(): string
     {
-        $appYear     = (string) Config::get('app.year');
+        $appYear = (string) Config::get('app.year');
         $currentYear = date('Y');
 
         return $appYear === $currentYear

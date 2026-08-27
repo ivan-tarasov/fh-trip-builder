@@ -12,7 +12,7 @@ return [
     */
 
     'directory' => [
-        'js'  => '/frontend/js',
+        'js' => '/frontend/js',
         'css' => '/frontend/css',
     ],
 
@@ -45,7 +45,7 @@ return [
     */
 
     'pagination' => [
-        'search'  => 7,
+        'search' => 7,
         'booking' => 100,
     ],
 
@@ -131,9 +131,9 @@ return [
 
     'footer-git' => [
         'Explore the docs' => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/README.md',
-        'Report Bug'       => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
-        'Request Feature'  => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
-        'Pull requests'    => 'https://github.com/ivan-tarasov/fh-trip-builder/pulls',
+        'Report Bug' => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
+        'Request Feature' => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
+        'Pull requests' => 'https://github.com/ivan-tarasov/fh-trip-builder/pulls',
     ],
 
     /*
@@ -146,9 +146,9 @@ return [
     */
 
     'tab_active' => [
-        'btn'  => ' active',
+        'btn' => ' active',
         'aria' => 'true',
-        'div'  => ' show active',
+        'div' => ' show active',
     ],
 
     /*

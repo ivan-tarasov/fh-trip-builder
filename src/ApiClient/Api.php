@@ -18,7 +18,7 @@ class Api
     {
         $this->client = new Client([
             'base_uri' => rtrim($baseUrl, '/') . '/',
-            'timeout'  => self::TIMEOUT,
+            'timeout' => self::TIMEOUT,
         ]);
     }
 
@@ -33,7 +33,7 @@ class Api
     {
         try {
             $response = $this->client->get($endpoint, [
-                'query'   => $params,
+                'query' => $params,
                 'headers' => $headers,
             ]);
 
@@ -60,7 +60,7 @@ class Api
     {
         try {
             $response = $this->client->post($endpoint, [
-                'json'    => $params,
+                'json' => $params,
                 'headers' => $headers,
             ]);
 

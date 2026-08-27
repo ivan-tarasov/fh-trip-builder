@@ -23,7 +23,7 @@ try {
     session_set_cookie_params([
         'httponly' => true,
         'samesite' => 'Lax',
-        'secure'   => ! empty($_SERVER['HTTPS']),
+        'secure' => ! empty($_SERVER['HTTPS']),
     ]);
     session_start();
 

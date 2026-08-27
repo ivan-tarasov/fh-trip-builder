@@ -22,7 +22,7 @@ class AirlinesController
         try {
             $headers = [
                 'Authorization' => Credentials::getBearer(),
-                'Accept'        => 'application/json',
+                'Accept' => 'application/json',
             ];
 
             $response = $apiClient->post('airlines', $headers, ['major' => true]);

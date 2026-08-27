@@ -52,17 +52,17 @@ class Response extends AbstractApi
 
         foreach ($airportsGroups as $city => $group) {
             $response[] = $renderer->render('api/airports/autofill/city-span.html.twig', [
-                'city_code'    => $group['code'],
-                'city_name'    => $city,
+                'city_code' => $group['code'],
+                'city_name' => $city,
                 'country_name' => $group['country'],
-                'time_zone'    => Helper::getUTCTime((float) $group['timezone']),
+                'time_zone' => Helper::getUTCTime((float) $group['timezone']),
             ]);
 
             foreach ($group['airports'] as $airport) {
                 $response[] = $renderer->render('api/airports/autofill/airport-span.html.twig', [
-                    'airport_code'    => $airport['code'],
-                    'airport_name'    => $airport['title'],
-                    'city_name'       => $airport['city'],
+                    'airport_code' => $airport['code'],
+                    'airport_name' => $airport['title'],
+                    'city_name' => $airport['city'],
                     'airport_country' => $airport['country'],
                 ]);
             }

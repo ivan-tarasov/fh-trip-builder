@@ -23,7 +23,7 @@ class MyController extends AbstractController
 
         foreach ($rows as $row) {
             $outbound = json_decode($row['flight_outbound'] ?? '');
-            $return   = json_decode($row['flight_return'] ?? '');
+            $return = json_decode($row['flight_return'] ?? '');
 
             // Skip rows whose stored flight JSON is corrupt.
             if (! $outbound instanceof stdClass) {
@@ -31,16 +31,16 @@ class MyController extends AbstractController
             }
 
             $priceBase = $outbound->price_base + ($return->price_base ?? 0);
-            $priceTax  = $outbound->price_tax + ($return->price_tax ?? 0);
+            $priceTax = $outbound->price_tax + ($return->price_tax ?? 0);
 
             $bookings[] = [
-                'id_raw'        => $row['id'],
-                'id_pretty'     => Helper::bookingIdToString($row['id']),
-                'created'       => $row['created'],
-                'price_base'    => $priceBase,
-                'price_tax'     => $priceTax,
-                'price_total'   => $priceBase + $priceTax,
-                'outbound'      => $outbound,
+                'id_raw' => $row['id'],
+                'id_pretty' => Helper::bookingIdToString($row['id']),
+                'created' => $row['created'],
+                'price_base' => $priceBase,
+                'price_tax' => $priceTax,
+                'price_total' => $priceBase + $priceTax,
+                'outbound' => $outbound,
                 'return_flight' => $return instanceof stdClass ? $return : null,
             ];
         }

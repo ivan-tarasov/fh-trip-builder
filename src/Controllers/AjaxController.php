@@ -30,12 +30,12 @@ class AjaxController extends AbstractController
 
         $this->setGet([
             'flight_outbound' => filter_var($_POST['depart_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
-            'flight_return'   => filter_var($_POST['return_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
+            'flight_return' => filter_var($_POST['return_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
         ]);
 
         if (! $this->get['flight_outbound']) {
             echo json_encode([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Wrong format',
             ]);
 
@@ -46,7 +46,7 @@ class AjaxController extends AbstractController
 
         $headers = [
             'Authorization' => Credentials::getBearer(),
-            'Accept'        => 'application/json',
+            'Accept' => 'application/json',
         ];
 
         $request = [
@@ -94,7 +94,7 @@ class AjaxController extends AbstractController
 
         if (! $this->get['booking_id']) {
             echo json_encode([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Wrong format',
             ]);
 
@@ -111,12 +111,12 @@ class AjaxController extends AbstractController
 
         if ($deleted > 0) {
             $json = [
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id'])),
             ];
         } else {
             $json = [
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Booking not found or already deleted.',
             ];
         }

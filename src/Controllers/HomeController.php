@@ -32,8 +32,8 @@ class HomeController extends AbstractController
 
         echo (new TwigRenderer())->renderPage('index/view.html.twig', [
             'bg_image_url' => $bgImageUrl,
-            'today_date'   => date('Y-m-d'),
-            'poi_cards'    => $poi,
+            'today_date' => date('Y-m-d'),
+            'poi_cards' => $poi,
             'top_searches' => $topSearches,
         ]);
     }

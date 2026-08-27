@@ -23,7 +23,7 @@ class AirportsController
         try {
             $headers = [
                 'Authorization' => Credentials::getBearer(),
-                'Accept'        => 'application/json',
+                'Accept' => 'application/json',
             ];
 
             $response = $apiClient->post('airports', $headers, ['major' => true]);
