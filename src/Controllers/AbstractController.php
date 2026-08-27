@@ -19,7 +19,6 @@ class AbstractController
     public function __construct()
     {
         $this->dbConnect();
-
         $this->setStaticUrl(AmazonS3::getUrl());
     }
 
@@ -29,7 +28,6 @@ class AbstractController
     private function dbConnect(): void
     {
         $this->db = MySql::connect();
-
         $this->db->setTrace(true);
     }
 
