@@ -12,6 +12,7 @@ use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TripBuilder\Database\Connection;
 use TripBuilder\Helper;
 
 abstract class AbstractCommand extends Command
@@ -48,6 +49,14 @@ abstract class AbstractCommand extends Command
     protected OutputInterface $output;
     protected SymfonyStyle $io;
     protected MysqliDb $db;
+
+    // PDO connection for commands migrated off the legacy MysqliDb query builder.
+    private ?Connection $connection = null;
+
+    protected function connection(): Connection
+    {
+        return $this->connection ??= Connection::fromEnv();
+    }
 
     protected function initialize(InputInterface $input, OutputInterface $output): void
     {
@@ -128,22 +137,13 @@ abstract class AbstractCommand extends Command
      */
     protected function getAllDatabaseTables(): array
     {
-        $request = sprintf(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND table_type = 'BASE TABLE'",
-            $_ENV['DB_DATABASE'],
+        $rows = $this->connection()->fetchAll(
+            'SELECT table_name AS name FROM information_schema.tables'
+            . ' WHERE table_schema = ? AND table_type = ?',
+            [$_ENV['DB_DATABASE'] ?? '', 'BASE TABLE'],
         );
 
-        $response = $this->db->rawQuery($request);
-
-        $tables = [];
-
-        foreach ($response as $table) {
-            if (isset($table['table_name'])) {
-                $tables[] = $table['table_name'];
-            }
-        }
-
-        return $tables;
+        return array_map(static fn(array $row): string => (string) $row['name'], $rows);
     }
 
     private function buildFormats(): void

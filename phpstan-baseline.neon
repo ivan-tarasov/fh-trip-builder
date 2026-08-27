@@ -151,12 +151,6 @@ parameters:
 			path: src/Noah/AbstractCommand.php
 
 		-
-			message: '#^Parameter \#1 \$num of function number_format expects float, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Noah/Flights/Cleaning.php
-
-		-
 			message: '#^Method TripBuilder\\Noah\\Flights\\Generate\:\:setArriveAirportData\(\) has parameter \$data with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
