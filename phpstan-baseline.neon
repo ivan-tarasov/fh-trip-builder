@@ -97,12 +97,6 @@ parameters:
 			path: src/Controllers/AjaxController.php
 
 		-
-			message: '#^Parameter \#1 \$id of static method TripBuilder\\Helper\:\:bookingIdToString\(\) expects int, true given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Controllers/AjaxController.php
-
-		-
 			message: '#^Property TripBuilder\\Controllers\\AjaxController\:\:\$get type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

@@ -17,6 +17,28 @@ final class BookingRepositoryTest extends IntegrationTestCase
         self::assertSame([], $bookings);
     }
 
+    public function testCreateReturnsIdAndDeleteForSessionRemovesScoped(): void
+    {
+        $repo = new BookingRepository($this->connection());
+        $session = 'test-' . uniqid();
+
+        $id = $repo->create([
+            'session_id' => $session,
+            'departure_time' => '2026-09-15 06:00:00',
+            'flight_outbound' => '{"x":1}',
+            'flight_return' => null,
+        ]);
+
+        self::assertGreaterThan(0, $id);
+        self::assertCount(1, $repo->forSession($session));
+
+        // Wrong session must not delete.
+        self::assertSame(0, $repo->deleteForSession($id, 'someone-else'));
+        // Correct session deletes exactly one.
+        self::assertSame(1, $repo->deleteForSession($id, $session));
+        self::assertSame([], $repo->forSession($session));
+    }
+
     public function testForSessionRoundTripsAnInsertedBooking(): void
     {
         $connection = $this->connection();

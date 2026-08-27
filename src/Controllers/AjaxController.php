@@ -10,6 +10,7 @@ use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
+use TripBuilder\Repository\BookingRepository;
 
 class AjaxController extends AbstractController
 {
@@ -68,12 +69,11 @@ class AjaxController extends AbstractController
             $request[$field] = json_encode($response->data);
         }
 
-        $id = $this->db->insert('bookings', $request);
-
-        if ($id) {
+        try {
+            $id = (new BookingRepository($this->connection()))->create($request);
             $json = ['status' => 'success', 'message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
-        } else {
-            error_log('Booking insert failed: ' . $this->db->getLastError());
+        } catch (\Throwable $e) {
+            error_log('Booking insert failed: ' . $e->getMessage());
             $json = ['status' => 'error', 'message' => 'Could not create the booking. Please try again later.'];
         }
 
@@ -101,17 +101,20 @@ class AjaxController extends AbstractController
             return;
         }
 
-        $this->db->where('id', $this->get['booking_id']);
-        $this->db->where('session_id', session_id());
+        try {
+            $deleted = (new BookingRepository($this->connection()))
+                ->deleteForSession($this->get['booking_id'], session_id());
+        } catch (\Throwable $e) {
+            error_log('Booking delete failed: ' . $e->getMessage());
+            $deleted = 0;
+        }
 
-        // delete() returns true even when nothing matched — check affected rows
-        if ($this->db->delete('bookings') && $this->db->count > 0) {
+        if ($deleted > 0) {
             $json = [
                 'status'  => 'success',
                 'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id'])),
             ];
         } else {
-            error_log('Booking delete failed: ' . ($this->db->getLastError() ?: 'no matching booking'));
             $json = [
                 'status'  => 'error',
                 'message' => 'Booking not found or already deleted.',
