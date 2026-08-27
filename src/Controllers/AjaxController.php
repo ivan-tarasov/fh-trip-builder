@@ -70,7 +70,7 @@ class AjaxController extends AbstractController
         }
 
         try {
-            $id = (new BookingRepository($this->connection()))->create($request);
+            $id = new BookingRepository($this->connection())->create($request);
             $json = ['status' => 'success', 'message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
         } catch (\Throwable $e) {
             error_log('Booking insert failed: ' . $e->getMessage());

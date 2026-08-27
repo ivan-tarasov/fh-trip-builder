@@ -12,7 +12,7 @@ class NotFoundController
 {
     public function index(): void
     {
-        echo (new TwigRenderer())->renderPage('error/404-not-found.html.twig', [
+        echo new TwigRenderer()->renderPage('error/404-not-found.html.twig', [
             'app_css_folder' => sprintf('%s/%s', Cdn::getUrl(), Config::get('site.static.endpoint.css')),
         ]);
     }

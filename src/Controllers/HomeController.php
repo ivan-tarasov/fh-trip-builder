@@ -28,9 +28,9 @@ class HomeController extends AbstractController
         shuffle($poi);
         $poi = array_slice($poi, 0, 3);
 
-        $topSearches = (new SearchRepository($this->connection()))->topSearches(5);
+        $topSearches = new SearchRepository($this->connection())->topSearches(5);
 
-        echo (new TwigRenderer())->renderPage('index/view.html.twig', [
+        echo new TwigRenderer()->renderPage('index/view.html.twig', [
             'bg_image_url' => $bgImageUrl,
             'today_date' => date('Y-m-d'),
             'poi_cards' => $poi,

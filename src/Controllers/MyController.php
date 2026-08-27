@@ -17,7 +17,7 @@ class MyController extends AbstractController
      */
     public function bookings(): void
     {
-        $rows = (new BookingRepository($this->connection()))->forSession(session_id());
+        $rows = new BookingRepository($this->connection())->forSession(session_id());
 
         $bookings = [];
 
@@ -45,7 +45,7 @@ class MyController extends AbstractController
             ];
         }
 
-        echo (new TwigRenderer())->renderPage('my/bookings/view.html.twig', [
+        echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
             'bookings' => $bookings,
             'has_rows' => count($rows) > 0,
         ]);

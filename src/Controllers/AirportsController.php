@@ -28,7 +28,7 @@ class AirportsController
 
             $response = $apiClient->post('airports', $headers, ['major' => true]);
 
-            echo (new TwigRenderer())->renderPage('airports/view.html.twig', [
+            echo new TwigRenderer()->renderPage('airports/view.html.twig', [
                 'airports' => $response->data,
             ]);
         } catch (\Exception $e) {

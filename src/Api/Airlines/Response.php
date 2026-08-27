@@ -25,7 +25,7 @@ class Response extends AbstractApi
 
         $majorOnly = !empty($this->data[self::DATA_KEY_MAJOR]) && $this->data[self::DATA_KEY_MAJOR];
 
-        $airlines = (new AirlineRepository($this->connection()))->search($codes, $majorOnly);
+        $airlines = new AirlineRepository($this->connection())->search($codes, $majorOnly);
 
         $this->sendResponse(HttpStatus::Ok, $airlines);
     }

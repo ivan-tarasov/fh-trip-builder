@@ -325,7 +325,7 @@ class Generate extends AbstractCommand
             // Normalize departure to an immutable instance in the specified departure TZ
             if ($departDateTime instanceof DateTimeInterface) {
                 // Rebase via timestamp to avoid double-parsing and then set the intended depart TZ
-                $depart = (new DateTimeImmutable('@' . $departDateTime->getTimestamp()))->setTimezone($tzDepart);
+                $depart = new DateTimeImmutable('@' . $departDateTime->getTimestamp())->setTimezone($tzDepart);
             } else {
                 $depart = new DateTimeImmutable((string) $departDateTime, $tzDepart);
             }

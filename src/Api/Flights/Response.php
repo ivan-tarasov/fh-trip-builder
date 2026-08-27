@@ -121,7 +121,7 @@ class Response extends AbstractApi
             ApiResponder::badRequest();
         }
 
-        $flight = (new FlightRepository($this->connection()))->findById((int) $this->data[self::DATA_FLIGHT_ID]);
+        $flight = new FlightRepository($this->connection())->findById((int) $this->data[self::DATA_FLIGHT_ID]);
 
         if ($flight === null) {
             ApiResponder::notFound('Flight not found');
@@ -140,7 +140,7 @@ class Response extends AbstractApi
 
     private function getOnewayFlights(): array
     {
-        $result = (new FlightRepository($this->connection()))->onewaySearch(
+        $result = new FlightRepository($this->connection())->onewaySearch(
             $this->query->from,
             $this->query->to,
             $this->query->departDate,
@@ -160,7 +160,7 @@ class Response extends AbstractApi
 
     private function getRoundtripFlights(): array
     {
-        $result = (new FlightRepository($this->connection()))->roundtripSearch(
+        $result = new FlightRepository($this->connection())->roundtripSearch(
             $this->query->from,
             $this->query->to,
             $this->query->departDate,

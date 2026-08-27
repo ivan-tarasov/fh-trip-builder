@@ -27,7 +27,7 @@ class AirlinesController
 
             $response = $apiClient->post('airlines', $headers, ['major' => true]);
 
-            echo (new TwigRenderer())->renderPage('airlines/view.html.twig', [
+            echo new TwigRenderer()->renderPage('airlines/view.html.twig', [
                 'airlines' => $response->data,
             ]);
         } catch (\Exception $e) {

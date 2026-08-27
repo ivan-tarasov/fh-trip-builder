@@ -20,7 +20,7 @@ class Response extends AbstractApi
     {
         $majorOnly = !empty($this->data['major']) && $this->data['major'];
 
-        $airports = (new AirportRepository($this->connection()))->enabled($majorOnly);
+        $airports = new AirportRepository($this->connection())->enabled($majorOnly);
 
         $this->sendResponse(HttpStatus::Ok, $airports);
     }
@@ -37,7 +37,7 @@ class Response extends AbstractApi
             return;
         }
 
-        $airports = (new AirportRepository($this->connection()))->autofill($query);
+        $airports = new AirportRepository($this->connection())->autofill($query);
 
         $airportsGroups = $response = [];
 

@@ -70,7 +70,7 @@ try {
         $output = ob_get_clean();
 
         if (! str_starts_with(ltrim($output), '<!DOCTYPE')) {
-            $output = (new TwigRenderer())->renderPage('layout.html.twig', [
+            $output = new TwigRenderer()->renderPage('layout.html.twig', [
                 'page_content' => $output,
             ]);
         }

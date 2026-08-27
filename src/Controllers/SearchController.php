@@ -116,7 +116,7 @@ class SearchController extends AbstractController
 
             $total_flights = $this->data->total_flights;
 
-            echo (new TwigRenderer())->renderPage('search/view.html.twig', [
+            echo new TwigRenderer()->renderPage('search/view.html.twig', [
                 // Lead form + sidebar + cards share the resolved query context.
                 'triptype' => $this->get[self::GET_TRIPTYPE],
                 'depart_code' => $this->get[self::GET_FROM],
@@ -158,7 +158,7 @@ class SearchController extends AbstractController
     private function checkHash(): void
     {
         if ($this->get['hash']) {
-            $search = (new SearchRepository($this->connection()))->findByHash($this->get['hash']);
+            $search = new SearchRepository($this->connection())->findByHash($this->get['hash']);
 
             $search_params = http_build_query([
                 self::GET_FROM => $search[self::GET_FROM . '_code'],
@@ -169,7 +169,7 @@ class SearchController extends AbstractController
                 self::GET_CLASS => 'economy', // FIXME: we need real class here
             ]);
 
-            echo (new TwigRenderer())->render('search/redirect.html.twig', [
+            echo new TwigRenderer()->render('search/redirect.html.twig', [
                 'image_url' => Cdn::getUrl(sprintf(
                     '%s/search_redirect.gif',
                     Config::get('site.static.endpoint.images'),
@@ -202,7 +202,7 @@ class SearchController extends AbstractController
         ));
 
         // Insert or update search
-        (new SearchRepository($this->connection()))->record(
+        new SearchRepository($this->connection())->record(
             $hash,
             $this->get[self::GET_FROM],
             trim(preg_replace('/\([^)]+\)/', '', $this->data->depart)),
