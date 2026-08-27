@@ -91,12 +91,6 @@ parameters:
 			path: src/Controllers/AjaxController.php
 
 		-
-			message: '#^Method TripBuilder\\Controllers\\SearchController\:\:getCarrierLogo\(\) has parameter \$carrier with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controllers/SearchController.php
-
-		-
 			message: '#^Method TripBuilder\\Controllers\\SearchController\:\:setGet\(\) has parameter \$get with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

@@ -1,0 +1,47 @@
+<!-- Result pagination -->
+<nav class="mt-5" aria-label="Pagination of flight">
+  <ul class="pagination justify-content-end">
+
+    {% if pagination.prev %}
+    <li class="page-item">
+        <a class="page-link" href="{{ pagination.prev }}">
+            <i class="fas fa-lg fa-long-arrow-alt-left pe-2"></i>
+            Previous
+        </a>
+    </li>
+    {% endif %}
+
+    {% for item in pagination.items %}
+        {% if item.type == 'skipped' %}
+    <li class="page-item">
+        <a class="page-link text-body-tertiary bg-white disabled">
+            ...
+        </a>
+    </li>
+        {% elseif item.type == 'current' %}
+    <li class="page-item active">
+        <span class="page-link rounded-bottom-3 shadow fs-5 fw-bold">
+            {{ item.number }}
+        </span>
+    </li>
+        {% else %}
+    <li class="page-item">
+        <a class="page-link" href="{{ item.url }}">
+            {{ item.number }}
+        </a>
+    </li>
+        {% endif %}
+    {% endfor %}
+
+    {% if pagination.next %}
+    <li class="page-item">
+        <a class="page-link" href="{{ pagination.next }}">
+            Next
+            <i class="fas fa-lg fa-long-arrow-alt-right ms-2"></i>
+        </a>
+    </li>
+    {% endif %}
+
+  </ul>
+</nav>
+<!-- End / Result pagination -->
