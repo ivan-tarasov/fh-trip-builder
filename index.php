@@ -61,10 +61,10 @@ try {
     if (! $needsLayout) {
         $controller->$actionName();
     } else {
-        // Capture the page body. Templates already migrated to Twig render the
-        // full document themselves (they extend layout.html.twig); pages still
-        // on the legacy Templater emit only their body, so wrap those in the
-        // base layout during the migration.
+        // Capture the page body. Page controllers render the full document
+        // themselves (their templates extend layout.html.twig); a controller
+        // that emits only a body fragment instead (e.g. the search
+        // redirect-guard) gets wrapped in the base layout here.
         ob_start();
         $controller->$actionName();
         $output = ob_get_clean();

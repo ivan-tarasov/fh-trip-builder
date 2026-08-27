@@ -155,15 +155,3 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/Noah/Grab/Suppliers.php
-
-		-
-			message: '#^Call to preg_quote\(\) is missing delimiter / to be effective\.$#'
-			identifier: argument.invalidPregQuote
-			count: 2
-			path: src/Templater.php
-
-		-
-			message: '#^Property TripBuilder\\Templater\:\:\$placeholders type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Templater.php

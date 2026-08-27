@@ -14,8 +14,8 @@ use Twig\TwigFunction;
 /**
  * Renders Twig templates from frontend/template with HTML auto-escaping.
  *
- * Replaces the hand-rolled Templater: templates are escaped by default and
- * support inheritance/includes/loops, so view assembly leaves the controllers.
+ * Templates are escaped by default and support inheritance/includes/loops, so
+ * view assembly lives in the templates rather than in the controllers.
  */
 final class TwigRenderer
 {
