@@ -29,13 +29,21 @@ final class Connection
 
     /**
      * Build a connection from the DB_* environment variables.
+     *
+     * Reads real environment variables first (getenv), falling back to $_ENV.
+     * This matters in CI, where the credentials are process env vars and
+     * phpdotenv's immutable loader won't copy them into $_ENV.
      */
     public static function fromEnv(): self
     {
         $pdo = new PDO(
-            self::dsn($_ENV),
-            $_ENV['DB_USERNAME'] ?? '',
-            $_ENV['DB_PASSWORD'] ?? '',
+            self::dsn([
+                'DB_HOST' => self::env('DB_HOST'),
+                'DB_DATABASE' => self::env('DB_DATABASE'),
+                'DB_PORT' => self::env('DB_PORT'),
+            ]),
+            self::env('DB_USERNAME'),
+            self::env('DB_PASSWORD'),
             [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -44,6 +52,21 @@ final class Connection
         );
 
         return new self($pdo);
+    }
+
+    /**
+     * Read a config value: real environment variable first, then $_ENV.
+     * getenv() distinguishes "unset" (false) from a legitimately empty value.
+     */
+    private static function env(string $key): string
+    {
+        $value = getenv($key);
+
+        if ($value !== false) {
+            return $value;
+        }
+
+        return isset($_ENV[$key]) ? (string) $_ENV[$key] : '';
     }
 
     /**
