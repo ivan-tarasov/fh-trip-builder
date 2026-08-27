@@ -1,0 +1,11 @@
+<style>
+    body {
+        overflow: hidden;
+    }
+</style>
+<img src="{{ image_url }}" />
+<script>
+    setTimeout(function() {
+        window.location.replace("/search/?{{ search_params|escape('js') }}");
+    }, 100);
+</script>

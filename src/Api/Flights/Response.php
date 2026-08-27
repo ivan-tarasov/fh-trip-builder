@@ -10,6 +10,7 @@ use TripBuilder\Api\ApiResponder;
 use TripBuilder\Api\HttpStatus;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\FlightRepository;
+use TripBuilder\TripType;
 
 class Response extends AbstractApi
 {
@@ -25,9 +26,6 @@ class Response extends AbstractApi
     private const DATA_ADULT_COUNT = 'adult_count';
     private const DATA_CHILD_COUNT = 'child_count';
     private const DATA_FLIGHT_ID = 'id';
-
-    private const TRIPTYPE_ROUNDTRIP = 'roundtrip';
-    private const TRIPTYPE_ONEWAY = 'oneway';
 
     private const RESPONSE_FLIGHT_ID = 'id';
     private const RESPONSE_CURRENT_PAGE = 'current_page';
@@ -96,9 +94,9 @@ class Response extends AbstractApi
             self::RESPONSE_ARRIVE => sprintf('%s (%s)', $airports->cityByCode($this->query->to), $this->query->to),
         ];
 
-        $flights = match ($this->data[self::DATA_TRIPTYPE]) {
-            self::TRIPTYPE_ONEWAY => $this->getOnewayFlights(),
-            self::TRIPTYPE_ROUNDTRIP => $this->getRoundtripFlights(),
+        $flights = match (TripType::tryFrom($this->data[self::DATA_TRIPTYPE])) {
+            TripType::Oneway => $this->getOnewayFlights(),
+            TripType::Roundtrip => $this->getRoundtripFlights(),
             default => ['error' => 'Wrong trip type'],
         };
 

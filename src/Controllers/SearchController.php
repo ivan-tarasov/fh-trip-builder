@@ -12,7 +12,8 @@ use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\SearchRepository;
-use TripBuilder\Templater;
+use TripBuilder\TripType;
+use TripBuilder\View\TwigRenderer;
 
 class SearchController extends AbstractController
 {
@@ -33,8 +34,6 @@ class SearchController extends AbstractController
 
     private ?array $post;
 
-    private Templater $templater;
-
     private ?stdClass $data = null;
 
     /**
@@ -43,8 +42,6 @@ class SearchController extends AbstractController
      */
     public function index(): void
     {
-        $this->templater = new Templater();
-
         try {
             // Handle GET data
             $this->setGet([
@@ -91,8 +88,6 @@ class SearchController extends AbstractController
                 return;
             }
 
-            $activetab[$this->get[self::GET_TRIPTYPE]] = Config::get('site.tab_active');
-
             $apiClient = new Api(Config::get('api.fake.url'));
 
             $headers = [
@@ -103,9 +98,7 @@ class SearchController extends AbstractController
             $data = [
                 'page'        => $this->get[self::GET_PAGE] ?? 1,
                 'sort'        => 'price',
-                'trip_type'   => $this->get[self::GET_TRIPTYPE] == Config::get('search.triptype.roundtrip')
-                    ? 'roundtrip'
-                    : 'oneway',
+                'trip_type'   => $this->get[self::GET_TRIPTYPE], // already normalised to a TripType value
                 'from'        => $this->get[self::GET_FROM],
                 'to'          => $this->get[self::GET_TO],
                 'depart_date' => $this->get[self::GET_DEPART],
@@ -123,202 +116,35 @@ class SearchController extends AbstractController
 
             $total_flights = $this->data->total_flights;
 
-            /*
-            |--------------------------------------------------------------------------
-            | Lead form
-            |--------------------------------------------------------------------------
-            |
-            | Building page top search form
-            |
-            */
-
-            echo $this->templater
-                ->setPath('search')
-                ->setFilename('search-form-up')
-                ->set()
-                ->setPlaceholder('search_page_url', '/search/')
-                ->setPlaceholder('airports_autofill', Config::get('api.fake.url') . '/airports/autofill/?query=')
-                ->setPlaceholder('search_triptype', Helper::escapeHtml($this->get[self::GET_TRIPTYPE]))
-                ->setPlaceholder('input_triptype', Config::get('search.form.input.triptype'))
-                ->setPlaceholder('input_triptype_roundtrip', Config::get('search.triptype.roundtrip'))
-                ->setPlaceholder('input_triptype_oneway', Config::get('search.triptype.oneway'))
-                ->setPlaceholder('input_from', Config::get('search.form.input.depart_place'))
-                ->setPlaceholder('input_to', Config::get('search.form.input.arrive_place'))
-                ->setPlaceholder('input_from_date', Config::get('search.form.input.depart_date'))
-                ->setPlaceholder('input_to_date', Config::get('search.form.input.return_date'))
-                ->setPlaceholder('depart_code', Helper::escapeHtml($this->get[self::GET_FROM]))
-                ->setPlaceholder('arrive_code', Helper::escapeHtml($this->get[self::GET_TO]))
-                ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
-                ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
-                ->setPlaceholder('depart_date', Helper::escapeHtml($this->get[self::GET_DEPART]))
-                ->setPlaceholder('return_date', Helper::escapeHtml($this->get[self::GET_RETURN]))
-                ->setPlaceholder('tab_rt_button', $activetab[Config::get('search.triptype.roundtrip')]['btn']  ?? '')
-                ->setPlaceholder('tab_rt_aria', $activetab[Config::get('search.triptype.roundtrip')]['aria'] ?? '')
-                ->setPlaceholder('tab_rt_div', $activetab[Config::get('search.triptype.roundtrip')]['div']  ?? '')
-                ->setPlaceholder('tab_ow_button', $activetab[Config::get('search.triptype.oneway')]['btn']     ?? '')
-                ->setPlaceholder('tab_ow_aria', $activetab[Config::get('search.triptype.oneway')]['aria']    ?? '')
-                ->setPlaceholder('tab_ow_div', $activetab[Config::get('search.triptype.oneway')]['div']     ?? '')
-                ->save()
-                ->render();
-
-            /*
-            |--------------------------------------------------------------------------
-            | Sidebar
-            |--------------------------------------------------------------------------
-            |
-            | Building page sidebar
-            |
-            */
-
-            // 1. Render button for filters
-            $sb_update_button = $this->templater
-                ->setPath('search/sidebar')
-                ->setFilename('update-button')
-                ->set()
-                ->save()
-                ->render();
-
-            // 2. Building sort section
-            $this->templater->setFilename('sort')->set();
-
-            foreach (Config::get('search.sort') as $key => $params) {
-                $this->templater
-                    ->setPlaceholder('sb_sort_item_hide', $params[array_key_first($activetab)] !== 1 ? ' d-none' : null)
-                    ->setPlaceholder('sb_sort_item_id', $params['id'])
-                    ->setPlaceholder('sb_sort_item_value', $key)
-                    ->setPlaceholder('sb_sort_item_checked', $_SESSION[self::POST_SORT] == $key ? 'checked' : null)
-                    ->setPlaceholder('sb_sort_item_title', $params['title'])
-                    ->setPlaceholder('sb_sort_item_note', $params['note'])
-                    ->save();
-            }
-
-            $sb_filter_sort = $this->templater->render();
-
-            // 3. Building time preferences filter
-            $sb_filter_timerange = $this->templater
-                ->setFilename('range')
-                ->set()
-                ->setPlaceholder('clock_range', $this->generateTimeRange())
-                ->setPlaceholder('range_depart_from', '00:00')
-                ->setPlaceholder('range_depart_to', '23:59')
-                ->setPlaceholder('range_return_from', '00:00')
-                ->setPlaceholder('range_return_to', '23:59')
-                ->save()
-                ->render();
-
-            // 4. Building airlines filter with airlines from flights response
-            $sb_filter_airlines = null;
-
-            $airlines_request = array_unique(array_merge(...array_map(function ($item) {
-                $values = [$item->outbound->carrier];
-
-                if (isset($item->returning->carrier)) {
-                    $values[] = $item->returning->carrier;
-                }
-
-                return $values;
-            }, $this->data->flights ?? [])));
-
-            if (! empty($airlines_request)) {
-                $airlines_request = ['selected' => implode(',', $airlines_request)];
-
-                $airlines_response = $apiClient->post('airlines', $headers, $airlines_request);
-
-                if (!empty($airlines_response->data)) {
-                    $this->templater
-                        ->setPath('search/sidebar')
-                        ->setFilename('airlines')
-                        ->set();
-
-                    foreach ($airlines_response->data as $airline) {
-                        $this->templater
-                            ->setPlaceholder('airline-iata-code', $airline->code)
-                            ->setPlaceholder('airline-title', $airline->title)
-                            ->setPlaceholder('airline-checked', 'checked')
-                            ->save();
-                    }
-
-                    $sb_filter_airlines = $this->templater->render();
-                }
-            }
-
-            // 5. Building and render sidebar
-            $sidebar = $this->templater
-                ->setPath('search/sidebar')
-                ->setFilename('view')
-                ->set()
-                ->setPlaceholder('form_url', sprintf(
+            echo (new TwigRenderer())->renderPage('search/view.html.twig', [
+                // Lead form + sidebar + cards share the resolved query context.
+                'triptype'      => $this->get[self::GET_TRIPTYPE],
+                'depart_code'   => $this->get[self::GET_FROM],
+                'arrive_code'   => $this->get[self::GET_TO],
+                'depart_city'   => $this->data->depart,
+                'arrive_city'   => $this->data->arrive,
+                'depart_date'   => $this->get[self::GET_DEPART],
+                'return_date'   => $this->get[self::GET_RETURN],
+                // Sidebar
+                'form_url'      => sprintf(
                     '%s?%s',
                     Helper::getUrlPath(),
                     http_build_query(array_merge($this->get, [self::GET_PAGE => null])),
-                ))
-                ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
-                ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
-                ->setPlaceholder('sb_update_button', $sb_update_button)
-                ->setPlaceholder('sb_filter_sort', $sb_filter_sort)
-                ->setPlaceholder('sb_filter_timerange', $sb_filter_timerange)
-                ->setPlaceholder('sb_filter_airlines', $sb_filter_airlines)
-                ->save()
-                ->render();
-
-            /*
-            |--------------------------------------------------------------------------
-            | Flights
-            |--------------------------------------------------------------------------
-            |
-            | Building flight cards and pagination bar. If flights not found in API
-            | response - we show `No flights found` page
-            |
-            */
-
-            if ($total_flights != 0) {
-                $flight_cards   = $this->getFlightCards();
-                $pagination_bar = $this->getPagination();
-
-                $flights = $this->templater
-                    ->setPath('search/cards')
-                    ->setFilename('view')
-                    ->set()
-                    ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
-                    ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
-                    ->setPlaceholder('total_flights', Helper::plural($total_flights, 'flight', showNumber: true))
-                    ->setPlaceholder('flight_cards', $flight_cards)
-                    ->setPlaceholder('pagination_bar', $pagination_bar)
-                    ->save()
-                    ->render();
-            } else {
-                $flights = $this->templater
-                    ->setPath('search')
-                    ->setFilename('no-result')
-                    ->set()
-                    ->setPlaceholder('not_found_img', Cdn::getUrl(sprintf(
-                        '%s/%s',
-                        Config::get('site.static.endpoint.images'),
-                        'no-results.png',
-                    )))
-                    ->setPlaceholder('depart_city', Helper::escapeHtml($this->data->depart))
-                    ->setPlaceholder('arrive_city', Helper::escapeHtml($this->data->arrive))
-                    ->setPlaceholder('depart_date', Helper::escapeHtml($this->get[self::GET_DEPART]))
-                    ->setPlaceholder('return_date', !empty($this->get[self::GET_RETURN]) ? ' to ' . Helper::escapeHtml($this->get[self::GET_RETURN]) : null)
-                    ->save()
-                    ->render();
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | Search page
-            |--------------------------------------------------------------------------
-            |
-            | Combine together sidebar and flight cards with pagination bar to
-            | building whole search page
-            |
-            */
-
-            echo $this->templater->setPath('search')->setFilename('view')->set()
-                ->setPlaceholder('sidebar-panel', $sidebar)
-                ->setPlaceholder('flight-cards', $flights)
-                ->save()
-                ->render();
+                ),
+                'session_sort'  => $_SESSION[self::POST_SORT],
+                'clock_range'   => $this->generateTimeRange(),
+                'airlines'      => $this->fetchSidebarAirlines($apiClient, $headers),
+                // Flights / no-result
+                'total_flights'      => $total_flights,
+                'total_flights_text' => Helper::plural((int) $total_flights, 'flight', showNumber: true),
+                'flights'            => $total_flights != 0 ? $this->buildFlights() : [],
+                'pagination'         => $total_flights != 0 ? $this->buildPagination() : null,
+                'not_found_img'      => Cdn::getUrl(sprintf(
+                    '%s/%s',
+                    Config::get('site.static.endpoint.images'),
+                    'no-results.png',
+                )),
+            ]);
         } catch (\Exception $e) {
             error_log('Search page failed: ' . $e->getMessage());
             echo 'Something went wrong while searching for flights. Please try again later.';
@@ -343,17 +169,13 @@ class SearchController extends AbstractController
                 self::GET_CLASS    => 'economy', // FIXME: we need real class here
             ]);
 
-            echo $this->templater
-                ->setPath('search')
-                ->setFilename('redirect')
-                ->set()
-                ->setPlaceholder('image_url', Cdn::getUrl(sprintf(
+            echo (new TwigRenderer())->render('search/redirect.html.twig', [
+                'image_url' => Cdn::getUrl(sprintf(
                     '%s/search_redirect.gif',
                     Config::get('site.static.endpoint.images'),
-                )))
-                ->setPlaceholder('search_params', $search_params)
-                ->save()
-                ->render();
+                )),
+                'search_params' => $search_params,
+            ]);
 
             die();
         }
@@ -389,6 +211,151 @@ class SearchController extends AbstractController
             $this->get[self::GET_DEPART],
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
+        );
+    }
+
+    /**
+     * Fetch the airlines present in the flights response for the sidebar filter.
+     *
+     * @param array<string, string> $headers
+     * @return array<int, stdClass>
+     * @throws GuzzleException
+     */
+    private function fetchSidebarAirlines(Api $apiClient, array $headers): array
+    {
+        $carriers = array_unique(array_merge(...array_map(function ($item) {
+            $values = [$item->outbound->carrier];
+
+            if (isset($item->returning->carrier)) {
+                $values[] = $item->returning->carrier;
+            }
+
+            return $values;
+        }, $this->data->flights ?? [])));
+
+        if (empty($carriers)) {
+            return [];
+        }
+
+        $airlines_response = $apiClient->post('airlines', $headers, ['selected' => implode(',', $carriers)]);
+
+        return $airlines_response->data ?? [];
+    }
+
+    /**
+     * Normalise the flights response into the per-card view-model the
+     * templates render (prices, carrier logos, per-leg flight info).
+     *
+     * @return array<int, array<string, mixed>>
+     * @throws \Exception
+     */
+    private function buildFlights(): array
+    {
+        $flights = [];
+
+        foreach ($this->data->flights as $flight) {
+            $carriers = [];
+            $tickets  = [];
+
+            foreach ([$flight->outbound, $flight->returning] as $ticket) {
+                if (! $ticket) {
+                    continue;
+                }
+
+                $carriers[] = [
+                    'number'   => $ticket->number,
+                    'name'     => $ticket->carrier_name,
+                    'logo_url' => Cdn::getUrl(sprintf(
+                        '%s/suppliers/%s.png',
+                        Config::get('site.static.endpoint.images'),
+                        $ticket->carrier,
+                    )),
+                ];
+
+                $tickets[] = [
+                    'depart_time'    => date('H:i', strtotime($ticket->depart->date_time)),
+                    'arrive_time'    => date('H:i', strtotime($ticket->arrive->date_time)),
+                    'depart_date'    => date('Y-m-d', strtotime($ticket->depart->date_time)),
+                    'arrive_date'    => date('Y-m-d', strtotime($ticket->arrive->date_time)),
+                    'depart_city'    => $ticket->depart->airport_city,
+                    'arrive_city'    => $ticket->arrive->airport_city,
+                    'depart_airport' => $ticket->depart->airport_name,
+                    'arrive_airport' => $ticket->arrive->airport_name,
+                    'depart_code'    => $ticket->depart->airport_code,
+                    'arrive_code'    => $ticket->arrive->airport_code,
+                    'duration'       => $this->minutesToStringTime($ticket->duration),
+                ];
+            }
+
+            $flights[] = [
+                'outbound_id'  => $flight->outbound->id,
+                'returning_id' => $flight->returning->id ?? null,
+                'price_total'  => number_format((float) $flight->price_base + (float) $flight->price_tax, 2),
+                'price_base'   => number_format((float) $flight->price_base, 2),
+                'price_tax'    => number_format((float) $flight->price_tax, 2),
+                'price_gst'    => number_format(0, 2),
+                'price_qst'    => number_format(0, 2),
+                'carriers'     => $carriers,
+                'tickets'      => $tickets,
+            ];
+        }
+
+        return $flights;
+    }
+
+    /**
+     * Build the pagination view-model: previous/next URLs and the page items
+     * (link, current, or skipped ellipsis). Returns null for a single page.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function buildPagination(): ?array
+    {
+        $totalPages = $this->data->total_pages;
+
+        // If we have only 1 page - skip render
+        if ($totalPages == 1) {
+            return null;
+        }
+
+        $page = $this->get[self::GET_PAGE];
+
+        $items     = [];
+        $skipPages = false;
+
+        for ($i = 1; $i <= $totalPages; $i++) {
+            $isFirstPage   = $i === 1;
+            $isLastPage    = $i === $totalPages;
+            $isWithinRange = abs($i - $page) <= 1;
+
+            if ($totalPages >= 10 && !$isFirstPage && !$isLastPage && !$isWithinRange) {
+                $skipPages = true;
+                continue;
+            }
+
+            if ($skipPages) {
+                $items[]   = ['type' => 'skipped'];
+                $skipPages = false;
+            }
+
+            $items[] = $i != $page
+                ? ['type' => 'link', 'url' => $this->pageUrl($i), 'number' => $i]
+                : ['type' => 'current', 'number' => $i];
+        }
+
+        return [
+            'prev'  => $page > 1 ? $this->pageUrl($page - 1) : null,
+            'next'  => $page < $totalPages ? $this->pageUrl($page + 1) : null,
+            'items' => $items,
+        ];
+    }
+
+    private function pageUrl(int $page): string
+    {
+        return sprintf(
+            '%s?%s',
+            Helper::getUrlPath(),
+            http_build_query(array_merge($this->get, [self::GET_PAGE => $page])),
         );
     }
 
@@ -440,215 +407,10 @@ class SearchController extends AbstractController
         return trim($formattedTime);
     }
 
-    /**
-     * @return string
-     * @throws \Exception
-     */
-    private function getFlightCards(): string
-    {
-        $package = '';
-
-        foreach ($this->data->flights as $flight) {
-            $carriers = [];
-
-            foreach ([$flight->outbound, $flight->returning] as $ticket) {
-                if (! $ticket) {
-                    continue;
-                }
-
-                $carriers[] = [
-                    'code'   => $ticket->carrier,
-                    'number' => $ticket->number,
-                    'name'   => $ticket->carrier_name,
-                ];
-
-                $this->templater
-                    ->setPath('search/cards')
-                    ->setFilename('flight-info')
-                    ->set()
-                    ->setPlaceholder('depart_time', date('H:i', strtotime($ticket->depart->date_time)))
-                    ->setPlaceholder('arrive_time', date('H:i', strtotime($ticket->arrive->date_time)))
-                    ->setPlaceholder('depart_date', date('Y-m-d', strtotime($ticket->depart->date_time)))
-                    ->setPlaceholder('arrive_date', date('Y-m-d', strtotime($ticket->arrive->date_time)))
-                    ->setPlaceholder('depart_city', $ticket->depart->airport_city)
-                    ->setPlaceholder('arrive_city', $ticket->arrive->airport_city)
-                    ->setPlaceholder('depart_airport', $ticket->depart->airport_name)
-                    ->setPlaceholder('arrive_airport', $ticket->arrive->airport_name)
-                    ->setPlaceholder('depart_code', $ticket->depart->airport_code)
-                    ->setPlaceholder('arrive_code', $ticket->arrive->airport_code)
-                    ->setPlaceholder('flight_duration', $this->minutesToStringTime($ticket->duration))
-                    ->save();
-            }
-
-            $flight_info = $this->templater->render();
-
-            // Flight logos
-            $airline_logos = '';
-
-            foreach ($carriers as $carrier) {
-                $airline_logos .= $this->getCarrierLogo($carrier);
-            }
-
-            $package .= $this->templater
-                ->setPath('search/cards')
-                ->setFilename('body')
-                ->set()
-                ->setPlaceholder('outbound_id', $flight->outbound->id)
-                ->setPlaceholder('returning_id', $flight->returning->id ?? null)
-                ->setPlaceholder('flight_price_total', number_format((float) $flight->price_base + (float) $flight->price_tax, 2))
-                ->setPlaceholder('flight_price_base', number_format((float) $flight->price_base, 2))
-                ->setPlaceholder('flight_price_tax', number_format((float) $flight->price_tax, 2))
-                ->setPlaceholder('flight_price_gst', number_format(0, 2))
-                ->setPlaceholder('flight_price_qst', number_format(0, 2))
-                ->setPlaceholder('airline_logos', $airline_logos)
-
-                ->setPlaceholder('flight_info', $flight_info)
-                ->save()
-                ->render();
-        }
-
-        return $package;
-    }
-
-    /**
-     * @throws \Exception
-     */
-    private function getCarrierLogo(array $carrier): string
-    {
-        return $this->templater
-            ->setPath('search/cards')
-            ->setFilename('airline-logo')
-            ->set()
-            ->setPlaceholder('flight_number', $carrier['number'])
-            ->setPlaceholder('airline_title', $carrier['name'])
-            ->setPlaceholder('logo_url', Cdn::getUrl(sprintf(
-                '%s/suppliers/%s.png',
-                Config::get('site.static.endpoint.images'),
-                $carrier['code'],
-            )))
-            ->save()
-            ->render();
-    }
-
-    /**
-     * @return string
-     * @throws \Exception
-     */
-    private function getPagination(): string
-    {
-        // If we have only 1 page - skip render
-        if ($this->data->total_pages == 1) {
-            return '';
-        }
-
-        // Render previous page button
-        if ($this->get[self::GET_PAGE] > 1) {
-            $url = sprintf(
-                '%s?%s',
-                Helper::getUrlPath(),
-                http_build_query(array_merge($this->get, [self::GET_PAGE => $this->get[self::GET_PAGE] - 1])),
-            );
-
-            $button_prev = $this->templater
-                ->setPath('search/pagination')
-                ->setFilename('button_prev')
-                ->set()
-                ->setPlaceholder('href_url', $url)
-                ->save()
-                ->render();
-        } else {
-            $button_prev = null;
-        }
-
-        // Render next page button
-        if ($this->get[self::GET_PAGE] < $this->data->total_pages) {
-            $url = sprintf(
-                '%s?%s',
-                Helper::getUrlPath(),
-                http_build_query(array_merge($this->get, [self::GET_PAGE => $this->get[self::GET_PAGE] + 1])),
-            );
-
-            $button_next = $this->templater
-                ->setPath('search/pagination')
-                ->setFilename('button_next')
-                ->set()
-                ->setPlaceholder('href_url', $url)
-                ->save()
-                ->render();
-        } else {
-            $button_next = null;
-        }
-
-        // Render page buttons
-        $skipPages = false;
-
-        for ($i = 1; $i <= $this->data->total_pages; $i++) {
-            $isFirstPage   = $i === 1;
-            $isLastPage    = $i === $this->data->total_pages;
-            $isWithinRange = abs($i - $this->get[self::GET_PAGE]) <= 1;
-
-            if ($this->data->total_pages >= 10 && !$isFirstPage && !$isLastPage && !$isWithinRange) {
-                $skipPages = true;
-                continue;
-            }
-
-            if ($skipPages) {
-                $this->templater
-                    ->setPath('search/pagination')
-                    ->setFilename('button_skipped')
-                    ->set()
-                    ->save();
-
-                $skipPages = false;
-            }
-
-            // Generate the page link
-            if ($i != $this->get[self::GET_PAGE]) {
-                $url = sprintf(
-                    '%s?%s',
-                    Helper::getUrlPath(),
-                    http_build_query(array_merge($this->get, [self::GET_PAGE => $i])),
-                );
-
-                $this->templater
-                    ->setPath('search/pagination')
-                    ->setFilename('button_link')
-                    ->set()
-                    ->setPlaceholder('href_url', $url)
-                    ->setPlaceholder('page_number', $i)
-                    ->save();
-            } else {
-                $this->templater
-                    ->setPath('search/pagination')
-                    ->setFilename('button_current')
-                    ->set()
-                    ->setPlaceholder('page_number', $i)
-                    ->save();
-            }
-        }
-
-        $button_pages = $this->templater->render();
-
-        // Render pagination bar
-        return $this->templater
-            ->setPath('search/pagination')
-            ->setFilename('view')
-            ->set()
-            ->setPlaceholder('button_prev', $button_prev)
-            ->setPlaceholder('buttons_pages', $button_pages)
-            ->setPlaceholder('button_next', $button_next)
-            ->save()
-            ->render();
-    }
-
     private function setGet(array $get): void
     {
-        if (!in_array($get[self::GET_TRIPTYPE], [
-            Config::get('search.triptype.roundtrip'),
-            Config::get('search.triptype.oneway'),
-        ])) {
-            $get[self::GET_TRIPTYPE] = Config::get('search.triptype.oneway');
-        }
+        // Normalise the trip type, defaulting to one-way for invalid input.
+        $get[self::GET_TRIPTYPE] = TripType::fromRequest($get[self::GET_TRIPTYPE])->value;
 
         $this->get = $get;
     }

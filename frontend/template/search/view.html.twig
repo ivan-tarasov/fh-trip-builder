@@ -1,0 +1,18 @@
+{% extends 'layout.html.twig' %}
+
+{% block content %}
+{% include 'search/search-form-up.html.twig' %}
+<div class="container py-5">
+  <div class="row">
+
+    {% include 'search/sidebar/view.html.twig' %}
+
+    {% if total_flights != 0 %}
+        {% include 'search/cards/view.html.twig' %}
+    {% else %}
+        {% include 'search/no-result.html.twig' %}
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

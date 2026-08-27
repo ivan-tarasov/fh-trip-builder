@@ -12,9 +12,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 use TripBuilder\Config;
-use TripBuilder\Controllers\AbstractController;
 use TripBuilder\Routes;
 use TripBuilder\Timer;
+use TripBuilder\View\TwigRenderer;
 
 try {
     Timer::start();
@@ -57,15 +57,26 @@ try {
 
     $needsLayout = ! in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
 
-    // The layout renderer opens its own DB connection, so only build it for
-    // routes that actually render the header/footer (not API/Ajax endpoints).
-    $layout = $needsLayout ? new AbstractController() : null;
+    // API/Ajax endpoints emit their own payload with no header/footer.
+    if (! $needsLayout) {
+        $controller->$actionName();
+    } else {
+        // Capture the page body. Page controllers render the full document
+        // themselves (their templates extend layout.html.twig); a controller
+        // that emits only a body fragment instead (e.g. the search
+        // redirect-guard) gets wrapped in the base layout here.
+        ob_start();
+        $controller->$actionName();
+        $output = ob_get_clean();
 
-    $layout?->header();
+        if (! str_starts_with(ltrim($output), '<!DOCTYPE')) {
+            $output = (new TwigRenderer())->renderPage('layout.html.twig', [
+                'page_content' => $output,
+            ]);
+        }
 
-    $controller->$actionName();
-
-    $layout?->footer();
+        echo $output;
+    }
 
     // This is the end...
 } catch (Throwable $e) {

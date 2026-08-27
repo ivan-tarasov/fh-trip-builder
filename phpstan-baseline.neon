@@ -79,12 +79,6 @@ parameters:
 			path: src/Config.php
 
 		-
-			message: '#^Method TripBuilder\\Controllers\\AbstractController\:\:copyrightYears\(\) never returns int so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: src/Controllers/AbstractController.php
-
-		-
 			message: '#^Method TripBuilder\\Controllers\\AjaxController\:\:setGet\(\) has parameter \$params with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -95,12 +89,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Controllers/AjaxController.php
-
-		-
-			message: '#^Method TripBuilder\\Controllers\\SearchController\:\:getCarrierLogo\(\) has parameter \$carrier with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controllers/SearchController.php
 
 		-
 			message: '#^Method TripBuilder\\Controllers\\SearchController\:\:setGet\(\) has parameter \$get with no value type specified in iterable type array\.$#'
@@ -167,15 +155,3 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/Noah/Grab/Suppliers.php
-
-		-
-			message: '#^Call to preg_quote\(\) is missing delimiter / to be effective\.$#'
-			identifier: argument.invalidPregQuote
-			count: 2
-			path: src/Templater.php
-
-		-
-			message: '#^Property TripBuilder\\Templater\:\:\$placeholders type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Templater.php

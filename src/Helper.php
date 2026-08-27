@@ -25,14 +25,6 @@ class Helper
         return is_string($path) ? $path : '/';
     }
 
-    /**
-     * Escape a value for safe output in an HTML text or attribute context.
-     */
-    public static function escapeHtml(int|float|string|null $value): string
-    {
-        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    }
-
     public static function getUTCTime(int|float $offset): string
     {
         $hours = floor(abs($offset));

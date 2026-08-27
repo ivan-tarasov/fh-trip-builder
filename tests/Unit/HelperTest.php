@@ -72,24 +72,4 @@ final class HelperTest extends TestCase
         ];
     }
 
-    #[DataProvider('escapeProvider')]
-    public function testEscapeHtml(string $expected, int|float|string|null $value): void
-    {
-        self::assertSame($expected, Helper::escapeHtml($value));
-    }
-
-    /**
-     * @return array<string, array{0: string, 1: int|float|string|null}>
-     */
-    public static function escapeProvider(): array
-    {
-        return [
-            'tags'   => ['&lt;script&gt;', '<script>'],
-            'quotes' => ['&quot;x&quot;', '"x"'],
-            'amp'    => ['a &amp; b', 'a & b'],
-            'null'   => ['', null],
-            'int'    => ['5', 5],
-            'plain'  => ['Montreal (YUL)', 'Montreal (YUL)'],
-        ];
-    }
 }
