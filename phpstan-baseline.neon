@@ -31,12 +31,6 @@ parameters:
 			path: src/Api/Airlines/Response.php
 
 		-
-			message: '#^Property TripBuilder\\Api\\Airports\\Response\:\:\$airports type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Api/Airports/Response.php
-
-		-
 			message: '#^Right side of && is always true\.$#'
 			identifier: booleanAnd.rightAlwaysTrue
 			count: 1
