@@ -41,7 +41,6 @@ class AbstractApi extends AbstractController
         'And@nothEr_Auth0riz@tionKey',
     ];
 
-    private array $headers = [];
     protected array $data = [];
     private string $allowedMethod;
 
@@ -91,7 +90,7 @@ class AbstractApi extends AbstractController
                 'endpoint' => Helper::getUrlPath(),
                 'method' => $this->getRequestMethod(),
                 'timestamp' => date('Y-m-d H:i:s'),
-                'data' => $data ?? [],
+                'data' => $data,
             ];
 
             $response = json_encode($response);
@@ -128,11 +127,6 @@ class AbstractApi extends AbstractController
             : '';
     }
 
-    private function getRequestHeaders(): void
-    {
-        $this->setHeaders(getallheaders() ?? []);
-    }
-
     private function setRequestData(): void
     {
         $data = file_get_contents('php://input');
@@ -161,16 +155,6 @@ class AbstractApi extends AbstractController
                 'last_search' => $this->db->now(),
             ]);
         }
-    }
-
-    private function setHeaders(array $headers): void
-    {
-        $this->headers = $headers;
-    }
-
-    private function getHeaders(): array
-    {
-        return $this->headers;
     }
 
     public function setAllowedMethod(string $method): void

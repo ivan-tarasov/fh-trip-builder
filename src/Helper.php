@@ -5,7 +5,6 @@ namespace TripBuilder;
 use DateTime;
 use DateTimeZone;
 use Exception;
-use InvalidArgumentException;
 
 class Helper
 {
@@ -88,43 +87,5 @@ class Helper
     public static function bookingIdToString(int $id): string
     {
         return number_format($id, 0, '', '-');
-    }
-
-    public static function calculateTax(float $amount, string $province = 'QC'): array
-    {
-        $rates = [
-            'NL' => ['HST' => 15],
-            'PE' => ['HST' => 15],
-            'NS' => ['HST' => 15],
-            'NB' => ['HST' => 15],
-            'QC' => ['GST' => 5, 'QST' => 9.975],
-            'ON' => ['HST' => 13],
-            'MB' => ['GST' => 5, 'PST' => 7],
-            'SK' => ['GST' => 5, 'PST' => 6],
-            'AB' => ['GST' => 5],
-            'BC' => ['GST' => 5, 'PST' => 7],
-            'YT' => ['GST' => 5],
-            'NT' => ['GST' => 5],
-            'NU' => ['GST' => 5],
-        ];
-
-        if (!isset($rates[$province])) {
-            throw new InvalidArgumentException("Unknown province: $province");
-        }
-
-        $taxes = [];
-        $totalTax = 0.0;
-
-        foreach ($rates[$province] as $abbr => $rate) {
-            $value = round($amount * ($rate / 100), 2);
-            $taxes[$abbr] = number_format($value, 2, '.', '');
-            $totalTax += $value;
-        }
-
-        return [
-                'amount' => number_format($amount, 2, '.', ''),
-                'taxes' => number_format($totalTax, 2, '.', ''),
-                'total' => number_format($amount + $totalTax, 2, '.', ''),
-            ] + $taxes;
     }
 }

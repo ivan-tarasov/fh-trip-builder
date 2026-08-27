@@ -11,14 +11,6 @@ class MyController extends AbstractController
 {
     /**
      * @return void
-     */
-    public function index(): void
-    {
-        echo 'My::index()';
-    }
-
-    /**
-     * @return void
      * @throws \Exception
      */
     public function bookings(): void

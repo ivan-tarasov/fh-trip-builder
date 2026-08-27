@@ -7,10 +7,9 @@
       "psr-4": {"TripBuilder\\": "src/"}
     },
     "require": {
-        "thingengineer/mysqli-database-class": "dev-master",
+        "thingengineer/mysqli-database-class": "dev-master#5159467ae081adbe96586e45e65a58c0fe7a32ce",
         "vlucas/phpdotenv": "^5.5",
         "guzzlehttp/guzzle": "^7.7",
-        "symfony/console": "^6.3",
-        "ipinfo/ipinfo": "^3.1"
+        "symfony/console": "^6.3"
     }
 }

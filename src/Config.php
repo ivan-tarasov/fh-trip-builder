@@ -67,20 +67,4 @@ class Config
 
         return $value;
     }
-
-    public static function set(string $key, string $value): void
-    {
-        $segments = explode('.', $key);
-        $config =& static::$configData;
-
-        foreach ($segments as $segment) {
-            if (!isset($config[$segment]) || !is_array($config[$segment])) {
-                $config[$segment] = [];
-            }
-
-            $config =& $config[$segment];
-        }
-
-        $config = $value;
-    }
 }

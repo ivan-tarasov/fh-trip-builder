@@ -5,7 +5,6 @@ namespace TripBuilder\Controllers;
 use TripBuilder\AmazonS3;
 use TripBuilder\DataBase\MySql;
 use TripBuilder\Config;
-use TripBuilder\Routs;
 use TripBuilder\Templater;
 
 class HomeController extends AbstractController

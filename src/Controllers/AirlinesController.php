@@ -6,15 +6,10 @@ use TripBuilder\AmazonS3;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Config;
-use TripBuilder\Helper;
 use TripBuilder\Templater;
 
 class AirlinesController
 {
-    const AIRLINES_LOGO_PATH   = 'frontend/images/airlines',
-          AIRLINES_LOGO_EXT    = 'png',
-          AIRLINES_LOGO_NO_IMG = 'no-logo';
-
     /**
      * @return void
      * @throws \GuzzleHttp\Exception\GuzzleException

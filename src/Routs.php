@@ -23,7 +23,6 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/my' => 'My@index',
         '/my/bookings' => 'My@bookings',
 
         /*
@@ -40,7 +39,6 @@ class Routs
         |--------------------------------------------------------------------------
         */
 
-        '/api' => 'Api@index',
         '/api/server' => 'Api@server',
         '/api/airports' => 'Api@airports',
         '/api/airports/autofill' => 'Api@airportsAutofill',
@@ -64,7 +62,6 @@ class Routs
     const EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
-        'Debug',
     ];
 
     private static string $currentPage;

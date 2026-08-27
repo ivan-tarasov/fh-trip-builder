@@ -36,13 +36,6 @@ abstract class AbstractCommand extends Command
         'dark' => ['white', 'black'],
     ];
 
-    private const INDICATOR_SPINNER = [
-        ['⠏', '⠛', '⠹', '⢸', '⣰', '⣤', '⣆', '⡇'],
-        ['▁','▂','▃','▄','▅','▆','▇','█','▇','▆','▅','▄','▃','▁'],
-        ['◜','◝','◞','◟'],
-        ['◐','◓','◑','◒'],
-    ];
-
     private const FORMAT_OUTPUT_LINE_LENGTH = 60;
     private const FORMAT_OUTPUT_DEFAULT_COLOR = 'default';
 

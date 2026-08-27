@@ -12,14 +12,6 @@ class ApiController extends AbstractController
 {
     /**
      * @return void
-     */
-    public function index(): void
-    {
-        // $this->sendResponse(200, ['All works']);
-    }
-
-    /**
-     * @return void
      * @throws \Exception
      */
     public function server(): void

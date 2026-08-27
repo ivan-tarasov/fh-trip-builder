@@ -70,7 +70,6 @@ class Response extends AbstractApi
 
     private int $currentPage;
     private string $sort;
-    private int $totalPages;
     private string $from;
     private string $to;
     private string $departDate;
@@ -404,11 +403,6 @@ class Response extends AbstractApi
     {
         $this->sort = $method;
         return $this;
-    }
-
-    private function setTotalPages(int $count): void
-    {
-        $this->totalPages = $count;
     }
 
     private function setFrom(string $from): static
