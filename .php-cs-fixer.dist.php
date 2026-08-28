@@ -20,5 +20,12 @@ return (new PhpCsFixer\Config())
             'after_heredoc' => true,
             'elements' => ['arrays', 'arguments', 'parameters', 'match'],
         ],
+        // Import global-namespace classes instead of leading-backslash qualifiers.
+        'global_namespace_import' => [
+            'import_classes' => true,
+            'import_constants' => false,
+            'import_functions' => false,
+        ],
+        'fully_qualified_strict_types' => true,
     ])
     ->setFinder($finder);

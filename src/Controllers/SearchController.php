@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use DateInterval;
+use DateTime;
+use Exception;
 use GuzzleHttp\Exception\GuzzleException;
 use stdClass;
 use TripBuilder\ApiClient\Api;
@@ -145,7 +148,7 @@ class SearchController extends AbstractController
                     'no-results.png',
                 )),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             error_log('Search page failed: ' . $e->getMessage());
             echo 'Something went wrong while searching for flights. Please try again later.';
         }
@@ -153,7 +156,7 @@ class SearchController extends AbstractController
 
     /**
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     private function checkHash(): void
     {
@@ -247,7 +250,7 @@ class SearchController extends AbstractController
      * templates render (prices, carrier logos, per-leg flight info).
      *
      * @return array<int, array<string, mixed>>
-     * @throws \Exception
+     * @throws Exception
      */
     private function buildFlights(): array
     {
@@ -258,7 +261,7 @@ class SearchController extends AbstractController
             $tickets = [];
 
             foreach ([$flight->outbound, $flight->returning] as $ticket) {
-                if (! $ticket) {
+                if (!$ticket) {
                     continue;
                 }
 
@@ -366,9 +369,9 @@ class SearchController extends AbstractController
      */
     private function generateTimeRange(): string
     {
-        $startTime = new \DateTime('00:00');
-        $endTime = new \DateTime('23:59');
-        $interval = new \DateInterval('PT30M');
+        $startTime = new DateTime('00:00');
+        $endTime = new DateTime('23:59');
+        $interval = new DateInterval('PT30M');
 
         $range = [];
 
@@ -385,8 +388,8 @@ class SearchController extends AbstractController
     {
         $seconds = $minutes * 60;
 
-        $dtF = new \DateTime('@0');
-        $dtT = new \DateTime("@$seconds");
+        $dtF = new DateTime('@0');
+        $dtT = new DateTime("@$seconds");
 
         $interval = $dtF->diff($dtT);
 

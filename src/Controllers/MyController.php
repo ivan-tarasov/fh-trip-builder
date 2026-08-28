@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use Exception;
 use stdClass;
 use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
@@ -13,7 +14,7 @@ class MyController extends AbstractController
 {
     /**
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function bookings(): void
     {
@@ -26,7 +27,7 @@ class MyController extends AbstractController
             $return = json_decode($row['flight_return'] ?? '');
 
             // Skip rows whose stored flight JSON is corrupt.
-            if (! $outbound instanceof stdClass) {
+            if (!$outbound instanceof stdClass) {
                 continue;
             }
 

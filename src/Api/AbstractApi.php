@@ -151,7 +151,7 @@ abstract class AbstractApi
 
         $decoded = json_decode($data, true);
 
-        if (! is_array($decoded)) {
+        if (!is_array($decoded)) {
             ApiResponder::badRequest('Malformed JSON body');
         }
 

@@ -6,6 +6,7 @@ namespace TripBuilder\Tests\Integration;
 
 use PDO;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Throwable;
 use TripBuilder\Database\Connection;
 
@@ -45,7 +46,7 @@ abstract class IntegrationTestCase extends TestCase
         $database = (string) (getenv('DB_DATABASE') ?: '');
 
         if ($database === '') {
-            throw new \RuntimeException('DB_DATABASE not set');
+            throw new RuntimeException('DB_DATABASE not set');
         }
 
         $socket = (string) (getenv('DB_SOCKET') ?: '');

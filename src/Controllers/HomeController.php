@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use Exception;
 use TripBuilder\Config;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\View\TwigRenderer;
@@ -12,7 +13,7 @@ class HomeController extends AbstractController
 {
     /**
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function index(): void
     {

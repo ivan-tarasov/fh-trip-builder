@@ -91,7 +91,7 @@ class Generate extends AbstractCommand
             },
         );
 
-        if (! is_numeric($flightsToAdd) || (int) $flightsToAdd < 1) {
+        if (!is_numeric($flightsToAdd) || (int) $flightsToAdd < 1) {
             $this->io->error('The "flights" argument must be a positive number.');
 
             return Command::INVALID;
@@ -242,7 +242,7 @@ class Generate extends AbstractCommand
             }
 
             $connection->commit();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $connection->rollBack();
 
             throw $e;

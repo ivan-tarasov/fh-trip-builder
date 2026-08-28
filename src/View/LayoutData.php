@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\View;
 
+use Exception;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
@@ -53,7 +54,7 @@ final class LayoutData
 
     /**
      * @return array<string, string>
-     * @throws \Exception
+     * @throws Exception
      */
     public function gitInfo(): array
     {
@@ -76,7 +77,7 @@ final class LayoutData
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     private function flightsCount(): int
     {

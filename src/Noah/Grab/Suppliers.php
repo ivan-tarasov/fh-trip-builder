@@ -57,7 +57,7 @@ class Suppliers extends AbstractCommand
             // Build the complete path to save the image
             $targetPath = $targetFolder . $filename;
 
-            if (! file_exists($targetPath)) {
+            if (!file_exists($targetPath)) {
                 // Get the HTTP headers of the URL
                 $headers = get_headers($imageUrl);
 

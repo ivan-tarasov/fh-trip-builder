@@ -9,6 +9,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 use TripBuilder\Config;
 use TripBuilder\Noah\AbstractCommand;
 
@@ -91,7 +92,7 @@ class Install extends AbstractCommand
             try {
                 $this->connection()->pdo()->exec($query);
                 $this->formatOutput($action, 'created', 'success');
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $this->formatOutput($action, 'failed', 'danger');
             }
         }
@@ -127,14 +128,14 @@ class Install extends AbstractCommand
                 try {
                     // Insert, or refresh the row's columns if it already exists.
                     $this->connection()->execute($sql, array_values($values));
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $failed = true;
                     $this->formatOutput($action, 'failed', 'danger');
                     break;
                 }
             }
 
-            if (! $failed) {
+            if (!$failed) {
                 $this->formatOutput($action, 'done', 'success');
             }
         }
