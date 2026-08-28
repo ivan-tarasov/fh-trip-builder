@@ -7,14 +7,14 @@ namespace TripBuilder\Controllers;
 use DateInterval;
 use DateTime;
 use Exception;
-use GuzzleHttp\Exception\GuzzleException;
 use stdClass;
-use TripBuilder\ApiClient\Api;
-use TripBuilder\ApiClient\Credentials;
+use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\SearchRepository;
+use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 use TripBuilder\View\TwigRenderer;
 
@@ -39,9 +39,6 @@ class SearchController extends AbstractController
 
     private ?stdClass $data = null;
 
-    /**
-     * @throws GuzzleException
-     */
     public function index(): void
     {
         try {
@@ -90,28 +87,31 @@ class SearchController extends AbstractController
                 return;
             }
 
-            $apiClient = new Api(Config::get('api.fake.url'));
+            $query = new FlightSearchQuery(
+                currentPage: $this->get[self::GET_PAGE] ?? 1,
+                sort: 'price',
+                from: $this->get[self::GET_FROM],
+                to: $this->get[self::GET_TO],
+                departDate: $this->get[self::GET_DEPART],
+                returnDate: $this->get[self::GET_RETURN] ?? '',
+                adultNum: 1, // FIXME: now we provide only 1 adult count
+                childNum: 0, // FIXME: now we provide only 0 child count
+            );
 
-            $headers = [
-                'Authorization' => Credentials::getBearer(),
-                'Accept' => 'application/json',
-            ];
+            // Call the flight search directly; reuse the nested-object shape the
+            // removed HTTP round-trip used to produce (array -> JSON -> stdClass).
+            $payload = new FlightFinder($this->connection())->search(
+                $query,
+                TripType::from($this->get[self::GET_TRIPTYPE]),
+            );
 
-            $data = [
-                'page' => $this->get[self::GET_PAGE] ?? 1,
-                'sort' => 'price',
-                'trip_type' => $this->get[self::GET_TRIPTYPE], // already normalised to a TripType value
-                'from' => $this->get[self::GET_FROM],
-                'to' => $this->get[self::GET_TO],
-                'depart_date' => $this->get[self::GET_DEPART],
-                'return_date' => $this->get[self::GET_RETURN],
-                'adult_count' => 1, // FIXME: now we provide only 1 adult count
-                'child_count' => 0, // FIXME: now we provide only 0 child count
-            ];
+            $decoded = json_decode((string) json_encode($payload), false);
 
-            $flights_response = $apiClient->post('flights', $headers, $data);
+            if (! $decoded instanceof stdClass) {
+                throw new Exception('Failed to build the flights response');
+            }
 
-            $this->setData($flights_response->data);
+            $this->setData($decoded);
 
             // Recording search stat
             $this->searchStat();
@@ -135,7 +135,7 @@ class SearchController extends AbstractController
                 ),
                 'session_sort' => $_SESSION[self::POST_SORT],
                 'clock_range' => $this->generateTimeRange(),
-                'airlines' => $this->fetchSidebarAirlines($apiClient, $headers),
+                'airlines' => $this->fetchSidebarAirlines(),
                 // Flights / no-result
                 'total_flights' => $total_flights,
                 'total_flights_text' => Helper::plural((int) $total_flights, 'flight', showNumber: true),
@@ -215,11 +215,9 @@ class SearchController extends AbstractController
     /**
      * Fetch the airlines present in the flights response for the sidebar filter.
      *
-     * @param array<string, string> $headers
-     * @return array<int, stdClass>
-     * @throws GuzzleException
+     * @return list<array<string, mixed>>
      */
-    private function fetchSidebarAirlines(Api $apiClient, array $headers): array
+    private function fetchSidebarAirlines(): array
     {
         $carriers = array_unique(array_merge(...array_map(function ($item) {
             $values = [$item->outbound->carrier];
@@ -235,9 +233,7 @@ class SearchController extends AbstractController
             return [];
         }
 
-        $airlines_response = $apiClient->post('airlines', $headers, ['selected' => implode(',', $carriers)]);
-
-        return $airlines_response->data ?? [];
+        return new AirlineRepository($this->connection())->search(array_values($carriers), false);
     }
 
     /**

@@ -44,6 +44,21 @@ final readonly class AirlineRepository
     }
 
     /**
+     * Bump the booking counter for the given airline IATA codes.
+     */
+    public function recordBooking(string ...$codes): void
+    {
+        $in = implode(', ', array_fill(0, count($codes), '?'));
+
+        $this->connection->execute(
+            'UPDATE ' . Table::Airlines->value
+            . ' SET book_count = book_count + 1, last_search = NOW()'
+            . " WHERE code IN ($in)",
+            array_values($codes),
+        );
+    }
+
+    /**
      * The most-booked airlines first (matches the legacy `orderBy('book_count')`
      * default DESC direction).
      *

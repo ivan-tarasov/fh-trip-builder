@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace TripBuilder\Api;
 
 use TripBuilder\Database\Connection;
-use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
 
@@ -20,12 +19,6 @@ abstract class AbstractApi
     private const array RAW_RESPONSE_ENDPOINTS = [
         '/api/airports/autofill',
     ];
-
-    protected const string DB_TABLE_AIRLINES = Table::Airlines->value;
-    protected const string DB_TABLE_AIRPORTS = Table::Airports->value;
-    protected const string DB_TABLE_BOOKINGS = Table::Bookings->value;
-    protected const string DB_TABLE_COUNTRIES = Table::Countries->value;
-    protected const string DB_TABLE_FLIGHTS = Table::Flights->value;
 
     // Parsed request payload: readable by the endpoint subclasses, but only
     // this base class may populate it (from setRequestData()).
@@ -153,27 +146,6 @@ abstract class AbstractApi
         }
 
         $this->data = $decoded;
-    }
-
-    /**
-     * @param list<string> $conditions
-     */
-    protected function updateSearchStats(string $table, array $conditions): void
-    {
-        $in = implode(', ', array_fill(0, count($conditions), '?'));
-
-        if ($table === self::DB_TABLE_AIRPORTS) {
-            $this->connection()->execute(
-                "UPDATE `$table` SET search_count = search_count + 1, last_search = NOW()"
-                . " WHERE code IN ($in) OR city_code IN ($in)",
-                [...$conditions, ...$conditions],
-            );
-        } elseif ($table === self::DB_TABLE_AIRLINES) {
-            $this->connection()->execute(
-                "UPDATE `$table` SET book_count = book_count + 1, last_search = NOW() WHERE code IN ($in)",
-                array_values($conditions),
-            );
-        }
     }
 
     public function setAllowedMethod(HttpMethod $method): void

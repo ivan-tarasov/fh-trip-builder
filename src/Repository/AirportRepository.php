@@ -37,6 +37,22 @@ final readonly class AirportRepository
     }
 
     /**
+     * Bump the search counter for the given departure/arrival airports,
+     * matched by airport code or city code.
+     */
+    public function recordSearch(string ...$codes): void
+    {
+        $in = implode(', ', array_fill(0, count($codes), '?'));
+
+        $this->connection->execute(
+            'UPDATE ' . Table::Airports->value
+            . ' SET search_count = search_count + 1, last_search = NOW()'
+            . " WHERE code IN ($in) OR city_code IN ($in)",
+            [...$codes, ...$codes],
+        );
+    }
+
+    /**
      * City name for an airport code or city code (first match), or null.
      */
     public function cityByCode(string $code): ?string
