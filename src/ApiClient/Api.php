@@ -10,7 +10,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\TransferException;
 use stdClass;
 
-class Api
+final readonly class Api
 {
     private const int TIMEOUT = 10;
 

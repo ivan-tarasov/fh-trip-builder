@@ -7,12 +7,12 @@ namespace TripBuilder\Repository;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
-final class AirportRepository
+final readonly class AirportRepository
 {
     private const string COLUMNS = 'a.code, a.title, c.title AS country, a.city_code, a.city, '
         . 'a.timezone, a.timezone_name, a.latitude, a.longitude, a.altitude';
 
-    public function __construct(private readonly Connection $connection) {}
+    public function __construct(private Connection $connection) {}
 
     /**
      * Enabled airports (optionally major only), joined to their country,

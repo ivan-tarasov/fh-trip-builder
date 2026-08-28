@@ -17,11 +17,11 @@ use Twig\TwigFunction;
  * Templates are escaped by default and support inheritance/includes/loops, so
  * view assembly lives in the templates rather than in the controllers.
  */
-final class TwigRenderer
+final readonly class TwigRenderer
 {
-    private readonly Environment $twig;
+    private Environment $twig;
 
-    private readonly LayoutData $layout;
+    private LayoutData $layout;
 
     public function __construct()
     {

@@ -7,9 +7,9 @@ namespace TripBuilder\Repository;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
-final class BookingRepository
+final readonly class BookingRepository
 {
-    public function __construct(private readonly Connection $connection) {}
+    public function __construct(private Connection $connection) {}
 
     /**
      * Bookings for a session, earliest departure first.
