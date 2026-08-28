@@ -9,7 +9,7 @@ use TripBuilder\Database\Table;
 
 final class AirportRepository
 {
-    private const COLUMNS = 'a.code, a.title, c.title AS country, a.city_code, a.city, '
+    private const string COLUMNS = 'a.code, a.title, c.title AS country, a.city_code, a.city, '
         . 'a.timezone, a.timezone_name, a.latitude, a.longitude, a.altitude';
 
     public function __construct(private readonly Connection $connection) {}

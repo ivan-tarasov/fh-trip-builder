@@ -6,8 +6,8 @@ namespace TripBuilder;
 
 class Csrf
 {
-    private const SESSION_KEY = 'csrf_token';
-    public const HEADER = 'X-CSRF-Token';
+    private const string SESSION_KEY = 'csrf_token';
+    public const string HEADER = 'X-CSRF-Token';
 
     /**
      * Return the current session CSRF token, creating one if needed.

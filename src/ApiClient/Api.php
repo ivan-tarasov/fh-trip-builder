@@ -10,7 +10,7 @@ use GuzzleHttp\Exception\TransferException;
 
 class Api
 {
-    private const TIMEOUT = 10;
+    private const int TIMEOUT = 10;
 
     private Client $client;
 

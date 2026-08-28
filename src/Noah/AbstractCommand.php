@@ -16,7 +16,7 @@ use TripBuilder\Helper;
 
 abstract class AbstractCommand extends Command
 {
-    private const NOAH_VERSION = 'v0.3.4';
+    private const string NOAH_VERSION = 'v0.3.4';
 
     /**
      * Color presets
@@ -27,7 +27,7 @@ abstract class AbstractCommand extends Command
      *         black, red,        green,        yellow,        blue,        magenta,        cyan,        white,
      *         gray,  bright-red, bright-green, bright-yellow, bright-blue, bright-magenta, bright-cyan, bright-white
      */
-    private const STYLE_FORMATS = [
+    private const array STYLE_FORMATS = [
         'default' => ['default', 'default'],
         'primary' => ['white', 'blue'],
         'success' => ['bright-white', 'green'],
@@ -38,11 +38,11 @@ abstract class AbstractCommand extends Command
         'dark' => ['white', 'black'],
     ];
 
-    private const FORMAT_OUTPUT_LINE_LENGTH = 60;
-    private const FORMAT_OUTPUT_DEFAULT_COLOR = 'default';
+    private const int FORMAT_OUTPUT_LINE_LENGTH = 60;
+    private const string FORMAT_OUTPUT_DEFAULT_COLOR = 'default';
 
-    protected const CONFIG_DIR_TABLES = 'noah/db/tables';
-    protected const CONFIG_DIR_SEEDERS = 'noah/db/seeders';
+    protected const string CONFIG_DIR_TABLES = 'noah/db/tables';
+    protected const string CONFIG_DIR_SEEDERS = 'noah/db/seeders';
 
     // Console I/O handles: set once by initialize(), read-only for commands.
     protected private(set) InputInterface $input;

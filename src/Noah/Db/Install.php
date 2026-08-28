@@ -21,8 +21,8 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Install extends AbstractCommand
 {
-    private const MESSAGE_CREATING_TABLE = 'Creating `%s` table';
-    private const MESSAGE_SEEDING_TABLE = 'Seeding `%s` table';
+    private const string MESSAGE_CREATING_TABLE = 'Creating `%s` table';
+    private const string MESSAGE_SEEDING_TABLE = 'Seeding `%s` table';
 
     /**
      * @throws Exception

@@ -30,24 +30,24 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Generate extends AbstractCommand
 {
-    private const FLIGHTS_COUNT = 10000;
-    private const NUMBERS_POOL = 9999;
-    private const PRICE_MULTIPLIER = 8;
-    private const PRICE_ADD_DOLLARS = [5, 800];
-    private const PRICE_TAX_PERCENT = [5, 90];
-    private const DURATION_ADD_KM = [10, 55];
-    private const DATE_ADD_DAYS = [1, 90];
-    private const FLIGHT_SPEED_KMH = [700, 900];
+    private const int FLIGHTS_COUNT = 10000;
+    private const int NUMBERS_POOL = 9999;
+    private const int PRICE_MULTIPLIER = 8;
+    private const array PRICE_ADD_DOLLARS = [5, 800];
+    private const array PRICE_TAX_PERCENT = [5, 90];
+    private const array DURATION_ADD_KM = [10, 55];
+    private const array DATE_ADD_DAYS = [1, 90];
+    private const array FLIGHT_SPEED_KMH = [700, 900];
 
-    private const PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory%\n %message%";
-    private const PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>';
-    private const PROGRESS_CHARACTER_CURRENT = '<fg=green>▓</>';
-    private const PROGRESS_CHARACTER_DONE = '<fg=green>▓</>';
+    private const string PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory%\n %message%";
+    private const string PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>';
+    private const string PROGRESS_CHARACTER_CURRENT = '<fg=green>▓</>';
+    private const string PROGRESS_CHARACTER_DONE = '<fg=green>▓</>';
 
-    private const PROGRESS_MSG_BREAK = 300;
-    private const PROGRESS_MSG_FORMAT = '> %s...';
+    private const int PROGRESS_MSG_BREAK = 300;
+    private const string PROGRESS_MSG_FORMAT = '> %s...';
 
-    private const PROGRESS_MSG_POOL = [
+    private const array PROGRESS_MSG_POOL = [
         'Raising the ailerons',
         'Removing the flaps',
         'Removing the chassis',
@@ -59,10 +59,10 @@ class Generate extends AbstractCommand
         'Joining the "10k" club',
     ];
 
-    private const COUNT_DUPLICATES = 'Deleted duplicate flights';
-    private const COUNT_TOTAL = 'Total added';
+    private const string COUNT_DUPLICATES = 'Deleted duplicate flights';
+    private const string COUNT_TOTAL = 'Total added';
 
-    private const INSERT_BATCH_SIZE = 500;
+    private const int INSERT_BATCH_SIZE = 500;
 
     private array $count = [
         self::COUNT_DUPLICATES => 0,

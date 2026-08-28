@@ -6,7 +6,7 @@ namespace TripBuilder;
 
 class Routes
 {
-    public const ENABLED_ROUTES = [
+    public const array ENABLED_ROUTES = [
 
         /*
         |--------------------------------------------------------------------------
@@ -58,9 +58,9 @@ class Routes
 
     ];
 
-    public const ROUTES_CONTROLLERS_PATH = 'TripBuilder\Controllers';
+    public const string ROUTES_CONTROLLERS_PATH = 'TripBuilder\Controllers';
 
-    public const EXCLUDE_HEADER_FOOTER = [
+    public const array EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
     ];

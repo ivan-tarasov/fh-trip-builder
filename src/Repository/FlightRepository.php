@@ -16,7 +16,7 @@ use TripBuilder\Database\Table;
  */
 final class FlightRepository
 {
-    private const PER_PAGE = 10;
+    private const int PER_PAGE = 10;
 
     public function __construct(private readonly Connection $connection) {}
 

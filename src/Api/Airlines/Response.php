@@ -11,8 +11,8 @@ use TripBuilder\Repository\AirlineRepository;
 
 class Response extends AbstractApi
 {
-    private const DATA_KEY_SELECTED = 'selected';
-    private const DATA_KEY_MAJOR = 'major';
+    private const string DATA_KEY_SELECTED = 'selected';
+    private const string DATA_KEY_MAJOR = 'major';
 
     /**
      * @throws Exception

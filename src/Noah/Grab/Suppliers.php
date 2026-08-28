@@ -22,8 +22,8 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Suppliers extends AbstractCommand
 {
-    private const IMAGE_URL = 'https://mpics.avs.io/al_square/64/64/%s.png';
-    private const LOCAL_IMAGE_PATH = '/frontend/images/suppliers/';
+    private const string IMAGE_URL = 'https://mpics.avs.io/al_square/64/64/%s.png';
+    private const string LOCAL_IMAGE_PATH = '/frontend/images/suppliers/';
 
     /**
      * @throws Exception

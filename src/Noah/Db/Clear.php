@@ -23,19 +23,19 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Clear extends AbstractCommand
 {
-    private const ARG_NAME = 'table';
-    private const ARG_DESCRIPTION = 'Database table to clear';
+    private const string ARG_NAME = 'table';
+    private const string ARG_DESCRIPTION = 'Database table to clear';
 
-    private const MESSAGE_WARNING = 'WARNING!!! ';
-    private const MESSAGE_DONE = 'Table(s) was successfully purged';
+    private const string MESSAGE_WARNING = 'WARNING!!! ';
+    private const string MESSAGE_DONE = 'Table(s) was successfully purged';
 
-    private const ALL_TABLES = 'all';
+    private const string ALL_TABLES = 'all';
 
-    private const CONFIRM_QUESTION_ONE = 'You\'re about to purge ALL DATA from CHOSEN TABLE(S)! Are you sure?';
-    private const CONFIRM_QUESTION_TWO = 'Think twice! One more time - ARE YOU SURE?';
+    private const string CONFIRM_QUESTION_ONE = 'You\'re about to purge ALL DATA from CHOSEN TABLE(S)! Are you sure?';
+    private const string CONFIRM_QUESTION_TWO = 'Think twice! One more time - ARE YOU SURE?';
 
-    private const SQL_QUERY_DELETE_FROM = 'DELETE FROM %s';
-    private const SQL_QUERY_ALTER = 'ALTER TABLE %s AUTO_INCREMENT = %s';
+    private const string SQL_QUERY_DELETE_FROM = 'DELETE FROM %s';
+    private const string SQL_QUERY_ALTER = 'ALTER TABLE %s AUTO_INCREMENT = %s';
 
     protected function configure(): void
     {

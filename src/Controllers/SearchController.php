@@ -17,7 +17,7 @@ use TripBuilder\View\TwigRenderer;
 
 class SearchController extends AbstractController
 {
-    private const GET_HASH = 'hash',
+    private const string GET_HASH = 'hash',
         GET_FROM = 'from',
         GET_TO = 'to',
         GET_DEPART = 'depart',
@@ -26,7 +26,7 @@ class SearchController extends AbstractController
         GET_CLASS = 'class',
         GET_PAGE = 'page';
 
-    private const POST_SORT = 'sort',
+    private const string POST_SORT = 'sort',
         POST_TIME_RANGE = 'time_range',
         POST_AIRLINES = 'airlines';
 

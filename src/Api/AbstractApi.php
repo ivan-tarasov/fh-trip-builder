@@ -11,21 +11,21 @@ use TripBuilder\Routes;
 
 abstract class AbstractApi
 {
-    private const HEADER_AUTH_KEY = 'Authorization';
+    private const string HEADER_AUTH_KEY = 'Authorization';
 
-    private const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
+    private const array EXCLUDE_AUTH_CHECK_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    private const RAW_RESPONSE_ENDPOINTS = [
+    private const array RAW_RESPONSE_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    protected const DB_TABLE_AIRLINES = Table::Airlines->value;
-    protected const DB_TABLE_AIRPORTS = Table::Airports->value;
-    protected const DB_TABLE_BOOKINGS = Table::Bookings->value;
-    protected const DB_TABLE_COUNTRIES = Table::Countries->value;
-    protected const DB_TABLE_FLIGHTS = Table::Flights->value;
+    protected const string DB_TABLE_AIRLINES = Table::Airlines->value;
+    protected const string DB_TABLE_AIRPORTS = Table::Airports->value;
+    protected const string DB_TABLE_BOOKINGS = Table::Bookings->value;
+    protected const string DB_TABLE_COUNTRIES = Table::Countries->value;
+    protected const string DB_TABLE_FLIGHTS = Table::Flights->value;
 
     // Parsed request payload: readable by the endpoint subclasses, but only
     // this base class may populate it (from setRequestData()).
