@@ -65,13 +65,10 @@ abstract class AbstractApi
             return false;
         }
 
-        foreach (explode(',', $_ENV['API_ACCEPTED_TOKENS'] ?? '') as $authorized) {
-            if ($authorized !== '' && hash_equals($authorized, $token)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(
+            explode(',', $_ENV['API_ACCEPTED_TOKENS'] ?? ''),
+            static fn(string $authorized): bool => $authorized !== '' && hash_equals($authorized, $token),
+        );
     }
 
     private function guardNotAllowedRequestMethod(): void
