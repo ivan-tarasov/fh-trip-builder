@@ -5,30 +5,18 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Exception;
-use TripBuilder\ApiClient\Api;
-use TripBuilder\ApiClient\Credentials;
-use TripBuilder\Config;
+use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\View\TwigRenderer;
 
-class AirlinesController
+class AirlinesController extends AbstractController
 {
-    /**
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     */
     public function index(): void
     {
-        $apiClient = new Api(Config::get('api.fake.url'));
-
         try {
-            $headers = [
-                'Authorization' => Credentials::getBearer(),
-                'Accept' => 'application/json',
-            ];
-
-            $response = $apiClient->post('airlines', $headers, ['major' => true]);
+            $airlines = new AirlineRepository($this->connection())->search(null, true);
 
             echo new TwigRenderer()->renderPage('airlines/view.html.twig', [
-                'airlines' => $response->data,
+                'airlines' => $airlines,
             ]);
         } catch (Exception $e) {
             error_log('Airlines page failed: ' . $e->getMessage());

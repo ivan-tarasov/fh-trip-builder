@@ -31,48 +31,6 @@ parameters:
 			path: src/Api/Airports/Response.php
 
 		-
-			message: '#^Method TripBuilder\\Api\\Flights\\Response\:\:getOnewayFlights\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Api/Flights/Response.php
-
-		-
-			message: '#^Method TripBuilder\\Api\\Flights\\Response\:\:getRoundtripFlights\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Api/Flights/Response.php
-
-		-
-			message: '#^Method TripBuilder\\ApiClient\\Api\:\:get\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/ApiClient/Api.php
-
-		-
-			message: '#^Method TripBuilder\\ApiClient\\Api\:\:get\(\) has parameter \$params with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/ApiClient/Api.php
-
-		-
-			message: '#^Method TripBuilder\\ApiClient\\Api\:\:get\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/ApiClient/Api.php
-
-		-
-			message: '#^Method TripBuilder\\ApiClient\\Api\:\:post\(\) has parameter \$headers with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/ApiClient/Api.php
-
-		-
-			message: '#^Method TripBuilder\\ApiClient\\Api\:\:post\(\) has parameter \$params with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/ApiClient/Api.php
-
-		-
 			message: '#^Property TripBuilder\\Config\:\:\$configData type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

@@ -4,22 +4,16 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
-use GuzzleHttp\Exception\GuzzleException;
 use Throwable;
-use TripBuilder\ApiClient\Api;
-use TripBuilder\ApiClient\Credentials;
-use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Service\FlightFinder;
 
 class AjaxController extends AbstractController
 {
     private array $get;
 
-    /**
-     * @throws GuzzleException
-     */
     public function addTrip(): void
     {
         header('Content-type: application/json; charset=utf-8');
@@ -42,12 +36,7 @@ class AjaxController extends AbstractController
             return;
         }
 
-        $apiClient = new Api(Config::get('api.fake.url'));
-
-        $headers = [
-            'Authorization' => Credentials::getBearer(),
-            'Accept' => 'application/json',
-        ];
+        $finder = new FlightFinder($this->connection());
 
         $request = [
             'session_id' => session_id(),
@@ -60,13 +49,22 @@ class AjaxController extends AbstractController
                 continue;
             }
 
-            $response = $apiClient->post('flights/one', $headers, ['id' => $flight_id,]);
+            $flight = $finder->findOne((int) $flight_id);
 
-            if ($field == 'flight_outbound') {
-                $request['departure_time'] = $response->data->depart->date_time;
+            if ($flight === null) {
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'The selected flight is no longer available.',
+                ]);
+
+                return;
             }
 
-            $request[$field] = json_encode($response->data);
+            if ($field == 'flight_outbound') {
+                $request['departure_time'] = $flight['depart']['date_time'];
+            }
+
+            $request[$field] = json_encode($flight);
         }
 
         try {
