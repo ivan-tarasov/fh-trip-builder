@@ -44,9 +44,10 @@ abstract class AbstractCommand extends Command
     protected const CONFIG_DIR_TABLES = 'noah/db/tables';
     protected const CONFIG_DIR_SEEDERS = 'noah/db/seeders';
 
-    protected InputInterface $input;
-    protected OutputInterface $output;
-    protected SymfonyStyle $io;
+    // Console I/O handles: set once by initialize(), read-only for commands.
+    protected private(set) InputInterface $input;
+    protected private(set) OutputInterface $output;
+    protected private(set) SymfonyStyle $io;
 
     private ?Connection $connection = null;
 

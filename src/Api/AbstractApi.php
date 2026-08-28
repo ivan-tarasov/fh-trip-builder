@@ -27,7 +27,9 @@ abstract class AbstractApi
     protected const DB_TABLE_COUNTRIES = Table::Countries->value;
     protected const DB_TABLE_FLIGHTS = Table::Flights->value;
 
-    protected array $data = [];
+    // Parsed request payload: readable by the endpoint subclasses, but only
+    // this base class may populate it (from setRequestData()).
+    protected private(set) array $data = [];
     private HttpMethod $allowedMethod;
 
     private ?Connection $connection = null;
