@@ -23,7 +23,7 @@ final class TwigRendererTest extends TestCase
     public function testRendersFragment(): void
     {
         $html = $this->renderer->render('search/redirect.html.twig', [
-            'image_url'     => '//cdn.example.test/gif.gif',
+            'image_url' => '//cdn.example.test/gif.gif',
             'search_params' => 'from=YUL',
         ]);
 
@@ -34,7 +34,7 @@ final class TwigRendererTest extends TestCase
     public function testAutoEscapesHtmlContext(): void
     {
         $html = $this->renderer->render('search/redirect.html.twig', [
-            'image_url'     => 'x"><script>alert(1)</script>',
+            'image_url' => 'x"><script>alert(1)</script>',
             'search_params' => '',
         ]);
 
@@ -45,7 +45,7 @@ final class TwigRendererTest extends TestCase
     public function testEscapesJavascriptContext(): void
     {
         $html = $this->renderer->render('search/redirect.html.twig', [
-            'image_url'     => '',
+            'image_url' => '',
             'search_params' => 'a="b"&c=<d>',
         ]);
 
@@ -62,10 +62,10 @@ final class TwigRendererTest extends TestCase
     public function testRegisteredFunctionsAndEscapingInRealTemplate(): void
     {
         $airline = (object) [
-            'code'  => 'AC',
+            'code' => 'AC',
             'title' => '<b>Air & Co</b>',
             'phone' => '123',
-            'url'   => 'https://example.test',
+            'url' => 'https://example.test',
         ];
 
         $html = $this->renderer->render('airlines/card.html.twig', ['airline' => $airline]);

@@ -20,7 +20,7 @@ class Response extends AbstractApi
     {
         $majorOnly = !empty($this->data['major']) && $this->data['major'];
 
-        $airports = (new AirportRepository($this->connection()))->enabled($majorOnly);
+        $airports = new AirportRepository($this->connection())->enabled($majorOnly);
 
         $this->sendResponse(HttpStatus::Ok, $airports);
     }
@@ -37,7 +37,7 @@ class Response extends AbstractApi
             return;
         }
 
-        $airports = (new AirportRepository($this->connection()))->autofill($query);
+        $airports = new AirportRepository($this->connection())->autofill($query);
 
         $airportsGroups = $response = [];
 
@@ -52,17 +52,17 @@ class Response extends AbstractApi
 
         foreach ($airportsGroups as $city => $group) {
             $response[] = $renderer->render('api/airports/autofill/city-span.html.twig', [
-                'city_code'    => $group['code'],
-                'city_name'    => $city,
+                'city_code' => $group['code'],
+                'city_name' => $city,
                 'country_name' => $group['country'],
-                'time_zone'    => Helper::getUTCTime((float) $group['timezone']),
+                'time_zone' => Helper::getUTCTime((float) $group['timezone']),
             ]);
 
             foreach ($group['airports'] as $airport) {
                 $response[] = $renderer->render('api/airports/autofill/airport-span.html.twig', [
-                    'airport_code'    => $airport['code'],
-                    'airport_name'    => $airport['title'],
-                    'city_name'       => $airport['city'],
+                    'airport_code' => $airport['code'],
+                    'airport_name' => $airport['title'],
+                    'city_name' => $airport['city'],
                     'airport_country' => $airport['country'],
                 ]);
             }

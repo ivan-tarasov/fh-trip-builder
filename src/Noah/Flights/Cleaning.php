@@ -9,6 +9,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 use TripBuilder\Database\Table;
 use TripBuilder\Noah\AbstractCommand;
 
@@ -31,7 +32,7 @@ class Cleaning extends AbstractCommand
                 'DELETE FROM ' . Table::Flights->value . ' WHERE DATE(departure_time) < ?',
                 [date('Y-m-d')],
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->io->error('Deleting old flights failed: ' . $e->getMessage());
 
             return Command::FAILURE;

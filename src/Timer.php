@@ -8,7 +8,7 @@ use Exception;
 
 class Timer
 {
-    private const ACCURACY_DEFAULT = 3;
+    private const int ACCURACY_DEFAULT = 3;
 
     private static ?float $startTime = null;
     private static ?float $endTime = null;

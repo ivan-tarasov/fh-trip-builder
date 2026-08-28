@@ -14,46 +14,46 @@ use TripBuilder\TripType;
 
 class Response extends AbstractApi
 {
-    private const PER_PAGE_LIMIT = 10;
+    private const int PER_PAGE_LIMIT = 10;
 
-    private const DATA_PAGE = 'page';
-    private const DATA_SORT = 'sort';
-    private const DATA_TRIPTYPE = 'trip_type';
-    private const DATA_DEPART = 'from';
-    private const DATA_ARRIVE = 'to';
-    private const DATA_DEPART_DATE = 'depart_date';
-    private const DATA_RETURN_DATE = 'return_date';
-    private const DATA_ADULT_COUNT = 'adult_count';
-    private const DATA_CHILD_COUNT = 'child_count';
-    private const DATA_FLIGHT_ID = 'id';
+    private const string DATA_PAGE = 'page';
+    private const string DATA_SORT = 'sort';
+    private const string DATA_TRIPTYPE = 'trip_type';
+    private const string DATA_DEPART = 'from';
+    private const string DATA_ARRIVE = 'to';
+    private const string DATA_DEPART_DATE = 'depart_date';
+    private const string DATA_RETURN_DATE = 'return_date';
+    private const string DATA_ADULT_COUNT = 'adult_count';
+    private const string DATA_CHILD_COUNT = 'child_count';
+    private const string DATA_FLIGHT_ID = 'id';
 
-    private const RESPONSE_FLIGHT_ID = 'id';
-    private const RESPONSE_CURRENT_PAGE = 'current_page';
-    private const RESPONSE_TOTAL_PAGES = 'total_pages';
-    private const RESPONSE_PER_PAGE = 'per_page';
-    private const RESPONSE_TOTAL_FLIGHTS = 'total_flights';
-    private const RESPONSE_FLIGHTS = 'flights';
-    private const RESPONSE_OUTBOUND = 'outbound';
-    private const RESPONSE_RETURNING = 'returning';
-    private const RESPONSE_DEPART = 'depart';
-    private const RESPONSE_ARRIVE = 'arrive';
-    private const RESPONSE_FLIGHT_NUMBER = 'number';
-    private const RESPONSE_AIRPORT_CODE = 'airport_code';
-    private const RESPONSE_AIRPORT_NAME = 'airport_name';
-    private const RESPONSE_AIRPORT_COUNTRY = 'airport_country';
-    private const RESPONSE_AIRPORT_CITY = 'airport_city';
-    private const RESPONSE_DATE_TIME = 'date_time';
-    private const RESPONSE_FLIGHT_CARRIER_CODE = 'carrier';
-    private const RESPONSE_FLIGHT_CARRIER_NAME = 'carrier_name';
-    private const RESPONSE_CABIN_CODE = 'cabin_code';
-    private const RESPONSE_DISTANCE = 'distance';
-    private const RESPONSE_DURATION = 'duration';
-    private const RESPONSE_PRICE_BASE = 'price_base';
-    private const RESPONSE_PRICE_TAX = 'price_tax';
-    private const RESPONSE_RATING = 'rating';
+    private const string RESPONSE_FLIGHT_ID = 'id';
+    private const string RESPONSE_CURRENT_PAGE = 'current_page';
+    private const string RESPONSE_TOTAL_PAGES = 'total_pages';
+    private const string RESPONSE_PER_PAGE = 'per_page';
+    private const string RESPONSE_TOTAL_FLIGHTS = 'total_flights';
+    private const string RESPONSE_FLIGHTS = 'flights';
+    private const string RESPONSE_OUTBOUND = 'outbound';
+    private const string RESPONSE_RETURNING = 'returning';
+    private const string RESPONSE_DEPART = 'depart';
+    private const string RESPONSE_ARRIVE = 'arrive';
+    private const string RESPONSE_FLIGHT_NUMBER = 'number';
+    private const string RESPONSE_AIRPORT_CODE = 'airport_code';
+    private const string RESPONSE_AIRPORT_NAME = 'airport_name';
+    private const string RESPONSE_AIRPORT_COUNTRY = 'airport_country';
+    private const string RESPONSE_AIRPORT_CITY = 'airport_city';
+    private const string RESPONSE_DATE_TIME = 'date_time';
+    private const string RESPONSE_FLIGHT_CARRIER_CODE = 'carrier';
+    private const string RESPONSE_FLIGHT_CARRIER_NAME = 'carrier_name';
+    private const string RESPONSE_CABIN_CODE = 'cabin_code';
+    private const string RESPONSE_DISTANCE = 'distance';
+    private const string RESPONSE_DURATION = 'duration';
+    private const string RESPONSE_PRICE_BASE = 'price_base';
+    private const string RESPONSE_PRICE_TAX = 'price_tax';
+    private const string RESPONSE_RATING = 'rating';
 
-    private const CABIN_OUTBOUND = 'Y'; // FIXME: we need to add the real one in DB
-    private const CABIN_RETURN = 'X'; // FIXME: we need to add the real one in DB
+    private const string CABIN_OUTBOUND = 'Y'; // FIXME: we need to add the real one in DB
+    private const string CABIN_RETURN = 'X'; // FIXME: we need to add the real one in DB
 
     private FlightSearchQuery $query;
     private int $totalFlights;
@@ -121,7 +121,7 @@ class Response extends AbstractApi
             ApiResponder::badRequest();
         }
 
-        $flight = (new FlightRepository($this->connection()))->findById((int) $this->data[self::DATA_FLIGHT_ID]);
+        $flight = new FlightRepository($this->connection())->findById((int) $this->data[self::DATA_FLIGHT_ID]);
 
         if ($flight === null) {
             ApiResponder::notFound('Flight not found');
@@ -140,7 +140,7 @@ class Response extends AbstractApi
 
     private function getOnewayFlights(): array
     {
-        $result = (new FlightRepository($this->connection()))->onewaySearch(
+        $result = new FlightRepository($this->connection())->onewaySearch(
             $this->query->from,
             $this->query->to,
             $this->query->departDate,
@@ -160,7 +160,7 @@ class Response extends AbstractApi
 
     private function getRoundtripFlights(): array
     {
-        $result = (new FlightRepository($this->connection()))->roundtripSearch(
+        $result = new FlightRepository($this->connection())->roundtripSearch(
             $this->query->from,
             $this->query->to,
             $this->query->departDate,

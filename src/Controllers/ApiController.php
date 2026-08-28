@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use Exception;
 use TripBuilder\Api\Airlines;
 use TripBuilder\Api\Airports;
 use TripBuilder\Api\Flights;
@@ -12,8 +13,7 @@ use TripBuilder\Api\HttpMethod;
 class ApiController extends AbstractController
 {
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function airports(): void
     {
@@ -23,8 +23,7 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function airportsAutofill(): void
     {
@@ -34,8 +33,7 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function airlines(): void
     {
@@ -45,8 +43,7 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function flights(): void
     {
@@ -56,8 +53,7 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function flightsOne(): void
     {

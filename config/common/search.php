@@ -59,7 +59,7 @@ return [
                 'id' => 'duration',
                 'text' => 'Fastest flight',
                 'icon' => 'rocket',
-                'color' => 'primary'
+                'color' => 'primary',
             ],
         ],
         'depart_time' => [

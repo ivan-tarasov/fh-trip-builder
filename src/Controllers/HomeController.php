@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use Exception;
 use TripBuilder\Config;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\View\TwigRenderer;
@@ -11,8 +12,7 @@ use TripBuilder\View\TwigRenderer;
 class HomeController extends AbstractController
 {
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception|\Twig\Error\Error
      */
     public function index(): void
     {
@@ -28,12 +28,12 @@ class HomeController extends AbstractController
         shuffle($poi);
         $poi = array_slice($poi, 0, 3);
 
-        $topSearches = (new SearchRepository($this->connection()))->topSearches(5);
+        $topSearches = new SearchRepository($this->connection())->topSearches(5);
 
-        echo (new TwigRenderer())->renderPage('index/view.html.twig', [
+        echo new TwigRenderer()->renderPage('index/view.html.twig', [
             'bg_image_url' => $bgImageUrl,
-            'today_date'   => date('Y-m-d'),
-            'poi_cards'    => $poi,
+            'today_date' => date('Y-m-d'),
+            'poi_cards' => $poi,
             'top_searches' => $topSearches,
         ]);
     }

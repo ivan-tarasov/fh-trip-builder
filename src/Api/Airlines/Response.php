@@ -11,8 +11,8 @@ use TripBuilder\Repository\AirlineRepository;
 
 class Response extends AbstractApi
 {
-    private const DATA_KEY_SELECTED = 'selected';
-    private const DATA_KEY_MAJOR = 'major';
+    private const string DATA_KEY_SELECTED = 'selected';
+    private const string DATA_KEY_MAJOR = 'major';
 
     /**
      * @throws Exception
@@ -25,7 +25,7 @@ class Response extends AbstractApi
 
         $majorOnly = !empty($this->data[self::DATA_KEY_MAJOR]) && $this->data[self::DATA_KEY_MAJOR];
 
-        $airlines = (new AirlineRepository($this->connection()))->search($codes, $majorOnly);
+        $airlines = new AirlineRepository($this->connection())->search($codes, $majorOnly);
 
         $this->sendResponse(HttpStatus::Ok, $airlines);
     }

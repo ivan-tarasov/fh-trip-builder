@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\View;
 
+use Exception;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
@@ -29,15 +30,17 @@ final class LayoutData
      * counter is read afterwards so it reflects that query (as before).
      *
      * @return array<string, string|int>
+     *
+     * @throws Exception
      */
     public function stats(): array
     {
         $flightsCount = $this->flightsCount();
 
         return [
-            'flights_count'     => number_format($flightsCount),
+            'flights_count' => number_format($flightsCount),
             'database_requests' => $this->connection()->queryCount(),
-            'execution_time'    => $this->executionTime(),
+            'execution_time' => $this->executionTime(),
         ];
     }
 
@@ -53,7 +56,7 @@ final class LayoutData
 
     /**
      * @return array<string, string>
-     * @throws \Exception
+     * @throws Exception
      */
     public function gitInfo(): array
     {
@@ -67,7 +70,7 @@ final class LayoutData
 
     public function copyrightYears(): string
     {
-        $appYear     = (string) Config::get('app.year');
+        $appYear = (string) Config::get('app.year');
         $currentYear = date('Y');
 
         return $appYear === $currentYear
@@ -76,13 +79,16 @@ final class LayoutData
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     private function flightsCount(): int
     {
         return (int) $this->connection()->fetchValue('SELECT count(*) FROM ' . Table::Flights->value);
     }
 
+    /**
+     * @throws Exception
+     */
     private function executionTime(): string
     {
         Timer::stop();

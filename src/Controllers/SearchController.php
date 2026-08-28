@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use DateInterval;
+use DateTime;
+use Exception;
 use GuzzleHttp\Exception\GuzzleException;
 use stdClass;
 use TripBuilder\ApiClient\Api;
@@ -17,18 +20,18 @@ use TripBuilder\View\TwigRenderer;
 
 class SearchController extends AbstractController
 {
-    private const GET_HASH        = 'hash',
-        GET_FROM        = 'from',
-        GET_TO          = 'to',
-        GET_DEPART      = 'depart',
-        GET_RETURN      = 'return',
-        GET_TRIPTYPE    = 'triptype',
-        GET_CLASS       = 'class',
-        GET_PAGE        = 'page';
+    private const string GET_HASH = 'hash',
+        GET_FROM = 'from',
+        GET_TO = 'to',
+        GET_DEPART = 'depart',
+        GET_RETURN = 'return',
+        GET_TRIPTYPE = 'triptype',
+        GET_CLASS = 'class',
+        GET_PAGE = 'page';
 
-    private const POST_SORT       = 'sort',
+    private const string POST_SORT = 'sort',
         POST_TIME_RANGE = 'time_range',
-        POST_AIRLINES   = 'airlines';
+        POST_AIRLINES = 'airlines';
 
     private array $get;
 
@@ -37,7 +40,6 @@ class SearchController extends AbstractController
     private ?stdClass $data = null;
 
     /**
-     * @return void
      * @throws GuzzleException
      */
     public function index(): void
@@ -45,14 +47,14 @@ class SearchController extends AbstractController
         try {
             // Handle GET data
             $this->setGet([
-                self::GET_HASH     => $_GET[Config::get('search.form.input.hash')]        ?? null,
-                self::GET_FROM     => strtoupper($_GET[Config::get('search.form.input.depart_place')] ?? ''),
-                self::GET_TO       => strtoupper($_GET[Config::get('search.form.input.arrive_place')] ?? ''),
-                self::GET_DEPART   => $_GET[Config::get('search.form.input.depart_date')] ?? null,
-                self::GET_RETURN   => $_GET[Config::get('search.form.input.return_date')] ?? null,
-                self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')]    ?? null,
-                self::GET_CLASS    => $_GET[Config::get('search.form.input.class')]       ?? null,
-                self::GET_PAGE     => filter_var(
+                self::GET_HASH => $_GET[Config::get('search.form.input.hash')] ?? null,
+                self::GET_FROM => strtoupper($_GET[Config::get('search.form.input.depart_place')] ?? ''),
+                self::GET_TO => strtoupper($_GET[Config::get('search.form.input.arrive_place')] ?? ''),
+                self::GET_DEPART => $_GET[Config::get('search.form.input.depart_date')] ?? null,
+                self::GET_RETURN => $_GET[Config::get('search.form.input.return_date')] ?? null,
+                self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')] ?? null,
+                self::GET_CLASS => $_GET[Config::get('search.form.input.class')] ?? null,
+                self::GET_PAGE => filter_var(
                     $_GET[Config::get('search.form.input.page')] ?? 1,
                     FILTER_VALIDATE_INT,
                     ['options' => ['default' => 1, 'min_range' => 1]],
@@ -65,9 +67,9 @@ class SearchController extends AbstractController
             // Handle POST data
             $this->setPost($_POST
                 ? [
-                    self::POST_SORT       => $_POST[self::POST_SORT]       ?? false,
+                    self::POST_SORT => $_POST[self::POST_SORT] ?? false,
                     self::POST_TIME_RANGE => $_POST[self::POST_TIME_RANGE] ?? false,
-                    self::POST_AIRLINES   => $_POST[self::POST_AIRLINES]   ?? false,
+                    self::POST_AIRLINES => $_POST[self::POST_AIRLINES] ?? false,
                 ] : null);
 
             // Handle SESSION data
@@ -92,15 +94,15 @@ class SearchController extends AbstractController
 
             $headers = [
                 'Authorization' => Credentials::getBearer(),
-                'Accept'        => 'application/json',
+                'Accept' => 'application/json',
             ];
 
             $data = [
-                'page'        => $this->get[self::GET_PAGE] ?? 1,
-                'sort'        => 'price',
-                'trip_type'   => $this->get[self::GET_TRIPTYPE], // already normalised to a TripType value
-                'from'        => $this->get[self::GET_FROM],
-                'to'          => $this->get[self::GET_TO],
+                'page' => $this->get[self::GET_PAGE] ?? 1,
+                'sort' => 'price',
+                'trip_type' => $this->get[self::GET_TRIPTYPE], // already normalised to a TripType value
+                'from' => $this->get[self::GET_FROM],
+                'to' => $this->get[self::GET_TO],
                 'depart_date' => $this->get[self::GET_DEPART],
                 'return_date' => $this->get[self::GET_RETURN],
                 'adult_count' => 1, // FIXME: now we provide only 1 adult count
@@ -116,60 +118,59 @@ class SearchController extends AbstractController
 
             $total_flights = $this->data->total_flights;
 
-            echo (new TwigRenderer())->renderPage('search/view.html.twig', [
+            echo new TwigRenderer()->renderPage('search/view.html.twig', [
                 // Lead form + sidebar + cards share the resolved query context.
-                'triptype'      => $this->get[self::GET_TRIPTYPE],
-                'depart_code'   => $this->get[self::GET_FROM],
-                'arrive_code'   => $this->get[self::GET_TO],
-                'depart_city'   => $this->data->depart,
-                'arrive_city'   => $this->data->arrive,
-                'depart_date'   => $this->get[self::GET_DEPART],
-                'return_date'   => $this->get[self::GET_RETURN],
+                'triptype' => $this->get[self::GET_TRIPTYPE],
+                'depart_code' => $this->get[self::GET_FROM],
+                'arrive_code' => $this->get[self::GET_TO],
+                'depart_city' => $this->data->depart,
+                'arrive_city' => $this->data->arrive,
+                'depart_date' => $this->get[self::GET_DEPART],
+                'return_date' => $this->get[self::GET_RETURN],
                 // Sidebar
-                'form_url'      => sprintf(
+                'form_url' => sprintf(
                     '%s?%s',
                     Helper::getUrlPath(),
                     http_build_query(array_merge($this->get, [self::GET_PAGE => null])),
                 ),
-                'session_sort'  => $_SESSION[self::POST_SORT],
-                'clock_range'   => $this->generateTimeRange(),
-                'airlines'      => $this->fetchSidebarAirlines($apiClient, $headers),
+                'session_sort' => $_SESSION[self::POST_SORT],
+                'clock_range' => $this->generateTimeRange(),
+                'airlines' => $this->fetchSidebarAirlines($apiClient, $headers),
                 // Flights / no-result
-                'total_flights'      => $total_flights,
+                'total_flights' => $total_flights,
                 'total_flights_text' => Helper::plural((int) $total_flights, 'flight', showNumber: true),
-                'flights'            => $total_flights != 0 ? $this->buildFlights() : [],
-                'pagination'         => $total_flights != 0 ? $this->buildPagination() : null,
-                'not_found_img'      => Cdn::getUrl(sprintf(
+                'flights' => $total_flights != 0 ? $this->buildFlights() : [],
+                'pagination' => $total_flights != 0 ? $this->buildPagination() : null,
+                'not_found_img' => Cdn::getUrl(sprintf(
                     '%s/%s',
                     Config::get('site.static.endpoint.images'),
                     'no-results.png',
                 )),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             error_log('Search page failed: ' . $e->getMessage());
             echo 'Something went wrong while searching for flights. Please try again later.';
         }
     }
 
     /**
-     * @return void
-     * @throws \Exception
+     * @throws Exception|\Twig\Error\Error
      */
     private function checkHash(): void
     {
         if ($this->get['hash']) {
-            $search = (new SearchRepository($this->connection()))->findByHash($this->get['hash']);
+            $search = new SearchRepository($this->connection())->findByHash($this->get['hash']);
 
             $search_params = http_build_query([
-                self::GET_FROM     => $search[self::GET_FROM . '_code'],
-                self::GET_TO       => $search[self::GET_TO . '_code'],
-                self::GET_DEPART   => $search[self::GET_DEPART],
-                self::GET_RETURN   => $search[self::GET_RETURN],
+                self::GET_FROM => $search[self::GET_FROM . '_code'],
+                self::GET_TO => $search[self::GET_TO . '_code'],
+                self::GET_DEPART => $search[self::GET_DEPART],
+                self::GET_RETURN => $search[self::GET_RETURN],
                 self::GET_TRIPTYPE => $search[self::GET_TRIPTYPE],
-                self::GET_CLASS    => 'economy', // FIXME: we need real class here
+                self::GET_CLASS => 'economy', // FIXME: we need real class here
             ]);
 
-            echo (new TwigRenderer())->render('search/redirect.html.twig', [
+            echo new TwigRenderer()->render('search/redirect.html.twig', [
                 'image_url' => Cdn::getUrl(sprintf(
                     '%s/search_redirect.gif',
                     Config::get('site.static.endpoint.images'),
@@ -181,9 +182,6 @@ class SearchController extends AbstractController
         }
     }
 
-    /**
-     * @return void
-     */
     private function searchStat(): void
     {
         // Prevent too many counts from one user
@@ -202,7 +200,7 @@ class SearchController extends AbstractController
         ));
 
         // Insert or update search
-        (new SearchRepository($this->connection()))->record(
+        new SearchRepository($this->connection())->record(
             $hash,
             $this->get[self::GET_FROM],
             trim(preg_replace('/\([^)]+\)/', '', $this->data->depart)),
@@ -247,7 +245,7 @@ class SearchController extends AbstractController
      * templates render (prices, carrier logos, per-leg flight info).
      *
      * @return array<int, array<string, mixed>>
-     * @throws \Exception
+     * @throws Exception
      */
     private function buildFlights(): array
     {
@@ -255,16 +253,16 @@ class SearchController extends AbstractController
 
         foreach ($this->data->flights as $flight) {
             $carriers = [];
-            $tickets  = [];
+            $tickets = [];
 
             foreach ([$flight->outbound, $flight->returning] as $ticket) {
-                if (! $ticket) {
+                if (!$ticket) {
                     continue;
                 }
 
                 $carriers[] = [
-                    'number'   => $ticket->number,
-                    'name'     => $ticket->carrier_name,
+                    'number' => $ticket->number,
+                    'name' => $ticket->carrier_name,
                     'logo_url' => Cdn::getUrl(sprintf(
                         '%s/suppliers/%s.png',
                         Config::get('site.static.endpoint.images'),
@@ -273,30 +271,30 @@ class SearchController extends AbstractController
                 ];
 
                 $tickets[] = [
-                    'depart_time'    => date('H:i', strtotime($ticket->depart->date_time)),
-                    'arrive_time'    => date('H:i', strtotime($ticket->arrive->date_time)),
-                    'depart_date'    => date('Y-m-d', strtotime($ticket->depart->date_time)),
-                    'arrive_date'    => date('Y-m-d', strtotime($ticket->arrive->date_time)),
-                    'depart_city'    => $ticket->depart->airport_city,
-                    'arrive_city'    => $ticket->arrive->airport_city,
+                    'depart_time' => date('H:i', strtotime($ticket->depart->date_time)),
+                    'arrive_time' => date('H:i', strtotime($ticket->arrive->date_time)),
+                    'depart_date' => date('Y-m-d', strtotime($ticket->depart->date_time)),
+                    'arrive_date' => date('Y-m-d', strtotime($ticket->arrive->date_time)),
+                    'depart_city' => $ticket->depart->airport_city,
+                    'arrive_city' => $ticket->arrive->airport_city,
                     'depart_airport' => $ticket->depart->airport_name,
                     'arrive_airport' => $ticket->arrive->airport_name,
-                    'depart_code'    => $ticket->depart->airport_code,
-                    'arrive_code'    => $ticket->arrive->airport_code,
-                    'duration'       => $this->minutesToStringTime($ticket->duration),
+                    'depart_code' => $ticket->depart->airport_code,
+                    'arrive_code' => $ticket->arrive->airport_code,
+                    'duration' => $this->minutesToStringTime($ticket->duration),
                 ];
             }
 
             $flights[] = [
-                'outbound_id'  => $flight->outbound->id,
+                'outbound_id' => $flight->outbound->id,
                 'returning_id' => $flight->returning->id ?? null,
-                'price_total'  => number_format((float) $flight->price_base + (float) $flight->price_tax, 2),
-                'price_base'   => number_format((float) $flight->price_base, 2),
-                'price_tax'    => number_format((float) $flight->price_tax, 2),
-                'price_gst'    => number_format(0, 2),
-                'price_qst'    => number_format(0, 2),
-                'carriers'     => $carriers,
-                'tickets'      => $tickets,
+                'price_total' => number_format((float) $flight->price_base + (float) $flight->price_tax, 2),
+                'price_base' => number_format((float) $flight->price_base, 2),
+                'price_tax' => number_format((float) $flight->price_tax, 2),
+                'price_gst' => number_format(0, 2),
+                'price_qst' => number_format(0, 2),
+                'carriers' => $carriers,
+                'tickets' => $tickets,
             ];
         }
 
@@ -320,12 +318,12 @@ class SearchController extends AbstractController
 
         $page = $this->get[self::GET_PAGE];
 
-        $items     = [];
+        $items = [];
         $skipPages = false;
 
         for ($i = 1; $i <= $totalPages; $i++) {
-            $isFirstPage   = $i === 1;
-            $isLastPage    = $i === $totalPages;
+            $isFirstPage = $i === 1;
+            $isLastPage = $i === $totalPages;
             $isWithinRange = abs($i - $page) <= 1;
 
             if ($totalPages >= 10 && !$isFirstPage && !$isLastPage && !$isWithinRange) {
@@ -334,7 +332,7 @@ class SearchController extends AbstractController
             }
 
             if ($skipPages) {
-                $items[]   = ['type' => 'skipped'];
+                $items[] = ['type' => 'skipped'];
                 $skipPages = false;
             }
 
@@ -344,8 +342,8 @@ class SearchController extends AbstractController
         }
 
         return [
-            'prev'  => $page > 1 ? $this->pageUrl($page - 1) : null,
-            'next'  => $page < $totalPages ? $this->pageUrl($page + 1) : null,
+            'prev' => $page > 1 ? $this->pageUrl($page - 1) : null,
+            'next' => $page < $totalPages ? $this->pageUrl($page + 1) : null,
             'items' => $items,
         ];
     }
@@ -361,14 +359,12 @@ class SearchController extends AbstractController
 
     /**
      * Generating string for Time Range javascript
-     *
-     * @return string
      */
     private function generateTimeRange(): string
     {
-        $startTime = new \DateTime('00:00');
-        $endTime =   new \DateTime('23:59');
-        $interval =  new \DateInterval('PT30M');
+        $startTime = new DateTime('00:00');
+        $endTime = new DateTime('23:59');
+        $interval = new DateInterval('PT30M');
 
         $range = [];
 
@@ -385,8 +381,8 @@ class SearchController extends AbstractController
     {
         $seconds = $minutes * 60;
 
-        $dtF = new \DateTime('@0');
-        $dtT = new \DateTime("@$seconds");
+        $dtF = new DateTime('@0');
+        $dtT = new DateTime("@$seconds");
 
         $interval = $dtF->diff($dtT);
 

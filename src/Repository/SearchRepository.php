@@ -7,9 +7,9 @@ namespace TripBuilder\Repository;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
-final class SearchRepository
+final readonly class SearchRepository
 {
-    public function __construct(private readonly Connection $connection) {}
+    public function __construct(private Connection $connection) {}
 
     /**
      * The most-searched routes first (matches the legacy `orderBy('search_count')`

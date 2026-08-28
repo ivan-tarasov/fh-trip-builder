@@ -22,12 +22,12 @@ final class HelperTest extends TestCase
     public static function pluralProvider(): array
     {
         return [
-            'singular'                 => ['flight', 1, 'flight', null, false],
-            'plural'                   => ['flights', 2, 'flight', null, false],
-            'zero is plural'           => ['flights', 0, 'flight', null, false],
-            'singular with number'     => ['1 flight', 1, 'flight', null, true],
-            'plural with number'       => ['42 flights', 42, 'flight', null, true],
-            'custom plural'            => ['children', 3, 'child', 'children', false],
+            'singular' => ['flight', 1, 'flight', null, false],
+            'plural' => ['flights', 2, 'flight', null, false],
+            'zero is plural' => ['flights', 0, 'flight', null, false],
+            'singular with number' => ['1 flight', 1, 'flight', null, true],
+            'plural with number' => ['42 flights', 42, 'flight', null, true],
+            'custom plural' => ['children', 3, 'child', 'children', false],
             'custom plural with count' => ['3 children', 3, 'child', 'children', true],
         ];
     }
@@ -63,12 +63,12 @@ final class HelperTest extends TestCase
     public static function utcProvider(): array
     {
         return [
-            'utc'            => ['GMT+00:00', 0],
+            'utc' => ['GMT+00:00', 0],
             'positive whole' => ['GMT+02:00', 2],
             'negative whole' => ['GMT-05:00', -5],
-            'half hour'      => ['GMT+05:30', 5.5],
-            'negative half'  => ['GMT-03:30', -3.5],
-            'quarter'        => ['GMT+05:45', 5.75],
+            'half hour' => ['GMT+05:30', 5.5],
+            'negative half' => ['GMT-03:30', -3.5],
+            'quarter' => ['GMT+05:45', 5.75],
         ];
     }
 

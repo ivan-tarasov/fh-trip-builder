@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use GuzzleHttp\Exception\GuzzleException;
+use Throwable;
 use TripBuilder\ApiClient\Api;
 use TripBuilder\ApiClient\Credentials;
 use TripBuilder\Config;
@@ -17,25 +18,24 @@ class AjaxController extends AbstractController
     private array $get;
 
     /**
-     * @return void
      * @throws GuzzleException
      */
     public function addTrip(): void
     {
         header('Content-type: application/json; charset=utf-8');
 
-        if (! $this->guardRequest()) {
+        if (!$this->guardRequest()) {
             return;
         }
 
         $this->setGet([
             'flight_outbound' => filter_var($_POST['depart_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
-            'flight_return'   => filter_var($_POST['return_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
+            'flight_return' => filter_var($_POST['return_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
         ]);
 
-        if (! $this->get['flight_outbound']) {
+        if (!$this->get['flight_outbound']) {
             echo json_encode([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Wrong format',
             ]);
 
@@ -46,7 +46,7 @@ class AjaxController extends AbstractController
 
         $headers = [
             'Authorization' => Credentials::getBearer(),
-            'Accept'        => 'application/json',
+            'Accept' => 'application/json',
         ];
 
         $request = [
@@ -70,9 +70,9 @@ class AjaxController extends AbstractController
         }
 
         try {
-            $id = (new BookingRepository($this->connection()))->create($request);
+            $id = new BookingRepository($this->connection())->create($request);
             $json = ['status' => 'success', 'message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             error_log('Booking insert failed: ' . $e->getMessage());
             $json = ['status' => 'error', 'message' => 'Could not create the booking. Please try again later.'];
         }
@@ -84,7 +84,7 @@ class AjaxController extends AbstractController
     {
         header('Content-type: application/json; charset=utf-8');
 
-        if (! $this->guardRequest()) {
+        if (!$this->guardRequest()) {
             return;
         }
 
@@ -92,9 +92,9 @@ class AjaxController extends AbstractController
             'booking_id' => filter_var($_POST['booking_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
         ]);
 
-        if (! $this->get['booking_id']) {
+        if (!$this->get['booking_id']) {
             echo json_encode([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Wrong format',
             ]);
 
@@ -102,21 +102,21 @@ class AjaxController extends AbstractController
         }
 
         try {
-            $deleted = (new BookingRepository($this->connection()))
+            $deleted = new BookingRepository($this->connection())
                 ->deleteForSession($this->get['booking_id'], session_id());
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             error_log('Booking delete failed: ' . $e->getMessage());
             $deleted = 0;
         }
 
         if ($deleted > 0) {
             $json = [
-                'status'  => 'success',
+                'status' => 'success',
                 'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id'])),
             ];
         } else {
             $json = [
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Booking not found or already deleted.',
             ];
         }
@@ -143,7 +143,7 @@ class AjaxController extends AbstractController
 
         $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
 
-        if (! Csrf::isValid($token)) {
+        if (!Csrf::isValid($token)) {
             http_response_code(403);
             echo json_encode(['status' => 'error', 'message' => 'Invalid or missing CSRF token']);
 

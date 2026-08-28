@@ -22,8 +22,8 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Suppliers extends AbstractCommand
 {
-    private const IMAGE_URL = 'https://mpics.avs.io/al_square/64/64/%s.png';
-    private const LOCAL_IMAGE_PATH = '/frontend/images/suppliers/';
+    private const string IMAGE_URL = 'https://mpics.avs.io/al_square/64/64/%s.png';
+    private const string LOCAL_IMAGE_PATH = '/frontend/images/suppliers/';
 
     /**
      * @throws Exception
@@ -57,7 +57,7 @@ class Suppliers extends AbstractCommand
             // Build the complete path to save the image
             $targetPath = $targetFolder . $filename;
 
-            if (! file_exists($targetPath)) {
+            if (!file_exists($targetPath)) {
                 // Get the HTTP headers of the URL
                 $headers = get_headers($imageUrl);
 

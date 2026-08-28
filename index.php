@@ -23,7 +23,7 @@ try {
     session_set_cookie_params([
         'httponly' => true,
         'samesite' => 'Lax',
-        'secure'   => ! empty($_SERVER['HTTPS']),
+        'secure' => !empty($_SERVER['HTTPS']),
     ]);
     session_start();
 
@@ -42,7 +42,7 @@ try {
     [$controllerName, $actionName] = explode('@', Routes::ENABLED_ROUTES[$url] ?? 'NotFound@index');
 
     // Unknown route: set the status now, before any layout output locks the headers
-    if (! isset(Routes::ENABLED_ROUTES[$url])) {
+    if (!isset(Routes::ENABLED_ROUTES[$url])) {
         http_response_code(404);
     }
 
@@ -55,10 +55,10 @@ try {
 
     $controller = new $controllerClassName();
 
-    $needsLayout = ! in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
+    $needsLayout = !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
 
     // API/Ajax endpoints emit their own payload with no header/footer.
-    if (! $needsLayout) {
+    if (!$needsLayout) {
         $controller->$actionName();
     } else {
         // Capture the page body. Page controllers render the full document
@@ -69,8 +69,8 @@ try {
         $controller->$actionName();
         $output = ob_get_clean();
 
-        if (! str_starts_with(ltrim($output), '<!DOCTYPE')) {
-            $output = (new TwigRenderer())->renderPage('layout.html.twig', [
+        if (!str_starts_with(ltrim($output), '<!DOCTYPE')) {
+            $output = new TwigRenderer()->renderPage('layout.html.twig', [
                 'page_content' => $output,
             ]);
         }
@@ -88,7 +88,7 @@ try {
         $e->getLine(),
     ));
 
-    if (! headers_sent()) {
+    if (!headers_sent()) {
         http_response_code(500);
     }
 

@@ -47,7 +47,7 @@ return [
 
     'license' => [
         'type' => 'MIT',
-        'url'  => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/LICENSE.txt',
+        'url' => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/LICENSE.txt',
     ],
 
     'documentation' => 'https://github.com/ivan-tarasov/fh-trip-builder/blob/master/README.md',

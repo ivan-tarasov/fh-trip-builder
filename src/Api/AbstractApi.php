@@ -11,23 +11,25 @@ use TripBuilder\Routes;
 
 abstract class AbstractApi
 {
-    private const HEADER_AUTH_KEY = 'Authorization';
+    private const string HEADER_AUTH_KEY = 'Authorization';
 
-    private const EXCLUDE_AUTH_CHECK_ENDPOINTS = [
+    private const array EXCLUDE_AUTH_CHECK_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    private const RAW_RESPONSE_ENDPOINTS = [
+    private const array RAW_RESPONSE_ENDPOINTS = [
         '/api/airports/autofill',
     ];
 
-    protected const DB_TABLE_AIRLINES = Table::Airlines->value;
-    protected const DB_TABLE_AIRPORTS = Table::Airports->value;
-    protected const DB_TABLE_BOOKINGS = Table::Bookings->value;
-    protected const DB_TABLE_COUNTRIES = Table::Countries->value;
-    protected const DB_TABLE_FLIGHTS = Table::Flights->value;
+    protected const string DB_TABLE_AIRLINES = Table::Airlines->value;
+    protected const string DB_TABLE_AIRPORTS = Table::Airports->value;
+    protected const string DB_TABLE_BOOKINGS = Table::Bookings->value;
+    protected const string DB_TABLE_COUNTRIES = Table::Countries->value;
+    protected const string DB_TABLE_FLIGHTS = Table::Flights->value;
 
-    protected array $data = [];
+    // Parsed request payload: readable by the endpoint subclasses, but only
+    // this base class may populate it (from setRequestData()).
+    protected private(set) array $data = [];
     private HttpMethod $allowedMethod;
 
     private ?Connection $connection = null;
@@ -63,13 +65,10 @@ abstract class AbstractApi
             return false;
         }
 
-        foreach (explode(',', $_ENV['API_ACCEPTED_TOKENS'] ?? '') as $authorized) {
-            if ($authorized !== '' && hash_equals($authorized, $token)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(
+            explode(',', $_ENV['API_ACCEPTED_TOKENS'] ?? ''),
+            static fn(string $authorized): bool => $authorized !== '' && hash_equals($authorized, $token),
+        );
     }
 
     private function guardNotAllowedRequestMethod(): void
@@ -149,7 +148,7 @@ abstract class AbstractApi
 
         $decoded = json_decode($data, true);
 
-        if (! is_array($decoded)) {
+        if (!is_array($decoded)) {
             ApiResponder::badRequest('Malformed JSON body');
         }
 

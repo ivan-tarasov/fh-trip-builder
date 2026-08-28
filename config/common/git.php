@@ -13,7 +13,7 @@ return [
     'github' => [
         'url' => 'github.com',
         'user' => 'ivan-tarasov',
-        'repo' => 'fh-trip-builder'
+        'repo' => 'fh-trip-builder',
     ],
 
 ];

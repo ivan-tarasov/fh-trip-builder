@@ -7,9 +7,9 @@ namespace TripBuilder\Repository;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
-final class AirlineRepository
+final readonly class AirlineRepository
 {
-    public function __construct(private readonly Connection $connection) {}
+    public function __construct(private Connection $connection) {}
 
     /**
      * Airlines ordered by title, optionally filtered to specific IATA codes

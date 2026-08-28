@@ -14,11 +14,11 @@ use TripBuilder\Database\Table;
  * Rows come back with normalised leg aliases: `out_*` for the primary/outbound
  * leg and `in_*` for the return leg, so the caller can map both legs uniformly.
  */
-final class FlightRepository
+final readonly class FlightRepository
 {
-    private const PER_PAGE = 10;
+    private const int PER_PAGE = 10;
 
-    public function __construct(private readonly Connection $connection) {}
+    public function __construct(private Connection $connection) {}
 
     /**
      * One-way flights for a route/date, paginated.

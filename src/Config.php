@@ -15,7 +15,7 @@ use Exception;
 
 class Config
 {
-    private const CONFIG_DIRECTORY = 'config';
+    private const string CONFIG_DIRECTORY = 'config';
 
     protected static array $configData = [];
 

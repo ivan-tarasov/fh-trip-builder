@@ -10,9 +10,10 @@
       "psr-4": {"TripBuilder\\Tests\\": "tests/"}
     },
     "require": {
-        "vlucas/phpdotenv": "^5.5",
+        "php": "^8.4",
+        "vlucas/phpdotenv": "^5.6",
         "guzzlehttp/guzzle": "^7.7",
-        "symfony/console": "^6.3",
+        "symfony/console": "^7.0",
         "twig/twig": "^3.10"
     },
     "require-dev": {
