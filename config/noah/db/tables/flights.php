@@ -13,6 +13,16 @@ return [
     'engine' => 'InnoDB',
     'charset' => 'utf8',
 
+    /*
+    | Secondary indexes for the search joins (departure/arrival airport,
+    | airline) and the flights:add dedup GROUP BY (airline, number, date).
+    */
+    'indexes' => [
+        ['name' => 'departure_airport', 'columns' => ['departure_airport']],
+        ['name' => 'arrival_airport', 'columns' => ['arrival_airport']],
+        ['name' => 'airline_number_departure_time', 'columns' => ['airline', 'number', 'departure_time']],
+    ],
+
     'columns' => [
         [
             'name' => 'id',

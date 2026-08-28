@@ -56,7 +56,7 @@ class Install extends AbstractCommand
             }
 
             $query = sprintf(
-                'CREATE TABLE %s (%s, PRIMARY KEY (%s)) ENGINE=%s DEFAULT CHARSET=%s%s;',
+                'CREATE TABLE %s (%s, PRIMARY KEY (%s)%s) ENGINE=%s DEFAULT CHARSET=%s%s;',
                 $table,
                 implode(', ', array_map(function ($column) {
                     return sprintf(
@@ -83,6 +83,7 @@ class Install extends AbstractCommand
                     );
                 }, $data['columns'])),
                 $data['primary'],
+                $this->indexClause($data['indexes'] ?? []),
                 $data['engine'],
                 $data['charset'],
                 isset($data['auto_increment'])
@@ -150,6 +151,23 @@ class Install extends AbstractCommand
                 $this->formatOutput($action, 'done', 'success');
             }
         }
+    }
+
+    /**
+     * Build the `, KEY ...` fragment for a table's secondary indexes.
+     *
+     * @param list<array{name: string, columns: list<string>}> $indexes
+     */
+    private function indexClause(array $indexes): string
+    {
+        $clause = '';
+
+        foreach ($indexes as $index) {
+            $columns = implode(', ', array_map(static fn(string $c): string => "`$c`", $index['columns']));
+            $clause .= sprintf(', KEY `%s` (%s)', $index['name'], $columns);
+        }
+
+        return $clause;
     }
 
     /**
