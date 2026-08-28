@@ -82,7 +82,7 @@ class Generate extends AbstractCommand
         // If flights to add not provided – ask
         $flightsToAdd = $input->getArgument('flights') ?? $this->io->ask(
             'Number of flights to add',
-            self::FLIGHTS_COUNT,
+            (string) self::FLIGHTS_COUNT,
             function (string $number): int {
                 if (!is_numeric($number)) {
                     throw new RuntimeException('You must type a number.');
