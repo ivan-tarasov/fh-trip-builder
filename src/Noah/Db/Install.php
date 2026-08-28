@@ -11,6 +11,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 use TripBuilder\Config;
+use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
@@ -109,31 +110,41 @@ class Install extends AbstractCommand
     }
 
     /**
-     * @throws Exception
+     * Seed every table from its CSV file (header row = columns, one data row
+     * per record; an empty cell is stored as NULL).
      */
     private function seedingTables(): void
     {
-        new Config(self::CONFIG_DIR_SEEDERS);
+        $directory = sprintf('%s/config/%s', Helper::getRootDir(), self::CONFIG_DIR_SEEDERS);
 
-        foreach (Config::get() as $table => $data) {
+        foreach (glob($directory . '/*.csv') as $file) {
+            $table = pathinfo($file, PATHINFO_FILENAME);
             $action = sprintf(self::MESSAGE_SEEDING_TABLE, $table);
 
-            $columns = $data['columns'];
+            $handle = fopen($file, 'r');
+            $columns = fgetcsv($handle, null, ',', '"', '');
             $sql = $this->seedStatement($table, $columns);
             $failed = false;
 
-            foreach ($data['seeds'] as $seed) {
-                $values = array_pad($seed, count($columns), null);
+            while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
+                // An empty cell means NULL; pad short rows to the column count.
+                $values = array_pad(
+                    array_map(static fn(?string $value): ?string => $value === '' ? null : $value, $row),
+                    count($columns),
+                    null,
+                );
 
                 try {
                     // Insert, or refresh the row's columns if it already exists.
-                    $this->connection()->execute($sql, array_values($values));
+                    $this->connection()->execute($sql, $values);
                 } catch (Throwable $e) {
                     $failed = true;
                     $this->formatOutput($action, 'failed', 'danger');
                     break;
                 }
             }
+
+            fclose($handle);
 
             if (!$failed) {
                 $this->formatOutput($action, 'done', 'success');
