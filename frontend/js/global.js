@@ -214,7 +214,9 @@
     });
 
     $(function () {
-        $('[data-toggle="tooltip"]').tooltip();
+        document.querySelectorAll('[data-toggle="tooltip"]').forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
     });
 
     $("#airlinesSelectAll").click(function () {
