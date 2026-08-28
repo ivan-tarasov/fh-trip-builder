@@ -13,8 +13,7 @@ use TripBuilder\View\TwigRenderer;
 class MyController extends AbstractController
 {
     /**
-     * @return void
-     * @throws Exception
+     * @throws Exception|\Twig\Error\Error
      */
     public function bookings(): void
     {

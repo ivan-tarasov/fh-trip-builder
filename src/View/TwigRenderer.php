@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace TripBuilder\View;
 
+use Exception;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use Twig\Environment;
+use Twig\Error\LoaderError;
+use Twig\Error\RuntimeError;
+use Twig\Error\SyntaxError;
 use Twig\Loader\FilesystemLoader;
 use Twig\TwigFunction;
 
@@ -52,6 +56,8 @@ final readonly class TwigRenderer
      * Render a template fragment (no base layout).
      *
      * @param array<string, mixed> $context
+     *
+     * @throws LoaderError|RuntimeError|SyntaxError
      */
     public function render(string $template, array $context = []): string
     {
@@ -63,6 +69,8 @@ final readonly class TwigRenderer
      * extending layout.html.twig get a populated header/footer.
      *
      * @param array<string, mixed> $context
+     *
+     * @throws Exception|LoaderError|RuntimeError|SyntaxError
      */
     public function renderPage(string $template, array $context = []): string
     {

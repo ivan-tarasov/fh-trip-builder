@@ -12,8 +12,7 @@ use TripBuilder\View\TwigRenderer;
 class HomeController extends AbstractController
 {
     /**
-     * @return void
-     * @throws Exception
+     * @throws Exception|\Twig\Error\Error
      */
     public function index(): void
     {

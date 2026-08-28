@@ -27,5 +27,10 @@ return (new PhpCsFixer\Config())
             'import_functions' => false,
         ],
         'fully_qualified_strict_types' => true,
+        // Drop PHPDoc tags that only repeat the native signature; keep the ones
+        // that add information (@throws, generic array shapes, descriptions).
+        'no_superfluous_phpdoc_tags' => ['allow_mixed' => true, 'remove_inheritdoc' => false],
+        'no_empty_phpdoc' => true,
+        'phpdoc_trim' => true,
     ])
     ->setFinder($finder);

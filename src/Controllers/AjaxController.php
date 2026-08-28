@@ -18,7 +18,6 @@ class AjaxController extends AbstractController
     private array $get;
 
     /**
-     * @return void
      * @throws GuzzleException
      */
     public function addTrip(): void

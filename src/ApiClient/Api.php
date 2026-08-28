@@ -25,10 +25,6 @@ final readonly class Api
     }
 
     /**
-     * @param string $endpoint
-     * @param array  $headers
-     * @param array  $params
-     * @return array
      * @throws Exception|GuzzleException
      */
     public function get(string $endpoint, array $headers = [], array $params = []): array
@@ -52,10 +48,6 @@ final readonly class Api
     }
 
     /**
-     * @param string $endpoint
-     * @param array  $headers
-     * @param array  $params
-     * @return stdClass
      * @throws GuzzleException
      */
     public function post(string $endpoint, array $headers = [], array $params = []): stdClass

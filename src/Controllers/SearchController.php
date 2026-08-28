@@ -40,7 +40,6 @@ class SearchController extends AbstractController
     private ?stdClass $data = null;
 
     /**
-     * @return void
      * @throws GuzzleException
      */
     public function index(): void
@@ -155,8 +154,7 @@ class SearchController extends AbstractController
     }
 
     /**
-     * @return void
-     * @throws Exception
+     * @throws Exception|\Twig\Error\Error
      */
     private function checkHash(): void
     {
@@ -184,9 +182,6 @@ class SearchController extends AbstractController
         }
     }
 
-    /**
-     * @return void
-     */
     private function searchStat(): void
     {
         // Prevent too many counts from one user
@@ -364,8 +359,6 @@ class SearchController extends AbstractController
 
     /**
      * Generating string for Time Range javascript
-     *
-     * @return string
      */
     private function generateTimeRange(): string
     {

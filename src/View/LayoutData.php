@@ -30,6 +30,8 @@ final class LayoutData
      * counter is read afterwards so it reflects that query (as before).
      *
      * @return array<string, string|int>
+     *
+     * @throws Exception
      */
     public function stats(): array
     {
@@ -84,6 +86,9 @@ final class LayoutData
         return (int) $this->connection()->fetchValue('SELECT count(*) FROM ' . Table::Flights->value);
     }
 
+    /**
+     * @throws Exception
+     */
     private function executionTime(): string
     {
         Timer::stop();

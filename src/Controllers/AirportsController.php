@@ -14,7 +14,6 @@ use TripBuilder\View\TwigRenderer;
 class AirportsController
 {
     /**
-     * @return void
      * @throws GuzzleException
      */
     public function index(): void

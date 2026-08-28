@@ -13,7 +13,6 @@ use TripBuilder\View\TwigRenderer;
 class AirlinesController
 {
     /**
-     * @return void
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function index(): void

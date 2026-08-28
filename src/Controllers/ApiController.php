@@ -13,7 +13,6 @@ use TripBuilder\Api\HttpMethod;
 class ApiController extends AbstractController
 {
     /**
-     * @return void
      * @throws Exception
      */
     public function airports(): void
@@ -24,7 +23,6 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
      * @throws Exception
      */
     public function airportsAutofill(): void
@@ -35,7 +33,6 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
      * @throws Exception
      */
     public function airlines(): void
@@ -46,7 +43,6 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
      * @throws Exception
      */
     public function flights(): void
@@ -57,7 +53,6 @@ class ApiController extends AbstractController
     }
 
     /**
-     * @return void
      * @throws Exception
      */
     public function flightsOne(): void
