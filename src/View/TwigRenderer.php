@@ -32,7 +32,7 @@ final readonly class TwigRenderer
         $loader = new FilesystemLoader(Helper::getRootDir() . '/frontend/template');
 
         $this->twig = new Environment($loader, [
-            'cache' => Helper::getRootDir() . '/var/cache/twig',
+            'cache' => Helper::getRootDir() . '/cache/twig',
             'auto_reload' => true,
             'strict_variables' => true,
             'autoescape' => 'html',

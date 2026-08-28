@@ -19,8 +19,9 @@
 /.php-cs-fixer.cache
 /.phpstan.cache/
 
-# Compiled Twig templates
-/var/
+# Compiled Twig templates (keep the directory, ignore its contents)
+/cache/twig/*
+!/cache/twig/.gitkeep
 
 # Log files
 *.log
