@@ -8,6 +8,7 @@ $finder = PhpCsFixer\Finder::create()
 
 return (new PhpCsFixer\Config())
     ->setRiskyAllowed(false)
+    ->setCacheFile(__DIR__ . '/cache/.php-cs-fixer.cache')
     ->setRules([
         '@PER-CS2.0' => true,
         'no_unused_imports' => true,

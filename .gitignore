@@ -14,14 +14,9 @@
 # Composer controlled vendor directory
 /vendor/
 
-# Dev-tooling caches
-/.phpunit.cache/
-/.php-cs-fixer.cache
-/.phpstan.cache/
-
-# Compiled Twig templates (keep the directory, ignore its contents)
-/cache/twig/*
-!/cache/twig/.gitkeep
+# Cache root (Twig templates + dev-tooling caches); keep the directory only
+/cache/*
+!/cache/.gitkeep
 
 # Log files
 *.log
