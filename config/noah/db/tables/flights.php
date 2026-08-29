@@ -14,12 +14,15 @@ return [
     'charset' => 'utf8',
 
     /*
-    | Secondary indexes for the search joins (departure/arrival airport,
-    | airline) and the flights:add dedup GROUP BY (airline, number, date).
+    | Secondary indexes. The composite (departure_airport, arrival_airport,
+    | departure_time) is the search filter: one-way and both legs of round-trip
+    | range-scan it (route equality + a half-open date window), which keeps
+    | `flights` the selective driving table. Its leading column also covers any
+    | departure_airport-only lookup. The second index serves the flights:add
+    | dedup GROUP BY (airline, number, date).
     */
     'indexes' => [
-        ['name' => 'departure_airport', 'columns' => ['departure_airport']],
-        ['name' => 'arrival_airport', 'columns' => ['arrival_airport']],
+        ['name' => 'route_departure_time', 'columns' => ['departure_airport', 'arrival_airport', 'departure_time']],
         ['name' => 'airline_number_departure_time', 'columns' => ['airline', 'number', 'departure_time']],
     ],
 
