@@ -66,12 +66,14 @@ final readonly class AirportRepository
     }
 
     /**
-     * Autofill search across code/title/city.
+     * Autofill suggestions for the search form, across code/title/city.
      *
-     * NOTE: the WHERE clause deliberately has no parentheses, reproducing the
-     * legacy MysqliDb precedence exactly — because AND binds before OR, the
-     * `enabled = 1` guard applies only to the code match. Preserved for
-     * behaviour parity; tightening it is a separate behavioural change.
+     * Restricted to major airports (is_major = 1), because flights are only
+     * generated between major airports (see Noah\Flights\Generate) — suggesting
+     * a minor airport would always yield an empty search. The match group is
+     * parenthesised so the enabled/major guards gate every match; without the
+     * parentheses, AND binding tighter than OR would apply them only to the
+     * code match.
      *
      * @return list<array<string, mixed>>
      */
@@ -82,7 +84,8 @@ final readonly class AirportRepository
         $sql = 'SELECT ' . self::COLUMNS
             . ' FROM ' . Table::Airports->value . ' a'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
-            . ' WHERE a.enabled = 1 AND a.code LIKE ? OR a.title LIKE ? OR a.city_code LIKE ? OR a.city LIKE ?'
+            . ' WHERE a.enabled = 1 AND a.is_major = 1'
+            . ' AND (a.code LIKE ? OR a.title LIKE ? OR a.city_code LIKE ? OR a.city LIKE ?)'
             . ' ORDER BY a.title ASC';
 
         return $this->connection->fetchAll($sql, [$like, $like, $like, $like]);

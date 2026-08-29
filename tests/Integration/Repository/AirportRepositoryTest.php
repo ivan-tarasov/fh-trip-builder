@@ -54,6 +54,26 @@ final class AirportRepositoryTest extends IntegrationTestCase
         self::assertContains('YUL', array_column($airports, 'code'));
     }
 
+    public function testAutofillReturnsMajorAirportsOnly(): void
+    {
+        $codes = array_column($this->repository()->autofill('mon'), 'code');
+
+        // YUL (Montreal) is major and should appear...
+        self::assertContains('YUL', $codes);
+        // ...while MVD (Montevideo) is a minor airport also matching 'mon' and
+        // must be excluded: flights are only generated between major airports,
+        // so suggesting it would always yield an empty search.
+        self::assertNotContains('MVD', $codes);
+
+        // Belt and braces: every suggestion must be a major, enabled airport.
+        $majorCodes = array_column(
+            $this->connection()->fetchAll('SELECT code FROM airports WHERE enabled = 1 AND is_major = 1'),
+            'code',
+        );
+        self::assertNotEmpty($codes);
+        self::assertEmpty(array_diff($codes, $majorCodes));
+    }
+
     private function repository(): AirportRepository
     {
         return new AirportRepository($this->connection());
