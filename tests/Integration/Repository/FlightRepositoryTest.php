@@ -76,6 +76,23 @@ final class FlightRepositoryTest extends IntegrationTestCase
         foreach (['out_id', 'out_price_base', 'in_id', 'in_price_base', 'in_arr_code'] as $key) {
             self::assertArrayHasKey($key, $row);
         }
+        // The pairing is a genuine round trip: return leg reverses the outbound.
+        self::assertSame($row['out_dep_code'], $row['in_arr_code']);
+        self::assertSame($row['out_arr_code'], $row['in_dep_code']);
+    }
+
+    public function testSearchWithUnknownAirportShortCircuitsToEmpty(): void
+    {
+        // 'ZZZ' resolves to no airport codes, so neither search should run the
+        // expensive flight query — both return an empty, zero-total result.
+        self::assertSame(
+            ['rows' => [], 'total' => 0],
+            $this->repository()->onewaySearch('ZZZ', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1),
+        );
+        self::assertSame(
+            ['rows' => [], 'total' => 0],
+            $this->repository()->roundtripSearch('ZZZ', 'YYZ', self::DEPART_DATE, self::RETURN_DATE, SortMethod::Price, 1),
+        );
     }
 
     private function repository(): FlightRepository

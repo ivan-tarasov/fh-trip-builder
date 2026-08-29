@@ -13,6 +13,13 @@ use TripBuilder\Database\Table;
  *
  * Rows come back with normalised leg aliases: `out_*` for the primary/outbound
  * leg and `in_*` for the return leg, so the caller can map both legs uniformly.
+ *
+ * Both searches resolve the from/to inputs to concrete airport codes first, so
+ * the flight filter is an indexed `departure_airport IN (…) AND arrival_airport
+ * IN (…)` equality with a half-open date window — driven off the
+ * (departure_airport, arrival_airport, departure_time) index. That keeps `flights`
+ * the selective driving table (a handful of rows) instead of the optimiser
+ * full-scanning it and cross-joining the airport/country lookup tables.
  */
 final readonly class FlightRepository
 {
@@ -27,20 +34,27 @@ final readonly class FlightRepository
      */
     public function onewaySearch(string $from, string $to, string $departDate, SortMethod $sort, int $page): array
     {
-        $fromJoins = ' FROM ' . Table::Flights->value . ' flight'
-            . ' INNER JOIN ' . Table::Airports->value . ' depart_airport ON flight.departure_airport = depart_airport.code'
-            . ' INNER JOIN ' . Table::Airports->value . ' arrive_airport ON flight.arrival_airport = arrive_airport.code'
-            . ' INNER JOIN ' . Table::Airlines->value . ' airline ON flight.airline = airline.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' depart_country ON depart_airport.country_code = depart_country.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' arrive_country ON arrive_airport.country_code = arrive_country.code';
+        $fromCodes = $this->resolveAirportCodes($from);
+        $toCodes = $this->resolveAirportCodes($to);
 
-        $where = ' WHERE (depart_airport.code = ? or depart_airport.city_code = ?)'
-            . ' AND (arrive_airport.code = ? or arrive_airport.city_code = ?)'
-            . ' AND DATE(flight.departure_time) = ?';
+        if ($fromCodes === [] || $toCodes === []) {
+            return ['rows' => [], 'total' => 0];
+        }
 
-        $params = [$from, $from, $to, $to, $departDate];
+        $where = ' WHERE flight.departure_airport IN (' . $this->placeholders($fromCodes) . ')'
+            . ' AND flight.arrival_airport IN (' . $this->placeholders($toCodes) . ')'
+            . ' AND flight.departure_time >= ? AND flight.departure_time < ? + INTERVAL 1 DAY';
 
-        $total = (int) $this->connection->fetchValue('SELECT count(1)' . $fromJoins . $where, $params);
+        $params = [...$fromCodes, ...$toCodes, $departDate, $departDate];
+
+        $total = (int) $this->connection->fetchValue(
+            'SELECT COUNT(*) FROM ' . Table::Flights->value . ' flight' . $where,
+            $params,
+        );
+
+        if ($total === 0) {
+            return ['rows' => [], 'total' => 0];
+        }
 
         $columns = implode(', ', $this->legColumns('out', [
             'flight' => 'flight',
@@ -51,7 +65,14 @@ final readonly class FlightRepository
             'arrCountry' => 'arrive_country',
         ]));
 
-        $sql = 'SELECT ' . $columns . $fromJoins . $where
+        $sql = 'SELECT STRAIGHT_JOIN ' . $columns
+            . ' FROM ' . Table::Flights->value . ' flight'
+            . ' INNER JOIN ' . Table::Airports->value . ' depart_airport ON flight.departure_airport = depart_airport.code'
+            . ' INNER JOIN ' . Table::Airports->value . ' arrive_airport ON flight.arrival_airport = arrive_airport.code'
+            . ' INNER JOIN ' . Table::Airlines->value . ' airline ON flight.airline = airline.code'
+            . ' INNER JOIN ' . Table::Countries->value . ' depart_country ON depart_airport.country_code = depart_country.code'
+            . ' INNER JOIN ' . Table::Countries->value . ' arrive_country ON arrive_airport.country_code = arrive_country.code'
+            . $where
             . ' ORDER BY ' . $sort->onewayOrderBy() . ' ASC'
             . ' LIMIT ' . $this->offset($page) . ', ' . self::PER_PAGE;
 
@@ -90,34 +111,41 @@ final readonly class FlightRepository
     /**
      * Round-trip pairings for a route and out/return dates, paginated.
      *
+     * The outbound and return legs are each filtered on their own route/date
+     * window (both index range-scans), then paired on `out.arrival = in.departure`
+     * — so the self-join runs over two small sets, not the whole table.
+     *
      * @return array{rows: list<array<string, mixed>>, total: int}
      */
     public function roundtripSearch(string $from, string $to, string $departDate, string $returnDate, SortMethod $sort, int $page): array
     {
-        // The return-leg date lives in the JOIN condition, so its param comes
-        // first in the statement (matching the legacy joinWhere ordering).
-        $fromJoins = ' FROM ' . Table::Flights->value . ' out_flight'
-            . ' INNER JOIN ' . Table::Airports->value . ' out_airport ON out_flight.departure_airport = out_airport.code'
-            . ' INNER JOIN ' . Table::Airports->value . ' out_arrival_airport ON out_flight.arrival_airport = out_arrival_airport.code'
-            . ' INNER JOIN ' . Table::Airlines->value . ' out_airline ON out_flight.airline = out_airline.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' out_country ON out_airport.country_code = out_country.code'
-            . ' INNER JOIN ' . Table::Flights->value . ' in_flight ON out_flight.arrival_airport = in_flight.departure_airport AND DATE(in_flight.departure_time) = ?'
-            . ' INNER JOIN ' . Table::Airports->value . ' in_airport ON in_flight.departure_airport = in_airport.code'
-            . ' INNER JOIN ' . Table::Airports->value . ' in_arrival_airport ON in_flight.arrival_airport = in_arrival_airport.code'
-            . ' INNER JOIN ' . Table::Airlines->value . ' in_airline ON in_flight.airline = in_airline.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' in_country ON in_airport.country_code = in_country.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' out_arrival_country ON out_arrival_airport.country_code = out_arrival_country.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' in_arrival_country ON in_arrival_airport.country_code = in_arrival_country.code';
+        $fromCodes = $this->resolveAirportCodes($from);
+        $toCodes = $this->resolveAirportCodes($to);
 
-        $where = ' WHERE (out_airport.code = ? OR out_airport.city_code = ?)'
-            . ' AND (out_arrival_airport.code = ? OR out_arrival_airport.city_code = ?)'
-            . ' AND (in_airport.code = ? OR in_airport.city_code = ?)'
-            . ' AND (in_arrival_airport.code = ? OR in_arrival_airport.city_code = ?)'
-            . ' AND DATE(out_flight.departure_time) = ?';
+        if ($fromCodes === [] || $toCodes === []) {
+            return ['rows' => [], 'total' => 0];
+        }
 
-        $params = [$returnDate, $from, $from, $to, $to, $to, $to, $from, $from, $departDate];
+        // Return-leg predicate lives in the JOIN, so its params come first.
+        $join = ' INNER JOIN ' . Table::Flights->value . ' in_flight'
+            . ' ON out_flight.arrival_airport = in_flight.departure_airport'
+            . ' AND in_flight.arrival_airport IN (' . $this->placeholders($fromCodes) . ')'
+            . ' AND in_flight.departure_time >= ? AND in_flight.departure_time < ? + INTERVAL 1 DAY';
 
-        $total = (int) $this->connection->fetchValue('SELECT count(1)' . $fromJoins . $where, $params);
+        $where = ' WHERE out_flight.departure_airport IN (' . $this->placeholders($fromCodes) . ')'
+            . ' AND out_flight.arrival_airport IN (' . $this->placeholders($toCodes) . ')'
+            . ' AND out_flight.departure_time >= ? AND out_flight.departure_time < ? + INTERVAL 1 DAY';
+
+        $params = [...$fromCodes, $returnDate, $returnDate, ...$fromCodes, ...$toCodes, $departDate, $departDate];
+
+        $total = (int) $this->connection->fetchValue(
+            'SELECT COUNT(*) FROM ' . Table::Flights->value . ' out_flight' . $join . $where,
+            $params,
+        );
+
+        if ($total === 0) {
+            return ['rows' => [], 'total' => 0];
+        }
 
         $columns = implode(', ', array_merge(
             $this->legColumns('out', [
@@ -138,11 +166,52 @@ final readonly class FlightRepository
             ]),
         ));
 
-        $sql = 'SELECT ' . $columns . $fromJoins . $where
+        $sql = 'SELECT STRAIGHT_JOIN ' . $columns
+            . ' FROM ' . Table::Flights->value . ' out_flight'
+            . $join
+            . ' INNER JOIN ' . Table::Airports->value . ' out_airport ON out_flight.departure_airport = out_airport.code'
+            . ' INNER JOIN ' . Table::Airports->value . ' out_arrival_airport ON out_flight.arrival_airport = out_arrival_airport.code'
+            . ' INNER JOIN ' . Table::Airlines->value . ' out_airline ON out_flight.airline = out_airline.code'
+            . ' INNER JOIN ' . Table::Countries->value . ' out_country ON out_airport.country_code = out_country.code'
+            . ' INNER JOIN ' . Table::Countries->value . ' out_arrival_country ON out_arrival_airport.country_code = out_arrival_country.code'
+            . ' INNER JOIN ' . Table::Airports->value . ' in_airport ON in_flight.departure_airport = in_airport.code'
+            . ' INNER JOIN ' . Table::Airports->value . ' in_arrival_airport ON in_flight.arrival_airport = in_arrival_airport.code'
+            . ' INNER JOIN ' . Table::Airlines->value . ' in_airline ON in_flight.airline = in_airline.code'
+            . ' INNER JOIN ' . Table::Countries->value . ' in_country ON in_airport.country_code = in_country.code'
+            . ' INNER JOIN ' . Table::Countries->value . ' in_arrival_country ON in_arrival_airport.country_code = in_arrival_country.code'
+            . $where
             . ' ORDER BY ' . $sort->roundtripOrderBy() . ' ASC'
             . ' LIMIT ' . $this->offset($page) . ', ' . self::PER_PAGE;
 
         return ['rows' => $this->connection->fetchAll($sql, $params), 'total' => $total];
+    }
+
+    /**
+     * Resolve a search input (an airport code or a city code) to the concrete
+     * airport codes it covers, so the flight filter can use an indexed
+     * `departure_airport IN (…)` equality instead of a non-sargable
+     * `(code = ? OR city_code = ?)` join predicate.
+     *
+     * @return list<string>
+     */
+    private function resolveAirportCodes(string $codeOrCity): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT code FROM ' . Table::Airports->value . ' WHERE code = ? OR city_code = ?',
+            [$codeOrCity, $codeOrCity],
+        );
+
+        return array_map(static fn(array $row): string => (string) $row['code'], $rows);
+    }
+
+    /**
+     * Comma-separated `?` placeholders for an IN (…) list.
+     *
+     * @param list<string> $values
+     */
+    private function placeholders(array $values): string
+    {
+        return implode(', ', array_fill(0, count($values), '?'));
     }
 
     private function offset(int $page): int
