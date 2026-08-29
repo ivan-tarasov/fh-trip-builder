@@ -73,12 +73,12 @@
 
                     <form method="get" action="/search/" id="searchForm" class="p-4 p-md-5 rounded-3 bg-body-tertiary">
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control auto-clear" id="departing_airport" data-filter="{{ config('api.fake.url') }}/airports/autofill/?query=#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
+                            <input type="text" class="form-control auto-clear" id="departing_airport" data-filter="/api/airports/autofill?query=#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
                             <input type="hidden" id="departing_airport_value" name="{{ config('search.form.input.depart_place') }}" value=""/>
                             <label for="departing_airport">From:</label>
                         </div>
                         <div class="form-floating mb-3">
-                            <input type="text" class="form-control auto-clear" id="arrival_airport" data-filter="{{ config('api.fake.url') }}/airports/autofill/?query=#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
+                            <input type="text" class="form-control auto-clear" id="arrival_airport" data-filter="/api/airports/autofill?query=#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
                             <input type="hidden" id="arrival_airport_value" name="{{ config('search.form.input.arrive_place') }}" value=""/>
                             <label for="arrival_airport">To</label>
                         </div>
