@@ -94,7 +94,11 @@
         });
 
         $("button[id^=addTrip_]").click(function () {
-            let tripID = [$(this).data('flight-departing-id'), $(this).data('flight-returning-id')];
+            // Comma-separated segment ids per direction (an itinerary can have
+            // more than one leg). jQuery coerces a single-id value to a Number,
+            // so normalise to a string before sending.
+            let departIds = String($(this).data('flight-departing-ids') ?? '');
+            let returnIds = String($(this).data('flight-returning-ids') ?? '');
 
             Swal.fire({
                 title: 'Add this trip?',
@@ -109,7 +113,7 @@
                             'Content-Type': 'application/x-www-form-urlencoded',
                             'X-CSRF-Token': csrfToken()
                         },
-                        body: new URLSearchParams({depart_id: tripID[0] ?? '', return_id: tripID[1] ?? ''})
+                        body: new URLSearchParams({depart_ids: departIds, return_ids: returnIds})
                     })
                         .then(response => {
                             if (!response.ok) {

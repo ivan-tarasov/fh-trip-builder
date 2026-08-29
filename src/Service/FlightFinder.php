@@ -15,6 +15,12 @@ use TripBuilder\TripType;
 /**
  * Flight search + shaping, independent of any transport.
  *
+ * Each result item carries an `outbound` itinerary and (for round-trips) a
+ * `returning` itinerary. An itinerary is an ordered list of `segments` (one per
+ * flight leg) plus its `stops` count, `total_duration`, and `layovers` (the
+ * connection airport and wait between consecutive segments) — so a direct
+ * flight is a one-segment itinerary and a connection has two or more.
+ *
  * The HTTP endpoint (Api\Flights\Response) and the page controllers both call
  * this directly, so a page render no longer makes an HTTP request to the app's
  * own API.
@@ -27,6 +33,11 @@ final readonly class FlightFinder
     private const string RESPONSE_FLIGHTS = 'flights';
     private const string RESPONSE_OUTBOUND = 'outbound';
     private const string RESPONSE_RETURNING = 'returning';
+    private const string RESPONSE_SEGMENTS = 'segments';
+    private const string RESPONSE_STOPS = 'stops';
+    private const string RESPONSE_TOTAL_DURATION = 'total_duration';
+    private const string RESPONSE_LAYOVERS = 'layovers';
+    private const string RESPONSE_WAIT_MINUTES = 'wait_minutes';
     private const string RESPONSE_DEPART = 'depart';
     private const string RESPONSE_ARRIVE = 'arrive';
     private const string RESPONSE_FLIGHT_NUMBER = 'number';
@@ -85,27 +96,42 @@ final readonly class FlightFinder
     }
 
     /**
-     * A single flight leg by id (for the add-trip flow), or null.
+     * Shape an ordered list of leg ids into booking segments, each carrying its
+     * own price so a booking total can be summed. Records the booking stat for
+     * the carriers involved. Returns [] when no ids resolve.
+     *
+     * @param list<int> $ids
+     * @return list<array<string, mixed>>
+     */
+    public function findSegments(array $ids): array
+    {
+        $legs = new FlightRepository($this->connection)->legsByIds($ids);
+
+        if ($legs === []) {
+            return [];
+        }
+
+        $carriers = array_values(array_unique(array_map(
+            static fn(array $leg): string => (string) $leg['carrier'],
+            $legs,
+        )));
+
+        new AirlineRepository($this->connection)->recordBooking(...$carriers);
+
+        return array_map(fn(array $leg): array => $this->mapLeg($leg, self::CABIN_OUTBOUND) + [
+            self::RESPONSE_PRICE_BASE => (float) $leg['price_base'],
+            self::RESPONSE_PRICE_TAX => (float) $leg['price_tax'],
+        ], $legs);
+    }
+
+    /**
+     * A single shaped flight leg by id (for the add-trip flow), or null.
      *
      * @return array<string, mixed>|null
      */
     public function findOne(int $id): ?array
     {
-        $flight = new FlightRepository($this->connection)->findById($id);
-
-        if ($flight === null) {
-            return null;
-        }
-
-        $response = array_merge($this->mapLeg($flight, 'out', self::CABIN_OUTBOUND), [
-            self::RESPONSE_PRICE_BASE => (float) $flight['out_price_base'],
-            self::RESPONSE_PRICE_TAX => (float) $flight['out_price_tax'],
-        ]);
-
-        // Updating booking stats
-        new AirlineRepository($this->connection)->recordBooking($response[self::RESPONSE_FLIGHT_CARRIER_CODE]);
-
-        return $response;
+        return $this->findSegments([$id])[0] ?? null;
     }
 
     /**
@@ -121,10 +147,10 @@ final readonly class FlightFinder
             $query->currentPage,
         );
 
-        $rows = array_map(fn(array $row): array => [
-            self::RESPONSE_PRICE_BASE => $row['out_price_base'],
-            self::RESPONSE_PRICE_TAX => $row['out_price_tax'],
-            self::RESPONSE_OUTBOUND => $this->mapLeg($row, 'out', self::CABIN_OUTBOUND),
+        $rows = array_map(fn(array $itinerary): array => [
+            self::RESPONSE_PRICE_BASE => $itinerary['price_base'],
+            self::RESPONSE_PRICE_TAX => $itinerary['price_tax'],
+            self::RESPONSE_OUTBOUND => $this->mapItinerary($itinerary, self::CABIN_OUTBOUND),
             self::RESPONSE_RETURNING => [],
         ], $result['rows']);
 
@@ -145,47 +171,80 @@ final readonly class FlightFinder
             $query->currentPage,
         );
 
-        $rows = array_map(fn(array $row): array => [
-            self::RESPONSE_PRICE_BASE => $row['out_price_base'] + $row['in_price_base'],
-            self::RESPONSE_PRICE_TAX => round($row['out_price_tax'] + $row['in_price_tax'], 2),
-            self::RESPONSE_OUTBOUND => $this->mapLeg($row, 'out', self::CABIN_OUTBOUND),
-            self::RESPONSE_RETURNING => $this->mapLeg($row, 'in', self::CABIN_RETURN),
+        $rows = array_map(fn(array $pair): array => [
+            self::RESPONSE_PRICE_BASE => $pair['price_base'],
+            self::RESPONSE_PRICE_TAX => $pair['price_tax'],
+            self::RESPONSE_OUTBOUND => $this->mapItinerary($pair['outbound'], self::CABIN_OUTBOUND),
+            self::RESPONSE_RETURNING => $this->mapItinerary($pair['returning'], self::CABIN_RETURN),
         ], $result['rows']);
 
         return [$rows, $result['total']];
     }
 
     /**
-     * Map one leg of a flight row (aliased `{$prefix}_*`) into the response shape.
+     * Shape a repository itinerary (ordered legs + aggregates) into the response
+     * shape: per-segment legs, the stop count, total elapsed duration, and the
+     * layover (connection airport + wait) between each pair of segments.
      *
-     * @param array<string, mixed> $row
+     * @param array<string, mixed> $itinerary
      * @return array<string, mixed>
      */
-    private function mapLeg(array $row, string $prefix, string $cabin): array
+    private function mapItinerary(array $itinerary, string $cabin): array
+    {
+        $legs = $itinerary['legs'];
+
+        $layovers = [];
+
+        for ($i = 1; $i < count($legs); $i++) {
+            $layovers[] = [
+                self::RESPONSE_AIRPORT_CODE => $legs[$i - 1]['arr_code'],
+                self::RESPONSE_AIRPORT_NAME => $legs[$i - 1]['arr_name'],
+                self::RESPONSE_AIRPORT_CITY => $legs[$i - 1]['arr_city'],
+                self::RESPONSE_WAIT_MINUTES => (int) round(
+                    (strtotime((string) $legs[$i]['dep_datetime']) - strtotime((string) $legs[$i - 1]['arr_datetime'])) / 60,
+                ),
+            ];
+        }
+
+        return [
+            self::RESPONSE_SEGMENTS => array_map(fn(array $leg): array => $this->mapLeg($leg, $cabin), $legs),
+            self::RESPONSE_STOPS => (int) $itinerary['stops'],
+            self::RESPONSE_TOTAL_DURATION => (int) $itinerary['duration'],
+            self::RESPONSE_LAYOVERS => $layovers,
+        ];
+    }
+
+    /**
+     * Map one hydrated flight leg (plain columns) into the response segment shape.
+     *
+     * @param array<string, mixed> $leg
+     * @return array<string, mixed>
+     */
+    private function mapLeg(array $leg, string $cabin): array
     {
         return [
-            self::RESPONSE_FLIGHT_ID => $row["{$prefix}_id"],
-            self::RESPONSE_FLIGHT_CARRIER_CODE => $row["{$prefix}_carrier"],
-            self::RESPONSE_FLIGHT_CARRIER_NAME => $row["{$prefix}_carrier_name"],
-            self::RESPONSE_FLIGHT_NUMBER => sprintf('%s-%d', $row["{$prefix}_carrier"], $row["{$prefix}_number"]),
+            self::RESPONSE_FLIGHT_ID => $leg['id'],
+            self::RESPONSE_FLIGHT_CARRIER_CODE => $leg['carrier'],
+            self::RESPONSE_FLIGHT_CARRIER_NAME => $leg['carrier_name'],
+            self::RESPONSE_FLIGHT_NUMBER => sprintf('%s-%d', $leg['carrier'], $leg['number']),
             self::RESPONSE_DEPART => [
-                self::RESPONSE_AIRPORT_CODE => $row["{$prefix}_dep_code"],
-                self::RESPONSE_AIRPORT_NAME => $row["{$prefix}_dep_name"],
-                self::RESPONSE_AIRPORT_COUNTRY => $row["{$prefix}_dep_country"],
-                self::RESPONSE_AIRPORT_CITY => $row["{$prefix}_dep_city"],
-                self::RESPONSE_DATE_TIME => $row["{$prefix}_dep_datetime"],
+                self::RESPONSE_AIRPORT_CODE => $leg['dep_code'],
+                self::RESPONSE_AIRPORT_NAME => $leg['dep_name'],
+                self::RESPONSE_AIRPORT_COUNTRY => $leg['dep_country'],
+                self::RESPONSE_AIRPORT_CITY => $leg['dep_city'],
+                self::RESPONSE_DATE_TIME => $leg['dep_datetime'],
             ],
             self::RESPONSE_ARRIVE => [
-                self::RESPONSE_AIRPORT_CODE => $row["{$prefix}_arr_code"],
-                self::RESPONSE_AIRPORT_NAME => $row["{$prefix}_arr_name"],
-                self::RESPONSE_AIRPORT_COUNTRY => $row["{$prefix}_arr_country"],
-                self::RESPONSE_AIRPORT_CITY => $row["{$prefix}_arr_city"],
-                self::RESPONSE_DATE_TIME => $row["{$prefix}_arr_datetime"],
+                self::RESPONSE_AIRPORT_CODE => $leg['arr_code'],
+                self::RESPONSE_AIRPORT_NAME => $leg['arr_name'],
+                self::RESPONSE_AIRPORT_COUNTRY => $leg['arr_country'],
+                self::RESPONSE_AIRPORT_CITY => $leg['arr_city'],
+                self::RESPONSE_DATE_TIME => $leg['arr_datetime'],
             ],
             self::RESPONSE_CABIN_CODE => $cabin,
-            self::RESPONSE_DISTANCE => $row["{$prefix}_distance"],
-            self::RESPONSE_DURATION => $row["{$prefix}_duration"],
-            self::RESPONSE_RATING => (float) $row["{$prefix}_rating"],
+            self::RESPONSE_DISTANCE => $leg['distance'],
+            self::RESPONSE_DURATION => $leg['duration'],
+            self::RESPONSE_RATING => (float) $leg['rating'],
         ];
     }
 }

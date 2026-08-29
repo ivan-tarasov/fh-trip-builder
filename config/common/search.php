@@ -106,4 +106,27 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Connections / layovers
+    |--------------------------------------------------------------------------
+    |
+    | Bounds for assembling connecting itineraries at search time. A valid
+    | layover departs between min/max minutes after the previous leg arrives;
+    | max_stops caps how many connections are explored (0 = direct only);
+    | roundtrip_topk caps the cheapest candidates kept per direction before
+    | pairing, so round-trip pairing stays bounded.
+    |
+    */
+
+    'connections' => [
+        'min_connect_minutes' => 45,
+        'max_connect_minutes' => 360,
+        // 0 = direct only, 1 = direct + one connection. Each extra stop lets the
+        // middle leg fan out to every airport, so 2 is materially more expensive
+        // on large flight tables — enable it only for smaller datasets.
+        'max_stops' => 1,
+        'roundtrip_topk' => 50,
+    ],
+
 ];

@@ -1,0 +1,43 @@
+{# Collapsed itinerary line: carrier · departure · path (a dot per stop) · arrival · stops · total time #}
+<div class="row align-items-center g-2 py-2">
+    <!-- Airline -->
+    <div class="col-auto">
+        <img src="{{ direction.logo_url }}" class="rounded-circle" style="max-height: 40px;"
+             data-toggle="tooltip" data-placement="top" title="{{ direction.carrier_name }}"
+             alt="{{ direction.carrier_name }}" />
+    </div>
+    <!-- Departure -->
+    <div class="col-auto">
+        <div class="h5 mb-0">{{ direction.depart_time }}</div>
+        <div class="small text-muted">{{ direction.depart_code }} &ndash; {{ direction.arrive_code }}</div>
+        <div class="small text-muted">{{ direction.carrier_name }}</div>
+    </div>
+    <!-- Path with stop dots -->
+    <div class="col px-2">
+        <div class="itinerary-path">
+            {% for layover in direction.layovers %}
+                <span class="itinerary-stop"
+                      style="left: {{ (loop.index / (direction.layovers|length + 1) * 100)|round }}%;"
+                      data-toggle="tooltip" data-placement="top"
+                      title="Stop: {{ layover.wait }} layover, {{ layover.airport_code }} &ndash; {{ layover.airport_city }}"></span>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- Arrival -->
+    <div class="col-auto">
+        <div class="h5 mb-0">
+            {{ direction.arrive_time }}{% if direction.day_offset > 0 %}<sup class="text-primary small">+{{ direction.day_offset }}</sup>{% endif %}
+        </div>
+    </div>
+    <!-- Stops summary -->
+    <div class="col-auto" style="min-width: 120px;">
+        <div class="fw-semibold small">{{ direction.stops_label }}</div>
+        {% for layover in direction.layovers %}
+            <div class="small text-muted">{{ layover.wait }} in {{ layover.airport_code }}</div>
+        {% endfor %}
+    </div>
+    <!-- Total duration -->
+    <div class="col-auto text-nowrap small text-muted" style="min-width: 90px;">
+        <i class="far fa-clock pe-1"></i>{{ direction.duration }}
+    </div>
+</div>

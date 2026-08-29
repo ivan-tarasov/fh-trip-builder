@@ -22,50 +22,38 @@ class AjaxController extends AbstractController
             return;
         }
 
-        $this->setGet([
-            'flight_outbound' => filter_var($_POST['depart_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
-            'flight_return' => filter_var($_POST['return_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
-        ]);
+        // Each direction is a comma-separated list of flight-leg ids (an
+        // itinerary can have more than one leg when it connects).
+        $outboundIds = $this->parseIds($_POST['depart_ids'] ?? '');
+        $returnIds = $this->parseIds($_POST['return_ids'] ?? '');
 
-        if (!$this->get['flight_outbound']) {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Wrong format',
-            ]);
+        if ($outboundIds === []) {
+            echo json_encode(['status' => 'error', 'message' => 'Wrong format']);
 
             return;
         }
 
         $finder = new FlightFinder($this->connection());
 
+        $outbound = $finder->findSegments($outboundIds);
+        $return = $returnIds === [] ? [] : $finder->findSegments($returnIds);
+
+        // Every requested leg must still resolve, or the itinerary is stale.
+        if (count($outbound) !== count($outboundIds) || count($return) !== count($returnIds)) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'The selected flight is no longer available.',
+            ]);
+
+            return;
+        }
+
         $request = [
             'session_id' => session_id(),
+            'departure_time' => $outbound[0]['depart']['date_time'],
+            'flight_outbound' => json_encode($outbound),
+            'flight_return' => $return === [] ? null : json_encode($return),
         ];
-
-        foreach ($this->get as $field => $flight_id) {
-            if (empty($flight_id)) {
-                $request[$field] = null;
-
-                continue;
-            }
-
-            $flight = $finder->findOne((int) $flight_id);
-
-            if ($flight === null) {
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'The selected flight is no longer available.',
-                ]);
-
-                return;
-            }
-
-            if ($field == 'flight_outbound') {
-                $request['departure_time'] = $flight['depart']['date_time'];
-            }
-
-            $request[$field] = json_encode($flight);
-        }
 
         try {
             $id = new BookingRepository($this->connection())->create($request);
@@ -76,6 +64,26 @@ class AjaxController extends AbstractController
         }
 
         echo json_encode($json);
+    }
+
+    /**
+     * Parse a comma-separated list of positive integer ids.
+     *
+     * @return list<int>
+     */
+    private function parseIds(string $csv): array
+    {
+        $ids = [];
+
+        foreach (explode(',', $csv) as $part) {
+            $id = filter_var(trim($part), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+            if ($id !== false) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
     }
 
     public function deleteBooking(): void

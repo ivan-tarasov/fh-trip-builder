@@ -89,7 +89,7 @@ class SearchController extends AbstractController
 
             $query = new FlightSearchQuery(
                 currentPage: $this->get[self::GET_PAGE] ?? 1,
-                sort: 'price',
+                sort: $_SESSION[self::POST_SORT],
                 from: $this->get[self::GET_FROM],
                 to: $this->get[self::GET_TO],
                 departDate: $this->get[self::GET_DEPART],
@@ -219,21 +219,27 @@ class SearchController extends AbstractController
      */
     private function fetchSidebarAirlines(): array
     {
-        $carriers = array_unique(array_merge(...array_map(function ($item) {
-            $values = [$item->outbound->carrier];
+        $carriers = [];
 
-            if (isset($item->returning->carrier)) {
-                $values[] = $item->returning->carrier;
+        foreach ($this->data->flights ?? [] as $item) {
+            foreach ([$item->outbound, $item->returning] as $itinerary) {
+                if (empty($itinerary) || empty($itinerary->segments)) {
+                    continue;
+                }
+
+                foreach ($itinerary->segments as $segment) {
+                    $carriers[] = $segment->carrier;
+                }
             }
+        }
 
-            return $values;
-        }, $this->data->flights ?? [])));
+        $carriers = array_values(array_unique($carriers));
 
-        if (empty($carriers)) {
+        if ($carriers === []) {
             return [];
         }
 
-        return new AirlineRepository($this->connection())->search(array_values($carriers), false);
+        return new AirlineRepository($this->connection())->search($carriers, false);
     }
 
     /**
@@ -248,53 +254,129 @@ class SearchController extends AbstractController
         $flights = [];
 
         foreach ($this->data->flights as $flight) {
-            $carriers = [];
-            $tickets = [];
+            $outbound = $this->buildDirection($flight->outbound, 'Outbound');
+            $directions = [$outbound['direction']];
+            $outboundIds = $outbound['ids'];
+            $returnIds = [];
 
-            foreach ([$flight->outbound, $flight->returning] as $ticket) {
-                if (!$ticket) {
-                    continue;
-                }
-
-                $carriers[] = [
-                    'number' => $ticket->number,
-                    'name' => $ticket->carrier_name,
-                    'logo_url' => Cdn::getUrl(sprintf(
-                        '%s/suppliers/%s.png',
-                        Config::get('site.static.endpoint.images'),
-                        $ticket->carrier,
-                    )),
-                ];
-
-                $tickets[] = [
-                    'depart_time' => date('H:i', strtotime($ticket->depart->date_time)),
-                    'arrive_time' => date('H:i', strtotime($ticket->arrive->date_time)),
-                    'depart_date' => date('Y-m-d', strtotime($ticket->depart->date_time)),
-                    'arrive_date' => date('Y-m-d', strtotime($ticket->arrive->date_time)),
-                    'depart_city' => $ticket->depart->airport_city,
-                    'arrive_city' => $ticket->arrive->airport_city,
-                    'depart_airport' => $ticket->depart->airport_name,
-                    'arrive_airport' => $ticket->arrive->airport_name,
-                    'depart_code' => $ticket->depart->airport_code,
-                    'arrive_code' => $ticket->arrive->airport_code,
-                    'duration' => $this->minutesToStringTime($ticket->duration),
-                ];
+            if (!empty($flight->returning) && !empty($flight->returning->segments)) {
+                $return = $this->buildDirection($flight->returning, 'Return');
+                $directions[] = $return['direction'];
+                $returnIds = $return['ids'];
             }
 
             $flights[] = [
-                'outbound_id' => $flight->outbound->id,
-                'returning_id' => $flight->returning->id ?? null,
+                'outbound_ids' => $outboundIds,
+                'return_ids' => $returnIds,
                 'price_total' => number_format((float) $flight->price_base + (float) $flight->price_tax, 2),
                 'price_base' => number_format((float) $flight->price_base, 2),
                 'price_tax' => number_format((float) $flight->price_tax, 2),
                 'price_gst' => number_format(0, 2),
                 'price_qst' => number_format(0, 2),
-                'carriers' => $carriers,
-                'tickets' => $tickets,
+                'directions' => $directions,
             ];
         }
 
         return $flights;
+    }
+
+    /**
+     * Build one direction's view-model — both the collapsed compact line
+     * (leading carrier, first/last times with a next-day offset, total duration,
+     * a layover entry per stop) and the expanded per-segment detail shown under
+     * "flight details". Also returns the segment ids.
+     *
+     * @return array{direction: array<string, mixed>, ids: list<int>}
+     * @throws Exception
+     */
+    private function buildDirection(object $itinerary, string $label): array
+    {
+        $segments = $itinerary->segments;
+        $first = $segments[0];
+        $last = $segments[array_key_last($segments)];
+
+        $ids = [];
+        $detail = [];
+
+        foreach ($segments as $segment) {
+            $ids[] = (int) $segment->id;
+
+            $detail[] = [
+                'carrier_name' => $segment->carrier_name,
+                'logo_url' => $this->carrierLogo($segment->carrier),
+                'flight_number' => 'Flight ' . str_replace('-', '', $segment->number),
+                'duration' => $this->minutesToStringTime($segment->duration),
+                'cabin' => 'Economy',
+                'depart_time' => date('g:ia', strtotime($segment->depart->date_time)),
+                'depart_date' => date('D, d M', strtotime($segment->depart->date_time)),
+                'depart_city' => $segment->depart->airport_city,
+                'depart_code' => $segment->depart->airport_code,
+                'arrive_time' => date('g:ia', strtotime($segment->arrive->date_time)),
+                'arrive_date' => date('D, d M', strtotime($segment->arrive->date_time)),
+                'arrive_city' => $segment->arrive->airport_city,
+                'arrive_code' => $segment->arrive->airport_code,
+            ];
+        }
+
+        $layovers = [];
+
+        foreach ($itinerary->layovers as $layover) {
+            $layovers[] = [
+                'airport_code' => $layover->airport_code,
+                'airport_city' => $layover->airport_city,
+                'wait' => $this->minutesToStringTime($layover->wait_minutes),
+            ];
+        }
+
+        return [
+            'direction' => [
+                'label' => $label,
+                'stops_label' => $this->stopsLabel((int) $itinerary->stops),
+                'duration' => $this->minutesToStringTime((int) $itinerary->total_duration),
+                'carrier_name' => $first->carrier_name,
+                'logo_url' => $this->carrierLogo($first->carrier),
+                'depart_time' => date('g:iA', strtotime($first->depart->date_time)),
+                'depart_code' => $first->depart->airport_code,
+                'depart_city' => $first->depart->airport_city,
+                'arrive_time' => date('g:iA', strtotime($last->arrive->date_time)),
+                'arrive_code' => $last->arrive->airport_code,
+                'arrive_city' => $last->arrive->airport_city,
+                'day_offset' => $this->dayOffset($first->depart->date_time, $last->arrive->date_time),
+                'layovers' => $layovers,
+                'segments' => $detail,
+            ],
+            'ids' => $ids,
+        ];
+    }
+
+    private function carrierLogo(string $carrier): string
+    {
+        return Cdn::getUrl(sprintf(
+            '%s/suppliers/%s.png',
+            Config::get('site.static.endpoint.images'),
+            $carrier,
+        ));
+    }
+
+    private function stopsLabel(int $stops): string
+    {
+        return match (true) {
+            $stops === 0 => 'Direct',
+            $stops === 1 => '1 stop',
+            default => $stops . ' stops',
+        };
+    }
+
+    /**
+     * Whole days between a departure and an arrival (0 = same calendar day,
+     * 1 = arrives the next day, …) for the "+N" arrival marker.
+     */
+    private function dayOffset(string $departDateTime, string $arriveDateTime): int
+    {
+        $depart = new DateTime(date('Y-m-d', strtotime($departDateTime)));
+        $arrive = new DateTime(date('Y-m-d', strtotime($arriveDateTime)));
+
+        return (int) $depart->diff($arrive)->format('%r%a');
     }
 
     /**

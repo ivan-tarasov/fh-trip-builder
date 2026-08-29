@@ -1348,3 +1348,45 @@ textarea {
   color: #212529 !important;
 }
 
+
+/* Compact itinerary line: the flight path with a filled dot per layover. */
+.itinerary-path {
+  position: relative;
+  height: 2px;
+  background-color: #ced4da;
+  border-radius: 2px;
+}
+
+.itinerary-path::before,
+.itinerary-path::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background-color: #adb5bd;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.itinerary-path::before { left: 0; }
+.itinerary-path::after { right: 0; }
+
+.itinerary-stop {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background-color: #6c757d;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+/* "Show flight details" toggle: swap the label and rotate the chevron by state. */
+.flight-details-toggle .if-expanded { display: none; }
+.flight-details-toggle:not(.collapsed) .if-collapsed { display: none; }
+.flight-details-toggle:not(.collapsed) .if-expanded { display: inline; }
+.flight-details-toggle .chevron { transition: transform 0.2s ease; }
+.flight-details-toggle:not(.collapsed) .chevron { transform: rotate(180deg); }

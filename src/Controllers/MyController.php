@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Exception;
-use stdClass;
 use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\View\TwigRenderer;
@@ -22,16 +21,18 @@ class MyController extends AbstractController
         $bookings = [];
 
         foreach ($rows as $row) {
-            $outbound = json_decode($row['flight_outbound'] ?? '');
-            $return = json_decode($row['flight_return'] ?? '');
+            $outbound = json_decode($row['flight_outbound'] ?? '', true);
+            $return = json_decode($row['flight_return'] ?? '', true);
 
-            // Skip rows whose stored flight JSON is corrupt.
-            if (!$outbound instanceof stdClass) {
+            // Skip rows whose stored flight JSON is corrupt or empty.
+            if (!is_array($outbound) || $outbound === []) {
                 continue;
             }
 
-            $priceBase = $outbound->price_base + ($return->price_base ?? 0);
-            $priceTax = $outbound->price_tax + ($return->price_tax ?? 0);
+            $returnSegments = is_array($return) ? $return : [];
+
+            $priceBase = $this->sumSegments($outbound, 'price_base') + $this->sumSegments($returnSegments, 'price_base');
+            $priceTax = $this->sumSegments($outbound, 'price_tax') + $this->sumSegments($returnSegments, 'price_tax');
 
             $bookings[] = [
                 'id_raw' => $row['id'],
@@ -40,8 +41,8 @@ class MyController extends AbstractController
                 'price_base' => $priceBase,
                 'price_tax' => $priceTax,
                 'price_total' => $priceBase + $priceTax,
-                'outbound' => $outbound,
-                'return_flight' => $return instanceof stdClass ? $return : null,
+                'outbound' => $this->bookingDirection($outbound),
+                'return_flight' => $returnSegments === [] ? null : $this->bookingDirection($returnSegments),
             ];
         }
 
@@ -51,4 +52,44 @@ class MyController extends AbstractController
         ]);
     }
 
+    /**
+     * Collapse a stored itinerary (list of leg segments) into the view-model the
+     * bookings templates render: the first leg's departure, the last leg's
+     * arrival, the leading carrier, and a stops label.
+     *
+     * @param list<array<string, mixed>> $segments
+     * @return array<string, mixed>
+     */
+    private function bookingDirection(array $segments): array
+    {
+        $first = $segments[0];
+        $last = $segments[count($segments) - 1];
+
+        return [
+            'depart' => $first['depart'],
+            'arrive' => $last['arrive'],
+            'carrier' => $first['carrier'],
+            'carrier_name' => $first['carrier_name'],
+            'number' => $first['number'],
+            'stops_label' => $this->stopsLabel(count($segments) - 1),
+            'segments' => $segments,
+        ];
+    }
+
+    private function stopsLabel(int $stops): string
+    {
+        return match (true) {
+            $stops === 0 => 'Direct',
+            $stops === 1 => '1 stop',
+            default => $stops . ' stops',
+        };
+    }
+
+    /**
+     * @param list<array<string, mixed>> $segments
+     */
+    private function sumSegments(array $segments, string $key): float
+    {
+        return array_sum(array_map(static fn(array $segment): float => (float) $segment[$key], $segments));
+    }
 }

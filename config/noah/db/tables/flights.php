@@ -23,6 +23,10 @@ return [
     */
     'indexes' => [
         ['name' => 'route_departure_time', 'columns' => ['departure_airport', 'arrival_airport', 'departure_time']],
+        // A connecting leg's arrival is open (it can land anywhere), so the
+        // route index above can't seek it by date; this one lets such legs seek
+        // on (departure_airport, departure_time).
+        ['name' => 'departure_airport_time', 'columns' => ['departure_airport', 'departure_time']],
         ['name' => 'airline_number_departure_time', 'columns' => ['airline', 'number', 'departure_time']],
     ],
 
