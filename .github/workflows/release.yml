@@ -1,0 +1,86 @@
+name: Release
+
+# Tags and publishes a release when a pull request is merged into develop.
+# The bump comes from a label on the PR — release:major / release:minor /
+# release:patch, defaulting to patch — so commit messages stay prose.
+# Add the `no-release` label to merge without cutting a release.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop]
+
+permissions:
+  contents: write
+
+# Two PRs merged close together must not read the same "latest tag".
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: >-
+      github.event.pull_request.merged == true
+      && !contains(github.event.pull_request.labels.*.name, 'no-release')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history and tags: the next version is derived from the last one.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Work out the next version
+        id: version
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+
+          case ",${LABELS}," in
+            *,release:major,*) level=major ;;
+            *,release:minor,*) level=minor ;;
+            *)                 level=patch ;;
+          esac
+
+          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          latest=${latest:-v0.0.0}
+          IFS=. read -r major minor patch <<< "${latest#v}"
+
+          case "$level" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+
+          next="v${major}.${minor}.${patch}"
+
+          if git rev-parse -q --verify "refs/tags/${next}" >/dev/null; then
+            echo "::error::Tag ${next} already exists — refusing to overwrite it."
+            exit 1
+          fi
+
+          echo "Bumping ${latest} -> ${next} (${level})"
+          echo "tag=${next}" >> "$GITHUB_OUTPUT"
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          # Tags the merge commit and lets GitHub write the notes from the
+          # pull requests included since the previous release.
+          gh release create "$TAG" \
+            --target "${{ github.event.pull_request.merge_commit_sha }}" \
+            --title "$TAG — $TITLE" \
+            --generate-notes
+
+      - name: Summary
+        run: |
+          echo "Released **${{ steps.version.outputs.tag }}** from PR #${{ github.event.pull_request.number }}" >> "$GITHUB_STEP_SUMMARY"
