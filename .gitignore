@@ -29,3 +29,8 @@ Thumbs.db
 
 # Generated MySQL config
 config.mysql.php
+
+# Web server config: owned by the host, not the repo. cPanel and similar panels
+# rewrite this file (e.g. the PHP handler block), so a tracked copy fights the
+# server on every deploy. Copy .htaccess.example into place instead.
+/.htaccess
