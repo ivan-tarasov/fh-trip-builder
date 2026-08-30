@@ -147,10 +147,33 @@ final class FlightRepositoryTest extends IntegrationTestCase
 
     public function testSearchWithUnknownAirportShortCircuitsToEmpty(): void
     {
-        self::assertSame(
-            ['rows' => [], 'total' => 0],
-            $this->repository()->searchDirection('ZZZ', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1),
+        $result = $this->repository()->searchDirection('ZZZ', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+
+        self::assertSame([], $result['rows']);
+        self::assertSame(0, $result['total']);
+        self::assertNull($result['cheapest']);
+    }
+
+    public function testSearchReportsTheCheapestOfEveryResult(): void
+    {
+        // `cheapest` anchors the "+$X vs cheapest" note on each card, so it must
+        // be the lowest total across all results — not just the first page.
+        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+
+        self::assertNotNull($result['cheapest']);
+
+        $pageTotals = array_map(
+            static fn(array $itinerary): float => $itinerary['price_base'] + $itinerary['price_tax'],
+            $result['rows'],
         );
+
+        // Sorted by price, so the first row of page one is that cheapest total.
+        self::assertEqualsWithDelta(min($pageTotals), $result['cheapest'], 0.01);
+
+        // And nothing on the page can be cheaper than it.
+        foreach ($pageTotals as $total) {
+            self::assertGreaterThanOrEqual($result['cheapest'] - 0.01, $total);
+        }
     }
 
     /**

@@ -22,7 +22,14 @@
                     <span class="price__symbol">$</span><span class="price__whole">{{ flight.price.whole }}</span><span class="price__cents">.{{ flight.price.cents }}</span>
                     <span class="price__currency">CAD</span>
                 </div>
-                <div class="small text-muted price-note">
+                <div class="small price-note">
+                    {% if flight.is_cheapest %}
+                        <span class="text-success fw-semibold">cheapest option</span>
+                        <span class="text-muted">&middot;</span>
+                    {% elseif flight.price_difference %}
+                        <span class="text-muted">+${{ flight.price_difference }} vs cheapest &middot;</span>
+                    {% endif %}
+                    <span class="text-muted">
                     {% if price_mode == 'from' %}
                         <span data-toggle="tooltip" data-placement="top"
                               title="This departure plus the cheapest available return. Choose your return next to see the exact total.">
@@ -34,6 +41,7 @@
                             total per passenger <i class="fas fa-info-circle"></i>
                         </span>
                     {% endif %}
+                    </span>
                 </div>
             </div>
 

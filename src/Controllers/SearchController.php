@@ -301,9 +301,15 @@ class SearchController extends AbstractController
         $flights = [];
 
         $step = $this->data->step;
+        $cheapest = $this->data->cheapest_total;
+        // Naming one option "cheapest" only says something when there is more
+        // than one to be cheaper than.
+        $compare = $cheapest !== null && $this->data->total_flights > 1;
 
         foreach ($this->data->flights as $flight) {
             $built = $this->buildDirection($flight->itinerary);
+            $total = (float) $flight->price_base + (float) $flight->price_tax;
+            $difference = $compare ? $total - (float) $cheapest : null;
 
             $flights[] = [
                 // Each round-trip choice adds a half to the package (a link);
@@ -315,7 +321,12 @@ class SearchController extends AbstractController
                 },
                 'outbound_ids' => $built['ids'],
                 'return_ids' => [],
-                'price' => $this->priceParts((float) $flight->price_base + (float) $flight->price_tax),
+                'price' => $this->priceParts($total),
+                // Whole pounds/dollars: the cents of a difference are noise.
+                'is_cheapest' => $difference !== null && $difference < 0.5,
+                'price_difference' => $difference !== null && $difference >= 0.5
+                    ? number_format($difference)
+                    : null,
                 'price_base' => number_format((float) $flight->price_base, 2),
                 'price_tax' => number_format((float) $flight->price_tax, 2),
                 'price_gst' => number_format(0, 2),

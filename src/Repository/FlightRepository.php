@@ -59,7 +59,10 @@ final readonly class FlightRepository
      * the outbound first, then the return — rather than pairing every outbound
      * with every return.
      *
-     * @return array{rows: list<array<string, mixed>>, total: int}
+     * `cheapest` is the lowest total among the results this search can show, so
+     * a row can be priced relative to it without a second query.
+     *
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null}
      */
     public function searchDirection(string $from, string $to, string $departDate, SortMethod $sort, int $page): array
     {
@@ -67,7 +70,7 @@ final readonly class FlightRepository
         $toCodes = $this->resolveAirportCodes($to);
 
         if ($fromCodes === [] || $toCodes === []) {
-            return ['rows' => [], 'total' => 0];
+            return ['rows' => [], 'total' => 0, 'cheapest' => null];
         }
 
         [$candidateSql, $params] = $this->candidateSql($fromCodes, $toCodes, $departDate);
@@ -81,7 +84,7 @@ final readonly class FlightRepository
         );
 
         if ($candidates === []) {
-            return ['rows' => [], 'total' => 0];
+            return ['rows' => [], 'total' => 0, 'cheapest' => null];
         }
 
         $total = min(count($candidates), self::COUNT_CAP);
@@ -96,7 +99,14 @@ final readonly class FlightRepository
 
         $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs, $badges), $pageItems);
 
-        return ['rows' => $rows, 'total' => $total];
+        // Across every candidate, not just this page — otherwise page two would
+        // call its own first row the cheapest.
+        $cheapest = min(array_map(
+            static fn(array $c): float => (float) $c['price_base'] + (float) $c['price_tax'],
+            $candidates,
+        ));
+
+        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest];
     }
 
     /**

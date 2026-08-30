@@ -96,7 +96,7 @@ final readonly class FlightFinder
         $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
         $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
 
-        $result = ['rows' => [], 'total' => 0];
+        $result = ['rows' => [], 'total' => 0, 'cheapest' => null];
         $addBase = 0.0;
         $addTax = 0.0;
 
@@ -153,6 +153,11 @@ final readonly class FlightFinder
             'total_pages' => (int) ceil($result['total'] / self::PER_PAGE_LIMIT),
             'per_page' => self::PER_PAGE_LIMIT,
             'total_flights' => $result['total'],
+            // The lowest total on offer, in the same money the rows show, so a
+            // row can say how much more than the best option it costs.
+            'cheapest_total' => $result['cheapest'] === null
+                ? null
+                : round($result['cheapest'] + $addBase + $addTax, 2),
             'trip_type' => $tripType->value,
             'step' => $step,
             // Step 1 totals assume the cheapest return, so they are a floor;
