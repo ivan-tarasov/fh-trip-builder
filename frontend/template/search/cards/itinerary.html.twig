@@ -2,11 +2,15 @@
    The bar draws a part per flight leg and per layover, each sized by its own
    minutes, so the shape of the journey is readable without opening details. #}
 <div class="row align-items-center g-3 itinerary">
-    <!-- Airline -->
-    <div class="col-auto text-center" style="width: 76px;">
-        <img src="{{ direction.logo_url }}" class="rounded-circle" style="max-height: 40px;"
-             alt="{{ direction.carrier_name }}" />
-        <div class="small text-muted text-truncate">{{ direction.carrier_name }}</div>
+    <!-- Airline(s): one logo per airline flown, named on hover -->
+    <div class="col-auto">
+        <div class="airline-logos{% if direction.carriers|length > 1 %} airline-logos--multi{% endif %}">
+            {% for carrier in direction.carriers|slice(0, 3) %}
+                <img src="{{ carrier.logo_url }}" class="airline-logo rounded-circle"
+                     data-toggle="tooltip" data-placement="top" title="{{ carrier.name }}"
+                     alt="{{ carrier.name }}" />
+            {% endfor %}
+        </div>
     </div>
 
     <!-- Departure -->

@@ -433,9 +433,17 @@ class SearchController extends AbstractController
 
         $ids = [];
         $detail = [];
+        $carriers = [];
 
         foreach ($segments as $segment) {
             $ids[] = (int) $segment->id;
+
+            // One entry per airline, so a codeshare-ish itinerary shows each
+            // logo rather than repeating the first.
+            $carriers[$segment->carrier] ??= [
+                'name' => $segment->carrier_name,
+                'logo_url' => $this->carrierLogo($segment->carrier),
+            ];
 
             $detail[] = [
                 'carrier_name' => $segment->carrier_name,
@@ -508,8 +516,7 @@ class SearchController extends AbstractController
             'direction' => [
                 'stops_label' => $this->stopsLabel((int) $itinerary->stops),
                 'duration' => $this->minutesToStringTime((int) $itinerary->total_duration),
-                'carrier_name' => $first->carrier_name,
-                'logo_url' => $this->carrierLogo($first->carrier),
+                'carriers' => array_values($carriers),
                 'depart_time' => date('H:i', strtotime($first->depart->date_time)),
                 'depart_code' => $first->depart->airport_code,
                 'depart_city' => $first->depart->airport_city,
@@ -563,14 +570,12 @@ class SearchController extends AbstractController
             if ($wait < self::LAYOVER_TIGHT_MINUTES) {
                 $notices['tight'] = [
                     'icon' => 'person-running',
-                    'tone' => 'danger',
                     'label' => 'Tight connection',
                     'text' => sprintf('Only %s to change planes in %s', $waitLabel, $city),
                 ];
             } elseif ($wait > self::LAYOVER_LONG_MINUTES) {
                 $notices['long'] = [
                     'icon' => 'hourglass-half',
-                    'tone' => 'warning',
                     'label' => 'Long layover',
                     'text' => sprintf('%s waiting in %s', $waitLabel, $city),
                 ];
@@ -582,7 +587,6 @@ class SearchController extends AbstractController
             )) {
                 $notices['night'] = [
                     'icon' => 'moon',
-                    'tone' => 'warning',
                     'label' => 'Night layover',
                     'text' => sprintf('The wait in %s runs through the night', $city),
                 ];
@@ -593,7 +597,6 @@ class SearchController extends AbstractController
             if ($country !== $originCountry && $country !== $destinationCountry) {
                 $notices['visa'] = [
                     'icon' => 'passport',
-                    'tone' => 'info',
                     'label' => 'Transit visa',
                     'text' => sprintf('Connects through %s — check whether a transit visa is needed', $country),
                 ];
@@ -605,7 +608,6 @@ class SearchController extends AbstractController
         if (count($carriers) > 1) {
             $notices['airlines'] = [
                 'icon' => 'suitcase-rolling',
-                'tone' => 'danger',
                 'label' => 'Separate airlines',
                 'text' => 'Flights are on different airlines — bags may need collecting and re-checking',
             ];
@@ -614,7 +616,6 @@ class SearchController extends AbstractController
         if ($totalDuration > self::LONG_TRIP_MINUTES) {
             $notices['duration'] = [
                 'icon' => 'clock',
-                'tone' => 'warning',
                 'label' => 'Long journey',
                 'text' => sprintf('%s door to door', $this->minutesToStringTime($totalDuration)),
             ];

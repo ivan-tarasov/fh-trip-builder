@@ -1523,9 +1523,8 @@ textarea {
   cursor: help;
 }
 
-.notice--danger  { background-color: #ffe3e3; color: #c92a2a; }
-.notice--warning { background-color: #fff3bf; color: #a37200; }
-.notice--info    { background-color: #e7f5ff; color: #1971c2; }
+/* One treatment for all of them: these are things to look twice at. */
+.notice { background-color: #ffe9e9; color: #d6336c; }
 
 /* The whole card is the click target; the controls above it stay clickable. */
 .flight-card { cursor: pointer; }
@@ -1540,3 +1539,66 @@ textarea {
 .icon-btn.is-copied .icon-idle { display: none; }
 .icon-btn.is-active .icon-done,
 .icon-btn.is-copied .icon-done { display: inline-block; }
+
+/* Airline logos: one per airline flown, overlapped when there is more than one
+   so the pair reads as a single mark without stealing width from the route. */
+.airline-logos {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.airline-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background-color: #fff;
+}
+
+.airline-logos--multi .airline-logo {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .06);
+}
+
+.airline-logos--multi .airline-logo:nth-child(1) { top: 0; left: 0; z-index: 3; }
+.airline-logos--multi .airline-logo:nth-child(2) { bottom: 0; right: 0; z-index: 2; }
+.airline-logos--multi .airline-logo:nth-child(3) { bottom: 0; left: 0; z-index: 1; }
+
+/* The chosen outbound: a green banner rather than a green wash, so the route
+   bar inside keeps the same contrast it has on every other card. */
+.selected-flight { border: 1px solid #b2e2c4; }
+
+.selected-flight__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .5rem 1rem;
+  background-color: #2fa360;
+  color: #fff;
+  border-radius: calc(var(--bs-border-radius) - 1px) calc(var(--bs-border-radius) - 1px) 0 0;
+}
+
+/* Divides what is already settled from what is still being chosen. */
+.step-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1.5rem 0 1rem;
+  color: #6c757d;
+  font-size: .875rem;
+}
+
+.step-divider::before,
+.step-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #dee2e6;
+}
