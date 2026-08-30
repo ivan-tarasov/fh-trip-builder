@@ -1,0 +1,24 @@
+# Template for the web server's .htaccess — copy it into place on deploy:
+#
+#     cp .htaccess.example .htaccess
+#
+# The live .htaccess is deliberately NOT tracked (see .gitignore). Hosting
+# panels such as cPanel own that file and rewrite it — for example the
+# "# php -- BEGIN cPanel-generated handler" block that pins the PHP version.
+# A tracked copy would collide with the server on every deploy, and pulling
+# over it would silently drop that block, leaving the app on the wrong PHP.
+#
+# So: copy this once, then let the server keep its own copy. If you re-copy it
+# later, re-add any panel-generated blocks afterwards.
+#
+# Front-controller routing: send every request that doesn't map to a real file
+# or directory through index.php, so clean URLs like /search/ and
+# /api/airports/autofill reach the router (index.php reads the path from
+# REQUEST_URI). Static assets still serve directly via the -f/-d checks.
+# Apache only; nginx does this in its vhost with try_files ... /index.php.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

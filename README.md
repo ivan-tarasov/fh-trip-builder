@@ -84,6 +84,16 @@ DB_USERNAME=database_user
 DB_PASSWORD=database_password
 ```
 
+Copy the web server config into place as well:
+```bash
+cp .htaccess.example .htaccess
+```
+The live `.htaccess` is not tracked by git, because hosting panels such as cPanel
+own that file and rewrite it — notably the generated block that pins the PHP
+version. Keeping it untracked stops a deploy from overwriting those changes. If
+your host has already created an `.htaccess`, leave it alone and just make sure
+it contains the rewrite rules from `.htaccess.example`.
+
 ### 4. Run Installation Command
 Execute the following command to run the installation process:
 ```bash
