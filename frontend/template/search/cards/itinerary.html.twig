@@ -16,8 +16,9 @@
     <div class="col px-2">
         <div class="itinerary-path">
             {% for layover in direction.layovers %}
+                {# Positioned by when the stop actually happens, not evenly spaced. #}
                 <span class="itinerary-stop"
-                      style="left: {{ (loop.index / (direction.layovers|length + 1) * 100)|round }}%;"
+                      style="left: {{ layover.position_pct }}%;"
                       data-toggle="tooltip" data-placement="top"
                       title="Stop: {{ layover.wait }} layover, {{ layover.airport_code }} &ndash; {{ layover.airport_city }}"></span>
             {% endfor %}

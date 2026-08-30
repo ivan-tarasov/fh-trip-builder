@@ -7,7 +7,8 @@
 
     {% include 'search/sidebar/view.html.twig' %}
 
-    {% if total_flights != 0 %}
+    {# Step 3 lists nothing — it shows the assembled package instead. #}
+    {% if step == 3 or total_flights != 0 %}
         {% include 'search/cards/view.html.twig' %}
     {% else %}
         {% include 'search/no-result.html.twig' %}

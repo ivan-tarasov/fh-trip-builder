@@ -1390,3 +1390,51 @@ textarea {
 .flight-details-toggle:not(.collapsed) .if-expanded { display: inline; }
 .flight-details-toggle .chevron { transition: transform 0.2s ease; }
 .flight-details-toggle:not(.collapsed) .chevron { transform: rotate(180deg); }
+
+/* Two-step search: departing -> returning progress track. */
+.step-track { font-size: .875rem; }
+
+.step-track__item {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  color: #6c757d;
+}
+
+.step-track__item.is-current { color: #0d6efd; font-weight: 600; }
+.step-track__item.is-done { color: #198754; }
+
+.step-track__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: .75rem;
+  line-height: 1;
+}
+
+.step-track__item.is-current .step-track__marker { background-color: #0d6efd; border-color: #0d6efd; color: #fff; }
+.step-track__item.is-done .step-track__marker { background-color: #198754; border-color: #198754; color: #fff; }
+
+.step-track__line {
+  flex: 0 0 40px;
+  height: 1px;
+  background-color: #ced4da;
+}
+
+/* Lift the option the pointer is on, so rows read as choosable. */
+.flight-card { transition: box-shadow .15s ease, transform .15s ease; }
+.flight-card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1) !important; }
+
+/* The assembled round trip, set apart from the option lists. */
+.trip-package { border: 2px solid var(--bs-primary); }
+
+.trip-package__banner {
+  background-color: var(--bs-primary);
+  color: #fff;
+  padding: .5rem 1rem;
+  border-radius: calc(var(--bs-border-radius) - 2px) calc(var(--bs-border-radius) - 2px) 0 0;
+}

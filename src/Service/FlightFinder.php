@@ -31,13 +31,13 @@ final readonly class FlightFinder
 
     private const string RESPONSE_FLIGHT_ID = 'id';
     private const string RESPONSE_FLIGHTS = 'flights';
-    private const string RESPONSE_OUTBOUND = 'outbound';
-    private const string RESPONSE_RETURNING = 'returning';
+    private const string RESPONSE_ITINERARY = 'itinerary';
     private const string RESPONSE_SEGMENTS = 'segments';
     private const string RESPONSE_STOPS = 'stops';
     private const string RESPONSE_TOTAL_DURATION = 'total_duration';
     private const string RESPONSE_LAYOVERS = 'layovers';
     private const string RESPONSE_WAIT_MINUTES = 'wait_minutes';
+    private const string RESPONSE_POSITION = 'position_pct';
     private const string RESPONSE_DEPART = 'depart';
     private const string RESPONSE_ARRIVE = 'arrive';
     private const string RESPONSE_FLIGHT_NUMBER = 'number';
@@ -63,9 +63,21 @@ final readonly class FlightFinder
     /**
      * Run a flight search and shape the paginated result payload.
      *
+     * A round trip is chosen one direction at a time rather than as a pairing of
+     * every outbound with every return: with no selection this returns the
+     * outbound options priced "from" (the least each can cost once the cheapest
+     * return is added); given the chosen outbound's leg ids it returns the
+     * return options priced as the real trip total. A one-way search is a single
+     * list of totals.
+     *
+     * Once both directions are chosen the search stops listing options and
+     * returns the assembled round-trip package instead, ready to confirm.
+     *
+     * @param list<int> $outboundIds leg ids of an already-chosen outbound
+     * @param list<int> $returnIds leg ids of an already-chosen return
      * @return array<string, mixed>
      */
-    public function search(FlightSearchQuery $query, TripType $tripType): array
+    public function search(FlightSearchQuery $query, TripType $tripType, array $outboundIds = [], array $returnIds = []): array
     {
         // Updating search stats
         new AirportRepository($this->connection)->recordSearch($query->from, $query->to);
@@ -76,22 +88,84 @@ final readonly class FlightFinder
             self::RESPONSE_ARRIVE => sprintf('%s (%s)', $airports->cityByCode($query->to), $query->to),
         ];
 
-        [$flights, $totalFlights] = match ($tripType) {
-            TripType::Oneway => $this->onewayFlights($query),
-            TripType::Roundtrip => $this->roundtripFlights($query),
-        };
+        $flights = new FlightRepository($this->connection);
+
+        $isRoundtrip = $tripType === TripType::Roundtrip;
+
+        // A stale or tampered selection resolves to null and simply drops the
+        // traveller back to the step that still needs a choice.
+        $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
+        $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
+
+        $result = ['rows' => [], 'total' => 0];
+        $addBase = 0.0;
+        $addTax = 0.0;
+
+        if ($return !== null) {
+            // Step 3: both halves chosen — the package, with nothing left to list.
+            $step = 3;
+        } elseif ($outbound !== null) {
+            // Step 2: the return leg, priced as the real total with the choice.
+            $step = 2;
+            $result = $flights->searchDirection(
+                $query->to,
+                $query->from,
+                $query->returnDate,
+                SortMethod::fromRequest($query->sort),
+                $query->currentPage,
+            );
+            $addBase = (float) $outbound['price_base'];
+            $addTax = (float) $outbound['price_tax'];
+        } else {
+            // Step 1 (round trip) or the whole search (one way): the outbound.
+            $step = $isRoundtrip ? 1 : null;
+            $result = $flights->searchDirection(
+                $query->from,
+                $query->to,
+                $query->departDate,
+                SortMethod::fromRequest($query->sort),
+                $query->currentPage,
+            );
+
+            $addBase = ($step === 1 ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate) : null) ?? 0.0;
+        }
+
+        $rows = array_map(fn(array $itinerary): array => [
+            self::RESPONSE_PRICE_BASE => (float) $itinerary['price_base'] + $addBase,
+            self::RESPONSE_PRICE_TAX => round((float) $itinerary['price_tax'] + $addTax, 2),
+            self::RESPONSE_ITINERARY => $this->mapItinerary(
+                $itinerary,
+                $step === 2 ? self::CABIN_RETURN : self::CABIN_OUTBOUND,
+            ),
+        ], $result['rows']);
+
+        $packagePrice = $return === null ? null : round(
+            (float) $outbound['price_base'] + (float) $outbound['price_tax']
+            + (float) $return['price_base'] + (float) $return['price_tax'],
+            2,
+        );
 
         return [
             'current_page' => $query->currentPage,
-            'total_pages' => (int) ceil($totalFlights / self::PER_PAGE_LIMIT),
+            'total_pages' => (int) ceil($result['total'] / self::PER_PAGE_LIMIT),
             'per_page' => self::PER_PAGE_LIMIT,
-            'total_flights' => $totalFlights,
+            'total_flights' => $result['total'],
             'trip_type' => $tripType->value,
+            'step' => $step,
+            // "from" prices are a floor (cheapest return added), totals are exact.
+            'price_mode' => $step === 1 ? 'from' : 'total',
+            'selected' => $outbound === null ? null : $this->mapItinerary($outbound, self::CABIN_OUTBOUND),
+            'selected_price' => $outbound === null ? null : round((float) $outbound['price_base'] + (float) $outbound['price_tax'], 2),
+            'selected_ids' => $outbound === null ? [] : $outboundIds,
+            'selected_return' => $return === null ? null : $this->mapItinerary($return, self::CABIN_RETURN),
+            'selected_return_price' => $return === null ? null : round((float) $return['price_base'] + (float) $return['price_tax'], 2),
+            'selected_return_ids' => $return === null ? [] : $returnIds,
+            'package_price' => $packagePrice,
             self::RESPONSE_DEPART => $cities[self::RESPONSE_DEPART],
             self::RESPONSE_ARRIVE => $cities[self::RESPONSE_ARRIVE],
             'adult_count' => $query->adultNum,
             'child_count' => $query->childNum,
-            self::RESPONSE_FLIGHTS => $flights,
+            self::RESPONSE_FLIGHTS => $rows,
         ];
     }
 
@@ -135,53 +209,6 @@ final readonly class FlightFinder
     }
 
     /**
-     * @return array{0: list<array<string, mixed>>, 1: int}
-     */
-    private function onewayFlights(FlightSearchQuery $query): array
-    {
-        $result = new FlightRepository($this->connection)->onewaySearch(
-            $query->from,
-            $query->to,
-            $query->departDate,
-            SortMethod::fromRequest($query->sort),
-            $query->currentPage,
-        );
-
-        $rows = array_map(fn(array $itinerary): array => [
-            self::RESPONSE_PRICE_BASE => $itinerary['price_base'],
-            self::RESPONSE_PRICE_TAX => $itinerary['price_tax'],
-            self::RESPONSE_OUTBOUND => $this->mapItinerary($itinerary, self::CABIN_OUTBOUND),
-            self::RESPONSE_RETURNING => [],
-        ], $result['rows']);
-
-        return [$rows, $result['total']];
-    }
-
-    /**
-     * @return array{0: list<array<string, mixed>>, 1: int}
-     */
-    private function roundtripFlights(FlightSearchQuery $query): array
-    {
-        $result = new FlightRepository($this->connection)->roundtripSearch(
-            $query->from,
-            $query->to,
-            $query->departDate,
-            $query->returnDate,
-            SortMethod::fromRequest($query->sort),
-            $query->currentPage,
-        );
-
-        $rows = array_map(fn(array $pair): array => [
-            self::RESPONSE_PRICE_BASE => $pair['price_base'],
-            self::RESPONSE_PRICE_TAX => $pair['price_tax'],
-            self::RESPONSE_OUTBOUND => $this->mapItinerary($pair['outbound'], self::CABIN_OUTBOUND),
-            self::RESPONSE_RETURNING => $this->mapItinerary($pair['returning'], self::CABIN_RETURN),
-        ], $result['rows']);
-
-        return [$rows, $result['total']];
-    }
-
-    /**
      * Shape a repository itinerary (ordered legs + aggregates) into the response
      * shape: per-segment legs, the stop count, total elapsed duration, and the
      * layover (connection airport + wait) between each pair of segments.
@@ -193,17 +220,33 @@ final readonly class FlightFinder
     {
         $legs = $itinerary['legs'];
 
+        // Elapsed time is flying time plus waiting time; the leg stamps are local
+        // to their own airports, so they can't be subtracted across timezones.
+        $total = max(1, (int) $itinerary['duration']);
+
         $layovers = [];
+        $elapsed = 0;
 
         for ($i = 1; $i < count($legs); $i++) {
+            $wait = (int) round(
+                (strtotime((string) $legs[$i]['dep_datetime']) - strtotime((string) $legs[$i - 1]['arr_datetime'])) / 60,
+            );
+
+            $elapsed += (int) $legs[$i - 1]['duration'];
+
             $layovers[] = [
                 self::RESPONSE_AIRPORT_CODE => $legs[$i - 1]['arr_code'],
                 self::RESPONSE_AIRPORT_NAME => $legs[$i - 1]['arr_name'],
                 self::RESPONSE_AIRPORT_CITY => $legs[$i - 1]['arr_city'],
-                self::RESPONSE_WAIT_MINUTES => (int) round(
-                    (strtotime((string) $legs[$i]['dep_datetime']) - strtotime((string) $legs[$i - 1]['arr_datetime'])) / 60,
-                ),
+                self::RESPONSE_WAIT_MINUTES => $wait,
+                // Where the stop sits along the journey, so the dot on the path
+                // shows *when* it happens. Clamped clear of the end markers.
+                self::RESPONSE_POSITION => max(12, min(88, (int) round(
+                    ($elapsed + $wait / 2) / $total * 100,
+                ))),
             ];
+
+            $elapsed += $wait;
         }
 
         return [

@@ -1,49 +1,64 @@
-<div class="text-left badge-flight">&nbsp;</div>
-<div class="card mb-0 shadow-sm">
+{% set row_id = flight.outbound_ids|join('-') ~ '-' ~ flight.return_ids|join('-') %}
+<div class="card mb-3 shadow-sm flight-card">
     <div class="card-body">
-        <div class="row">
-            <!-- FLIGHTS (compact, one line per direction) -->
+        <div class="row align-items-center">
+            <!-- THE ITINERARY -->
             <div class="col-lg-9 pe-lg-4">
-                {% for direction in flight.directions %}
-                    {% if not loop.first %}<hr class="my-1" />{% endif %}
-                    {% include 'search/cards/itinerary.html.twig' %}
-                {% endfor %}
+                {% if flight.badge %}
+                    <span class="badge text-bg-{{ flight.badge.color }} mb-2">
+                        <i class="fas fa-{{ flight.badge.icon }} pe-1"></i>{{ flight.badge.text }}
+                    </span>
+                {% endif %}
+                {% include 'search/cards/itinerary.html.twig' with { 'direction': flight.itinerary } %}
             </div>
-            <!-- End / FLIGHTS -->
-            <!-- PRICE + ACTIONS -->
+            <!-- End / THE ITINERARY -->
+            <!-- PRICE + ACTION -->
             <div class="col-lg-3 border-start text-center d-flex flex-column justify-content-center pt-3 pt-lg-0">
+                {% if price_mode == 'from' %}<div class="small text-muted">from</div>{% endif %}
                 <div class="h3 mb-0">CAD {{ flight.price_total }}</div>
-                <div class="small text-muted mb-3" data-toggle="tooltip" data-placement="top"
-                     title="Base ${{ flight.price_base }} plus taxes ${{ flight.price_tax }} (GST ${{ flight.price_gst }}, QST ${{ flight.price_qst }})">
-                    total per passenger <i class="fas fa-info-circle"></i>
+                <div class="small text-muted mb-3">
+                    {% if price_mode == 'from' %}
+                        <span data-toggle="tooltip" data-placement="top"
+                              title="This departure plus the cheapest available return. Pick a return next to see the exact total.">
+                            with cheapest return <i class="fas fa-info-circle"></i>
+                        </span>
+                    {% else %}
+                        <span data-toggle="tooltip" data-placement="top"
+                              title="Base ${{ flight.price_base }} plus taxes ${{ flight.price_tax }} (GST ${{ flight.price_gst }}, QST ${{ flight.price_qst }})">
+                            total per passenger <i class="fas fa-info-circle"></i>
+                        </span>
+                    {% endif %}
                 </div>
-                <button type="button" class="btn btn-outline-secondary btn-sm mb-2 empty-link">
-                    <i class="far fa-bell pe-1"></i>Set price alert
-                </button>
                 <div class="d-grid">
-                    <button type="button" class="btn btn-buy"
-                            id="addTrip_{{ flight.outbound_ids|join('-') }}_{{ flight.return_ids|join('-') }}"
-                            data-flight-departing-ids="{{ flight.outbound_ids|join(',') }}"
-                            data-flight-returning-ids="{{ flight.return_ids|join(',') }}">
-                        Select
-                    </button>
+                    {% if flight.select_url %}
+                        {# A round-trip pick adds this half to the package. #}
+                        <a href="{{ flight.select_url }}" class="btn btn-buy">
+                            {{ step == 2 ? 'Select return' : 'Select departure' }}
+                            <i class="fas fa-arrow-right ps-1"></i>
+                        </a>
+                    {% else %}
+                        <button type="button" class="btn btn-buy"
+                                id="addTrip_{{ row_id }}"
+                                data-flight-departing-ids="{{ flight.outbound_ids|join(',') }}"
+                                data-flight-returning-ids="{{ flight.return_ids|join(',') }}">
+                            Select
+                        </button>
+                    {% endif %}
                 </div>
             </div>
-            <!-- End / PRICE + ACTIONS -->
+            <!-- End / PRICE + ACTION -->
         </div>
         <!-- Show flight details -->
         <div class="border-top mt-3 pt-1">
             <button class="btn btn-sm btn-link text-decoration-none collapsed flight-details-toggle" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#details-{{ flight.outbound_ids|first }}" aria-expanded="false">
+                    data-bs-toggle="collapse" data-bs-target="#details-{{ row_id }}" aria-expanded="false">
                 <span class="if-collapsed">Show flight details</span>
                 <span class="if-expanded">Hide flight details</span>
                 <i class="fas fa-chevron-down ps-1 chevron"></i>
             </button>
-            <div class="collapse" id="details-{{ flight.outbound_ids|first }}">
+            <div class="collapse" id="details-{{ row_id }}">
                 <div class="pt-2">
-                    {% for direction in flight.directions %}
-                        {% include 'search/cards/itinerary-detail.html.twig' %}
-                    {% endfor %}
+                    {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': flight.itinerary } %}
                 </div>
             </div>
         </div>

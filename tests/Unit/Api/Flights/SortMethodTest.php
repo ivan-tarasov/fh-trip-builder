@@ -31,17 +31,12 @@ final class SortMethodTest extends TestCase
         self::assertSame('rating DESC', SortMethod::Rating->candidateOrderBy());
     }
 
-    public function testPairSortKeyCombinesBothDirections(): void
+    public function testEveryCaseHasACandidateOrderBy(): void
     {
-        $out = ['price_base' => 100.0, 'price_tax' => 20.0, 'duration' => 300, 'rating' => 4.0];
-        $in = ['price_base' => 200.0, 'price_tax' => 30.0, 'duration' => 500, 'rating' => 3.0];
-
-        self::assertSame(350.0, SortMethod::Price->pairSortKey($out, $in));
-        self::assertSame(800.0, SortMethod::Duration->pairSortKey($out, $in));
-        // Rating is negated so higher-rated pairs sort first (ascending key).
-        self::assertSame(-3.5, SortMethod::Rating->pairSortKey($out, $in));
-        // Depart/arrive are one-way-only sorts, so they fall back to price.
-        self::assertSame(350.0, SortMethod::Depart->pairSortKey($out, $in));
-        self::assertSame(350.0, SortMethod::Arrive->pairSortKey($out, $in));
+        // Each direction of a trip is ranked by these columns, so every sort
+        // option must map to a valid ORDER BY over the candidate aggregates.
+        foreach (SortMethod::cases() as $sort) {
+            self::assertMatchesRegularExpression('/^[^;]+ (ASC|DESC)$/', $sort->candidateOrderBy());
+        }
     }
 }

@@ -42,22 +42,4 @@ enum SortMethod: string
         };
     }
 
-    /**
-     * Ascending sort key for a round-trip pairing, combining both directions'
-     * aggregates. Rating is negated so higher-rated pairs sort first. Depart /
-     * Arrive are one-way-only sorts (see config search.sort), so they fall back
-     * to combined price here.
-     *
-     * @param array{price_base: float, price_tax: float, duration: int, rating: float} $out
-     * @param array{price_base: float, price_tax: float, duration: int, rating: float} $in
-     */
-    public function pairSortKey(array $out, array $in): float
-    {
-        return match ($this) {
-            self::Duration => $out['duration'] + $in['duration'],
-            self::Rating => -(($out['rating'] + $in['rating']) / 2),
-            self::Price, self::Depart, self::Arrive =>
-                ($out['price_base'] + $out['price_tax']) + ($in['price_base'] + $in['price_tax']),
-        };
-    }
 }

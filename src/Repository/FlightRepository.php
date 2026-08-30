@@ -47,11 +47,14 @@ final readonly class FlightRepository
     public function __construct(private Connection $connection) {}
 
     /**
-     * One-way itineraries for a route/date, ranked and paginated.
+     * Itineraries for one direction of a trip (origin -> destination on a date),
+     * ranked and paginated. A round trip searches each direction separately —
+     * the outbound first, then the return — rather than pairing every outbound
+     * with every return.
      *
      * @return array{rows: list<array<string, mixed>>, total: int}
      */
-    public function onewaySearch(string $from, string $to, string $departDate, SortMethod $sort, int $page): array
+    public function searchDirection(string $from, string $to, string $departDate, SortMethod $sort, int $page): array
     {
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
@@ -86,77 +89,85 @@ final readonly class FlightRepository
     }
 
     /**
-     * Round-trip itinerary pairings, ranked by the combined sort and paginated.
-     *
-     * The cheapest `roundtrip_topk` itineraries are taken per direction, then
-     * paired — so the self-pairing stays bounded even on connective routes.
-     *
-     * @return array{rows: list<array<string, mixed>>, total: int}
+     * The cheapest total (base + tax) available for one direction, or null when
+     * the direction has no itineraries. Used to price a round-trip outbound as
+     * "from $X" — the least it can cost once a return is added.
      */
-    public function roundtripSearch(string $from, string $to, string $departDate, string $returnDate, SortMethod $sort, int $page): array
+    public function cheapestTotal(string $from, string $to, string $date): ?float
     {
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
 
         if ($fromCodes === [] || $toCodes === []) {
-            return ['rows' => [], 'total' => 0];
+            return null;
         }
 
-        $topK = (int) Config::get('search.connections.roundtrip_topk', 50);
+        [$sql, $params] = $this->candidateSql($fromCodes, $toCodes, $date);
 
-        $outbound = $this->topItineraries($fromCodes, $toCodes, $departDate, $sort, $topK);
-        $returning = $this->topItineraries($toCodes, $fromCodes, $returnDate, $sort, $topK);
-
-        if ($outbound === [] || $returning === []) {
-            return ['rows' => [], 'total' => 0];
-        }
-
-        // Pair the two directions and rank by the combined sort key.
-        $pairs = [];
-
-        foreach ($outbound as $out) {
-            foreach ($returning as $in) {
-                $pairs[] = ['out' => $out, 'in' => $in, 'key' => $sort->pairSortKey($out, $in)];
-            }
-        }
-
-        usort($pairs, static fn(array $a, array $b): int => $a['key'] <=> $b['key']);
-
-        $total = count($pairs);
-        $pageItems = array_slice($pairs, $this->offset($page), self::PER_PAGE);
-
-        $ids = array_merge(
-            $this->collectLegIds(array_column($pageItems, 'out')),
-            $this->collectLegIds(array_column($pageItems, 'in')),
+        $row = $this->connection->fetchOne(
+            $sql . ' ORDER BY (price_base + price_tax) ASC LIMIT 1',
+            $params,
         );
-        $legs = $this->hydrateLegs($ids);
 
-        $rows = array_map(fn(array $pair): array => [
-            'outbound' => $this->assembleItinerary($pair['out'], $legs),
-            'returning' => $this->assembleItinerary($pair['in'], $legs),
-            'price_base' => (float) $pair['out']['price_base'] + (float) $pair['in']['price_base'],
-            'price_tax' => round((float) $pair['out']['price_tax'] + (float) $pair['in']['price_tax'], 2),
-        ], $pageItems);
-
-        return ['rows' => $rows, 'total' => $total];
+        return $row === null ? null : (float) $row['price_base'] + (float) $row['price_tax'];
     }
 
     /**
-     * The cheapest N candidate itineraries for one direction (ids + aggregates,
-     * no display joins), used to build round-trip pairings.
+     * Rebuild a chosen itinerary from its ordered leg ids, with the aggregates
+     * the display needs. Returns null unless every id resolves and the legs form
+     * a connected chain — so a stale or tampered selection is rejected.
      *
-     * @param list<string> $fromCodes
-     * @param list<string> $toCodes
-     * @return list<array<string, mixed>>
+     * @param list<int> $ids
+     * @return array<string, mixed>|null
      */
-    private function topItineraries(array $fromCodes, array $toCodes, string $date, SortMethod $sort, int $limit): array
+    public function itineraryByIds(array $ids): ?array
     {
-        [$sql, $params] = $this->candidateSql($fromCodes, $toCodes, $date);
+        $legs = $this->legsByIds($ids);
 
-        return $this->connection->fetchAll(
-            $sql . ' ORDER BY ' . $sort->candidateOrderBy() . ' LIMIT ' . max(1, $limit),
-            $params,
-        );
+        if ($legs === [] || count($legs) !== count($ids)) {
+            return null;
+        }
+
+        $priceBase = 0.0;
+        $priceTax = 0.0;
+        $rating = 0.0;
+        // Departure and arrival are local times in (often) different timezones,
+        // so elapsed time is flying time plus waiting time — never a subtraction
+        // of the two stamps. This mirrors how candidateSql totals a duration.
+        $duration = 0;
+
+        foreach ($legs as $i => $leg) {
+            $priceBase += (float) $leg['price_base'];
+            $priceTax += (float) $leg['price_tax'];
+            $rating += (float) $leg['rating'];
+            $duration += (int) $leg['duration'];
+
+            if ($i > 0) {
+                // Legs must chain: each departs where the previous one landed.
+                if ($legs[$i - 1]['arr_code'] !== $leg['dep_code']) {
+                    return null;
+                }
+
+                // A layover is at one airport, so this subtraction is safe.
+                $duration += (int) round(
+                    (strtotime((string) $leg['dep_datetime']) - strtotime((string) $legs[$i - 1]['arr_datetime'])) / 60,
+                );
+            }
+        }
+
+        $first = $legs[0];
+        $last = $legs[count($legs) - 1];
+
+        return [
+            'legs' => $legs,
+            'stops' => count($legs) - 1,
+            'price_base' => $priceBase,
+            'price_tax' => round($priceTax, 2),
+            'duration' => $duration,
+            'depart_time' => (string) $first['dep_datetime'],
+            'arrive_time' => (string) $last['arr_datetime'],
+            'rating' => $rating / count($legs),
+        ];
     }
 
     /**

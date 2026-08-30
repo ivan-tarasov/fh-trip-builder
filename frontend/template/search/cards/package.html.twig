@@ -1,0 +1,71 @@
+{# The assembled round trip: both halves, each swappable, and one price. #}
+<div class="card mb-4 shadow-sm trip-package">
+    <div class="trip-package__banner d-flex align-items-center gap-2">
+        <i class="fas fa-suitcase-rolling"></i>
+        <span class="fw-semibold text-uppercase small">Your round-trip package</span>
+    </div>
+
+    <div class="card-body pt-3">
+        {# --- Outbound half --- #}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small fw-semibold text-uppercase text-secondary">
+                <i class="fas fa-plane-departure pe-1"></i>Departing &middot; {{ depart_date_label|date('D, j M Y') }}
+            </span>
+            <a href="{{ change_url }}" class="btn btn-sm btn-outline-secondary">Change</a>
+        </div>
+        {% include 'search/cards/itinerary.html.twig' with { 'direction': selected } %}
+
+        <hr class="my-3" />
+
+        {# --- Return half --- #}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small fw-semibold text-uppercase text-secondary">
+                <i class="fas fa-plane-arrival pe-1"></i>Returning &middot; {{ return_date_label|date('D, j M Y') }}
+            </span>
+            <a href="{{ change_return_url }}" class="btn btn-sm btn-outline-secondary">Change</a>
+        </div>
+        {% include 'search/cards/itinerary.html.twig' with { 'direction': selected_return } %}
+    </div>
+
+    {# --- Total and the one action that matters --- #}
+    <div class="card-body border-top bg-body-tertiary">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="text-muted">Trip total</span>
+                    <span class="h3 mb-0">CAD {{ package_price }}</span>
+                </div>
+                <div class="small text-muted">
+                    Departing CAD {{ selected_price }} &middot; Returning CAD {{ selected_return_price }}
+                    &middot; total per passenger
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end pt-3 pt-md-0">
+                <button type="button" class="btn btn-buy btn-lg px-4"
+                        id="addTrip_{{ package_ids.outbound }}_{{ package_ids.return }}"
+                        data-flight-departing-ids="{{ package_ids.outbound }}"
+                        data-flight-returning-ids="{{ package_ids.return }}">
+                    Confirm my selection <i class="fas fa-arrow-right ps-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# --- Full detail for both halves --- #}
+    <div class="card-body border-top pt-1">
+        <button class="btn btn-sm btn-link text-decoration-none collapsed flight-details-toggle" type="button"
+                data-bs-toggle="collapse" data-bs-target="#package-details" aria-expanded="false">
+            <span class="if-collapsed">Show flight details</span>
+            <span class="if-expanded">Hide flight details</span>
+            <i class="fas fa-chevron-down ps-1 chevron"></i>
+        </button>
+        <div class="collapse" id="package-details">
+            <div class="pt-2">
+                <div class="small fw-semibold text-uppercase text-secondary mb-2">Departing</div>
+                {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': selected } %}
+                <div class="small fw-semibold text-uppercase text-secondary mb-2">Returning</div>
+                {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': selected_return } %}
+            </div>
+        </div>
+    </div>
+</div>

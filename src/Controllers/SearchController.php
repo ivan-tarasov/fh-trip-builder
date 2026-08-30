@@ -27,7 +27,12 @@ class SearchController extends AbstractController
         GET_RETURN = 'return',
         GET_TRIPTYPE = 'triptype',
         GET_CLASS = 'class',
-        GET_PAGE = 'page';
+        GET_PAGE = 'page',
+        // Leg ids of the halves already chosen in a round trip. The outbound
+        // moves the search from step 1 (departing) to step 2 (returning); adding
+        // the return moves it to step 3, the assembled package.
+        GET_DEPART_ITIN = 'depart_itin',
+        GET_RETURN_ITIN = 'return_itin';
 
     private const string POST_SORT = 'sort',
         POST_TIME_RANGE = 'time_range',
@@ -56,6 +61,8 @@ class SearchController extends AbstractController
                     FILTER_VALIDATE_INT,
                     ['options' => ['default' => 1, 'min_range' => 1]],
                 ),
+                self::GET_DEPART_ITIN => $_GET[self::GET_DEPART_ITIN] ?? null,
+                self::GET_RETURN_ITIN => $_GET[self::GET_RETURN_ITIN] ?? null,
             ]);
 
             // Convert search hash to url and redirect
@@ -103,6 +110,8 @@ class SearchController extends AbstractController
             $payload = new FlightFinder($this->connection())->search(
                 $query,
                 TripType::from($this->get[self::GET_TRIPTYPE]),
+                $this->parseIds((string) ($this->get[self::GET_DEPART_ITIN] ?? '')),
+                $this->parseIds((string) ($this->get[self::GET_RETURN_ITIN] ?? '')),
             );
 
             $decoded = json_decode((string) json_encode($payload), false);
@@ -136,9 +145,46 @@ class SearchController extends AbstractController
                 'session_sort' => $_SESSION[self::POST_SORT],
                 'clock_range' => $this->generateTimeRange(),
                 'airlines' => $this->fetchSidebarAirlines(),
+                // Which half of a round trip is being chosen (null for one way),
+                // and the outbound already picked, if any.
+                'step' => $this->data->step,
+                'step_title' => $this->stepTitle(),
+                'step_route' => $this->stepRoute(),
+                'step_date' => $this->data->step === 2
+                    ? $this->get[self::GET_RETURN]
+                    : $this->get[self::GET_DEPART],
+                'price_mode' => $this->data->price_mode,
+                'selected' => $this->data->selected === null
+                    ? null
+                    : $this->buildDirection($this->data->selected)['direction'],
+                'selected_price' => $this->data->selected_price === null
+                    ? null
+                    : number_format((float) $this->data->selected_price, 2),
+                'selected_return' => $this->data->selected_return === null
+                    ? null
+                    : $this->buildDirection($this->data->selected_return)['direction'],
+                'selected_return_price' => $this->data->selected_return_price === null
+                    ? null
+                    : number_format((float) $this->data->selected_return_price, 2),
+                'package_price' => $this->data->package_price === null
+                    ? null
+                    : number_format((float) $this->data->package_price, 2),
+                'package_ids' => [
+                    'outbound' => implode(',', array_map(intval(...), (array) $this->data->selected_ids)),
+                    'return' => implode(',', array_map(intval(...), (array) $this->data->selected_return_ids)),
+                ],
+                'depart_date_label' => $this->get[self::GET_DEPART],
+                'return_date_label' => $this->get[self::GET_RETURN],
+                // Changing one half keeps the other, so the traveller returns
+                // straight to the package once they have re-picked.
+                'change_url' => $this->stepUrl(null, keepReturn: true),
+                'change_return_url' => $this->stepUrl(
+                    array_map(intval(...), (array) $this->data->selected_ids),
+                    keepReturn: false,
+                ),
                 // Flights / no-result
                 'total_flights' => $total_flights,
-                'total_flights_text' => Helper::plural((int) $total_flights, 'flight', showNumber: true),
+                'total_flights_text' => Helper::plural((int) $total_flights, 'option', showNumber: true),
                 'flights' => $total_flights != 0 ? $this->buildFlights() : [],
                 'pagination' => $total_flights != 0 ? $this->buildPagination() : null,
                 'not_found_img' => Cdn::getUrl(sprintf(
@@ -222,14 +268,8 @@ class SearchController extends AbstractController
         $carriers = [];
 
         foreach ($this->data->flights ?? [] as $item) {
-            foreach ([$item->outbound, $item->returning] as $itinerary) {
-                if (empty($itinerary) || empty($itinerary->segments)) {
-                    continue;
-                }
-
-                foreach ($itinerary->segments as $segment) {
-                    $carriers[] = $segment->carrier;
-                }
+            foreach ($item->itinerary->segments as $segment) {
+                $carriers[] = $segment->carrier;
             }
         }
 
@@ -253,31 +293,129 @@ class SearchController extends AbstractController
     {
         $flights = [];
 
-        foreach ($this->data->flights as $flight) {
-            $outbound = $this->buildDirection($flight->outbound, 'Outbound');
-            $directions = [$outbound['direction']];
-            $outboundIds = $outbound['ids'];
-            $returnIds = [];
+        $step = $this->data->step;
 
-            if (!empty($flight->returning) && !empty($flight->returning->segments)) {
-                $return = $this->buildDirection($flight->returning, 'Return');
-                $directions[] = $return['direction'];
-                $returnIds = $return['ids'];
-            }
+        foreach ($this->data->flights as $index => $flight) {
+            $built = $this->buildDirection($flight->itinerary);
 
             $flights[] = [
-                'outbound_ids' => $outboundIds,
-                'return_ids' => $returnIds,
+                // Each round-trip choice adds a half to the package (a link);
+                // only a one-way search books straight from the list.
+                'select_url' => match ($step) {
+                    1 => $this->stepUrl($built['ids'], keepReturn: true),
+                    2 => $this->returnStepUrl($built['ids']),
+                    default => null,
+                },
+                'outbound_ids' => $built['ids'],
+                'return_ids' => [],
                 'price_total' => number_format((float) $flight->price_base + (float) $flight->price_tax, 2),
                 'price_base' => number_format((float) $flight->price_base, 2),
                 'price_tax' => number_format((float) $flight->price_tax, 2),
                 'price_gst' => number_format(0, 2),
                 'price_qst' => number_format(0, 2),
-                'directions' => $directions,
+                // The list is ranked globally, so the first row of page one is
+                // genuinely the best by the chosen sort.
+                'badge' => $index === 0 && $this->get[self::GET_PAGE] == 1 ? $this->sortBadge() : null,
+                'itinerary' => $built['direction'],
             ];
         }
 
         return $flights;
+    }
+
+    /**
+     * Heading for the current step of the search.
+     */
+    private function stepTitle(): string
+    {
+        return match ($this->data->step) {
+            1 => 'Choose your departing flight',
+            2 => 'Choose your returning flight',
+            3 => 'Your round trip',
+            default => 'Choose your flight',
+        };
+    }
+
+    /**
+     * "City (CODE) → City (CODE)" for the current step, reversed on the return.
+     */
+    private function stepRoute(): string
+    {
+        return match ($this->data->step) {
+            2 => sprintf('%s → %s', $this->data->arrive, $this->data->depart),
+            3 => sprintf('%s ⇄ %s', $this->data->depart, $this->data->arrive),
+            default => sprintf('%s → %s', $this->data->depart, $this->data->arrive),
+        };
+    }
+
+    /**
+     * The badge config for the active sort (e.g. "Cheapest price"), or null.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function sortBadge(): ?array
+    {
+        $badge = Config::get(sprintf('search.sort.%s.badge', $_SESSION[self::POST_SORT]));
+
+        return is_array($badge) ? $badge : null;
+    }
+
+    /**
+     * URL for this search with the outbound choice set (or cleared when null),
+     * always returning to page one. `keepReturn` decides whether an already
+     * chosen return survives — re-picking a departure keeps it, so the traveller
+     * lands back on the package, while changing the return clears it.
+     *
+     * @param list<int>|null $ids
+     */
+    private function stepUrl(?array $ids, bool $keepReturn = false): string
+    {
+        return sprintf(
+            '%s?%s',
+            Helper::getUrlPath(),
+            http_build_query(array_merge($this->get, [
+                self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
+                self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
+                self::GET_PAGE => null,
+            ])),
+        );
+    }
+
+    /**
+     * URL that adds the chosen return to the package, keeping the outbound.
+     *
+     * @param list<int> $ids
+     */
+    private function returnStepUrl(array $ids): string
+    {
+        return sprintf(
+            '%s?%s',
+            Helper::getUrlPath(),
+            http_build_query(array_merge($this->get, [
+                self::GET_RETURN_ITIN => implode(',', $ids),
+                self::GET_PAGE => null,
+            ])),
+        );
+    }
+
+    /**
+     * Parse a comma-separated list of positive integer leg ids.
+     *
+     * @return list<int>
+     */
+    private function parseIds(string $csv): array
+    {
+        $ids = [];
+
+        foreach (explode(',', $csv) as $part) {
+            $id = filter_var(trim($part), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+            if ($id !== false) {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
     }
 
     /**
@@ -289,7 +427,7 @@ class SearchController extends AbstractController
      * @return array{direction: array<string, mixed>, ids: list<int>}
      * @throws Exception
      */
-    private function buildDirection(object $itinerary, string $label): array
+    private function buildDirection(object $itinerary): array
     {
         $segments = $itinerary->segments;
         $first = $segments[0];
@@ -325,12 +463,12 @@ class SearchController extends AbstractController
                 'airport_code' => $layover->airport_code,
                 'airport_city' => $layover->airport_city,
                 'wait' => $this->minutesToStringTime($layover->wait_minutes),
+                'position_pct' => $layover->position_pct,
             ];
         }
 
         return [
             'direction' => [
-                'label' => $label,
                 'stops_label' => $this->stopsLabel((int) $itinerary->stops),
                 'duration' => $this->minutesToStringTime((int) $itinerary->total_duration),
                 'carrier_name' => $first->carrier_name,

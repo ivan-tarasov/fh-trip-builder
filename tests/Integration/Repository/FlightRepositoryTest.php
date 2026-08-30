@@ -48,7 +48,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
 
     public function testOnewaySearchReturnsRankedItineraries(): void
     {
-        $result = $this->repository()->onewaySearch('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
 
         self::assertGreaterThanOrEqual(2, $result['total']);
         self::assertNotEmpty($result['rows']);
@@ -67,7 +67,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
 
     public function testOnewaySearchPaginatesToPerPage(): void
     {
-        $result = $this->repository()->onewaySearch('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
 
         self::assertLessThanOrEqual(10, count($result['rows']));
     }
@@ -95,42 +95,76 @@ final class FlightRepositoryTest extends IntegrationTestCase
         self::assertSame($this->outboundA, (int) $legs[1]['id']);
     }
 
-    public function testRoundtripSearchPairsBothDirections(): void
+    public function testSearchDirectionCoversTheReturnLegToo(): void
     {
-        $result = $this->repository()->roundtripSearch('YUL', 'YYZ', self::DEPART_DATE, self::RETURN_DATE, SortMethod::Price, 1);
+        // A round trip searches each direction on its own date; the return is
+        // the same query with the endpoints and date swapped.
+        $result = $this->repository()->searchDirection('YYZ', 'YUL', self::RETURN_DATE, SortMethod::Price, 1);
 
         self::assertGreaterThanOrEqual(1, $result['total']);
         self::assertNotEmpty($result['rows']);
 
-        $row = $result['rows'][0];
-        self::assertArrayHasKey('outbound', $row);
-        self::assertArrayHasKey('returning', $row);
+        $cheapest = $result['rows'][0];
+        $this->assertValidItinerary($cheapest);
+        self::assertSame('YYZ', $cheapest['legs'][0]['dep_code']);
+        self::assertSame('YUL', end($cheapest['legs'])['arr_code']);
+    }
 
-        $this->assertValidItinerary($row['outbound']);
-        $this->assertValidItinerary($row['returning']);
+    public function testCheapestTotalMatchesTheTopRankedItinerary(): void
+    {
+        $cheapest = $this->repository()->cheapestTotal('YUL', 'YYZ', self::DEPART_DATE);
+        $ranked = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
 
-        // Outbound goes YUL -> ... -> YYZ; the return reverses it.
-        self::assertSame('YUL', $row['outbound']['legs'][0]['dep_code']);
-        self::assertSame('YYZ', end($row['outbound']['legs'])['arr_code']);
-        self::assertSame('YYZ', $row['returning']['legs'][0]['dep_code']);
-        self::assertSame('YUL', end($row['returning']['legs'])['arr_code']);
-
+        self::assertNotNull($cheapest);
         self::assertEqualsWithDelta(
-            $row['outbound']['price_base'] + $row['returning']['price_base'],
-            $row['price_base'],
+            $ranked['rows'][0]['price_base'] + $ranked['rows'][0]['price_tax'],
+            $cheapest,
             0.01,
         );
+
+        self::assertNull($this->repository()->cheapestTotal('ZZZ', 'YYZ', self::DEPART_DATE));
+    }
+
+    public function testItineraryByIdsRebuildsAChosenOutbound(): void
+    {
+        $itinerary = $this->repository()->itineraryByIds([$this->outboundA]);
+
+        self::assertNotNull($itinerary);
+        $this->assertValidItinerary($itinerary);
+        self::assertSame(0, $itinerary['stops']);
+        self::assertSame('YUL', $itinerary['legs'][0]['dep_code']);
+    }
+
+    public function testItineraryByIdsDurationMatchesTheSearch(): void
+    {
+        // Leg stamps are local to their own airports, so a rebuilt itinerary
+        // must total flying + waiting time, not subtract arrival from departure
+        // (which inflates any trip crossing timezones).
+        $ranked = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $cheapest = $ranked['rows'][0];
+        $ids = array_map(static fn(array $leg): int => (int) $leg['id'], $cheapest['legs']);
+
+        $rebuilt = $this->repository()->itineraryByIds($ids);
+
+        self::assertNotNull($rebuilt);
+        self::assertSame($cheapest['duration'], $rebuilt['duration']);
+    }
+
+    public function testItineraryByIdsRejectsBrokenSelections(): void
+    {
+        // A leg that no longer exists.
+        self::assertNull($this->repository()->itineraryByIds([$this->outboundA, 2000000099]));
+
+        // Two legs that do not chain (both YUL->YYZ, so leg 2 doesn't start
+        // where leg 1 landed) must not be accepted as an itinerary.
+        self::assertNull($this->repository()->itineraryByIds([$this->outboundA, $this->outboundB]));
     }
 
     public function testSearchWithUnknownAirportShortCircuitsToEmpty(): void
     {
         self::assertSame(
             ['rows' => [], 'total' => 0],
-            $this->repository()->onewaySearch('ZZZ', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1),
-        );
-        self::assertSame(
-            ['rows' => [], 'total' => 0],
-            $this->repository()->roundtripSearch('ZZZ', 'YYZ', self::DEPART_DATE, self::RETURN_DATE, SortMethod::Price, 1),
+            $this->repository()->searchDirection('ZZZ', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1),
         );
     }
 
