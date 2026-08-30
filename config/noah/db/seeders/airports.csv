@@ -167,10 +167,10 @@ CEB,"Mactan-Cebu International",PH,CEB,"Cebu City",8,Asia/Manila,10.313333,123.9
 CEC,"Del Norte County Regional Airport",US,CEC,"Crescent City",-7,America/Los_Angeles,41.78,-124.23583,57,1,0,0
 CEZ,"Montezuma County",US,CEZ,Cortez,-6,America/Denver,37.302776,-108.62722,5918,1,0,0
 CFU,"Ioannis Kapodistrias",GR,CFU,Kerkyra,3,Europe/Athens,39.60784,19.914644,6,1,0,0
-CGH,"Congonhas International Airport",BR,SAO,"Sao Paulo",-3,America/Sao_Paulo,-23.626902,-46.659557,2631,1,0,0
+CGH,"Congonhas International Airport",BR,SAO,"Sao Paulo",-3,America/Sao_Paulo,-23.626902,-46.659557,2631,1,6,1
 CGI,"Cape Girardeau",US,CGI,"Cape Girardeau",-5,America/Chicago,37.22361,-89.57167,342,1,0,0
 CGK,"Soekarno-Hatta International",ID,JKT,Jakarta,7,Asia/Jakarta,-6.130643,106.655525,34,1,6,1
-CGN,Cologne/bonn,DE,CGN,Cologne,2,Europe/Berlin,50.878365,7.122224,250,1,0,0
+CGN,Cologne/bonn,DE,CGN,Cologne,2,Europe/Berlin,50.878365,7.122224,250,1,2,1
 CGO,Zhengzhou,CN,CGO,Zhengzhou,8,Asia/Shanghai,34.52752,113.84024,495,1,0,0
 CGQ,"Changchun Longjia International Airport",CN,CGQ,Changchun,8,Asia/Shanghai,43.99611,125.68528,678,1,0,0
 CGY,"Cagayan De Oro Domestic Airport",PH,CGY,"Cagayan De Oro",8,Asia/Manila,8.6125,124.45722,160,1,0,0
@@ -449,7 +449,7 @@ INT,Smith-Reynolds,US,INT,Winston-Salem,-4,America/New_York,36.135277,-80.225555
 INV,Inverness,GB,INV,Inverness,1,Europe/London,57.539345,-4.063738,31,1,0,0
 IPL,"Imperial County",US,IPL,Imperial,-7,America/Los_Angeles,32.83483,-115.57405,-55,1,0,0
 IPT,"Lycoming County",US,IPT,Williamsport,-4,America/New_York,41.24222,-76.920555,529,1,0,0
-ISB,"Islamabad International",PK,ISB,Islamabad,5,Asia/Karachi,33.548332,72.825,1778,1,0,0
+ISB,"Islamabad International",PK,ISB,Islamabad,5,Asia/Karachi,33.548332,72.825,1778,1,6,1
 ISL,"Istanbul Ataturk Airport",TR,IST,Istanbul,3,Europe/Istanbul,40.976665,28.815277,158,1,2,1
 ISN,"Sloulin Field International",US,ISN,Williston,-5,America/Chicago,48.175865,-103.63189,1982,1,0,0
 ISP,"Long Island Mac Arthur",US,ISP,Islip,-4,America/New_York,40.789314,-73.09755,79,1,0,0
@@ -484,7 +484,7 @@ KBV,Krabi,TH,KBV,Krabi,7,Asia/Bangkok,8.097281,98.98062,83,1,0,0
 KEF,"Keflavik International",IS,REK,Reykjavik,0,Atlantic/Reykjavik,63.997765,-22.624283,171,1,0,0
 KGL,"Kigalin International",RW,KGL,Kigali,2,Africa/Kigali,-1.963042,30.135014,4891,1,0,0
 KHH,"Kaoshiung International Airport",TW,KHH,Kaohsiung,8,Asia/Taipei,22.5725,120.345276,31,1,2,1
-KHI,"Quaid-e-azam International",PK,KHI,Karachi,5,Asia/Karachi,24.899986,67.16828,100,1,0,0
+KHI,"Quaid-e-azam International",PK,KHI,Karachi,5,Asia/Karachi,24.899986,67.16828,100,1,6,1
 KIN,"Norman Manley",JM,KIN,Kingston,-5,America/Jamaica,17.9357,-76.7875,10,1,0,0
 KIV,"International Airport Chisinau",MD,KIV,Chisinau,3,Europe/Chisinau,46.935444,28.934967,307,1,0,0
 KIX,"Kansai International",JP,OSA,Osaka,9,Asia/Tokyo,34.43533,135.24397,15,1,6,1
@@ -527,7 +527,7 @@ LFW,Lome,TG,LFW,Lome,0,Africa/Lome,6.167103,1.250347,72,1,0,0
 LGA,"La Guardia",US,NYC,"New York",-4,America/New_York,40.774254,-73.87162,22,1,6,1
 LGB,"Long Beach Municipal",US,LGB,"Long Beach",-7,America/Los_Angeles,33.818195,-118.14449,58,1,0,0
 LGW,"London Gatwick Airport",GB,LON,London,1,Europe/London,51.150837,-0.177416,194,1,2,1
-LHE,"Alama Iqbal International",PK,LHE,Lahore,5,Asia/Karachi,31.520832,74.40278,712,1,0,0
+LHE,"Alama Iqbal International",PK,LHE,Lahore,5,Asia/Karachi,31.520832,74.40278,712,1,6,1
 LHR,Heathrow,GB,LON,London,1,Europe/London,51.469604,-0.453566,80,1,12,1
 LIH,Lihue,US,LIH,"Kauai Island",-10,Pacific/Honolulu,21.978205,-159.34944,153,1,0,0
 LIM,"Jorge Chavez International",PE,LIM,Lima,-5,America/Lima,-12.024763,-77.10879,97,1,6,1
@@ -743,7 +743,7 @@ PSE,Mercedita,PR,PSE,Ponce,-4,America/Puerto_Rico,18.010702,-66.563545,29,1,0,0
 PSM,"Pease Air Force Base",US,BOS,Portsmouth,-4,America/New_York,43.0779,-70.8233,100,1,0,0
 PSP,"Palm Springs Metropolitan Area",US,PSP,"Palm Springs",-7,America/Los_Angeles,33.822975,-116.508446,474,1,0,0
 PTP,"Pointe-a-Pitre Le Raizet Airport",GP,PTP,Pointe-a-Pitre,-4,America/Guadeloupe,16.265297,-61.531803,19,1,0,0
-PTY,"Tocumen International",PA,PTY,"Panama City",-5,America/Panama,9.066897,-79.38764,42,1,0,0
+PTY,"Tocumen International",PA,PTY,"Panama City",-5,America/Panama,9.066897,-79.38764,42,1,6,1
 PUB,Memorial,US,PUB,Pueblo,-6,America/Denver,38.284206,-104.49511,4651,1,0,0
 PUJ,"Punta Cana International",DO,PUJ,"Punta Cana",-4,America/Santo_Domingo,18.562477,-68.364,40,1,0,0
 PUQ,"Pres Ibanez",CL,PUQ,"Punta Arenas",-3,America/Santiago,-53.005356,-70.84307,139,1,0,0

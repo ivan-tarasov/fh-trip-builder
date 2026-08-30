@@ -51,6 +51,27 @@ return [
             'comment' => false,
         ],
         [
+            // Where the airline is based, and the airports it operates from.
+            // Flight generation only lets a carrier fly routes that touch one
+            // of its hubs, or that stay inside its home country.
+            'name' => 'country',
+            'type' => 'char',
+            'length' => 2,
+            'default' => false,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
+            'name' => 'hubs',
+            'type' => 'varchar',
+            'length' => 255,
+            'default' => false,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
             'name' => 'traffic',
             'type' => 'int',
             'length' => 6,

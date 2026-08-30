@@ -117,7 +117,7 @@ class Generate extends AbstractCommand
         // carriers flew equally, so obscure operators outnumbered the majors —
         // and many of them have no logo to show.
         $airlines = $this->connection()->fetchAll(
-            'SELECT code, traffic FROM ' . Table::Airlines->value
+            'SELECT code, country, hubs, traffic FROM ' . Table::Airlines->value
             . ' WHERE is_major = 1 AND traffic > 0',
         );
 
@@ -125,14 +125,6 @@ class Generate extends AbstractCommand
             $this->io->error('No airlines are marked major with a traffic weight.');
 
             return Command::INVALID;
-        }
-
-        $airlineCumulative = [];
-        $airlineWeight = 0.0;
-
-        foreach ($airlines as $airline) {
-            $airlineWeight += (int) $airline['traffic'];
-            $airlineCumulative[] = $airlineWeight;
         }
 
         $airports = $this->connection()->fetchAll(
@@ -147,9 +139,17 @@ class Generate extends AbstractCommand
         }
 
         // Precompute how the network is shaped before generating anything (see
-        // routeDistribution): which route each flight takes is then a single
-        // lookup, and the distance for it is already known.
-        [$routes, $cumulative, $distances, $totalWeight] = $this->routeDistribution($airports);
+        // routeDistribution): each flight is then a single weighted draw that
+        // yields the route, the airline flying it, and the distance already
+        // measured.
+        [$routes, $cumulative, $distances, $carriers, $totalWeight] =
+            $this->routeDistribution($airports, $airlines);
+
+        if ($routes === []) {
+            $this->io->error('No airline serves any route in this network — check airline hubs.');
+
+            return Command::INVALID;
+        }
 
         // Show the progress bar
         $progressBar = new ProgressBar($output, $flightsToAdd);
@@ -166,16 +166,16 @@ class Generate extends AbstractCommand
         while ($this->count[self::COUNT_TOTAL] < $flightsToAdd) {
             $this->count[self::COUNT_TOTAL]++;
 
-            // Pick a route in proportion to how much traffic it should carry,
-            // so hubs and trunk routes get the flights they would in reality.
-            $route = $this->pickWeighted($cumulative, $totalWeight);
+            // One draw picks the route and the carrier together, weighted by how
+            // much traffic that pairing should carry.
+            $pick = $this->pickWeighted($cumulative, $totalWeight);
             $airportCount = count($airports);
-            $departAirport = $airports[intdiv($routes[$route], $airportCount)];
-            $arriveAirport = $airports[$routes[$route] % $airportCount];
-            $airline = $airlines[$this->pickWeighted($airlineCumulative, $airlineWeight)]['code'];
+            $departAirport = $airports[intdiv($routes[$pick], $airportCount)];
+            $arriveAirport = $airports[$routes[$pick] % $airportCount];
+            $airline = $carriers[$pick];
 
             // Already measured while building the distribution.
-            $distance = $distances[$route];
+            $distance = $distances[$pick];
 
             // Calculating flight duration between airports
             $duration = $this->getDurationFromDistance($distance) + Helper::random(self::DURATION_ADD_KM);
@@ -293,30 +293,72 @@ class Generate extends AbstractCommand
     }
 
     /**
-     * Build the route distribution: every ordered pair of airports, weighted by
-     * a gravity model — the product of the two airports' traffic weights,
-     * divided by how far apart they are. Big airports close together (JFK-BOS,
-     * JFK-LAX) end up with many daily flights; small airports far apart end up
-     * with almost none, which is the shape a real network has and the reason
-     * connections exist at all.
+     * Build the distribution every flight is drawn from: each entry is a route
+     * paired with an airline that actually operates it.
      *
-     * Returns the packed pair index, the cumulative weights to sample from, the
-     * distance of each pair in km, and the total weight.
+     * Routes are weighted by a gravity model — the product of the two airports'
+     * traffic weights over how far apart they are — so big airports close
+     * together carry many daily flights and small distant ones almost none.
+     * That weight is then split across the carriers serving the route, in
+     * proportion to each carrier's own traffic.
+     *
+     * A carrier serves a route only if it touches one of its hubs or stays
+     * inside its home country, which is what stops Emirates flying Montreal to
+     * Toronto. A route no carrier serves simply never appears.
      *
      * @param list<array<string, mixed>> $airports
-     * @return array{0: list<int>, 1: list<float>, 2: list<int>, 3: float}
+     * @param list<array<string, mixed>> $airlines
+     * @return array{0: list<int>, 1: list<float>, 2: list<int>, 3: list<string>, 4: float}
      */
-    private function routeDistribution(array $airports): array
+    private function routeDistribution(array $airports, array $airlines): array
     {
         $count = count($airports);
+
+        // Hubs and home country per carrier, resolved once.
+        $carrierHubs = [];
+        $carrierCountry = [];
+        $carrierWeight = [];
+
+        foreach ($airlines as $airline) {
+            $code = (string) $airline['code'];
+            $carrierHubs[$code] = array_flip(preg_split('/\s+/', trim((string) $airline['hubs']), -1, PREG_SPLIT_NO_EMPTY) ?: []);
+            $carrierCountry[$code] = (string) $airline['country'];
+            $carrierWeight[$code] = (int) $airline['traffic'];
+        }
+
         $routes = [];
         $cumulative = [];
         $distances = [];
+        $carriers = [];
         $running = 0.0;
 
         for ($i = 0; $i < $count; $i++) {
             for ($j = 0; $j < $count; $j++) {
                 if ($i === $j) {
+                    continue;
+                }
+
+                $from = (string) $airports[$i]['code'];
+                $to = (string) $airports[$j]['code'];
+                $fromCountry = (string) $airports[$i]['country_code'];
+                $toCountry = (string) $airports[$j]['country_code'];
+
+                $serving = [];
+                $servingWeight = 0;
+
+                foreach ($carrierHubs as $code => $hubs) {
+                    $touchesHub = isset($hubs[$from]) || isset($hubs[$to]);
+                    $domestic = $carrierCountry[$code] !== ''
+                        && $fromCountry === $carrierCountry[$code]
+                        && $toCountry === $carrierCountry[$code];
+
+                    if ($touchesHub || $domestic) {
+                        $serving[] = $code;
+                        $servingWeight += $carrierWeight[$code];
+                    }
+                }
+
+                if ($serving === [] || $servingWeight === 0) {
                     continue;
                 }
 
@@ -327,16 +369,22 @@ class Generate extends AbstractCommand
                     (float) $airports[$j]['longitude'],
                 ) / 1000);
 
-                $running += (int) $airports[$i]['traffic_weight'] * (int) $airports[$j]['traffic_weight']
+                $routeWeight = (int) $airports[$i]['traffic_weight'] * (int) $airports[$j]['traffic_weight']
                     / (1 + $distance / self::ROUTE_DISTANCE_HALVING_KM);
 
-                $routes[] = $i * $count + $j;
-                $cumulative[] = $running;
-                $distances[] = $distance;
+                // Share the route's traffic among the carriers that fly it.
+                foreach ($serving as $code) {
+                    $running += $routeWeight * $carrierWeight[$code] / $servingWeight;
+
+                    $routes[] = $i * $count + $j;
+                    $cumulative[] = $running;
+                    $distances[] = $distance;
+                    $carriers[] = $code;
+                }
             }
         }
 
-        return [$routes, $cumulative, $distances, $running];
+        return [$routes, $cumulative, $distances, $carriers, $running];
     }
 
     /**
