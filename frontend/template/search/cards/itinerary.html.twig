@@ -1,0 +1,50 @@
+{# One itinerary as a single line: carrier, departure, the route bar, arrival.
+   The bar draws a part per flight leg and per layover, each sized by its own
+   minutes, so the shape of the journey is readable without opening details. #}
+<div class="row align-items-center g-3 itinerary">
+    <!-- Airline(s): one logo per airline flown, named on hover -->
+    <div class="col-auto">
+        <div class="airline-logos{% if direction.carriers|length > 1 %} airline-logos--multi{% endif %}">
+            {% for carrier in direction.carriers|slice(0, 3) %}
+                <img src="{{ carrier.logo_url }}" class="airline-logo rounded-circle"
+                     data-toggle="tooltip" data-placement="top" title="{{ carrier.name }}"
+                     alt="{{ carrier.name }}" />
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Departure -->
+    <div class="col-auto" style="min-width: 92px;">
+        <div class="h4 mb-0">{{ direction.depart_time }}</div>
+        <div class="small">{{ direction.depart_city }}</div>
+        <div class="small text-muted">{{ direction.depart_day }}</div>
+    </div>
+
+    <!-- The route -->
+    <div class="col route px-4">
+        <div class="route__head">
+            <i class="fas fa-plane-departure text-secondary"></i>
+            <span class="route__summary">
+                {{ direction.duration }} in transit &middot; {{ direction.stops_label|lower }}
+            </span>
+            <i class="fas fa-plane-arrival text-secondary"></i>
+        </div>
+        <div class="route__bar">
+            {% for part in direction.route %}
+                <span class="route__{{ part.type }}" style="flex-grow: {{ part.weight }};"
+                      data-toggle="tooltip" data-placement="top" title="{{ part.tooltip }}">
+                    {% if part.start_code %}<span class="route__code route__code--start">{{ part.start_code }}</span>{% endif %}
+                    {% if part.end_code %}<span class="route__code route__code--end">{{ part.end_code }}</span>{% endif %}
+                    {% if part.code %}<span class="route__code route__code--stop">{{ part.code }}</span>{% endif %}
+                </span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Arrival -->
+    <div class="col-auto text-end" style="min-width: 92px;">
+        <div class="h4 mb-0">{{ direction.arrive_time }}</div>
+        <div class="small">{{ direction.arrive_city }}</div>
+        <div class="small text-muted">{{ direction.arrive_day }}</div>
+    </div>
+</div>

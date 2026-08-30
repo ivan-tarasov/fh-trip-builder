@@ -46,10 +46,15 @@ final class AirlineRepositoryTest extends IntegrationTestCase
         $airlines = $this->repository()->search(['AC'], false);
 
         self::assertCount(1, $airlines);
-        self::assertSame(
-            ['code', 'title', 'url', 'phone', 'traffic', 'is_major', 'book_count', 'last_search'],
-            array_keys($airlines[0]),
+
+        // Compared against the table itself rather than a copied-out list, so
+        // adding a column does not fail a test that is about row shape.
+        $columns = array_column(
+            $this->connection()->fetchAll('SHOW COLUMNS FROM airlines'),
+            'Field',
         );
+
+        self::assertSame($columns, array_keys($airlines[0]));
     }
 
     private function repository(): AirlineRepository

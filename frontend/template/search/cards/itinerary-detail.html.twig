@@ -1,0 +1,50 @@
+{# Expanded detail for one direction: a row per segment, layover rows between,
+   and the total trip time. #}
+<div class="border rounded-3 p-3 mb-3">
+    {% for segment in direction.segments %}
+        <div class="row align-items-center gy-2">
+            <!-- Airline + flight number + leg duration -->
+            <div class="col-md-3 d-flex align-items-center gap-2">
+                <img src="{{ segment.logo_url }}" class="rounded-circle" style="max-height: 32px;" alt="{{ segment.carrier_name }}" />
+                <div>
+                    <div class="fw-semibold">{{ segment.carrier_name }}</div>
+                    <div class="small text-muted">{{ segment.flight_number }}</div>
+                    <div class="small text-muted">{{ segment.duration }}</div>
+                </div>
+            </div>
+            <!-- Times -->
+            <div class="col-4 col-md-2">
+                <div class="fw-semibold">{{ segment.depart_time }}</div>
+                <div class="fw-semibold">{{ segment.arrive_time }}</div>
+            </div>
+            <!-- Dates -->
+            <div class="col-4 col-md-2 small text-muted">
+                <div>{{ segment.depart_date }}</div>
+                <div>{{ segment.arrive_date }}</div>
+            </div>
+            <!-- Airports -->
+            <div class="col-4 col-md-3">
+                <div>{{ segment.depart_city }} ({{ segment.depart_code }})</div>
+                <div>{{ segment.arrive_city }} ({{ segment.arrive_code }})</div>
+            </div>
+            <!-- Cabin + amenities -->
+            <div class="col-md-2 text-md-end">
+                <div class="small"><strong>Cabin:</strong> {{ segment.cabin }}</div>
+                <div class="text-primary">
+                    <i class="fas fa-wifi px-1" data-toggle="tooltip" title="Wi-Fi"></i>
+                    <i class="fas fa-tv px-1" data-toggle="tooltip" title="In-flight entertainment"></i>
+                    <i class="fas fa-plug px-1" data-toggle="tooltip" title="Power outlet"></i>
+                    <i class="fas fa-utensils px-1" data-toggle="tooltip" title="Meal"></i>
+                </div>
+            </div>
+        </div>
+        {% if direction.layovers[loop.index0] is defined %}
+            <div class="border-top border-bottom my-2 py-2 small text-muted">
+                <i class="far fa-clock pe-1"></i>{{ direction.layovers[loop.index0].wait }} in {{ direction.layovers[loop.index0].airport_city }}
+            </div>
+        {% endif %}
+    {% endfor %}
+    <div class="border-top pt-2 mt-2 small">
+        <strong>Total trip time (including layovers):</strong> {{ direction.duration }}
+    </div>
+</div>

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace TripBuilder\Api\Flights;
 
 /**
- * Flight sort options and the SQL ORDER BY expression each maps to.
- *
- * Expressions reference the SELECT aliases produced by FlightRepository
- * (`out_*` for the primary leg, `in_*` for the return leg).
+ * Flight sort options and how each maps onto the candidate-itinerary columns
+ * produced by FlightRepository (an itinerary is direct or a connection, with
+ * pre-aggregated `price_base`/`price_tax`, total `duration`, `depart_time`,
+ * `arrive_time`, and average `rating`).
  */
 enum SortMethod: string
 {
@@ -27,23 +27,19 @@ enum SortMethod: string
         return self::tryFrom($sort) ?? self::Price;
     }
 
-    public function onewayOrderBy(): string
+    /**
+     * ORDER BY clause (expression + direction) over the candidate-itinerary
+     * columns. Rating sorts highest-first; the rest lowest-first.
+     */
+    public function candidateOrderBy(): string
     {
         return match ($this) {
-            self::Price => '(out_price_base + out_price_tax)',
-            self::Duration => 'out_duration',
-            self::Depart => 'out_dep_datetime',
-            self::Arrive => 'out_arr_datetime',
-            self::Rating => 'out_rating',
+            self::Price => '(price_base + price_tax) ASC',
+            self::Duration => 'duration ASC',
+            self::Depart => 'depart_time ASC',
+            self::Arrive => 'arrive_time ASC',
+            self::Rating => 'rating DESC',
         };
     }
 
-    public function roundtripOrderBy(): string
-    {
-        return match ($this) {
-            self::Price, self::Depart, self::Arrive => '(out_price_base + out_price_tax + in_price_base + in_price_tax)',
-            self::Duration => '(out_duration + in_duration)',
-            self::Rating => '(out_rating + in_rating)',
-        };
-    }
 }

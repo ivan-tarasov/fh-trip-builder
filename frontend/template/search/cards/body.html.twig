@@ -1,84 +1,108 @@
-<div class="text-left badge-flight">&nbsp;</div>
-<div class="card mb-0 shadow-sm">
+{% set row_id = (flight.outbound_ids|merge(flight.return_ids))|join('-') %}
+
+{# Badges sit above the card and overlap it, so they read as a label on it. #}
+{% if flight.itinerary.badges %}
+    <div class="flight-badges">
+        {% for badge in flight.itinerary.badges %}
+            <span class="badge badge--{{ badge.tone }}" data-toggle="tooltip" data-placement="top" title="{{ badge.text }}">
+                <i class="fas fa-{{ badge.icon }} pe-1"></i>{{ badge.label }}
+            </span>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="card mb-3 shadow-sm flight-card position-relative{% if flight.itinerary.badges %} flight-card--badged{% endif %}">
     <div class="card-body">
-        <div class="row">
-            <!-- PRICE SECTION -->
-            <div class="col-sm-3 border-end px-4 pt-3">
-                <!-- Price total -->
-                <div class="card-title fs-2">
-              <span data-toggle="tooltip"
-                    data-placement="top"
-                    title="The final price consists of the ticket base price of ${{ flight.price_base }} plus taxes: ${{ flight.price_tax }}. Also may applied local taxes: GST ${{ flight.price_gst }}, QST ${{ flight.price_qst }}"
-              >
-                ${{ flight.price_total }}
-              </span>
+        <!-- Price, notices and the per-card actions -->
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+            <div>
+
+                {% if price_mode == 'from' %}<span class="small text-muted">from</span>{% endif %}
+                <div class="price">
+                    <span class="price__symbol">$</span><span class="price__whole">{{ flight.price.whole }}</span><span class="price__cents">.{{ flight.price.cents }}</span>
+                    <span class="price__currency">CAD</span>
                 </div>
-                <!-- End / Price total -->
-                <!-- Tax section -->
-                <dl class="row pt-2">
-                    <dt class="col-lg-4">Price</dt>
-                    <dd class="col-lg-8">${{ flight.price_base }}</dd>
-                    <dt class="col-lg-4">Taxes</dt>
-                    <dd class="col-lg-8">${{ flight.price_tax }}</dd>
-                    <dt class="col-lg-4">GST</dt>
-                    <dd class="col-lg-8">${{ flight.price_gst }}</dd>
-                    <dt class="col-lg-4">QST</dt>
-                    <dd class="col-lg-8">${{ flight.price_qst }}</dd>
-                </dl>
-                <!-- End / Tax section -->
-                <!-- Buy button -->
-                <div class="d-lg-grid gap-2">
-                    <button type="button" class="btn btn-buy btn-block my-4"
-                            id="addTrip_{{ flight.outbound_id }}_{{ flight.returning_id }}"
-                            data-flight-departing-id="{{ flight.outbound_id }}"
-                            data-flight-returning-id="{{ flight.returning_id }}">
-                        <i class="fas fa-xl fa-plus-circle float-end"></i>
-                        Buy ticket
-                    </button>
+                <div class="small price-note">
+                    {% if flight.is_cheapest %}
+                        <span class="text-success fw-semibold">cheapest option</span>
+                        <span class="text-muted">&middot;</span>
+                    {% elseif flight.price_difference %}
+                        <span class="text-muted">+${{ flight.price_difference }} vs cheapest &middot;</span>
+                    {% endif %}
+                    <span class="text-muted">
+                    {% if price_mode == 'from' %}
+                        <span data-toggle="tooltip" data-placement="top"
+                              title="This departure plus the cheapest available return. Choose your return next to see the exact total.">
+                            with cheapest return <i class="fas fa-info-circle"></i>
+                        </span>
+                    {% else %}
+                        <span data-toggle="tooltip" data-placement="top"
+                              title="Base ${{ flight.price_base }} plus taxes ${{ flight.price_tax }} (GST ${{ flight.price_gst }}, QST ${{ flight.price_qst }})">
+                            total per passenger <i class="fas fa-info-circle"></i>
+                        </span>
+                    {% endif %}
+                    </span>
                 </div>
-                <!-- Buy button -->
             </div>
-            <!-- End / PRICE SECTION -->
-            <!-- FLIGHTS -->
-            <div class="col-sm-9 px-5 pt-2 pb-3">
-                <!-- Airlines and buttons section -->
-                <div class="row pb-4">
-                    <!-- Airlines logos -->
-                    <div class="col-sm-8">
-                        <div class="media">
-                            {% for carrier in flight.carriers %}
-                                {% include 'search/cards/airline-logo.html.twig' %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <!-- End / Airlines logos -->
-                    <!-- Void buttons -->
-                    <div class="col-sm-4 text-end pe-0">
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Right buttons group">
-                            <button type="button"class="btn btn-link empty-link" data-toggle="tooltip"
-                                    data-placement="top" title="Add to compare">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button type="button" class="btn btn-link empty-link" data-toggle="tooltip"
-                                    data-placement="top" title="Price alert">
-                                <i class="fas fa-bell"></i>
-                            </button>
-                            <button type="button" class="btn btn-link empty-link" data-toggle="tooltip"
-                                    data-placement="top" title="Share this trip">
-                                <i class="fas fa-share"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- End / Void buttons -->
-                </div>
-                <!-- End / Airlines and buttons section -->
-                <!-- Flights info section -->
-                {% for ticket in flight.tickets %}
-                    {% include 'search/cards/flight-info.html.twig' %}
+
+            <div class="d-flex align-items-center gap-2 card-actions">
+                {% for notice in flight.itinerary.notices %}
+                    <span class="notice" data-toggle="tooltip" data-placement="top"
+                          title="{{ notice.label }} — {{ notice.text }}">
+                        <i class="fas fa-{{ notice.icon }}"></i>
+                    </span>
                 {% endfor %}
-                <!-- End / Flights info section -->
+
+                <button type="button" class="icon-btn js-like" aria-label="Save this flight"
+                        data-flight-key="{{ row_id }}" data-toggle="tooltip" data-placement="top" title="Save this flight">
+                    <i class="far fa-heart icon-idle"></i>
+                    <i class="fas fa-heart icon-done"></i>
+                </button>
+                <button type="button" class="icon-btn js-share" aria-label="Copy a link to this flight"
+                        data-share-url="{{ flight.share_url }}" data-toggle="tooltip" data-placement="top" title="Copy link">
+                    <i class="fas fa-arrow-up-from-bracket icon-idle"></i>
+                    <i class="fas fa-check icon-done"></i>
+                </button>
             </div>
-            <!-- End / FLIGHTS -->
+        </div>
+
+        <!-- The itinerary -->
+        <div class="d-flex align-items-center gap-2">
+            <div class="flex-grow-1">
+                {% include 'search/cards/itinerary.html.twig' with { 'direction': flight.itinerary } %}
+            </div>
+            {# The visible affordance and the accessible control. The rest of the
+               card forwards clicks here from JS — an overlay would swallow the
+               hover on the timeline, the logos and the price note. #}
+            {% if flight.select_url %}
+                <a href="{{ flight.select_url }}" class="btn btn-link text-decoration-none card-select px-1">
+                    <span class="visually-hidden">{{ step == 2 ? 'Select this return flight' : 'Select this departing flight' }}</span>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            {% else %}
+                <button type="button" class="btn btn-link text-decoration-none card-select px-1"
+                        id="addTrip_{{ row_id }}"
+                        data-flight-departing-ids="{{ flight.outbound_ids|join(',') }}"
+                        data-flight-returning-ids="{{ flight.return_ids|join(',') }}">
+                    <span class="visually-hidden">Select this flight</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            {% endif %}
+        </div>
+
+        <!-- Show flight details -->
+        <div class="border-top mt-3 pt-1 card-actions">
+            <button class="btn btn-sm btn-link text-decoration-none collapsed flight-details-toggle" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#details-{{ row_id }}" aria-expanded="false">
+                <span class="if-collapsed">Show flight details</span>
+                <span class="if-expanded">Hide flight details</span>
+                <i class="fas fa-chevron-down ps-1 chevron"></i>
+            </button>
+            <div class="collapse" id="details-{{ row_id }}">
+                <div class="pt-2">
+                    {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': flight.itinerary } %}
+                </div>
+            </div>
         </div>
     </div>
 </div>

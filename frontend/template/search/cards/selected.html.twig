@@ -1,0 +1,25 @@
+{# The outbound already chosen, kept in view while the return is picked. The
+   body stays white so the route bar reads as clearly as on any other card;
+   the green banner carries the "chosen" meaning instead of a tint behind it. #}
+<div class="card mb-2 selected-flight">
+    <div class="selected-flight__banner">
+        <span class="fw-semibold text-uppercase small">
+            <i class="fas fa-check-circle pe-1"></i>Departing flight selected
+        </span>
+        <a href="{{ change_url }}" class="btn btn-sm btn-light">Change</a>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-lg-9">
+                {% include 'search/cards/itinerary.html.twig' with { 'direction': selected } %}
+            </div>
+            <div class="col-lg-3 text-center border-start">
+                <div class="h5 mb-0">${{ selected_price }} <span class="price__currency">CAD</span></div>
+                <div class="small text-muted">this flight</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# A clear break between what is settled and what is still being chosen. #}
+<div class="step-divider"><span>Now choose your return flight</span></div>

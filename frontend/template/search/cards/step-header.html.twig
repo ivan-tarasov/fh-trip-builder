@@ -1,0 +1,32 @@
+{# Where the traveller is: departing, then returning, then the assembled trip. #}
+<div class="mb-4">
+    {% if step %}
+        <ol class="step-track list-unstyled d-flex align-items-center gap-2 mb-3">
+            <li class="step-track__item {{ step == 1 ? 'is-current' : 'is-done' }}">
+                <span class="step-track__marker">{% if step > 1 %}<i class="fas fa-check"></i>{% else %}1{% endif %}</span>
+                Departing
+            </li>
+            <li class="step-track__line" aria-hidden="true"></li>
+            <li class="step-track__item {{ step == 2 ? 'is-current' : (step > 2 ? 'is-done' : '') }}">
+                <span class="step-track__marker">{% if step > 2 %}<i class="fas fa-check"></i>{% else %}2{% endif %}</span>
+                Returning
+            </li>
+            <li class="step-track__line" aria-hidden="true"></li>
+            <li class="step-track__item {{ step == 3 ? 'is-current' : '' }}">
+                <span class="step-track__marker">3</span>
+                Review &amp; book
+            </li>
+        </ol>
+    {% endif %}
+
+    <h2 class="h4 mb-1">{{ step_title }}</h2>
+    <p class="text-muted mb-0">
+        {{ step_route }}
+        {% if step == 3 %}
+            &middot; {{ depart_date_label|date('D, j M') }} &ndash; {{ return_date_label|date('D, j M Y') }}
+        {% else %}
+            {% if step_date %}&middot; {{ step_date|date('D, j M Y') }}{% endif %}
+            &middot; {{ total_flights_text }}
+        {% endif %}
+    </p>
+</div>

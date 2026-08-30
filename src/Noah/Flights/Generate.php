@@ -34,6 +34,14 @@ class Generate extends AbstractCommand
     private const int NUMBERS_POOL = 9999;
     private const int PRICE_MULTIPLIER = 8;
     private const array PRICE_ADD_DOLLARS = [5, 800];
+
+    // Nonstop convenience premium: a convex (distance^2) surcharge so a single
+    // long leg is priced above two shorter legs covering the same route —
+    // mirroring real fares where nonstops carry a premium, which makes the
+    // cheapest itinerary often a connection. Bounded (max ~4000 at the
+    // reference distance) so price_base stays within decimal(6,2).
+    private const int PRICE_NONSTOP_PREMIUM_MAX = 4000;
+    private const int PRICE_PREMIUM_REF_KM = 20000;
     private const array PRICE_TAX_PERCENT = [5, 90];
     private const array DURATION_ADD_KM = [10, 55];
     private const array DATE_ADD_DAYS = [1, 90];
@@ -61,6 +69,11 @@ class Generate extends AbstractCommand
 
     private const string COUNT_DUPLICATES = 'Deleted duplicate flights';
     private const string COUNT_TOTAL = 'Total added';
+
+    // How quickly route traffic falls off with distance: at this many km a
+    // route carries half the flights an adjacent-airport route of the same
+    // size would. Keeps short-haul frequent without starving long-haul.
+    private const int ROUTE_DISTANCE_HALVING_KM = 2000;
 
     private const int INSERT_BATCH_SIZE = 500;
 
@@ -99,11 +112,44 @@ class Generate extends AbstractCommand
 
         $flightsToAdd = (int) $flightsToAdd;
 
-        // Get airlines and enabled major airports from the database
-        $airlines = $this->connection()->fetchAll('SELECT * FROM ' . Table::Airlines->value);
-        $airports = $this->connection()->fetchAll(
-            'SELECT * FROM ' . Table::Airports->value . ' WHERE enabled = 1 AND is_major = 1',
+        // Only airlines that actually operate in this network, weighted by how
+        // much of it they carry. Without the filter every one of the ~1,150
+        // carriers flew equally, so obscure operators outnumbered the majors —
+        // and many of them have no logo to show.
+        $airlines = $this->connection()->fetchAll(
+            'SELECT code, country, hubs, traffic FROM ' . Table::Airlines->value
+            . ' WHERE is_major = 1 AND traffic > 0',
         );
+
+        if ($airlines === []) {
+            $this->io->error('No airlines are marked major with a traffic weight.');
+
+            return Command::INVALID;
+        }
+
+        $airports = $this->connection()->fetchAll(
+            'SELECT * FROM ' . Table::Airports->value
+            . ' WHERE enabled = 1 AND is_major = 1 AND traffic_weight > 0',
+        );
+
+        if (count($airports) < 2) {
+            $this->io->error('Need at least two airports with a traffic weight to build a network.');
+
+            return Command::INVALID;
+        }
+
+        // Precompute how the network is shaped before generating anything (see
+        // routeDistribution): each flight is then a single weighted draw that
+        // yields the route, the airline flying it, and the distance already
+        // measured.
+        [$routes, $cumulative, $distances, $carriers, $totalWeight] =
+            $this->routeDistribution($airports, $airlines);
+
+        if ($routes === []) {
+            $this->io->error('No airline serves any route in this network — check airline hubs.');
+
+            return Command::INVALID;
+        }
 
         // Show the progress bar
         $progressBar = new ProgressBar($output, $flightsToAdd);
@@ -120,22 +166,16 @@ class Generate extends AbstractCommand
         while ($this->count[self::COUNT_TOTAL] < $flightsToAdd) {
             $this->count[self::COUNT_TOTAL]++;
 
-            // Get 2 random airports. Depart and arrive airports should be different
-            shuffle($airports);
-            $airportKey = array_rand($airports, 2);
-            $departAirport = $airports[$airportKey[0]];
-            $arriveAirport = $airports[$airportKey[1]];
-            $airline = $airlines[rand(0, count($airlines) - 1)]['code'];
+            // One draw picks the route and the carrier together, weighted by how
+            // much traffic that pairing should carry.
+            $pick = $this->pickWeighted($cumulative, $totalWeight);
+            $airportCount = count($airports);
+            $departAirport = $airports[intdiv($routes[$pick], $airportCount)];
+            $arriveAirport = $airports[$routes[$pick] % $airportCount];
+            $airline = $carriers[$pick];
 
-            // Calculating flight distance between airports
-            $distance = intval(
-                $this->distanceOnEarthSurface(
-                    (float) $departAirport['latitude'],
-                    (float) $departAirport['longitude'],
-                    (float) $arriveAirport['latitude'],
-                    (float) $arriveAirport['longitude'],
-                ) / 1000,
-            );
+            // Already measured while building the distribution.
+            $distance = $distances[$pick];
 
             // Calculating flight duration between airports
             $duration = $this->getDurationFromDistance($distance) + Helper::random(self::DURATION_ADD_KM);
@@ -152,8 +192,11 @@ class Generate extends AbstractCommand
                 ),
             );
 
-            // Faking base price, then tax as a percentage of that same base
-            $priceBase = ($distance * self::PRICE_MULTIPLIER / 100) + Helper::random(self::PRICE_ADD_DOLLARS);
+            // Base price: distance-linear fare + a convex nonstop premium (so a
+            // direct leg is dearer than two shorter connecting legs), then tax
+            // as a percentage of that same base.
+            $nonstopPremium = self::PRICE_NONSTOP_PREMIUM_MAX * ($distance / self::PRICE_PREMIUM_REF_KM) ** 2;
+            $priceBase = ($distance * self::PRICE_MULTIPLIER / 100) + $nonstopPremium + Helper::random(self::PRICE_ADD_DOLLARS);
             $priceTax = $priceBase * (Helper::random(self::PRICE_TAX_PERCENT) / 100);
 
             $flights[] = new Flight(
@@ -247,6 +290,127 @@ class Generate extends AbstractCommand
 
             throw $e;
         }
+    }
+
+    /**
+     * Build the distribution every flight is drawn from: each entry is a route
+     * paired with an airline that actually operates it.
+     *
+     * Routes are weighted by a gravity model — the product of the two airports'
+     * traffic weights over how far apart they are — so big airports close
+     * together carry many daily flights and small distant ones almost none.
+     * That weight is then split across the carriers serving the route, in
+     * proportion to each carrier's own traffic.
+     *
+     * A carrier serves a route only if it touches one of its hubs or stays
+     * inside its home country, which is what stops Emirates flying Montreal to
+     * Toronto. A route no carrier serves simply never appears.
+     *
+     * @param list<array<string, mixed>> $airports
+     * @param list<array<string, mixed>> $airlines
+     * @return array{0: list<int>, 1: list<float>, 2: list<int>, 3: list<string>, 4: float}
+     */
+    private function routeDistribution(array $airports, array $airlines): array
+    {
+        $count = count($airports);
+
+        // Hubs and home country per carrier, resolved once.
+        $carrierHubs = [];
+        $carrierCountry = [];
+        $carrierWeight = [];
+
+        foreach ($airlines as $airline) {
+            $code = (string) $airline['code'];
+            $carrierHubs[$code] = array_flip(preg_split('/\s+/', trim((string) $airline['hubs']), -1, PREG_SPLIT_NO_EMPTY) ?: []);
+            $carrierCountry[$code] = (string) $airline['country'];
+            $carrierWeight[$code] = (int) $airline['traffic'];
+        }
+
+        $routes = [];
+        $cumulative = [];
+        $distances = [];
+        $carriers = [];
+        $running = 0.0;
+
+        for ($i = 0; $i < $count; $i++) {
+            for ($j = 0; $j < $count; $j++) {
+                if ($i === $j) {
+                    continue;
+                }
+
+                $from = (string) $airports[$i]['code'];
+                $to = (string) $airports[$j]['code'];
+                $fromCountry = (string) $airports[$i]['country_code'];
+                $toCountry = (string) $airports[$j]['country_code'];
+
+                $serving = [];
+                $servingWeight = 0;
+
+                foreach ($carrierHubs as $code => $hubs) {
+                    $touchesHub = isset($hubs[$from]) || isset($hubs[$to]);
+                    $domestic = $carrierCountry[$code] !== ''
+                        && $fromCountry === $carrierCountry[$code]
+                        && $toCountry === $carrierCountry[$code];
+
+                    if ($touchesHub || $domestic) {
+                        $serving[] = $code;
+                        $servingWeight += $carrierWeight[$code];
+                    }
+                }
+
+                if ($serving === [] || $servingWeight === 0) {
+                    continue;
+                }
+
+                $distance = (int) ($this->distanceOnEarthSurface(
+                    (float) $airports[$i]['latitude'],
+                    (float) $airports[$i]['longitude'],
+                    (float) $airports[$j]['latitude'],
+                    (float) $airports[$j]['longitude'],
+                ) / 1000);
+
+                $routeWeight = (int) $airports[$i]['traffic_weight'] * (int) $airports[$j]['traffic_weight']
+                    / (1 + $distance / self::ROUTE_DISTANCE_HALVING_KM);
+
+                // Share the route's traffic among the carriers that fly it.
+                foreach ($serving as $code) {
+                    $running += $routeWeight * $carrierWeight[$code] / $servingWeight;
+
+                    $routes[] = $i * $count + $j;
+                    $cumulative[] = $running;
+                    $distances[] = $distance;
+                    $carriers[] = $code;
+                }
+            }
+        }
+
+        return [$routes, $cumulative, $distances, $carriers, $running];
+    }
+
+    /**
+     * Sample an index from cumulative weights (binary search). Used for both
+     * the route and the airline that flies it.
+     *
+     * @param list<float> $cumulative
+     */
+    private function pickWeighted(array $cumulative, float $totalWeight): int
+    {
+        $target = mt_rand() / mt_getrandmax() * $totalWeight;
+
+        $low = 0;
+        $high = count($cumulative) - 1;
+
+        while ($low < $high) {
+            $mid = intdiv($low + $high, 2);
+
+            if ($cumulative[$mid] < $target) {
+                $low = $mid + 1;
+            } else {
+                $high = $mid;
+            }
+        }
+
+        return $low;
     }
 
     /**

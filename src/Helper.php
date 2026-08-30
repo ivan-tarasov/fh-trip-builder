@@ -50,34 +50,68 @@ class Helper
      */
     public static function getGitInfo(): array
     {
-        // Four exec() shell-outs feed the footer on every page render; cache
-        // them for the lifetime of the request.
+        // Four exec() shell-outs feed the footer on every page render — about
+        // 200ms of process spawning. The answer only changes when the checkout
+        // does, so it is cached to disk and refreshed when git's own state
+        // changes; the static keeps it to one read per request.
         static $info = null;
 
         if ($info !== null) {
             return $info;
         }
 
-        $git_branch = 'git rev-parse --abbrev-ref HEAD';
-        $git_tag = 'git describe --tags --abbrev=0';
-        $git_commitHash = 'git log --pretty="%h" -n1 HEAD';
-        $git_commitDate = 'git log -n1 --pretty=%ci HEAD';
+        $cacheFile = self::getRootDir() . '/cache/git-info.json';
+        $stamp = self::gitStamp();
 
-        $git_branch = trim(exec($git_branch));
-        $git_tag = trim(exec($git_tag));
-        $git_commitHash = trim(exec($git_commitHash));
+        if (is_file($cacheFile)) {
+            $cached = json_decode((string) file_get_contents($cacheFile), true);
 
-        $git_commitDate = new DateTime(trim(exec($git_commitDate)));
+            if (is_array($cached) && ($cached['stamp'] ?? null) === $stamp && isset($cached['info'])) {
+                return $info = $cached['info'];
+            }
+        }
+
+        $git_commitDate = new DateTime(trim(exec('git log -n1 --pretty=%ci HEAD')));
         $git_commitDate->setTimezone(new DateTimeZone('UTC'));
 
         $info = [
-            'branch' => $git_branch,
-            'tag' => $git_tag,
-            'commit_hash' => $git_commitHash,
+            'branch' => trim(exec('git rev-parse --abbrev-ref HEAD')),
+            'tag' => trim(exec('git describe --tags --abbrev=0')),
+            'commit_hash' => trim(exec('git log --pretty="%h" -n1 HEAD')),
             'commit_date' => $git_commitDate->format('Y-m-d H:i:s'),
         ];
 
+        // A failure to cache only costs speed, never correctness.
+        @file_put_contents($cacheFile, json_encode(['stamp' => $stamp, 'info' => $info]));
+
         return $info;
+    }
+
+    /**
+     * A fingerprint of the checkout's current position: HEAD's contents plus
+     * the modification time of the ref it points at, so committing, switching
+     * branches or checking out all invalidate the cached git info.
+     */
+    private static function gitStamp(): string
+    {
+        $head = self::getRootDir() . '/.git/HEAD';
+
+        if (!is_file($head)) {
+            return 'no-git';
+        }
+
+        $contents = trim((string) file_get_contents($head));
+        $stamp = $contents . ':' . filemtime($head);
+
+        if (str_starts_with($contents, 'ref: ')) {
+            $ref = self::getRootDir() . '/.git/' . trim(substr($contents, 5));
+
+            if (is_file($ref)) {
+                $stamp .= ':' . filemtime($ref);
+            }
+        }
+
+        return $stamp;
     }
 
     /**

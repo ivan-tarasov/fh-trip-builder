@@ -94,7 +94,11 @@
         });
 
         $("button[id^=addTrip_]").click(function () {
-            let tripID = [$(this).data('flight-departing-id'), $(this).data('flight-returning-id')];
+            // Comma-separated segment ids per direction (an itinerary can have
+            // more than one leg). jQuery coerces a single-id value to a Number,
+            // so normalise to a string before sending.
+            let departIds = String($(this).data('flight-departing-ids') ?? '');
+            let returnIds = String($(this).data('flight-returning-ids') ?? '');
 
             Swal.fire({
                 title: 'Add this trip?',
@@ -109,7 +113,7 @@
                             'Content-Type': 'application/x-www-form-urlencoded',
                             'X-CSRF-Token': csrfToken()
                         },
-                        body: new URLSearchParams({depart_id: tripID[0] ?? '', return_id: tripID[1] ?? ''})
+                        body: new URLSearchParams({depart_ids: departIds, return_ids: returnIds})
                     })
                         .then(response => {
                             if (!response.ok) {
@@ -216,6 +220,127 @@
     $(function () {
         document.querySelectorAll('[data-toggle="tooltip"]').forEach(function (el) {
             new bootstrap.Tooltip(el);
+        });
+    });
+
+    /*[ Whole-card selection ]
+    ===========================================================*/
+    // Clicking anywhere on a card selects it, except on the controls that do
+    // their own thing. Done here rather than with a stretched-link overlay,
+    // which would block hovering the timeline, the logos and the price note.
+    document.querySelectorAll('.flight-card').forEach(function (card) {
+        card.addEventListener('click', function (event) {
+            if (event.target.closest('a, button, input, label, [data-bs-toggle]')) {
+                return;
+            }
+
+            const select = card.querySelector('.card-select');
+
+            if (select) {
+                select.click();
+            }
+        });
+    });
+
+    /*[ Saved flights + share link ]
+    ===========================================================*/
+    const SAVED_KEY = 'tb_saved_flights';
+
+    function savedFlights() {
+        try {
+            return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function storeSavedFlights(list) {
+        try {
+            localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+        } catch (e) {
+            // Private browsing or a full quota: the heart still toggles for
+            // this page view, it just will not be remembered.
+        }
+    }
+
+    // Saved flights live in this browser only — there is no account to sync to.
+    document.querySelectorAll('.js-like').forEach(function (button) {
+        const key = button.dataset.flightKey;
+
+        button.classList.toggle('is-active', savedFlights().indexOf(key) !== -1);
+
+        button.addEventListener('click', function (event) {
+            // Keep the click off the card, which would navigate away.
+            event.preventDefault();
+            event.stopPropagation();
+
+            const list = savedFlights();
+            const at = list.indexOf(key);
+
+            if (at === -1) {
+                list.push(key);
+            } else {
+                list.splice(at, 1);
+            }
+
+            button.classList.toggle('is-active', at === -1);
+            storeSavedFlights(list);
+        });
+    });
+
+    // The clipboard API rejects when the document is not focused, so keep a
+    // selection-based fallback rather than dropping the user into a prompt.
+    function copyToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text).catch(function () {
+                return selectionCopy(text) ? Promise.resolve() : Promise.reject();
+            });
+        }
+
+        return selectionCopy(text) ? Promise.resolve() : Promise.reject();
+    }
+
+    function selectionCopy(text) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.top = '-1000px';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+
+        let copied = false;
+
+        try {
+            copied = document.execCommand('copy');
+        } catch (e) {
+            copied = false;
+        }
+
+        document.body.removeChild(area);
+
+        return copied;
+    }
+
+    document.querySelectorAll('.js-share').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            // Keep the click off the card, which would navigate away.
+            event.preventDefault();
+            event.stopPropagation();
+
+            // The share URL is a path, so resolve it against this origin.
+            const url = new URL(button.dataset.shareUrl, window.location.origin).href;
+
+            copyToClipboard(url).then(function () {
+                button.classList.add('is-copied');
+
+                setTimeout(function () {
+                    button.classList.remove('is-copied');
+                }, 1600);
+            }, function () {
+                window.prompt('Copy this link', url);
+            });
         });
     });
 

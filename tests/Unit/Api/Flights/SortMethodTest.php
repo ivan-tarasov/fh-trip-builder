@@ -21,24 +21,22 @@ final class SortMethodTest extends TestCase
         self::assertSame(SortMethod::Price, SortMethod::fromRequest(''));
     }
 
-    public function testOnewayExpressions(): void
+    public function testCandidateOrderByExpressions(): void
     {
-        self::assertSame('(out_price_base + out_price_tax)', SortMethod::Price->onewayOrderBy());
-        self::assertSame('out_duration', SortMethod::Duration->onewayOrderBy());
-        self::assertSame('out_dep_datetime', SortMethod::Depart->onewayOrderBy());
-        self::assertSame('out_arr_datetime', SortMethod::Arrive->onewayOrderBy());
-        self::assertSame('out_rating', SortMethod::Rating->onewayOrderBy());
+        self::assertSame('(price_base + price_tax) ASC', SortMethod::Price->candidateOrderBy());
+        self::assertSame('duration ASC', SortMethod::Duration->candidateOrderBy());
+        self::assertSame('depart_time ASC', SortMethod::Depart->candidateOrderBy());
+        self::assertSame('arrive_time ASC', SortMethod::Arrive->candidateOrderBy());
+        // Rating sorts highest-first.
+        self::assertSame('rating DESC', SortMethod::Rating->candidateOrderBy());
     }
 
-    public function testRoundtripExpressionsFallBackToPriceForLegOnlySorts(): void
+    public function testEveryCaseHasACandidateOrderBy(): void
     {
-        $price = '(out_price_base + out_price_tax + in_price_base + in_price_tax)';
-
-        self::assertSame($price, SortMethod::Price->roundtripOrderBy());
-        self::assertSame('(out_duration + in_duration)', SortMethod::Duration->roundtripOrderBy());
-        self::assertSame('(out_rating + in_rating)', SortMethod::Rating->roundtripOrderBy());
-        // depart/arrive have no round-trip expression → price fallback (legacy parity)
-        self::assertSame($price, SortMethod::Depart->roundtripOrderBy());
-        self::assertSame($price, SortMethod::Arrive->roundtripOrderBy());
+        // Each direction of a trip is ranked by these columns, so every sort
+        // option must map to a valid ORDER BY over the candidate aggregates.
+        foreach (SortMethod::cases() as $sort) {
+            self::assertMatchesRegularExpression('/^[^;]+ (ASC|DESC)$/', $sort->candidateOrderBy());
+        }
     }
 }
