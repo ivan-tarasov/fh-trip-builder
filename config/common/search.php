@@ -122,11 +122,12 @@ return [
     'connections' => [
         'min_connect_minutes' => 45,
         'max_connect_minutes' => 360,
-        // 0 = direct only, 1 = direct + one connection. Two stops works and
-        // returns correct itineraries, but ranking them costs ~2s at a million
-        // flights (the join itself is fast — sorting every candidate is not),
-        // and dense routes can time out. Raise it only for smaller datasets.
-        'max_stops' => 1,
+        // 0 = direct only, 1 = direct + one connection, 2 = up to two.
+        // Cost scales with how many candidates have to be ranked, which falls
+        // sharply as the airport network widens: across 211 airports two stops
+        // costs ~250-700ms, where across 50 it was ~2s and could time out. If
+        // the network is ever narrowed again, re-measure before leaving this at 2.
+        'max_stops' => 2,
         'roundtrip_topk' => 50,
     ],
 
