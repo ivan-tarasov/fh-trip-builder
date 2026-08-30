@@ -1053,3 +1053,40 @@ ZNZ,"Zanzibar International Airport",TZ,ZNZ,Zanzibar,3,Africa/Dar_es_Salaam,-6.2
 ZQN,Queenstown,NZ,ZQN,Queenstown,13,Pacific/Auckland,-45.022038,168.7391,1171,1,0
 ZRH,Zurich,CH,ZRH,Zurich,2,Europe/Zurich,47.450603,8.561746,1416,1,1
 ZVE,"New Haven Railway",US,HVN,"New Haven",-4,America/New_York,41.3139,-72.9267,43,1,0
+PHX,"Phoenix Sky Harbor International",US,PHX,Phoenix,-7,America/Phoenix,33.434278,-112.011583,1135,1,1
+PHL,"Philadelphia International",US,PHL,Philadelphia,-4,America/New_York,39.871944,-75.241139,36,1,1
+YVR,"Vancouver International",CA,YVR,Vancouver,-7,America/Vancouver,49.1939,-123.1844,14,1,1
+MEX,"Benito Juarez International",MX,MEX,Mexico City,-6,America/Mexico_City,19.436303,-99.072097,7316,1,1
+BRU,"Brussels Airport",BE,BRU,Brussels,2,Europe/Brussels,50.901389,4.484444,184,1,1
+BER,"Berlin Brandenburg",DE,BER,Berlin,2,Europe/Berlin,52.366667,13.503333,157,1,1
+IST,"Istanbul Airport",TR,IST,Istanbul,3,Europe/Istanbul,41.275278,28.751944,325,1,1
+PKX,"Beijing Daxing International",CN,BJS,Beijing,8,Asia/Shanghai,39.509722,116.410833,98,1,1
+SHA,"Shanghai Hongqiao International",CN,SHA,Shanghai,8,Asia/Shanghai,31.197875,121.336319,10,1,1
+TFU,"Chengdu Tianfu International",CN,CTU,Chengdu,8,Asia/Shanghai,30.3125,104.441389,1400,1,1
+URC,"Urumqi Diwopu International",CN,URC,Urumqi,8,Asia/Shanghai,43.9071,87.4742,2125,1,1
+HAK,"Haikou Meilan International",CN,HAK,Haikou,8,Asia/Shanghai,19.9349,110.4589,75,1,1
+SYX,"Sanya Phoenix International",CN,SYX,Sanya,8,Asia/Shanghai,18.3029,109.4125,92,1,1
+KWE,"Guiyang Longdongbao International",CN,KWE,Guiyang,8,Asia/Shanghai,26.5385,106.8007,3736,1,1
+HFE,"Hefei Xinqiao International",CN,HFE,Hefei,8,Asia/Shanghai,31.78,116.9767,100,1,1
+LHW,"Lanzhou Zhongchuan International",CN,LHW,Lanzhou,8,Asia/Shanghai,36.5152,103.6202,6388,1,1
+INC,"Yinchuan Hedong International",CN,INC,Yinchuan,8,Asia/Shanghai,38.3216,106.3931,3763,1,1
+AER,"Sochi International",RU,AER,Sochi,3,Europe/Moscow,43.4499,39.9566,89,1,1
+VVO,"Vladivostok International",RU,VVO,Vladivostok,10,Asia/Vladivostok,43.399,132.1483,59,1,1
+KJA,"Krasnoyarsk Yemelyanovo",RU,KJA,Krasnoyarsk,7,Asia/Krasnoyarsk,56.1729,92.4933,942,1,1
+BFS,"Belfast International",GB,BFS,Belfast,1,Europe/London,54.6575,-6.215833,268,1,1
+TRD,"Trondheim Vaernes",NO,TRD,Trondheim,2,Europe/Oslo,63.4578,10.9239,56,1,1
+KCH,"Kuching International",MY,KCH,Kuching,8,Asia/Kuching,1.4847,110.3468,89,1,1
+UPG,"Sultan Hasanuddin International",ID,UPG,Makassar,8,Asia/Makassar,-5.0616,119.5541,47,1,1
+SDJ,"Sendai International",JP,SDJ,Sendai,9,Asia/Tokyo,38.1397,140.917,15,1,1
+PBH,"Paro International",BT,PBH,Paro,6,Asia/Thimphu,27.4032,89.4246,7332,1,1
+DAM,"Damascus International",SY,DAM,Damascus,3,Asia/Damascus,33.4115,36.5156,2020,1,1
+LXR,"Luxor International",EG,LXR,Luxor,2,Africa/Cairo,25.671,32.7066,294,1,1
+ORN,"Oran Es Senia",DZ,ORN,Oran,1,Africa/Algiers,35.6239,-0.6212,295,1,1
+TIP,"Tripoli International",LY,TIP,Tripoli,2,Africa/Tripoli,32.6635,13.159,263,1,1
+KAN,"Mallam Aminu Kano International",NG,KAN,Kano,1,Africa/Lagos,12.0476,8.5246,1562,1,1
+RUN,"Roland Garros",RE,RUN,Saint-Denis,4,Indian/Reunion,-20.8871,55.5103,66,1,1
+SDU,"Santos Dumont",BR,RIO,Rio De Janeiro,-3,America/Sao_Paulo,-22.9105,-43.1631,11,1,1
+NAT,"Sao Goncalo do Amarante International",BR,NAT,Natal,-3,America/Sao_Paulo,-5.7681,-35.3766,272,1,1
+POM,"Port Moresby Jacksons International",PG,POM,Port Moresby,10,Pacific/Port_Moresby,-9.4434,147.22,146,1,1
+NOU,"La Tontouta International",NC,NOU,Noumea,11,Pacific/Noumea,-22.0146,166.213,52,1,1
+VLI,"Bauerfield International",VU,VLI,Port Vila,11,Pacific/Efate,-17.6993,168.3197,70,1,1
