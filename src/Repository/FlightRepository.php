@@ -44,6 +44,13 @@ final readonly class FlightRepository
     // scan every flight on that route across the whole schedule.
     private const int CONNECT_DATE_BUFFER_DAYS = 3;
 
+    // Highlighting a "cheapest" or "fastest" option only means something when
+    // there are a few to choose between.
+    private const int BADGE_MIN_CHOICES = 3;
+
+    // How much the balanced pick leans on fare over elapsed time.
+    private const float BADGE_PRICE_WEIGHT = 0.6;
+
     public function __construct(private Connection $connection) {}
 
     /**
@@ -79,11 +86,15 @@ final readonly class FlightRepository
 
         $total = min(count($candidates), self::COUNT_CAP);
 
+        // Badges are decided across every candidate, not just this page, so
+        // "cheapest" means cheapest of the whole search.
+        $badges = count($candidates) >= self::BADGE_MIN_CHOICES ? $this->badgeKeys($candidates) : [];
+
         $pageItems = array_slice($candidates, $this->offset($page), self::PER_PAGE);
 
         $legs = $this->hydrateLegs($this->collectLegIds($pageItems));
 
-        $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs), $pageItems);
+        $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs, $badges), $pageItems);
 
         return ['rows' => $rows, 'total' => $total];
     }
@@ -160,6 +171,7 @@ final readonly class FlightRepository
 
         return [
             'legs' => $legs,
+            'badges' => [],
             'stops' => count($legs) - 1,
             'price_base' => $priceBase,
             'price_tax' => round($priceTax, 2),
@@ -350,9 +362,10 @@ final readonly class FlightRepository
      *
      * @param array<string, mixed> $candidate
      * @param array<int, array<string, mixed>> $legs
+     * @param array<string, list<string>> $badges
      * @return array<string, mixed>
      */
-    private function assembleItinerary(array $candidate, array $legs): array
+    private function assembleItinerary(array $candidate, array $legs, array $badges = []): array
     {
         $ordered = [];
 
@@ -366,6 +379,7 @@ final readonly class FlightRepository
 
         return [
             'legs' => $ordered,
+            'badges' => $badges[$this->candidateKey($candidate)] ?? [],
             'stops' => (int) $candidate['stops'],
             'price_base' => (float) $candidate['price_base'],
             'price_tax' => (float) $candidate['price_tax'],
@@ -374,6 +388,87 @@ final readonly class FlightRepository
             'arrive_time' => (string) $candidate['arrive_time'],
             'rating' => (float) $candidate['rating'],
         ];
+    }
+
+    /**
+     * Decide which candidates earn a badge, returned as candidate key => slugs.
+     *
+     * Cheapest and fastest are plain extremes. "Best value" is the lowest
+     * combined score once fare and elapsed time are each normalised across the
+     * result set, weighted toward fare — the trade-off most travellers make.
+     * A nonstop is only called out when it isn't already the cheapest.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return array<string, list<string>>
+     */
+    private function badgeKeys(array $candidates): array
+    {
+        $prices = [];
+        $durations = [];
+
+        foreach ($candidates as $candidate) {
+            $prices[] = (float) $candidate['price_base'] + (float) $candidate['price_tax'];
+            $durations[] = (int) $candidate['duration'];
+        }
+
+        $priceSpan = max(1e-9, max($prices) - min($prices));
+        $durationSpan = max(1, max($durations) - min($durations));
+
+        $cheapest = null;
+        $fastest = null;
+        $value = null;
+        $nonstop = null;
+        $bestScore = null;
+
+        foreach ($candidates as $i => $candidate) {
+            if ($cheapest === null || $prices[$i] < $prices[$cheapest]) {
+                $cheapest = $i;
+            }
+
+            if ($fastest === null || $durations[$i] < $durations[$fastest]) {
+                $fastest = $i;
+            }
+
+            $score = self::BADGE_PRICE_WEIGHT * (($prices[$i] - min($prices)) / $priceSpan)
+                + (1 - self::BADGE_PRICE_WEIGHT) * (($durations[$i] - min($durations)) / $durationSpan);
+
+            if ($bestScore === null || $score < $bestScore) {
+                $bestScore = $score;
+                $value = $i;
+            }
+
+            if ((int) $candidate['stops'] === 0 && ($nonstop === null || $prices[$i] < $prices[$nonstop])) {
+                $nonstop = $i;
+            }
+        }
+
+        $map = [];
+
+        foreach (['cheapest' => $cheapest, 'fastest' => $fastest, 'value' => $value] as $slug => $index) {
+            if ($index !== null) {
+                $map[$this->candidateKey($candidates[$index])][] = $slug;
+            }
+        }
+
+        if ($nonstop !== null && $nonstop !== $cheapest) {
+            $map[$this->candidateKey($candidates[$nonstop])][] = 'nonstop';
+        }
+
+        return $map;
+    }
+
+    /**
+     * Identity of a candidate itinerary: its leg ids in order.
+     *
+     * @param array<string, mixed> $candidate
+     */
+    private function candidateKey(array $candidate): string
+    {
+        return implode('-', array_filter([
+            $candidate['seg1'] ?? null,
+            $candidate['seg2'] ?? null,
+            $candidate['seg3'] ?? null,
+        ], static fn($id): bool => $id !== null));
     }
 
     /**

@@ -1349,41 +1349,6 @@ textarea {
 }
 
 
-/* Compact itinerary line: the flight path with a filled dot per layover. */
-.itinerary-path {
-  position: relative;
-  height: 2px;
-  background-color: #ced4da;
-  border-radius: 2px;
-}
-
-.itinerary-path::before,
-.itinerary-path::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  background-color: #adb5bd;
-  border-radius: 50%;
-  transform: translateY(-50%);
-}
-
-.itinerary-path::before { left: 0; }
-.itinerary-path::after { right: 0; }
-
-.itinerary-stop {
-  position: absolute;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  background-color: #6c757d;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-}
-
 /* "Show flight details" toggle: swap the label and rotate the chevron by state. */
 .flight-details-toggle .if-expanded { display: none; }
 .flight-details-toggle:not(.collapsed) .if-collapsed { display: none; }
@@ -1438,3 +1403,140 @@ textarea {
   padding: .5rem 1rem;
   border-radius: calc(var(--bs-border-radius) - 2px) calc(var(--bs-border-radius) - 2px) 0 0;
 }
+
+/* Route bar: a part per flight leg and per layover, each sized by its minutes.
+   Hovering a part highlights just that stretch of the journey. */
+.route { padding-bottom: 1.35rem; }
+
+.route__head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .3rem;
+  color: #6c757d;
+  font-size: .8125rem;
+}
+
+.route__summary { flex: 1; text-align: center; }
+
+.route__bar { display: flex; align-items: center; gap: 4px; }
+
+.route__leg,
+.route__stop {
+  position: relative;
+  flex-basis: 0;
+  cursor: pointer;
+  transition: background-color .12s ease, height .12s ease;
+}
+
+/* A flight is a solid bar; a layover is the thin gap between two flights. */
+.route__leg {
+  height: 6px;
+  min-width: 26px;
+  border-radius: 3px;
+  background-color: #ced4da;
+}
+
+.route__stop {
+  height: 2px;
+  min-width: 18px;
+  background-color: #dee2e6;
+}
+
+.route__leg:hover { background-color: #f5622d; }
+
+.route__stop:hover {
+  height: 6px;
+  border-radius: 3px;
+  background-color: #f5622d;
+}
+
+.route__code {
+  position: absolute;
+  top: 12px;
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--bs-primary);
+  white-space: nowrap;
+}
+
+.route__code--start { left: 0; }
+.route__code--end { right: 0; }
+
+.route__code--stop {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* The connection airport lights up with its own leg of the journey. */
+.route__stop:hover .route__code { color: #f5622d; }
+
+/* Badge label sitting on the shoulder of a card it describes. */
+.flight-badges {
+  display: flex;
+  gap: .35rem;
+  position: relative;
+  z-index: 3;
+  margin-bottom: -.65rem;
+  padding-left: .75rem;
+}
+
+.flight-badges .badge {
+  font-size: .8125rem;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.badge--success { background-color: #2fa360; }
+.badge--primary { background-color: #2f6fed; }
+.badge--purple  { background-color: #7048e8; }
+.badge--teal    { background-color: #0f9b8e; }
+.badge--secondary { background-color: #6c757d; }
+
+.flight-card--badged { border-top-left-radius: .5rem; }
+
+/* Round icon buttons: save and share. */
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background-color: #f1f3f5;
+  color: #495057;
+  transition: background-color .12s ease, color .12s ease;
+}
+
+.icon-btn:hover { background-color: #e9ecef; }
+.icon-btn.is-active { color: #e03131; }
+.icon-btn.is-copied { background-color: #d3f9d8; color: #2b8a3e; }
+
+/* A thing worth knowing before you choose: tight connection, night wait, … */
+.notice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: .875rem;
+  cursor: help;
+}
+
+.notice--danger  { background-color: #ffe3e3; color: #c92a2a; }
+.notice--warning { background-color: #fff3bf; color: #a37200; }
+.notice--info    { background-color: #e7f5ff; color: #1971c2; }
+
+/* The whole card is the click target; the controls above it stay clickable. */
+.flight-card { cursor: pointer; }
+.flight-card .card-actions { position: relative; z-index: 2; }
+.flight-card .stretched-link { color: #adb5bd; }
+.flight-card:hover .stretched-link { color: var(--bs-primary); }
+
+/* Icon buttons hold both states and swap with a class, because FontAwesome
+   rewrites <i> into <svg> and class edits from JS would not survive. */
+.icon-btn .icon-done { display: none; }
+.icon-btn.is-active .icon-idle,
+.icon-btn.is-copied .icon-idle { display: none; }
+.icon-btn.is-active .icon-done,
+.icon-btn.is-copied .icon-done { display: inline-block; }

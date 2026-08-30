@@ -1,44 +1,46 @@
-{# Collapsed itinerary line: carrier · departure · path (a dot per stop) · arrival · stops · total time #}
-<div class="row align-items-center g-2 py-2">
+{# One itinerary as a single line: carrier, departure, the route bar, arrival.
+   The bar draws a part per flight leg and per layover, each sized by its own
+   minutes, so the shape of the journey is readable without opening details. #}
+<div class="row align-items-center g-3 itinerary">
     <!-- Airline -->
-    <div class="col-auto">
+    <div class="col-auto text-center" style="width: 76px;">
         <img src="{{ direction.logo_url }}" class="rounded-circle" style="max-height: 40px;"
-             data-toggle="tooltip" data-placement="top" title="{{ direction.carrier_name }}"
              alt="{{ direction.carrier_name }}" />
+        <div class="small text-muted text-truncate">{{ direction.carrier_name }}</div>
     </div>
+
     <!-- Departure -->
-    <div class="col-auto">
-        <div class="h5 mb-0">{{ direction.depart_time }}</div>
-        <div class="small text-muted">{{ direction.depart_code }} &ndash; {{ direction.arrive_code }}</div>
-        <div class="small text-muted">{{ direction.carrier_name }}</div>
+    <div class="col-auto" style="min-width: 92px;">
+        <div class="h4 mb-0">{{ direction.depart_time }}</div>
+        <div class="small">{{ direction.depart_city }}</div>
+        <div class="small text-muted">{{ direction.depart_day }}</div>
     </div>
-    <!-- Path with stop dots -->
-    <div class="col px-2">
-        <div class="itinerary-path">
-            {% for layover in direction.layovers %}
-                {# Positioned by when the stop actually happens, not evenly spaced. #}
-                <span class="itinerary-stop"
-                      style="left: {{ layover.position_pct }}%;"
-                      data-toggle="tooltip" data-placement="top"
-                      title="Stop: {{ layover.wait }} layover, {{ layover.airport_code }} &ndash; {{ layover.airport_city }}"></span>
+
+    <!-- The route -->
+    <div class="col route px-4">
+        <div class="route__head">
+            <i class="fas fa-plane-departure text-secondary"></i>
+            <span class="route__summary">
+                {{ direction.duration }} in transit &middot; {{ direction.stops_label|lower }}
+            </span>
+            <i class="fas fa-plane-arrival text-secondary"></i>
+        </div>
+        <div class="route__bar">
+            {% for part in direction.route %}
+                <span class="route__{{ part.type }}" style="flex-grow: {{ part.weight }};"
+                      data-toggle="tooltip" data-placement="top" title="{{ part.tooltip }}">
+                    {% if part.start_code %}<span class="route__code route__code--start">{{ part.start_code }}</span>{% endif %}
+                    {% if part.end_code %}<span class="route__code route__code--end">{{ part.end_code }}</span>{% endif %}
+                    {% if part.code %}<span class="route__code route__code--stop">{{ part.code }}</span>{% endif %}
+                </span>
             {% endfor %}
         </div>
     </div>
+
     <!-- Arrival -->
-    <div class="col-auto">
-        <div class="h5 mb-0">
-            {{ direction.arrive_time }}{% if direction.day_offset > 0 %}<sup class="text-primary small">+{{ direction.day_offset }}</sup>{% endif %}
-        </div>
-    </div>
-    <!-- Stops summary -->
-    <div class="col-auto" style="min-width: 120px;">
-        <div class="fw-semibold small">{{ direction.stops_label }}</div>
-        {% for layover in direction.layovers %}
-            <div class="small text-muted">{{ layover.wait }} in {{ layover.airport_code }}</div>
-        {% endfor %}
-    </div>
-    <!-- Total duration -->
-    <div class="col-auto text-nowrap small text-muted" style="min-width: 90px;">
-        <i class="far fa-clock pe-1"></i>{{ direction.duration }}
+    <div class="col-auto text-end" style="min-width: 92px;">
+        <div class="h4 mb-0">{{ direction.arrive_time }}</div>
+        <div class="small">{{ direction.arrive_city }}</div>
+        <div class="small text-muted">{{ direction.arrive_day }}</div>
     </div>
 </div>

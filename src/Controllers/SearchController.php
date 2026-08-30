@@ -34,6 +34,13 @@ class SearchController extends AbstractController
         GET_DEPART_ITIN = 'depart_itin',
         GET_RETURN_ITIN = 'return_itin';
 
+    // What counts as worth warning about on an itinerary.
+    private const int LAYOVER_TIGHT_MINUTES = 90;
+    private const int LAYOVER_LONG_MINUTES = 300;
+    private const int LONG_TRIP_MINUTES = 1440;
+    private const int NIGHT_FROM_HOUR = 23;
+    private const int NIGHT_TO_HOUR = 6;
+
     private const string POST_SORT = 'sort',
         POST_TIME_RANGE = 'time_range',
         POST_AIRLINES = 'airlines';
@@ -295,7 +302,7 @@ class SearchController extends AbstractController
 
         $step = $this->data->step;
 
-        foreach ($this->data->flights as $index => $flight) {
+        foreach ($this->data->flights as $flight) {
             $built = $this->buildDirection($flight->itinerary);
 
             $flights[] = [
@@ -313,9 +320,12 @@ class SearchController extends AbstractController
                 'price_tax' => number_format((float) $flight->price_tax, 2),
                 'price_gst' => number_format(0, 2),
                 'price_qst' => number_format(0, 2),
-                // The list is ranked globally, so the first row of page one is
-                // genuinely the best by the chosen sort.
-                'badge' => $index === 0 && $this->get[self::GET_PAGE] == 1 ? $this->sortBadge() : null,
+                // Path only; the browser resolves it against its own origin.
+                'share_url' => match ($step) {
+                    1 => $this->stepUrl($built['ids'], keepReturn: true),
+                    2 => $this->returnStepUrl($built['ids']),
+                    default => $this->stepUrl(null),
+                },
                 'itinerary' => $built['direction'],
             ];
         }
@@ -346,18 +356,6 @@ class SearchController extends AbstractController
             3 => sprintf('%s ⇄ %s', $this->data->depart, $this->data->arrive),
             default => sprintf('%s → %s', $this->data->depart, $this->data->arrive),
         };
-    }
-
-    /**
-     * The badge config for the active sort (e.g. "Cheapest price"), or null.
-     *
-     * @return array<string, mixed>|null
-     */
-    private function sortBadge(): ?array
-    {
-        $badge = Config::get(sprintf('search.sort.%s.badge', $_SESSION[self::POST_SORT]));
-
-        return is_array($badge) ? $badge : null;
     }
 
     /**
@@ -445,15 +443,55 @@ class SearchController extends AbstractController
                 'flight_number' => 'Flight ' . str_replace('-', '', $segment->number),
                 'duration' => $this->minutesToStringTime($segment->duration),
                 'cabin' => 'Economy',
-                'depart_time' => date('g:ia', strtotime($segment->depart->date_time)),
+                'depart_time' => date('H:i', strtotime($segment->depart->date_time)),
                 'depart_date' => date('D, d M', strtotime($segment->depart->date_time)),
                 'depart_city' => $segment->depart->airport_city,
                 'depart_code' => $segment->depart->airport_code,
-                'arrive_time' => date('g:ia', strtotime($segment->arrive->date_time)),
+                'arrive_time' => date('H:i', strtotime($segment->arrive->date_time)),
                 'arrive_date' => date('D, d M', strtotime($segment->arrive->date_time)),
                 'arrive_city' => $segment->arrive->airport_city,
                 'arrive_code' => $segment->arrive->airport_code,
             ];
+        }
+
+        // The route bar: one part per flight leg and one per layover, each
+        // weighted by its own minutes so the drawn widths show the real shape of
+        // the journey. Airport codes sit under the part they belong to.
+        $parts = [];
+        $lastSegment = array_key_last($segments);
+
+        foreach ($segments as $i => $segment) {
+            $parts[] = [
+                'type' => 'leg',
+                'weight' => max(1, (int) $segment->duration),
+                'tooltip' => sprintf(
+                    '%s in the air · %s–%s',
+                    $this->minutesToStringTime((int) $segment->duration),
+                    $segment->depart->airport_code,
+                    $segment->arrive->airport_code,
+                ),
+                'start_code' => $i === 0 ? $segment->depart->airport_code : null,
+                'end_code' => $i === $lastSegment ? $segment->arrive->airport_code : null,
+                'code' => null,
+            ];
+
+            if (isset($itinerary->layovers[$i])) {
+                $layover = $itinerary->layovers[$i];
+
+                $parts[] = [
+                    'type' => 'stop',
+                    'weight' => max(1, (int) $layover->wait_minutes),
+                    'tooltip' => sprintf(
+                        'Layover at %s (%s) — %s',
+                        $layover->airport_name,
+                        $layover->airport_city,
+                        $this->minutesToStringTime((int) $layover->wait_minutes),
+                    ),
+                    'start_code' => null,
+                    'end_code' => null,
+                    'code' => $layover->airport_code,
+                ];
+            }
         }
 
         $layovers = [];
@@ -463,7 +501,6 @@ class SearchController extends AbstractController
                 'airport_code' => $layover->airport_code,
                 'airport_city' => $layover->airport_city,
                 'wait' => $this->minutesToStringTime($layover->wait_minutes),
-                'position_pct' => $layover->position_pct,
             ];
         }
 
@@ -473,13 +510,17 @@ class SearchController extends AbstractController
                 'duration' => $this->minutesToStringTime((int) $itinerary->total_duration),
                 'carrier_name' => $first->carrier_name,
                 'logo_url' => $this->carrierLogo($first->carrier),
-                'depart_time' => date('g:iA', strtotime($first->depart->date_time)),
+                'depart_time' => date('H:i', strtotime($first->depart->date_time)),
                 'depart_code' => $first->depart->airport_code,
                 'depart_city' => $first->depart->airport_city,
-                'arrive_time' => date('g:iA', strtotime($last->arrive->date_time)),
+                'depart_day' => date('D, j M', strtotime($first->depart->date_time)),
+                'arrive_time' => date('H:i', strtotime($last->arrive->date_time)),
                 'arrive_code' => $last->arrive->airport_code,
                 'arrive_city' => $last->arrive->airport_city,
-                'day_offset' => $this->dayOffset($first->depart->date_time, $last->arrive->date_time),
+                'arrive_day' => date('D, j M', strtotime($last->arrive->date_time)),
+                'notices' => $this->buildNotices($segments, $itinerary->layovers, (int) $itinerary->total_duration),
+                'badges' => array_map($this->badgeMeta(...), $itinerary->badges),
+                'route' => $parts,
                 'layovers' => $layovers,
                 'segments' => $detail,
             ],
@@ -496,6 +537,132 @@ class SearchController extends AbstractController
         ));
     }
 
+
+    /**
+     * Things about an itinerary a traveller would want to spot before choosing:
+     * connections that are tight or long, layovers spent overnight, a transit
+     * country that may need a visa, separately-ticketed airlines, and very long
+     * journeys. Each notice is deduplicated by label so a two-stop trip doesn't
+     * repeat the same warning.
+     *
+     * @param list<object> $segments
+     * @param list<object> $layovers
+     * @return list<array<string, string>>
+     */
+    private function buildNotices(array $segments, array $layovers, int $totalDuration): array
+    {
+        $notices = [];
+        $originCountry = $segments[0]->depart->airport_country;
+        $destinationCountry = $segments[array_key_last($segments)]->arrive->airport_country;
+
+        foreach ($layovers as $i => $layover) {
+            $wait = (int) $layover->wait_minutes;
+            $city = $layover->airport_city;
+            $waitLabel = $this->minutesToStringTime($wait);
+
+            if ($wait < self::LAYOVER_TIGHT_MINUTES) {
+                $notices['tight'] = [
+                    'icon' => 'person-running',
+                    'tone' => 'danger',
+                    'label' => 'Tight connection',
+                    'text' => sprintf('Only %s to change planes in %s', $waitLabel, $city),
+                ];
+            } elseif ($wait > self::LAYOVER_LONG_MINUTES) {
+                $notices['long'] = [
+                    'icon' => 'hourglass-half',
+                    'tone' => 'warning',
+                    'label' => 'Long layover',
+                    'text' => sprintf('%s waiting in %s', $waitLabel, $city),
+                ];
+            }
+
+            if (isset($segments[$i], $segments[$i + 1]) && $this->spansNight(
+                $segments[$i]->arrive->date_time,
+                $segments[$i + 1]->depart->date_time,
+            )) {
+                $notices['night'] = [
+                    'icon' => 'moon',
+                    'tone' => 'warning',
+                    'label' => 'Night layover',
+                    'text' => sprintf('The wait in %s runs through the night', $city),
+                ];
+            }
+
+            $country = $segments[$i]->arrive->airport_country;
+
+            if ($country !== $originCountry && $country !== $destinationCountry) {
+                $notices['visa'] = [
+                    'icon' => 'passport',
+                    'tone' => 'info',
+                    'label' => 'Transit visa',
+                    'text' => sprintf('Connects through %s — check whether a transit visa is needed', $country),
+                ];
+            }
+        }
+
+        $carriers = array_unique(array_map(static fn(object $s): string => $s->carrier, $segments));
+
+        if (count($carriers) > 1) {
+            $notices['airlines'] = [
+                'icon' => 'suitcase-rolling',
+                'tone' => 'danger',
+                'label' => 'Separate airlines',
+                'text' => 'Flights are on different airlines — bags may need collecting and re-checking',
+            ];
+        }
+
+        if ($totalDuration > self::LONG_TRIP_MINUTES) {
+            $notices['duration'] = [
+                'icon' => 'clock',
+                'tone' => 'warning',
+                'label' => 'Long journey',
+                'text' => sprintf('%s door to door', $this->minutesToStringTime($totalDuration)),
+            ];
+        }
+
+        return array_values($notices);
+    }
+
+    /**
+     * Whether a window overlaps the small hours on any night it touches.
+     */
+    private function spansNight(string $from, string $to): bool
+    {
+        $start = strtotime($from);
+        $end = strtotime($to);
+
+        for ($day = strtotime('midnight', $start) - 86400; $day <= $end; $day += 86400) {
+            $nightStart = $day + self::NIGHT_FROM_HOUR * 3600;
+            $nightEnd = $day + 86400 + self::NIGHT_TO_HOUR * 3600;
+
+            if ($start < $nightEnd && $end > $nightStart) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Presentation for a badge slug decided by the repository.
+     *
+     * @return array<string, string>
+     */
+    private function badgeMeta(string $slug): array
+    {
+        return match ($slug) {
+            'cheapest' => ['label' => 'Cheapest', 'tone' => 'success', 'icon' => 'tag',
+                'text' => 'Lowest price of every option we found'],
+            'fastest' => ['label' => 'Fastest', 'tone' => 'purple', 'icon' => 'bolt',
+                'text' => 'Shortest door-to-door time of every option we found'],
+            'value' => ['label' => 'Best value', 'tone' => 'primary', 'icon' => 'thumbs-up',
+                'text' => 'The best balance of price and travel time'],
+            'nonstop' => ['label' => 'Cheapest nonstop', 'tone' => 'teal', 'icon' => 'plane',
+                'text' => 'Lowest price among the flights with no connection'],
+            default => ['label' => ucfirst($slug), 'tone' => 'secondary', 'icon' => 'star', 'text' => ''],
+        };
+    }
+
     private function stopsLabel(int $stops): string
     {
         return match (true) {
@@ -503,18 +670,6 @@ class SearchController extends AbstractController
             $stops === 1 => '1 stop',
             default => $stops . ' stops',
         };
-    }
-
-    /**
-     * Whole days between a departure and an arrival (0 = same calendar day,
-     * 1 = arrives the next day, …) for the "+N" arrival marker.
-     */
-    private function dayOffset(string $departDateTime, string $arriveDateTime): int
-    {
-        $depart = new DateTime(date('Y-m-d', strtotime($departDateTime)));
-        $arrive = new DateTime(date('Y-m-d', strtotime($arriveDateTime)));
-
-        return (int) $depart->diff($arrive)->format('%r%a');
     }
 
     /**

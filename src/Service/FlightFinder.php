@@ -33,11 +33,11 @@ final readonly class FlightFinder
     private const string RESPONSE_FLIGHTS = 'flights';
     private const string RESPONSE_ITINERARY = 'itinerary';
     private const string RESPONSE_SEGMENTS = 'segments';
+    private const string RESPONSE_BADGES = 'badges';
     private const string RESPONSE_STOPS = 'stops';
     private const string RESPONSE_TOTAL_DURATION = 'total_duration';
     private const string RESPONSE_LAYOVERS = 'layovers';
     private const string RESPONSE_WAIT_MINUTES = 'wait_minutes';
-    private const string RESPONSE_POSITION = 'position_pct';
     private const string RESPONSE_DEPART = 'depart';
     private const string RESPONSE_ARRIVE = 'arrive';
     private const string RESPONSE_FLIGHT_NUMBER = 'number';
@@ -220,37 +220,24 @@ final readonly class FlightFinder
     {
         $legs = $itinerary['legs'];
 
-        // Elapsed time is flying time plus waiting time; the leg stamps are local
-        // to their own airports, so they can't be subtracted across timezones.
-        $total = max(1, (int) $itinerary['duration']);
-
         $layovers = [];
-        $elapsed = 0;
 
         for ($i = 1; $i < count($legs); $i++) {
-            $wait = (int) round(
-                (strtotime((string) $legs[$i]['dep_datetime']) - strtotime((string) $legs[$i - 1]['arr_datetime'])) / 60,
-            );
-
-            $elapsed += (int) $legs[$i - 1]['duration'];
-
             $layovers[] = [
                 self::RESPONSE_AIRPORT_CODE => $legs[$i - 1]['arr_code'],
                 self::RESPONSE_AIRPORT_NAME => $legs[$i - 1]['arr_name'],
                 self::RESPONSE_AIRPORT_CITY => $legs[$i - 1]['arr_city'],
-                self::RESPONSE_WAIT_MINUTES => $wait,
-                // Where the stop sits along the journey, so the dot on the path
-                // shows *when* it happens. Clamped clear of the end markers.
-                self::RESPONSE_POSITION => max(12, min(88, (int) round(
-                    ($elapsed + $wait / 2) / $total * 100,
-                ))),
+                // A layover is at one airport, so this subtraction is safe (leg
+                // stamps are local, and can't be subtracted across timezones).
+                self::RESPONSE_WAIT_MINUTES => (int) round(
+                    (strtotime((string) $legs[$i]['dep_datetime']) - strtotime((string) $legs[$i - 1]['arr_datetime'])) / 60,
+                ),
             ];
-
-            $elapsed += $wait;
         }
 
         return [
             self::RESPONSE_SEGMENTS => array_map(fn(array $leg): array => $this->mapLeg($leg, $cabin), $legs),
+            self::RESPONSE_BADGES => $itinerary['badges'] ?? [],
             self::RESPONSE_STOPS => (int) $itinerary['stops'],
             self::RESPONSE_TOTAL_DURATION => (int) $itinerary['duration'],
             self::RESPONSE_LAYOVERS => $layovers,
