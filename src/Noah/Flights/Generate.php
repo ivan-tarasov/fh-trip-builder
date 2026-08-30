@@ -112,8 +112,29 @@ class Generate extends AbstractCommand
 
         $flightsToAdd = (int) $flightsToAdd;
 
-        // Get airlines and enabled major airports from the database
-        $airlines = $this->connection()->fetchAll('SELECT * FROM ' . Table::Airlines->value);
+        // Only airlines that actually operate in this network, weighted by how
+        // much of it they carry. Without the filter every one of the ~1,150
+        // carriers flew equally, so obscure operators outnumbered the majors —
+        // and many of them have no logo to show.
+        $airlines = $this->connection()->fetchAll(
+            'SELECT code, traffic FROM ' . Table::Airlines->value
+            . ' WHERE is_major = 1 AND traffic > 0',
+        );
+
+        if ($airlines === []) {
+            $this->io->error('No airlines are marked major with a traffic weight.');
+
+            return Command::INVALID;
+        }
+
+        $airlineCumulative = [];
+        $airlineWeight = 0.0;
+
+        foreach ($airlines as $airline) {
+            $airlineWeight += (int) $airline['traffic'];
+            $airlineCumulative[] = $airlineWeight;
+        }
+
         $airports = $this->connection()->fetchAll(
             'SELECT * FROM ' . Table::Airports->value
             . ' WHERE enabled = 1 AND is_major = 1 AND traffic_weight > 0',
@@ -147,11 +168,11 @@ class Generate extends AbstractCommand
 
             // Pick a route in proportion to how much traffic it should carry,
             // so hubs and trunk routes get the flights they would in reality.
-            $route = $this->pickRoute($cumulative, $totalWeight);
+            $route = $this->pickWeighted($cumulative, $totalWeight);
             $airportCount = count($airports);
             $departAirport = $airports[intdiv($routes[$route], $airportCount)];
             $arriveAirport = $airports[$routes[$route] % $airportCount];
-            $airline = $airlines[rand(0, count($airlines) - 1)]['code'];
+            $airline = $airlines[$this->pickWeighted($airlineCumulative, $airlineWeight)]['code'];
 
             // Already measured while building the distribution.
             $distance = $distances[$route];
@@ -319,11 +340,12 @@ class Generate extends AbstractCommand
     }
 
     /**
-     * Sample one route from the cumulative weights (binary search).
+     * Sample an index from cumulative weights (binary search). Used for both
+     * the route and the airline that flies it.
      *
      * @param list<float> $cumulative
      */
-    private function pickRoute(array $cumulative, float $totalWeight): int
+    private function pickWeighted(array $cumulative, float $totalWeight): int
     {
         $target = mt_rand() / mt_getrandmax() * $totalWeight;
 
