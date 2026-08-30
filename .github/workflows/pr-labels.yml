@@ -1,0 +1,52 @@
+name: PR labels
+
+# Merging into develop cuts a release (see release.yml), and the size of the
+# version bump comes from a label. This check makes that choice deliberate:
+# a pull request must carry exactly one release label before it can merge.
+#
+# Failing this check only *blocks* a merge once it is added as a required
+# status check in the branch protection rules for develop.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]
+    branches: [develop]
+
+jobs:
+  release-label:
+    name: Release label
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require exactly one release label
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+
+          found=""
+          for label in release:major release:minor release:patch no-release; do
+            case ",${LABELS}," in
+              *",${label},"*) found="${found} ${label}" ;;
+            esac
+          done
+
+          count=$(echo $found | wc -w | tr -d ' ')
+
+          if [ "$count" -eq 1 ]; then
+            echo "Release label:${found}"
+            echo "Release label:${found}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "$count" -eq 0 ]; then
+            echo "::error::This pull request has no release label. Add one of"\
+                 "release:major, release:minor or release:patch to say how the"\
+                 "version should bump when it merges — or no-release to merge"\
+                 "without cutting a release."
+          else
+            echo "::error::This pull request has more than one release label"\
+                 "(${found# }). Keep exactly one so the version bump is not ambiguous."
+          fi
+
+          exit 1
