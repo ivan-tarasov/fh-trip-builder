@@ -17,15 +17,16 @@
         <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
             <div>
 
+                {% if price_mode == 'from' %}<span class="small text-muted">from</span>{% endif %}
                 <div class="price">
                     <span class="price__symbol">$</span><span class="price__whole">{{ flight.price.whole }}</span><span class="price__cents">.{{ flight.price.cents }}</span>
                     <span class="price__currency">CAD</span>
                 </div>
                 <div class="small text-muted price-note">
-                    {% if price_mode == 'outbound' %}
+                    {% if price_mode == 'from' %}
                         <span data-toggle="tooltip" data-placement="top"
-                              title="The fare for this departing flight. Your return is added at the next step, where you will see the exact trip total.">
-                            departing flight <i class="fas fa-info-circle"></i>
+                              title="This departure plus the cheapest available return. Choose your return next to see the exact total.">
+                            with cheapest return <i class="fas fa-info-circle"></i>
                         </span>
                     {% else %}
                         <span data-toggle="tooltip" data-placement="top"

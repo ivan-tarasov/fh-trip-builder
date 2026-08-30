@@ -117,10 +117,6 @@ final readonly class FlightFinder
             $addTax = (float) $outbound['price_tax'];
         } else {
             // Step 1 (round trip) or the whole search (one way): the outbound.
-            // Step 1 prices the outbound on its own. Adding the cheapest return
-            // would put the SAME number on every row — it cannot separate one
-            // departure from another, and finding it costs a second full search.
-            // The exact total is shown at step 2, where the return is known.
             $step = $isRoundtrip ? 1 : null;
             $result = $flights->searchDirection(
                 $query->from,
@@ -129,6 +125,12 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->currentPage,
             );
+
+            // Round trips show what the whole trip would cost with the cheapest
+            // return, so step 1 prices are comparable with the totals at step 2.
+            $addBase = ($step === 1
+                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate)
+                : null) ?? 0.0;
         }
 
         $rows = array_map(fn(array $itinerary): array => [
@@ -153,9 +155,9 @@ final readonly class FlightFinder
             'total_flights' => $result['total'],
             'trip_type' => $tripType->value,
             'step' => $step,
-            // Step 1 shows the departing fare alone; everywhere else is an
-            // exact total for the whole trip being booked.
-            'price_mode' => $step === 1 ? 'outbound' : 'total',
+            // Step 1 totals assume the cheapest return, so they are a floor;
+            // everywhere else the price is exact for the trip being booked.
+            'price_mode' => $step === 1 ? 'from' : 'total',
             'selected' => $outbound === null ? null : $this->mapItinerary($outbound, self::CABIN_OUTBOUND),
             'selected_price' => $outbound === null ? null : round((float) $outbound['price_base'] + (float) $outbound['price_tax'], 2),
             'selected_ids' => $outbound === null ? [] : $outboundIds,

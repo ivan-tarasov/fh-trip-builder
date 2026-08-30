@@ -197,7 +197,7 @@ final readonly class FlightRepository
      *
      * @param list<string> $fromCodes
      * @param list<string> $toCodes
-     * @return array{0: string, 1: list<string>}
+     * @return array{0: string, 1: list<string>, 2: list<string>, 3: list<list<string>>}
      */
     private function candidateSql(array $fromCodes, array $toCodes, string $date): array
     {
@@ -212,8 +212,11 @@ final readonly class FlightRepository
         $endpoints = array_values(array_unique([...$fromCodes, ...$toCodes]));
         $endPh = $this->placeholders($endpoints);
 
+        // Branches are kept alongside their own parameters so a caller can run
+        // one on its own (see cheapestTotal). Every branch names its columns for
+        // the same reason — an unnamed one cannot be used as a derived table.
         $parts = [];
-        $params = [];
+        $partParams = [];
 
         // Direct.
         $parts[] = "SELECT f1.id AS seg1, NULL AS seg2, NULL AS seg3, 0 AS stops,
@@ -224,7 +227,7 @@ final readonly class FlightRepository
             FROM {$flights} f1
             WHERE f1.departure_airport IN ({$fromPh}) AND f1.arrival_airport IN ({$toPh})
               AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY";
-        $params = [...$params, ...$fromCodes, ...$toCodes, $date, $date];
+        $partParams[] = [...$fromCodes, ...$toCodes, $date, $date];
 
         // 1-stop: f1 -> f2, connecting at f1.arrival within the layover window.
         // One branch per destination airport rather than a single IN list: with a
@@ -233,11 +236,13 @@ final readonly class FlightRepository
         // the connection airport and filter afterwards.
         if ($maxStops >= 1) {
             foreach ($toCodes as $toCode) {
-                $parts[] = "SELECT f1.id, f2.id, NULL, 1,
-                    f1.price_base + f2.price_base, f1.price_tax + f2.price_tax,
-                    f1.duration + f2.duration + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time),
-                    f1.departure_time, f2.arrival_time,
-                    (f1.rating + f2.rating) / 2
+                $parts[] = "SELECT f1.id AS seg1, f2.id AS seg2, NULL AS seg3, 1 AS stops,
+                    f1.price_base + f2.price_base AS price_base,
+                    f1.price_tax + f2.price_tax AS price_tax,
+                    f1.duration + f2.duration
+                        + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time) AS duration,
+                    f1.departure_time AS depart_time, f2.arrival_time AS arrive_time,
+                    (f1.rating + f2.rating) / 2 AS rating
                     FROM {$flights} f1
                     INNER JOIN {$flights} f2 ON f2.departure_airport = f1.arrival_airport
                         AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE
@@ -249,7 +254,7 @@ final readonly class FlightRepository
                 // No `f1.arrival NOT IN (endpoints)` here: for a single connection it
                 // is redundant (a hop through the origin/destination yields no valid
                 // second leg) and it would stop f1 from seeking on departure_airport_time.
-                $params = [...$params, ...$fromCodes, $date, $date, $toCode, $date, $date];
+                $partParams[] = [...$fromCodes, $date, $date, $toCode, $date, $date];
             }
         }
 
@@ -258,35 +263,133 @@ final readonly class FlightRepository
         // worth an order of magnitude when a city has several airports.
         if ($maxStops >= 2) {
             foreach ($toCodes as $toCode) {
-                $parts[] = "SELECT f1.id, f2.id, f3.id, 2,
-                f1.price_base + f2.price_base + f3.price_base, f1.price_tax + f2.price_tax + f3.price_tax,
-                f1.duration + f2.duration + f3.duration
-                    + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time)
-                    + TIMESTAMPDIFF(MINUTE, f2.arrival_time, f3.departure_time),
-                f1.departure_time, f3.arrival_time,
-                (f1.rating + f2.rating + f3.rating) / 3
-                FROM {$flights} f1
-                INNER JOIN {$flights} f2 ON f2.departure_airport = f1.arrival_airport
-                    AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE
-                    AND f2.departure_time <= f1.arrival_time + INTERVAL {$maxc} MINUTE
-                INNER JOIN {$flights} f3 ON f3.departure_airport = f2.arrival_airport
-                    AND f3.departure_time >= f2.arrival_time + INTERVAL {$minc} MINUTE
-                    AND f3.departure_time <= f2.arrival_time + INTERVAL {$maxc} MINUTE
-                WHERE f1.departure_airport IN ({$fromPh})
-                  AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
-                  AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
-                  AND f3.departure_time >= ? AND f3.departure_time < ? + INTERVAL {$buffer} DAY
-                  AND f3.arrival_airport = ?
-                  AND f1.arrival_airport NOT IN ({$endPh})
-                  AND f2.arrival_airport NOT IN ({$endPh})
-                  AND f2.arrival_airport <> f1.arrival_airport";
-                $params = [...$params, ...$fromCodes, $date, $date, $date, $date, $date, $date, $toCode, ...$endpoints, ...$endpoints];
+                $parts[] = "SELECT f1.id AS seg1, f2.id AS seg2, f3.id AS seg3, 2 AS stops,
+                    f1.price_base + f2.price_base + f3.price_base AS price_base,
+                    f1.price_tax + f2.price_tax + f3.price_tax AS price_tax,
+                    f1.duration + f2.duration + f3.duration
+                        + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time)
+                        + TIMESTAMPDIFF(MINUTE, f2.arrival_time, f3.departure_time) AS duration,
+                    f1.departure_time AS depart_time, f3.arrival_time AS arrive_time,
+                    (f1.rating + f2.rating + f3.rating) / 3 AS rating
+                    FROM {$flights} f1
+                    INNER JOIN {$flights} f2 ON f2.departure_airport = f1.arrival_airport
+                        AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE
+                        AND f2.departure_time <= f1.arrival_time + INTERVAL {$maxc} MINUTE
+                    INNER JOIN {$flights} f3 ON f3.departure_airport = f2.arrival_airport
+                        AND f3.departure_time >= f2.arrival_time + INTERVAL {$minc} MINUTE
+                        AND f3.departure_time <= f2.arrival_time + INTERVAL {$maxc} MINUTE
+                    WHERE f1.departure_airport IN ({$fromPh})
+                      AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
+                      AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
+                      AND f3.departure_time >= ? AND f3.departure_time < ? + INTERVAL {$buffer} DAY
+                      AND f3.arrival_airport = ?
+                      AND f1.arrival_airport NOT IN ({$endPh})
+                      AND f2.arrival_airport NOT IN ({$endPh})
+                      AND f2.arrival_airport <> f1.arrival_airport";
+                $partParams[] = [
+                    ...$fromCodes, $date, $date, $date, $date, $date, $date,
+                    $toCode, ...$endpoints, ...$endpoints,
+                ];
             }
         }
 
         $sql = implode(' UNION ALL ', array_map(static fn(string $p): string => '(' . $p . ')', $parts));
+        $params = array_merge(...$partParams);
 
-        return [$sql, $params];
+        return [$sql, $params, $parts, $partParams];
+    }
+
+    /**
+     * The cheapest total (base + tax) for one direction, or null when it has no
+     * itineraries.
+     *
+     * Finding it by ranking every candidate costs as much as the search itself.
+     * Instead the direct and one-stop branches — which are cheap to scan — give
+     * a bound, and each two-stop branch is then asked only for itineraries that
+     * beat it. Every leg of a cheaper itinerary must itself cost less than the
+     * bound, and so must each running total, which prunes the join early. The
+     * answer is exactly the same; it is only reached with far less work.
+     */
+    public function cheapestTotal(string $from, string $to, string $date): ?float
+    {
+        $fromCodes = $this->resolveAirportCodes($from);
+        $toCodes = $this->resolveAirportCodes($to);
+
+        if ($fromCodes === [] || $toCodes === []) {
+            return null;
+        }
+
+        [, , $parts, $partParams] = $this->candidateSql($fromCodes, $toCodes, $date);
+
+        $cheap = [];
+        $cheapParams = [];
+        $deep = [];
+
+        foreach ($parts as $i => $part) {
+            // Branches are emitted in stop order, so the two-stop ones carry the
+            // third leg; anything else is cheap enough to scan outright.
+            if (str_contains($part, 'f3.id AS seg3')) {
+                $deep[] = [$part, $partParams[$i]];
+            } else {
+                $cheap[] = '(' . $part . ')';
+                $cheapParams = [...$cheapParams, ...$partParams[$i]];
+            }
+        }
+
+        $best = $cheap === [] ? null : $this->minTotal(implode(' UNION ALL ', $cheap), $cheapParams);
+
+        foreach ($deep as [$part, $params]) {
+            if ($best !== null) {
+                // Prune to itineraries that could still beat the bound.
+                $part = $this->boundedByPrice($part, $best);
+            }
+
+            $found = $this->minTotal('(' . $part . ')', $params);
+
+            if ($found !== null && ($best === null || $found < $best)) {
+                $best = $found;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * Cheapest base+tax across a candidate union, or null when it matches nothing.
+     *
+     * @param list<string> $params
+     */
+    private function minTotal(string $sql, array $params): ?float
+    {
+        $value = $this->connection->fetchValue(
+            'SELECT MIN(price_base + price_tax) FROM (' . $sql . ') candidates',
+            $params,
+        );
+
+        return $value === null ? null : (float) $value;
+    }
+
+    /**
+     * Restrict a two-stop branch to itineraries that could cost less than the
+     * bound. The running totals are what prune the join: a partial itinerary
+     * already at or above the bound cannot be completed into a cheaper one.
+     * The bound is a float we computed, never user input.
+     */
+    private function boundedByPrice(string $part, float $bound): string
+    {
+        $leg1 = 'f1.price_base + f1.price_tax';
+        $leg2 = $leg1 . ' + f2.price_base + f2.price_tax';
+        $leg3 = $leg2 . ' + f3.price_base + f3.price_tax';
+
+        return $part . sprintf(
+            ' AND %s < %F AND %s < %F AND %s < %F',
+            $leg1,
+            $bound,
+            $leg2,
+            $bound,
+            $leg3,
+            $bound,
+        );
     }
 
     /**
