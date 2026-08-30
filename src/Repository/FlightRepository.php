@@ -481,8 +481,12 @@ final readonly class FlightRepository
      */
     private function resolveAirportCodes(string $codeOrCity): array
     {
+        // Only airports the network actually serves: one that carries no traffic
+        // can never match a flight, and carrying it in the IN list turns an
+        // index lookup into a range scan on the connection joins.
         $rows = $this->connection->fetchAll(
-            'SELECT code FROM ' . Table::Airports->value . ' WHERE code = ? OR city_code = ?',
+            'SELECT code FROM ' . Table::Airports->value
+            . ' WHERE (code = ? OR city_code = ?) AND enabled = 1 AND traffic_weight > 0',
             [$codeOrCity, $codeOrCity],
         );
 

@@ -114,6 +114,19 @@ return [
             'comment' => false,
         ],
         [
+            // Relative share of the network an airport carries. Flight
+            // generation samples routes in proportion to it, so hubs get the
+            // traffic hubs actually get instead of every airport getting the
+            // same. 0 keeps an airport out of the generated network entirely.
+            'name' => 'traffic_weight',
+            'type' => 'smallint',
+            'length' => 4,
+            'default' => [1],
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
             'name' => 'is_major',
             'type' => 'tinyint',
             'length' => 1,

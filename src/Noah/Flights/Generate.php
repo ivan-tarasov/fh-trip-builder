@@ -70,6 +70,11 @@ class Generate extends AbstractCommand
     private const string COUNT_DUPLICATES = 'Deleted duplicate flights';
     private const string COUNT_TOTAL = 'Total added';
 
+    // How quickly route traffic falls off with distance: at this many km a
+    // route carries half the flights an adjacent-airport route of the same
+    // size would. Keeps short-haul frequent without starving long-haul.
+    private const int ROUTE_DISTANCE_HALVING_KM = 2000;
+
     private const int INSERT_BATCH_SIZE = 500;
 
     private array $count = [
@@ -110,8 +115,20 @@ class Generate extends AbstractCommand
         // Get airlines and enabled major airports from the database
         $airlines = $this->connection()->fetchAll('SELECT * FROM ' . Table::Airlines->value);
         $airports = $this->connection()->fetchAll(
-            'SELECT * FROM ' . Table::Airports->value . ' WHERE enabled = 1 AND is_major = 1',
+            'SELECT * FROM ' . Table::Airports->value
+            . ' WHERE enabled = 1 AND is_major = 1 AND traffic_weight > 0',
         );
+
+        if (count($airports) < 2) {
+            $this->io->error('Need at least two airports with a traffic weight to build a network.');
+
+            return Command::INVALID;
+        }
+
+        // Precompute how the network is shaped before generating anything (see
+        // routeDistribution): which route each flight takes is then a single
+        // lookup, and the distance for it is already known.
+        [$routes, $cumulative, $distances, $totalWeight] = $this->routeDistribution($airports);
 
         // Show the progress bar
         $progressBar = new ProgressBar($output, $flightsToAdd);
@@ -128,22 +145,16 @@ class Generate extends AbstractCommand
         while ($this->count[self::COUNT_TOTAL] < $flightsToAdd) {
             $this->count[self::COUNT_TOTAL]++;
 
-            // Get 2 random airports. Depart and arrive airports should be different
-            shuffle($airports);
-            $airportKey = array_rand($airports, 2);
-            $departAirport = $airports[$airportKey[0]];
-            $arriveAirport = $airports[$airportKey[1]];
+            // Pick a route in proportion to how much traffic it should carry,
+            // so hubs and trunk routes get the flights they would in reality.
+            $route = $this->pickRoute($cumulative, $totalWeight);
+            $airportCount = count($airports);
+            $departAirport = $airports[intdiv($routes[$route], $airportCount)];
+            $arriveAirport = $airports[$routes[$route] % $airportCount];
             $airline = $airlines[rand(0, count($airlines) - 1)]['code'];
 
-            // Calculating flight distance between airports
-            $distance = intval(
-                $this->distanceOnEarthSurface(
-                    (float) $departAirport['latitude'],
-                    (float) $departAirport['longitude'],
-                    (float) $arriveAirport['latitude'],
-                    (float) $arriveAirport['longitude'],
-                ) / 1000,
-            );
+            // Already measured while building the distribution.
+            $distance = $distances[$route];
 
             // Calculating flight duration between airports
             $duration = $this->getDurationFromDistance($distance) + Helper::random(self::DURATION_ADD_KM);
@@ -258,6 +269,78 @@ class Generate extends AbstractCommand
 
             throw $e;
         }
+    }
+
+    /**
+     * Build the route distribution: every ordered pair of airports, weighted by
+     * a gravity model — the product of the two airports' traffic weights,
+     * divided by how far apart they are. Big airports close together (JFK-BOS,
+     * JFK-LAX) end up with many daily flights; small airports far apart end up
+     * with almost none, which is the shape a real network has and the reason
+     * connections exist at all.
+     *
+     * Returns the packed pair index, the cumulative weights to sample from, the
+     * distance of each pair in km, and the total weight.
+     *
+     * @param list<array<string, mixed>> $airports
+     * @return array{0: list<int>, 1: list<float>, 2: list<int>, 3: float}
+     */
+    private function routeDistribution(array $airports): array
+    {
+        $count = count($airports);
+        $routes = [];
+        $cumulative = [];
+        $distances = [];
+        $running = 0.0;
+
+        for ($i = 0; $i < $count; $i++) {
+            for ($j = 0; $j < $count; $j++) {
+                if ($i === $j) {
+                    continue;
+                }
+
+                $distance = (int) ($this->distanceOnEarthSurface(
+                    (float) $airports[$i]['latitude'],
+                    (float) $airports[$i]['longitude'],
+                    (float) $airports[$j]['latitude'],
+                    (float) $airports[$j]['longitude'],
+                ) / 1000);
+
+                $running += (int) $airports[$i]['traffic_weight'] * (int) $airports[$j]['traffic_weight']
+                    / (1 + $distance / self::ROUTE_DISTANCE_HALVING_KM);
+
+                $routes[] = $i * $count + $j;
+                $cumulative[] = $running;
+                $distances[] = $distance;
+            }
+        }
+
+        return [$routes, $cumulative, $distances, $running];
+    }
+
+    /**
+     * Sample one route from the cumulative weights (binary search).
+     *
+     * @param list<float> $cumulative
+     */
+    private function pickRoute(array $cumulative, float $totalWeight): int
+    {
+        $target = mt_rand() / mt_getrandmax() * $totalWeight;
+
+        $low = 0;
+        $high = count($cumulative) - 1;
+
+        while ($low < $high) {
+            $mid = intdiv($low + $high, 2);
+
+            if ($cumulative[$mid] < $target) {
+                $low = $mid + 1;
+            } else {
+                $high = $mid;
+            }
+        }
+
+        return $low;
     }
 
     /**
