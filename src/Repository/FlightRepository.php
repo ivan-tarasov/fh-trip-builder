@@ -251,29 +251,38 @@ final readonly class FlightRepository
         $params = [...$params, ...$fromCodes, ...$toCodes, $date, $date];
 
         // 1-stop: f1 -> f2, connecting at f1.arrival within the layover window.
+        // One branch per destination airport rather than a single IN list: with a
+        // constant arrival the final leg seeks (departure, arrival, time) on the
+        // route index, where an IN list forces it to walk every flight leaving
+        // the connection airport and filter afterwards.
         if ($maxStops >= 1) {
-            $parts[] = "SELECT f1.id, f2.id, NULL, 1,
-                f1.price_base + f2.price_base, f1.price_tax + f2.price_tax,
-                f1.duration + f2.duration + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time),
-                f1.departure_time, f2.arrival_time,
-                (f1.rating + f2.rating) / 2
-                FROM {$flights} f1
-                INNER JOIN {$flights} f2 ON f2.departure_airport = f1.arrival_airport
-                    AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE
-                    AND f2.departure_time <= f1.arrival_time + INTERVAL {$maxc} MINUTE
-                WHERE f1.departure_airport IN ({$fromPh})
-                  AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
-                  AND f2.arrival_airport IN ({$toPh})
-                  AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY";
-            // No `f1.arrival NOT IN (endpoints)` here: for a single connection it
-            // is redundant (a hop through the origin/destination yields no valid
-            // second leg) and it would stop f1 from seeking on departure_airport_time.
-            $params = [...$params, ...$fromCodes, $date, $date, ...$toCodes, $date, $date];
+            foreach ($toCodes as $toCode) {
+                $parts[] = "SELECT f1.id, f2.id, NULL, 1,
+                    f1.price_base + f2.price_base, f1.price_tax + f2.price_tax,
+                    f1.duration + f2.duration + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time),
+                    f1.departure_time, f2.arrival_time,
+                    (f1.rating + f2.rating) / 2
+                    FROM {$flights} f1
+                    INNER JOIN {$flights} f2 ON f2.departure_airport = f1.arrival_airport
+                        AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE
+                        AND f2.departure_time <= f1.arrival_time + INTERVAL {$maxc} MINUTE
+                    WHERE f1.departure_airport IN ({$fromPh})
+                      AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
+                      AND f2.arrival_airport = ?
+                      AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY";
+                // No `f1.arrival NOT IN (endpoints)` here: for a single connection it
+                // is redundant (a hop through the origin/destination yields no valid
+                // second leg) and it would stop f1 from seeking on departure_airport_time.
+                $params = [...$params, ...$fromCodes, $date, $date, $toCode, $date, $date];
+            }
         }
 
         // 2-stop: f1 -> f2 -> f3, two valid connections, distinct intermediates.
+        // Split per destination for the same reason as the 1-stop tier — it is
+        // worth an order of magnitude when a city has several airports.
         if ($maxStops >= 2) {
-            $parts[] = "SELECT f1.id, f2.id, f3.id, 2,
+            foreach ($toCodes as $toCode) {
+                $parts[] = "SELECT f1.id, f2.id, f3.id, 2,
                 f1.price_base + f2.price_base + f3.price_base, f1.price_tax + f2.price_tax + f3.price_tax,
                 f1.duration + f2.duration + f3.duration
                     + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time)
@@ -291,11 +300,12 @@ final readonly class FlightRepository
                   AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
                   AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
                   AND f3.departure_time >= ? AND f3.departure_time < ? + INTERVAL {$buffer} DAY
-                  AND f3.arrival_airport IN ({$toPh})
+                  AND f3.arrival_airport = ?
                   AND f1.arrival_airport NOT IN ({$endPh})
                   AND f2.arrival_airport NOT IN ({$endPh})
                   AND f2.arrival_airport <> f1.arrival_airport";
-            $params = [...$params, ...$fromCodes, $date, $date, $date, $date, $date, $date, ...$toCodes, ...$endpoints, ...$endpoints];
+                $params = [...$params, ...$fromCodes, $date, $date, $date, $date, $date, $date, $toCode, ...$endpoints, ...$endpoints];
+            }
         }
 
         $sql = implode(' UNION ALL ', array_map(static fn(string $p): string => '(' . $p . ')', $parts));
