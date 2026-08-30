@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Noah\Db;
 
 use Exception;
+use PDO;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -141,6 +142,9 @@ class Install extends AbstractCommand
                 } catch (Throwable $e) {
                     $failed = true;
                     $this->formatOutput($action, 'failed', 'danger');
+                    // Without the reason a failed seed is undiagnosable on a
+                    // server you cannot step through.
+                    $this->io->error(sprintf('Seeding `%s` failed: %s', $table, $e->getMessage()));
                     break;
                 }
             }
@@ -180,10 +184,40 @@ class Install extends AbstractCommand
     {
         $quoted = array_map(static fn(string $c): string => "`$c`", $columns);
         $placeholders = implode(', ', array_fill(0, count($columns), '?'));
-        $updates = implode(', ', array_map(static fn(string $c): string => "`$c` = new.`$c`", $columns));
+
+        // The `VALUES (...) AS new` row alias only exists in MySQL 8.0.19+, and
+        // not in MariaDB at all — which is what many shared hosts run. Fall back
+        // to VALUES(col), which every version understands (it is deprecated on
+        // newer MySQL, hence preferring the alias when it is available).
+        if ($this->supportsRowAlias()) {
+            $updates = implode(', ', array_map(static fn(string $c): string => "`$c` = new.`$c`", $columns));
+
+            return "INSERT INTO `$table` (" . implode(', ', $quoted) . ")"
+                . " VALUES ($placeholders) AS new"
+                . " ON DUPLICATE KEY UPDATE $updates";
+        }
+
+        $updates = implode(', ', array_map(static fn(string $c): string => "`$c` = VALUES(`$c`)", $columns));
 
         return "INSERT INTO `$table` (" . implode(', ', $quoted) . ")"
-            . " VALUES ($placeholders) AS new"
+            . " VALUES ($placeholders)"
             . " ON DUPLICATE KEY UPDATE $updates";
+    }
+
+    /**
+     * Whether the server understands the `VALUES (...) AS alias` form.
+     */
+    private function supportsRowAlias(): bool
+    {
+        static $supported = null;
+
+        if ($supported !== null) {
+            return $supported;
+        }
+
+        $version = (string) $this->connection()->pdo()->getAttribute(PDO::ATTR_SERVER_VERSION);
+
+        return $supported = !str_contains(strtolower($version), 'mariadb')
+            && version_compare($version, '8.0.19', '>=');
     }
 }
