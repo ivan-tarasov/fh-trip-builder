@@ -17,8 +17,11 @@
         <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
             <div>
                 {% if price_mode == 'from' %}<span class="small text-muted">from</span>{% endif %}
-                <div class="h2 mb-0">CAD {{ flight.price_total }}</div>
-                <div class="small text-muted">
+                <div class="price">
+                    <span class="price__symbol">$</span><span class="price__whole">{{ flight.price.whole }}</span><span class="price__cents">.{{ flight.price.cents }}</span>
+                    <span class="price__currency">CAD</span>
+                </div>
+                <div class="small text-muted price-note">
                     {% if price_mode == 'from' %}
                         <span data-toggle="tooltip" data-placement="top"
                               title="This departure plus the cheapest available return. Pick a return next to see the exact total.">
@@ -59,15 +62,16 @@
             <div class="flex-grow-1">
                 {% include 'search/cards/itinerary.html.twig' with { 'direction': flight.itinerary } %}
             </div>
-            {# This is the whole card's click target: it stretches over the card,
-               while the buttons above sit on top of it. #}
+            {# The visible affordance and the accessible control. The rest of the
+               card forwards clicks here from JS — an overlay would swallow the
+               hover on the timeline, the logos and the price note. #}
             {% if flight.select_url %}
-                <a href="{{ flight.select_url }}" class="btn btn-link text-decoration-none stretched-link px-1">
+                <a href="{{ flight.select_url }}" class="btn btn-link text-decoration-none card-select px-1">
                     <span class="visually-hidden">{{ step == 2 ? 'Select this return flight' : 'Select this departing flight' }}</span>
                     <i class="fas fa-chevron-right"></i>
                 </a>
             {% else %}
-                <button type="button" class="btn btn-link text-decoration-none stretched-link px-1"
+                <button type="button" class="btn btn-link text-decoration-none card-select px-1"
                         id="addTrip_{{ row_id }}"
                         data-flight-departing-ids="{{ flight.outbound_ids|join(',') }}"
                         data-flight-returning-ids="{{ flight.return_ids|join(',') }}">

@@ -175,7 +175,7 @@ class SearchController extends AbstractController
                     : number_format((float) $this->data->selected_return_price, 2),
                 'package_price' => $this->data->package_price === null
                     ? null
-                    : number_format((float) $this->data->package_price, 2),
+                    : $this->priceParts((float) $this->data->package_price),
                 'package_ids' => [
                     'outbound' => implode(',', array_map(intval(...), (array) $this->data->selected_ids)),
                     'return' => implode(',', array_map(intval(...), (array) $this->data->selected_return_ids)),
@@ -315,7 +315,7 @@ class SearchController extends AbstractController
                 },
                 'outbound_ids' => $built['ids'],
                 'return_ids' => [],
-                'price_total' => number_format((float) $flight->price_base + (float) $flight->price_tax, 2),
+                'price' => $this->priceParts((float) $flight->price_base + (float) $flight->price_tax),
                 'price_base' => number_format((float) $flight->price_base, 2),
                 'price_tax' => number_format((float) $flight->price_tax, 2),
                 'price_gst' => number_format(0, 2),
@@ -662,6 +662,19 @@ class SearchController extends AbstractController
                 'text' => 'Lowest price among the flights with no connection'],
             default => ['label' => ucfirst($slug), 'tone' => 'secondary', 'icon' => 'star', 'text' => ''],
         };
+    }
+
+    /**
+     * Split a price so the template can size the parts differently: the whole
+     * amount is what people scan, the cents are detail.
+     *
+     * @return array{whole: string, cents: string}
+     */
+    private function priceParts(float $amount): array
+    {
+        [$whole, $cents] = explode('.', number_format($amount, 2, '.', ','));
+
+        return ['whole' => $whole, 'cents' => $cents];
     }
 
     private function stopsLabel(int $stops): string

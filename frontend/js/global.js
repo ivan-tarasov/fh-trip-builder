@@ -223,6 +223,25 @@
         });
     });
 
+    /*[ Whole-card selection ]
+    ===========================================================*/
+    // Clicking anywhere on a card selects it, except on the controls that do
+    // their own thing. Done here rather than with a stretched-link overlay,
+    // which would block hovering the timeline, the logos and the price note.
+    document.querySelectorAll('.flight-card').forEach(function (card) {
+        card.addEventListener('click', function (event) {
+            if (event.target.closest('a, button, input, label, [data-bs-toggle]')) {
+                return;
+            }
+
+            const select = card.querySelector('.card-select');
+
+            if (select) {
+                select.click();
+            }
+        });
+    });
+
     /*[ Saved flights + share link ]
     ===========================================================*/
     const SAVED_KEY = 'tb_saved_flights';

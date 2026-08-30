@@ -33,10 +33,13 @@
             <div class="col-md-6">
                 <div class="d-flex align-items-baseline gap-2">
                     <span class="text-muted">Trip total</span>
-                    <span class="h3 mb-0">CAD {{ package_price }}</span>
+                    <span class="price price--lg">
+                        <span class="price__symbol">$</span><span class="price__whole">{{ package_price.whole }}</span><span class="price__cents">.{{ package_price.cents }}</span>
+                        <span class="price__currency">CAD</span>
+                    </span>
                 </div>
                 <div class="small text-muted">
-                    Departing CAD {{ selected_price }} &middot; Returning CAD {{ selected_return_price }}
+                    Departing ${{ selected_price }} &middot; Returning ${{ selected_return_price }}
                     &middot; total per passenger
                 </div>
             </div>

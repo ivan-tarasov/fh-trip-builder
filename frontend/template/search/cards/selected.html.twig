@@ -14,7 +14,7 @@
                 {% include 'search/cards/itinerary.html.twig' with { 'direction': selected } %}
             </div>
             <div class="col-lg-3 text-center border-start">
-                <div class="h5 mb-0">CAD {{ selected_price }}</div>
+                <div class="h5 mb-0">${{ selected_price }} <span class="price__currency">CAD</span></div>
                 <div class="small text-muted">this flight</div>
             </div>
         </div>

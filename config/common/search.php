@@ -122,9 +122,10 @@ return [
     'connections' => [
         'min_connect_minutes' => 45,
         'max_connect_minutes' => 360,
-        // 0 = direct only, 1 = direct + one connection. Each extra stop lets the
-        // middle leg fan out to every airport, so 2 is materially more expensive
-        // on large flight tables — enable it only for smaller datasets.
+        // 0 = direct only, 1 = direct + one connection. Two stops works and
+        // returns correct itineraries, but ranking them costs ~2s at a million
+        // flights (the join itself is fast — sorting every candidate is not),
+        // and dense routes can time out. Raise it only for smaller datasets.
         'max_stops' => 1,
         'roundtrip_topk' => 50,
     ],

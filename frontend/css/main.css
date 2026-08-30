@@ -1526,11 +1526,11 @@ textarea {
 /* One treatment for all of them: these are things to look twice at. */
 .notice { background-color: #ffe9e9; color: #d6336c; }
 
-/* The whole card is the click target; the controls above it stay clickable. */
+/* The whole card is the click target, forwarded from JS rather than by an
+   overlay — an overlay would sit on top of the timeline and kill its hover. */
 .flight-card { cursor: pointer; }
-.flight-card .card-actions { position: relative; z-index: 2; }
-.flight-card .stretched-link { color: #adb5bd; }
-.flight-card:hover .stretched-link { color: var(--bs-primary); }
+.flight-card .card-select { color: #adb5bd; }
+.flight-card:hover .card-select { color: var(--bs-primary); }
 
 /* Icon buttons hold both states and swap with a class, because FontAwesome
    rewrites <i> into <svg> and class edits from JS would not survive. */
@@ -1602,3 +1602,43 @@ textarea {
   height: 1px;
   background-color: #dee2e6;
 }
+
+/* Price: the number is what people compare, so it carries the weight while the
+   symbol, cents and currency code stay quiet around it. */
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: .15rem;
+  line-height: 1.1;
+  color: #212529;
+}
+
+.price__symbol {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.price__whole {
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.price__cents {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #495057;
+  margin-left: -.15rem;
+}
+
+.price__currency {
+  font-size: .75rem;
+  font-weight: 500;
+  color: #adb5bd;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-left: .2rem;
+}
+
+.price--lg .price__whole { font-size: 2.5rem; }
