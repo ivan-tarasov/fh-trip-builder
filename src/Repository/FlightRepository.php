@@ -100,30 +100,6 @@ final readonly class FlightRepository
     }
 
     /**
-     * The cheapest total (base + tax) available for one direction, or null when
-     * the direction has no itineraries. Used to price a round-trip outbound as
-     * "from $X" — the least it can cost once a return is added.
-     */
-    public function cheapestTotal(string $from, string $to, string $date): ?float
-    {
-        $fromCodes = $this->resolveAirportCodes($from);
-        $toCodes = $this->resolveAirportCodes($to);
-
-        if ($fromCodes === [] || $toCodes === []) {
-            return null;
-        }
-
-        [$sql, $params] = $this->candidateSql($fromCodes, $toCodes, $date);
-
-        $row = $this->connection->fetchOne(
-            $sql . ' ORDER BY (price_base + price_tax) ASC LIMIT 1',
-            $params,
-        );
-
-        return $row === null ? null : (float) $row['price_base'] + (float) $row['price_tax'];
-    }
-
-    /**
      * Rebuild a chosen itinerary from its ordered leg ids, with the aggregates
      * the display needs. Returns null unless every id resolves and the legs form
      * a connected chain — so a stale or tampered selection is rejected.

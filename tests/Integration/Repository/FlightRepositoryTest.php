@@ -110,21 +110,6 @@ final class FlightRepositoryTest extends IntegrationTestCase
         self::assertSame('YUL', end($cheapest['legs'])['arr_code']);
     }
 
-    public function testCheapestTotalMatchesTheTopRankedItinerary(): void
-    {
-        $cheapest = $this->repository()->cheapestTotal('YUL', 'YYZ', self::DEPART_DATE);
-        $ranked = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
-
-        self::assertNotNull($cheapest);
-        self::assertEqualsWithDelta(
-            $ranked['rows'][0]['price_base'] + $ranked['rows'][0]['price_tax'],
-            $cheapest,
-            0.01,
-        );
-
-        self::assertNull($this->repository()->cheapestTotal('ZZZ', 'YYZ', self::DEPART_DATE));
-    }
-
     public function testItineraryByIdsRebuildsAChosenOutbound(): void
     {
         $itinerary = $this->repository()->itineraryByIds([$this->outboundA]);

@@ -65,10 +65,9 @@ final readonly class FlightFinder
      *
      * A round trip is chosen one direction at a time rather than as a pairing of
      * every outbound with every return: with no selection this returns the
-     * outbound options priced "from" (the least each can cost once the cheapest
-     * return is added); given the chosen outbound's leg ids it returns the
-     * return options priced as the real trip total. A one-way search is a single
-     * list of totals.
+     * outbound options priced on their own; given the chosen outbound's leg ids
+     * it returns the return options priced as the real trip total. A one-way
+     * search is a single list of totals.
      *
      * Once both directions are chosen the search stops listing options and
      * returns the assembled round-trip package instead, ready to confirm.
@@ -118,6 +117,10 @@ final readonly class FlightFinder
             $addTax = (float) $outbound['price_tax'];
         } else {
             // Step 1 (round trip) or the whole search (one way): the outbound.
+            // Step 1 prices the outbound on its own. Adding the cheapest return
+            // would put the SAME number on every row — it cannot separate one
+            // departure from another, and finding it costs a second full search.
+            // The exact total is shown at step 2, where the return is known.
             $step = $isRoundtrip ? 1 : null;
             $result = $flights->searchDirection(
                 $query->from,
@@ -126,8 +129,6 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->currentPage,
             );
-
-            $addBase = ($step === 1 ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate) : null) ?? 0.0;
         }
 
         $rows = array_map(fn(array $itinerary): array => [
@@ -152,8 +153,9 @@ final readonly class FlightFinder
             'total_flights' => $result['total'],
             'trip_type' => $tripType->value,
             'step' => $step,
-            // "from" prices are a floor (cheapest return added), totals are exact.
-            'price_mode' => $step === 1 ? 'from' : 'total',
+            // Step 1 shows the departing fare alone; everywhere else is an
+            // exact total for the whole trip being booked.
+            'price_mode' => $step === 1 ? 'outbound' : 'total',
             'selected' => $outbound === null ? null : $this->mapItinerary($outbound, self::CABIN_OUTBOUND),
             'selected_price' => $outbound === null ? null : round((float) $outbound['price_base'] + (float) $outbound['price_tax'], 2),
             'selected_ids' => $outbound === null ? [] : $outboundIds,
