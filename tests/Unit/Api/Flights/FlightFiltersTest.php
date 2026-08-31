@@ -51,6 +51,100 @@ final class FlightFiltersTest extends TestCase
         ];
     }
 
+    public function testFromQueryReadsEveryFilter(): void
+    {
+        $filters = FlightFilters::fromQuery([
+            'stops' => '0,1',
+            'airlines' => 'af,kl',
+            'one_airline' => '1',
+            'max_price' => '1500.50',
+            'max_duration' => '720',
+            'dep_time' => '360-1080',
+            'arr_when' => 'morning,day',
+            'arr_date' => '2026-09-15,2026-09-16',
+            'via' => 'ams,lhr',
+            'from_ap' => 'cdg',
+            'to_ap' => 'jfk,ewr',
+            'aircraft' => '77w',
+            'no_night' => '1',
+            'no_gulf' => '1',
+            'no_visa' => '1',
+        ]);
+
+        self::assertFalse($filters->isEmpty());
+        self::assertSame([0, 1], $filters->stops);
+        // Codes are upper-cased so a hand-typed link still matches.
+        self::assertSame(['AF', 'KL'], $filters->airlines);
+        self::assertTrue($filters->singleCarrier);
+        self::assertSame(1500.50, $filters->maxPrice);
+        self::assertSame(720, $filters->maxDuration);
+        self::assertSame([360, 1080], $filters->departWindow);
+        self::assertSame(['morning', 'day'], $filters->arriveBuckets);
+        self::assertSame(['2026-09-15', '2026-09-16'], $filters->arriveDates);
+        self::assertSame(['AMS', 'LHR'], $filters->layoverAirports);
+        self::assertSame(['CDG'], $filters->departAirports);
+        self::assertSame(['JFK', 'EWR'], $filters->arriveAirports);
+        self::assertSame(['77W'], $filters->aircraft);
+        self::assertTrue($filters->noNightLayover);
+        self::assertTrue($filters->noGulfLayover);
+        self::assertTrue($filters->noVisaLayover);
+    }
+
+    public function testAnEmptyQueryFiltersNothing(): void
+    {
+        self::assertTrue(FlightFilters::fromQuery([])->isEmpty());
+        self::assertTrue(FlightFilters::fromQuery(['stops' => '', 'airlines' => ''])->isEmpty());
+    }
+
+    /**
+     * A filter built from a malformed value must come back off rather than on
+     * and matching nothing: a bad link should show the unfiltered search, not
+     * an empty page that looks like there are no flights.
+     */
+    public function testMalformedValuesAreDroppedNotHonoured(): void
+    {
+        $filters = FlightFilters::fromQuery([
+            'stops' => 'banana',
+            'airlines' => '<script>alert(1)</script>',
+            'max_price' => '-5',
+            'max_duration' => '0',
+            'dep_time' => '1080-360',
+            'arr_time' => 'not-a-range',
+            'dep_when' => 'lunchtime',
+            'arr_date' => '2026-13-45',
+            'via' => 'TOOLONG',
+            'aircraft' => "' OR 1=1--",
+            'one_airline' => 'yes',
+        ]);
+
+        self::assertTrue($filters->isEmpty(), 'garbage should leave every filter off');
+    }
+
+    public function testAWindowCoveringTheWholeDayIsNotAFilter(): void
+    {
+        // The slider sits at both ends until someone moves it; treating that as
+        // a filter would mean an untouched control silently constrains nothing
+        // while still counting as "filtered".
+        self::assertNull(FlightFilters::fromQuery(['dep_time' => '0-1440'])->departWindow);
+        self::assertNull(FlightFilters::fromQuery(['dep_time' => '0-1439'])->departWindow);
+        self::assertSame([0, 600], FlightFilters::fromQuery(['dep_time' => '0-600'])->departWindow);
+    }
+
+    public function testQueryKeysCoverEveryFilterTheParserReads(): void
+    {
+        // The controller carries QUERY_KEYS through every URL it builds, so a
+        // key the parser reads but this list omits would be dropped on paging.
+        $carried = FlightFilters::QUERY_KEYS;
+
+        foreach ([
+            'stops', 'airlines', 'one_airline', 'max_price', 'max_duration',
+            'dep_time', 'dep_when', 'arr_time', 'arr_when', 'arr_date',
+            'via', 'from_ap', 'to_ap', 'aircraft', 'no_night', 'no_gulf', 'no_visa',
+        ] as $key) {
+            self::assertContains($key, $carried);
+        }
+    }
+
     public function testNoFiltersMatchEverything(): void
     {
         $filters = new FlightFilters();

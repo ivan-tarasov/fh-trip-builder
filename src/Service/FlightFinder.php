@@ -96,7 +96,7 @@ final readonly class FlightFinder
         $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
         $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
 
-        $result = ['rows' => [], 'total' => 0, 'cheapest' => null];
+        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => []];
         $addBase = 0.0;
         $addTax = 0.0;
 
@@ -112,6 +112,7 @@ final readonly class FlightFinder
                 $query->returnDate,
                 SortMethod::fromRequest($query->sort),
                 $query->currentPage,
+                $query->filters,
             );
             $addBase = (float) $outbound['price_base'];
             $addTax = (float) $outbound['price_tax'];
@@ -124,6 +125,7 @@ final readonly class FlightFinder
                 $query->departDate,
                 SortMethod::fromRequest($query->sort),
                 $query->currentPage,
+                $query->filters,
             );
 
             // Round trips show what the whole trip would cost with the cheapest
@@ -174,6 +176,9 @@ final readonly class FlightFinder
             self::RESPONSE_ARRIVE => $cities[self::RESPONSE_ARRIVE],
             'adult_count' => $query->adultNum,
             'child_count' => $query->childNum,
+            // Which filter options would still return something, so the sidebar
+            // can grey out the ones that would empty the page.
+            'available' => $result['available'],
             self::RESPONSE_FLIGHTS => $rows,
         ];
     }

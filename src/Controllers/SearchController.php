@@ -8,6 +8,7 @@ use DateInterval;
 use DateTime;
 use Exception;
 use stdClass;
+use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
@@ -33,15 +34,12 @@ class SearchController extends AbstractController
         // moves the search from step 1 (departing) to step 2 (returning); adding
         // the return moves it to step 3, the assembled package.
         GET_DEPART_ITIN = 'depart_itin',
-        GET_RETURN_ITIN = 'return_itin';
+        GET_RETURN_ITIN = 'return_itin',
+        GET_SORT = 'sort';
 
-    private const string POST_SORT = 'sort',
-        POST_TIME_RANGE = 'time_range',
-        POST_AIRLINES = 'airlines';
+    private const string DEFAULT_SORT = 'price';
 
     private array $get;
-
-    private ?array $post;
 
     private ?stdClass $data = null;
 
@@ -66,25 +64,15 @@ class SearchController extends AbstractController
                 ),
                 self::GET_DEPART_ITIN => $_GET[self::GET_DEPART_ITIN] ?? null,
                 self::GET_RETURN_ITIN => $_GET[self::GET_RETURN_ITIN] ?? null,
+                // Sort and filters ride in the query string, so stepUrl() and
+                // pageUrl() — which rebuild from $this->get — carry them across
+                // pagination, the step transitions and a shared link for free.
+                self::GET_SORT => $_GET[self::GET_SORT] ?? null,
+                ...$this->filterQuery(),
             ]);
 
             // Convert search hash to url and redirect
             $this->checkHash();
-
-            // Handle POST data
-            $this->setPost($_POST
-                ? [
-                    self::POST_SORT => $_POST[self::POST_SORT] ?? false,
-                    self::POST_TIME_RANGE => $_POST[self::POST_TIME_RANGE] ?? false,
-                    self::POST_AIRLINES => $_POST[self::POST_AIRLINES] ?? false,
-                ] : null);
-
-            // Handle SESSION data
-            if ($this->post && $this->post[self::POST_SORT]) {
-                $_SESSION[self::POST_SORT] = $this->post[self::POST_SORT];
-            } elseif (!isset($_SESSION[self::POST_SORT]) || !$this->get[self::GET_PAGE]) {
-                $_SESSION[self::POST_SORT] = 'price';
-            }
 
             // If one of important params is empty or not provided – redirect to index page
             if (empty($this->get[self::GET_TRIPTYPE])
@@ -99,13 +87,14 @@ class SearchController extends AbstractController
 
             $query = new FlightSearchQuery(
                 currentPage: $this->get[self::GET_PAGE] ?? 1,
-                sort: $_SESSION[self::POST_SORT],
+                sort: $this->sort(),
                 from: $this->get[self::GET_FROM],
                 to: $this->get[self::GET_TO],
                 departDate: $this->get[self::GET_DEPART],
                 returnDate: $this->get[self::GET_RETURN] ?? '',
                 adultNum: 1, // FIXME: now we provide only 1 adult count
                 childNum: 0, // FIXME: now we provide only 0 child count
+                filters: FlightFilters::fromQuery($this->get),
             );
 
             // Call the flight search directly; reuse the nested-object shape the
@@ -145,9 +134,24 @@ class SearchController extends AbstractController
                     Helper::getUrlPath(),
                     http_build_query(array_merge($this->get, [self::GET_PAGE => null])),
                 ),
-                'session_sort' => $_SESSION[self::POST_SORT],
+                // Filter forms submit with GET, so they post to the bare path
+                // and carry the rest of the search as hidden fields.
+                'form_path' => Helper::getUrlPath(),
+                'session_sort' => $this->sort(),
                 'clock_range' => $this->generateTimeRange(),
                 'airlines' => $this->fetchSidebarAirlines(),
+                // What the sidebar needs to draw itself: the filters currently
+                // applied, and which options are worth offering at all.
+                'filters' => $this->filterQuery(),
+                'available' => (array) $this->data->available,
+                // Hidden fields a GET form needs so submitting one control does
+                // not drop the rest of the search.
+                'carried_query' => array_filter(
+                    $this->get,
+                    static fn(mixed $v, string $k): bool => $v !== null && $v !== ''
+                        && !in_array($k, [self::GET_SORT, self::GET_PAGE, self::GET_HASH], true),
+                    ARRAY_FILTER_USE_BOTH,
+                ),
                 // Which half of a round trip is being chosen (null for one way),
                 // and the outbound already picked, if any.
                 'step' => $this->data->step,
@@ -233,8 +237,9 @@ class SearchController extends AbstractController
 
     private function searchStat(): void
     {
-        // Prevent too many counts from one user
-        if ($this->post || $this->get[self::GET_PAGE] != 1) {
+        // Prevent too many counts from one user: only the first page of a
+        // search counts, so paging and re-filtering do not inflate it.
+        if ($this->get[self::GET_PAGE] != 1) {
             return;
         }
 
@@ -500,6 +505,38 @@ class SearchController extends AbstractController
         return "'" . implode("','", $range) . "'";
     }
 
+    /**
+     * The filter query keys as they arrived, untouched.
+     *
+     * They are kept verbatim rather than re-serialised from the parsed filters
+     * so that every URL the page builds reproduces exactly the search that
+     * produced it — including a value the parser rejected, which stays visible
+     * in the address bar instead of silently vanishing.
+     *
+     * @return array<string, string|null>
+     */
+    private function filterQuery(): array
+    {
+        $carried = [];
+
+        foreach (FlightFilters::QUERY_KEYS as $key) {
+            $value = $_GET[$key] ?? null;
+            $carried[$key] = is_string($value) && $value !== '' ? $value : null;
+        }
+
+        return $carried;
+    }
+
+    /**
+     * The chosen sort, defaulting to price.
+     */
+    private function sort(): string
+    {
+        $sort = $this->get[self::GET_SORT] ?? null;
+
+        return is_string($sort) && $sort !== '' ? $sort : self::DEFAULT_SORT;
+    }
+
     private function presenter(): ItineraryPresenter
     {
         return $this->presenter ??= new ItineraryPresenter();
@@ -511,11 +548,6 @@ class SearchController extends AbstractController
         $get[self::GET_TRIPTYPE] = TripType::fromRequest($get[self::GET_TRIPTYPE])->value;
 
         $this->get = $get;
-    }
-
-    private function setPost(?array $post): void
-    {
-        $this->post = $post;
     }
 
     private function setData(stdClass $data): void

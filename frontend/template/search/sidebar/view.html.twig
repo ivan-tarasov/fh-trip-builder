@@ -25,11 +25,15 @@
                         </h2>
                         <div id="sidebar_1_sort_content" class="accordion-collapse collapse show" aria-labelledby="sidebar_1_sort">
                             <div class="accordion-body px-1 py-3">
-                                <form method="post" action="{{ form_url }}" id="form_sort">
+                                {# Sort lives in the query string, so this is a GET form and has
+                                   to carry the rest of the search with it. #}
+                                <form method="get" action="{{ form_path }}" id="form_sort">
+                                    {% for name, value in carried_query %}
+                                        <input type="hidden" name="{{ name }}" value="{{ value }}" />
+                                    {% endfor %}
                                     {% for key, params in config('search.sort') %}
                                         {% include 'search/sidebar/sort.html.twig' %}
                                     {% endfor %}
-                                    <!-- update button -->
                                 </form>
                             </div>
                         </div>

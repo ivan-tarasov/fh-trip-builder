@@ -73,6 +73,152 @@ final readonly class FlightFilters
     ) {}
 
     /**
+     * Every query-string key a filter reads. The controller carries these
+     * through untouched so pagination, the step links and a shared URL all keep
+     * the filtering that produced the page.
+     *
+     * @var list<string>
+     */
+    public const array QUERY_KEYS = [
+        self::DIM_STOPS,
+        self::DIM_AIRLINES,
+        self::DIM_SINGLE_CARRIER,
+        self::DIM_PRICE,
+        self::DIM_DURATION,
+        self::DIM_DEPART_TIME,
+        self::QUERY_DEPART_BUCKETS,
+        self::DIM_ARRIVE_TIME,
+        self::QUERY_ARRIVE_BUCKETS,
+        self::DIM_ARRIVE_DATE,
+        self::DIM_LAYOVER_AIRPORTS,
+        self::DIM_DEPART_AIRPORTS,
+        self::DIM_ARRIVE_AIRPORTS,
+        self::DIM_AIRCRAFT,
+        self::DIM_NO_NIGHT,
+        self::DIM_NO_GULF,
+        self::DIM_NO_VISA,
+    ];
+
+    // The time dimensions take two keys: a set of named parts of the day, and
+    // a finer custom range that overrides them.
+    public const string QUERY_DEPART_BUCKETS = 'dep_when';
+    public const string QUERY_ARRIVE_BUCKETS = 'arr_when';
+
+    /**
+     * Read filters out of a query string.
+     *
+     * Everything here is visitor-supplied, so each value is checked against the
+     * shape it should have and dropped otherwise. Nothing reaches SQL — filters
+     * run in PHP — but a malformed value that survived would quietly filter the
+     * whole search away, which reads as "no flights" rather than "bad link".
+     *
+     * @param array<string, mixed> $query
+     */
+    public static function fromQuery(array $query): self
+    {
+        $csv = static function (mixed $raw, string $pattern, int $limit = 100): array {
+            if (!is_string($raw) || $raw === '') {
+                return [];
+            }
+
+            $values = array_filter(
+                array_map(trim(...), explode(',', strtoupper($raw))),
+                static fn(string $v): bool => preg_match($pattern, $v) === 1,
+            );
+
+            return array_values(array_slice(array_unique($values), 0, $limit));
+        };
+
+        $flag = static fn(mixed $raw): bool => $raw === '1' || $raw === 1 || $raw === true;
+
+        $positive = static function (mixed $raw): ?float {
+            if (!is_numeric($raw)) {
+                return null;
+            }
+
+            return (float) $raw > 0 ? (float) $raw : null;
+        };
+
+        $buckets = static function (mixed $raw): array {
+            if (!is_string($raw) || $raw === '') {
+                return [];
+            }
+
+            /** @var array<string, mixed> $known */
+            $known = (array) Config::get('search.filters.time_buckets', []);
+
+            return array_values(array_filter(
+                array_map(trim(...), explode(',', strtolower($raw))),
+                static fn(string $key): bool => isset($known[$key]),
+            ));
+        };
+
+        $duration = $positive($query[self::DIM_DURATION] ?? null);
+
+        return new self(
+            stops: array_values(array_filter(
+                array_map(intval(...), $csv($query[self::DIM_STOPS] ?? null, '/^[0-9]$/')),
+                static fn(int $n): bool => $n >= 0 && $n <= 9,
+            )),
+            airlines: $csv($query[self::DIM_AIRLINES] ?? null, '/^[A-Z0-9]{2}$/'),
+            singleCarrier: $flag($query[self::DIM_SINGLE_CARRIER] ?? null),
+            maxPrice: $positive($query[self::DIM_PRICE] ?? null),
+            maxDuration: $duration === null ? null : (int) $duration,
+            departWindow: self::window($query[self::DIM_DEPART_TIME] ?? null),
+            arriveWindow: self::window($query[self::DIM_ARRIVE_TIME] ?? null),
+            departBuckets: $buckets($query[self::QUERY_DEPART_BUCKETS] ?? null),
+            arriveBuckets: $buckets($query[self::QUERY_ARRIVE_BUCKETS] ?? null),
+            arriveDates: self::dates($query[self::DIM_ARRIVE_DATE] ?? null),
+            layoverAirports: $csv($query[self::DIM_LAYOVER_AIRPORTS] ?? null, '/^[A-Z]{3}$/'),
+            departAirports: $csv($query[self::DIM_DEPART_AIRPORTS] ?? null, '/^[A-Z]{3}$/'),
+            arriveAirports: $csv($query[self::DIM_ARRIVE_AIRPORTS] ?? null, '/^[A-Z]{3}$/'),
+            aircraft: $csv($query[self::DIM_AIRCRAFT] ?? null, '/^[A-Z0-9]{3}$/'),
+            noNightLayover: $flag($query[self::DIM_NO_NIGHT] ?? null),
+            noGulfLayover: $flag($query[self::DIM_NO_GULF] ?? null),
+            noVisaLayover: $flag($query[self::DIM_NO_VISA] ?? null),
+        );
+    }
+
+    /**
+     * A "from-to" minute-of-day range, or null when it is missing, malformed,
+     * or covers the whole day (in which case it constrains nothing).
+     *
+     * @return array{0: int, 1: int}|null
+     */
+    private static function window(mixed $raw): ?array
+    {
+        if (!is_string($raw) || preg_match('/^(\d{1,4})-(\d{1,4})$/', $raw, $match) !== 1) {
+            return null;
+        }
+
+        $from = (int) $match[1];
+        $to = (int) $match[2];
+
+        if ($from > $to || $to > 1440 || ($from === 0 && $to >= 1439)) {
+            return null;
+        }
+
+        return [$from, $to];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function dates(mixed $raw): array
+    {
+        if (!is_string($raw) || $raw === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(trim(...), explode(',', $raw)),
+            // Real calendar dates only: date() would happily echo back 2026-13-45.
+            static fn(string $d): bool => preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) === 1
+                && date('Y-m-d', (int) strtotime($d)) === $d,
+        ));
+    }
+
+    /**
      * Whether anything is filtered at all — lets the search skip the work.
      */
     public function isEmpty(): bool
