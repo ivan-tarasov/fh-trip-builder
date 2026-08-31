@@ -17,6 +17,8 @@ enum SortMethod: string
     case Depart = 'depart_time';
     case Arrive = 'arrive_time';
     case Rating = 'rating';
+    case LayoverShort = 'layover_short';
+    case Recommended = 'recommended';
 
     /**
      * Resolve a requested sort string, falling back to Price for anything
@@ -39,7 +41,26 @@ enum SortMethod: string
             self::Depart => 'depart_time ASC',
             self::Arrive => 'arrive_time ASC',
             self::Rating => 'rating DESC',
+            // A direct itinerary waits nowhere, so it sorts first — which is
+            // what "short layovers" should mean.
+            self::LayoverShort => 'layover_minutes ASC',
+            // Ranked afterwards against the whole result set (see
+            // ranksAcrossResults). Price only decides which candidates survive
+            // the cap, and the cheapest are the right ones to keep.
+            self::Recommended => '(price_base + price_tax) ASC',
         };
+    }
+
+    /**
+     * Whether this sort can only be decided once every result is known.
+     *
+     * "Recommended" scores each itinerary against the best and worst of the
+     * set, so there is no ORDER BY that expresses it — the repository ranks it
+     * after filtering instead.
+     */
+    public function ranksAcrossResults(): bool
+    {
+        return $this === self::Recommended;
     }
 
 }

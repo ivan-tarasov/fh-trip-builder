@@ -123,6 +123,12 @@ final readonly class FlightRepository
             return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available];
         }
 
+        // A sort that scores an itinerary against the rest of the set can only
+        // be resolved now, with filtering done and the whole result in hand.
+        if ($sort->ranksAcrossResults()) {
+            $matching = $this->rankByValue($matching);
+        }
+
         $total = min(count($matching), self::COUNT_CAP);
 
         // Badges are decided across every match, not just this page, so
@@ -279,6 +285,61 @@ final readonly class FlightRepository
         sort($found);
 
         return array_map(strval(...), $found);
+    }
+
+    /**
+     * How good each itinerary is on price against travel time, lowest best.
+     *
+     * Both are min-max scaled across the set being ranked, so the score says
+     * "how far from the best on offer" rather than comparing dollars to
+     * minutes. This is the one definition of a good itinerary in the app: the
+     * "Best value" badge marks its minimum and the Recommended sort orders by
+     * it, so the top row of that sort is the badged one.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return list<float>
+     */
+    private function valueScores(array $candidates): array
+    {
+        $prices = [];
+        $durations = [];
+
+        foreach ($candidates as $candidate) {
+            $prices[] = (float) $candidate['price_base'] + (float) $candidate['price_tax'];
+            $durations[] = (int) $candidate['duration'];
+        }
+
+        $cheapest = min($prices);
+        $quickest = min($durations);
+        // Guard the degenerate case where every option costs or lasts the same.
+        $priceSpan = max(1e-9, max($prices) - $cheapest);
+        $durationSpan = max(1, max($durations) - $quickest);
+
+        $scores = [];
+
+        foreach ($prices as $i => $price) {
+            $scores[] = self::BADGE_PRICE_WEIGHT * (($price - $cheapest) / $priceSpan)
+                + (1 - self::BADGE_PRICE_WEIGHT) * (($durations[$i] - $quickest) / $durationSpan);
+        }
+
+        return $scores;
+    }
+
+    /**
+     * Order itineraries by value, best first, keeping the incoming order as the
+     * tie-break so equal scores stay stable from one page to the next.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return list<array<string, mixed>>
+     */
+    private function rankByValue(array $candidates): array
+    {
+        $scores = $this->valueScores($candidates);
+        $order = array_keys($candidates);
+
+        usort($order, static fn(int $a, int $b): int => $scores[$a] <=> $scores[$b] ?: $a <=> $b);
+
+        return array_map(static fn(int $i): array => $candidates[$i], $order);
     }
 
     /**
@@ -806,8 +867,7 @@ final readonly class FlightRepository
             $durations[] = (int) $candidate['duration'];
         }
 
-        $priceSpan = max(1e-9, max($prices) - min($prices));
-        $durationSpan = max(1, max($durations) - min($durations));
+        $scores = $this->valueScores($candidates);
 
         $cheapest = null;
         $fastest = null;
@@ -824,11 +884,8 @@ final readonly class FlightRepository
                 $fastest = $i;
             }
 
-            $score = self::BADGE_PRICE_WEIGHT * (($prices[$i] - min($prices)) / $priceSpan)
-                + (1 - self::BADGE_PRICE_WEIGHT) * (($durations[$i] - min($durations)) / $durationSpan);
-
-            if ($bestScore === null || $score < $bestScore) {
-                $bestScore = $score;
+            if ($bestScore === null || $scores[$i] < $bestScore) {
+                $bestScore = $scores[$i];
                 $value = $i;
             }
 

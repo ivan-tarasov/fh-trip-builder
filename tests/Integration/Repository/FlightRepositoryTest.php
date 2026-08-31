@@ -176,6 +176,43 @@ final class FlightRepositoryTest extends IntegrationTestCase
         }
     }
 
+    public function testShortLayoverSortPutsTheLeastWaitingFirst(): void
+    {
+        $result = $this->repository()->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::LayoverShort, 1);
+
+        if ($result['total'] === 0) {
+            self::markTestSkipped('No generated flights on this route.');
+        }
+
+        $waits = array_map(static function (array $itinerary): int {
+            $flying = array_sum(array_map(static fn(array $leg): int => (int) $leg['duration'], $itinerary['legs']));
+
+            return $itinerary['duration'] - $flying;
+        }, $result['rows']);
+
+        $ordered = $waits;
+        sort($ordered);
+
+        self::assertSame($ordered, $waits);
+        // A direct itinerary waits nowhere, so it belongs at the top.
+        self::assertSame(0, $waits[0]);
+    }
+
+    public function testRecommendedSortLeadsWithTheBestValueItinerary(): void
+    {
+        // The Recommended sort and the "Best value" badge score itineraries the
+        // same way, so the badge must land on the first row. If these ever
+        // disagree the app is telling the visitor two different things about
+        // which flight is the good one.
+        $result = $this->repository()->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Recommended, 1);
+
+        if ($result['total'] < 3) {
+            self::markTestSkipped('Badges need at least a few options to mean anything.');
+        }
+
+        self::assertContains('value', $result['rows'][0]['badges']);
+    }
+
     /**
      * @param array<string, mixed> $itin
      */

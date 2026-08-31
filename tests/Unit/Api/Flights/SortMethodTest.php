@@ -13,6 +13,8 @@ final class SortMethodTest extends TestCase
     {
         self::assertSame(SortMethod::Duration, SortMethod::fromRequest('duration'));
         self::assertSame(SortMethod::Rating, SortMethod::fromRequest('rating'));
+        self::assertSame(SortMethod::LayoverShort, SortMethod::fromRequest('layover_short'));
+        self::assertSame(SortMethod::Recommended, SortMethod::fromRequest('recommended'));
     }
 
     public function testFromRequestFallsBackToPrice(): void
@@ -29,6 +31,24 @@ final class SortMethodTest extends TestCase
         self::assertSame('arrive_time ASC', SortMethod::Arrive->candidateOrderBy());
         // Rating sorts highest-first.
         self::assertSame('rating DESC', SortMethod::Rating->candidateOrderBy());
+        self::assertSame('layover_minutes ASC', SortMethod::LayoverShort->candidateOrderBy());
+    }
+
+    public function testOnlyRecommendedNeedsTheWholeResultSet(): void
+    {
+        // Everything else is expressible as an ORDER BY, so it can be settled
+        // in SQL before the page is cut.
+        foreach (SortMethod::cases() as $sort) {
+            self::assertSame($sort === SortMethod::Recommended, $sort->ranksAcrossResults());
+        }
+    }
+
+    public function testRecommendedStillOrdersTheCandidatesItKeeps(): void
+    {
+        // It is ranked afterwards, but the SQL still needs an order to decide
+        // which candidates survive the cap — and cheapest-first is the right
+        // set to keep.
+        self::assertSame('(price_base + price_tax) ASC', SortMethod::Recommended->candidateOrderBy());
     }
 
     public function testEveryCaseHasACandidateOrderBy(): void

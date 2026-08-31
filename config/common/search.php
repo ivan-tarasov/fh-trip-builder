@@ -34,6 +34,20 @@ return [
     */
 
     'sort' => [
+        'recommended' => [
+            'id' => 'Recommended',
+            'title' => 'Recommended',
+            'note' => 'The best balance of price and travel time',
+            'order' => 'asc',
+            'roundtrip' => 1,
+            'oneway' => 1,
+            'badge' => [
+                'id' => 'value',
+                'text' => 'Best value',
+                'icon' => 'thumbs-up',
+                'color' => 'primary',
+            ],
+        ],
         'price' => [
             'id' => 'Price',
             'title' => 'Cheap ones first',
@@ -88,6 +102,20 @@ return [
                 'text' => 'Earlier arrival',
                 'icon' => 'plane-arrival',
                 'color' => 'dark',
+            ],
+        ],
+        'layover_short' => [
+            'id' => 'ShortLayovers',
+            'title' => 'Short layovers',
+            'note' => 'Least time spent waiting between flights',
+            'order' => 'asc',
+            'roundtrip' => 1,
+            'oneway' => 1,
+            'badge' => [
+                'id' => 'layover_short',
+                'text' => 'Short layovers',
+                'icon' => 'hourglass-half',
+                'color' => 'teal',
             ],
         ],
         'rating' => [
