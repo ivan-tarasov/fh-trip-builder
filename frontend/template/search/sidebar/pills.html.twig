@@ -1,0 +1,12 @@
+{# Parts of the day as pills. Every bucket is always drawn, so the row keeps
+   its shape from one search to the next and an empty one greys out in place. #}
+<div class="filter-pills">
+    {% for option in options %}
+        <label class="filter-pill{{ option.available ? '' : ' is-unavailable' }}">
+            <input type="checkbox" name="{{ name }}[]" value="{{ option.value }}"
+                   {{ option.checked ? ' checked' : '' }}{{ option.available ? '' : ' disabled' }} />
+            <i class="fas fa-{{ option.icon }} filter-pill__icon"></i>
+            <span>{{ option.label }}{% if not option.available %} (no flights){% endif %}</span>
+        </label>
+    {% endfor %}
+</div>

@@ -90,6 +90,50 @@ final class FlightFiltersTest extends TestCase
         self::assertTrue($filters->noVisaLayover);
     }
 
+    public function testACheckboxGroupAndALinkMeanTheSameThing(): void
+    {
+        // The sidebar posts stops[]=0&stops[]=1; a shared or hand-written link
+        // says stops=0,1. Both have to land on the same filter, or a URL copied
+        // out of the address bar would stop matching what the page showed.
+        $fromForm = FlightFilters::fromQuery([
+            'stops' => ['0', '1'],
+            'airlines' => ['af', 'kl'],
+            'dep_when' => ['morning', 'day'],
+            'arr_date' => ['2026-09-15'],
+        ]);
+
+        $fromLink = FlightFilters::fromQuery([
+            'stops' => '0,1',
+            'airlines' => 'af,kl',
+            'dep_when' => 'morning,day',
+            'arr_date' => '2026-09-15',
+        ]);
+
+        self::assertSame($fromLink->stops, $fromForm->stops);
+        self::assertSame($fromLink->airlines, $fromForm->airlines);
+        self::assertSame($fromLink->departBuckets, $fromForm->departBuckets);
+        self::assertSame($fromLink->arriveDates, $fromForm->arriveDates);
+    }
+
+    public function testACommaListAndRepeatedKeysBothParse(): void
+    {
+        // The sidebar now posts a comma list so the URL stays readable, but
+        // http_build_query and hand-edited links still produce repeated keys.
+        self::assertSame(
+            ['AF', 'AS'],
+            FlightFilters::fromQuery(['airlines' => 'AF,AS'])->airlines,
+        );
+        self::assertSame(
+            ['AF', 'AS'],
+            FlightFilters::fromQuery(['airlines' => ['AF', 'AS']])->airlines,
+        );
+        // PHP indexes arrays when it round-trips them through a query string.
+        self::assertSame(
+            ['AC'],
+            FlightFilters::fromQuery(['airlines' => [0 => 'AC']])->airlines,
+        );
+    }
+
     public function testAnEmptyQueryFiltersNothing(): void
     {
         self::assertTrue(FlightFilters::fromQuery([])->isEmpty());
@@ -160,13 +204,26 @@ final class FlightFiltersTest extends TestCase
         self::assertTrue(new FlightFilters(stops: [0, 1, 2])->matches($this->candidate()));
     }
 
-    public function testAirlinesFilterNeedsEveryLegNotJustOne(): void
+    public function testAirlinesFilterMatchesWhenAnyLegIsFlownByAChoice(): void
     {
-        // Selecting Air France should not return a ticket that finishes on KLM:
-        // you picked an airline to fly, not one to fly part of the way.
-        self::assertFalse(new FlightFilters(airlines: ['AF'])->matches($this->candidate()));
+        // Flying one leg is enough. Demanding every leg is the stricter reading
+        // and was the first implementation, but so few generated itineraries
+        // are single-carrier that the filter had nothing to offer on most
+        // searches; the single-airline toggle covers the stricter want.
+        self::assertTrue(new FlightFilters(airlines: ['AF'])->matches($this->candidate()));
+        self::assertTrue(new FlightFilters(airlines: ['KL'])->matches($this->candidate()));
         self::assertTrue(new FlightFilters(airlines: ['AF', 'KL'])->matches($this->candidate()));
-        self::assertTrue(new FlightFilters(airlines: ['AF'])->matches($this->candidate(['carriers' => 'AF'])));
+        self::assertFalse(new FlightFilters(airlines: ['BA'])->matches($this->candidate()));
+    }
+
+    public function testSingleCarrierIsHowYouDemandTheWholeTripOnOneAirline(): void
+    {
+        // Airlines + the toggle together mean "all of it on Air France", which
+        // is what the airline filter alone used to mean on its own.
+        $bothOn = new FlightFilters(airlines: ['AF'], singleCarrier: true);
+
+        self::assertFalse($bothOn->matches($this->candidate()));
+        self::assertTrue($bothOn->matches($this->candidate(['carriers' => 'AF,AF'])));
     }
 
     public function testSingleCarrierFilter(): void
@@ -185,6 +242,20 @@ final class FlightFiltersTest extends TestCase
         self::assertFalse(new FlightFilters(maxPrice: 999.99)->matches($this->candidate()));
         self::assertTrue(new FlightFilters(maxDuration: 600)->matches($this->candidate()));
         self::assertFalse(new FlightFilters(maxDuration: 599)->matches($this->candidate()));
+    }
+
+    public function testPriceFilterCountsWhatTheCardWillShow(): void
+    {
+        // Half of a round trip is displayed priced as the whole trip, and the
+        // repository records that addition as `price_offset`. Ignoring it let a
+        // $8,000 limit through a card reading $9,700.
+        $halfOfARoundTrip = $this->candidate(['price_offset' => 8000.0]);
+
+        self::assertFalse(new FlightFilters(maxPrice: 8500.0)->matches($halfOfARoundTrip));
+        self::assertTrue(new FlightFilters(maxPrice: 9000.0)->matches($halfOfARoundTrip));
+
+        // A one-way search has no other half, so nothing is added.
+        self::assertTrue(new FlightFilters(maxPrice: 1000.0)->matches($this->candidate()));
     }
 
     public function testTimeBucketsAreHalfOpenSoAStampBelongsToOne(): void

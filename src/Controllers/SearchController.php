@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
-use DateInterval;
-use DateTime;
 use Exception;
 use stdClass;
 use TripBuilder\Api\Flights\FlightFilters;
@@ -13,7 +11,9 @@ use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Repository\AircraftRepository;
 use TripBuilder\Repository\AirlineRepository;
+use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
@@ -38,6 +38,15 @@ class SearchController extends AbstractController
         GET_SORT = 'sort';
 
     private const string DEFAULT_SORT = 'price';
+
+    // Roughly how many positions a slider handle should have.
+    private const int SLIDER_STOPS = 40;
+
+    // Step sizes a slider may round to, smallest first. Money climbs in the
+    // usual 1/2.5/5 pattern; time sticks to fractions of an hour, so a handle
+    // never stops somewhere like 41h 51m.
+    private const array PRICE_STEPS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
+    private const array DURATION_STEPS = [5, 10, 15, 30, 60, 120, 180, 360, 720];
 
     private array $get;
 
@@ -132,26 +141,24 @@ class SearchController extends AbstractController
                 'form_url' => sprintf(
                     '%s?%s',
                     Helper::getUrlPath(),
-                    http_build_query(array_merge($this->get, [self::GET_PAGE => null])),
+                    $this->queryString(array_merge($this->get, [self::GET_PAGE => null])),
                 ),
                 // Filter forms submit with GET, so they post to the bare path
                 // and carry the rest of the search as hidden fields.
                 'form_path' => Helper::getUrlPath(),
                 'session_sort' => $this->sort(),
-                'clock_range' => $this->generateTimeRange(),
-                'airlines' => $this->fetchSidebarAirlines(),
+                'sidebar' => $this->sidebarFilters(),
                 // What the sidebar needs to draw itself: the filters currently
                 // applied, and which options are worth offering at all.
                 'filters' => $this->filterQuery(),
                 'available' => (array) $this->data->available,
                 // Hidden fields a GET form needs so submitting one control does
                 // not drop the rest of the search.
-                'carried_query' => array_filter(
-                    $this->get,
-                    static fn(mixed $v, string $k): bool => $v !== null && $v !== ''
-                        && !in_array($k, [self::GET_SORT, self::GET_PAGE, self::GET_HASH], true),
-                    ARRAY_FILTER_USE_BOTH,
-                ),
+                'carried_query' => $this->carried([self::GET_SORT]),
+                // The filter form supplies filter values from its own controls,
+                // so it must not also carry the applied ones — an unchecked box
+                // would otherwise be re-submitted as a hidden field.
+                'carried_search' => $this->carried([self::GET_SORT, ...FlightFilters::QUERY_KEYS]),
                 // Which half of a round trip is being chosen (null for one way),
                 // and the outbound already picked, if any.
                 'step' => $this->data->step,
@@ -267,27 +274,422 @@ class SearchController extends AbstractController
     }
 
     /**
-     * Fetch the airlines present in the flights response for the sidebar filter.
+     * Everything the sidebar needs to draw itself: each filter's options with
+     * the codes turned into names, which of them are currently chosen, and
+     * which would return nothing if chosen.
      *
-     * @return list<array<string, mixed>>
+     * The search reports availability as bare codes because it never joins the
+     * airline, airport or aircraft tables — that is what keeps it fast. Those
+     * lookups happen here instead, once per render over a handful of rows.
+     *
+     * @return array<string, mixed>
      */
-    private function fetchSidebarAirlines(): array
+    private function sidebarFilters(): array
     {
-        $carriers = [];
+        $available = (array) $this->data->available;
+        // The response reaches here through json_decode's object mode, so a map
+        // of maps arrives as nested stdClass. Availability is a map of lists and
+        // survives the cast; bounds needs the round trip.
+        $bounds = (array) json_decode((string) json_encode($this->data->bounds), true);
+        $chosen = $this->filterQuery();
 
-        foreach ($this->data->flights ?? [] as $item) {
-            foreach ($item->itinerary->segments as $segment) {
-                $carriers[] = $segment->carrier;
+        $codes = static fn(string $dimension): array => array_map(
+            strval(...),
+            (array) ($available[$dimension] ?? []),
+        );
+
+        return [
+            'stops' => $this->stopOptions($codes(FlightFilters::DIM_STOPS), $chosen),
+            'airlines' => $this->airlineOptions($codes(FlightFilters::DIM_AIRLINES), $chosen),
+            'layover_airports' => $this->airportOptions(
+                $codes(FlightFilters::DIM_LAYOVER_AIRPORTS),
+                FlightFilters::DIM_LAYOVER_AIRPORTS,
+                $chosen,
+            ),
+            'depart_airports' => $this->airportOptions(
+                $codes(FlightFilters::DIM_DEPART_AIRPORTS),
+                FlightFilters::DIM_DEPART_AIRPORTS,
+                $chosen,
+            ),
+            'arrive_airports' => $this->airportOptions(
+                $codes(FlightFilters::DIM_ARRIVE_AIRPORTS),
+                FlightFilters::DIM_ARRIVE_AIRPORTS,
+                $chosen,
+            ),
+            'aircraft' => $this->aircraftOptions($codes(FlightFilters::DIM_AIRCRAFT), $chosen),
+            'arrive_dates' => $this->dateOptions($codes(FlightFilters::DIM_ARRIVE_DATE), $chosen),
+            'depart_buckets' => $this->bucketOptions(
+                $codes(FlightFilters::DIM_DEPART_TIME),
+                FlightFilters::QUERY_DEPART_BUCKETS,
+                $chosen,
+            ),
+            'arrive_buckets' => $this->bucketOptions(
+                $codes(FlightFilters::DIM_ARRIVE_TIME),
+                FlightFilters::QUERY_ARRIVE_BUCKETS,
+                $chosen,
+            ),
+            // A toggle is available when switching it on would leave something.
+            'toggles' => [
+                FlightFilters::DIM_SINGLE_CARRIER => [
+                    'label' => 'All flights with one airline',
+                    'hint' => 'One carrier for the whole trip, so bags are checked through.',
+                    'on' => isset($chosen[FlightFilters::DIM_SINGLE_CARRIER]),
+                    'available' => (bool) ($available[FlightFilters::DIM_SINGLE_CARRIER] ?? false),
+                ],
+                FlightFilters::DIM_NO_VISA => [
+                    'label' => 'No transit visa needed',
+                    'hint' => 'Hides connections in a country that is neither your origin nor your'
+                        . ' destination. Check the requirements yourself before booking.',
+                    'on' => isset($chosen[FlightFilters::DIM_NO_VISA]),
+                    'available' => (bool) ($available[FlightFilters::DIM_NO_VISA] ?? false),
+                ],
+                FlightFilters::DIM_NO_GULF => [
+                    'label' => 'No layovers in the Gulf',
+                    'hint' => 'Hides connections in the United Arab Emirates, Saudi Arabia, Qatar,'
+                        . ' Kuwait, Bahrain and Oman.',
+                    'on' => isset($chosen[FlightFilters::DIM_NO_GULF]),
+                    'available' => (bool) ($available[FlightFilters::DIM_NO_GULF] ?? false),
+                ],
+                FlightFilters::DIM_NO_NIGHT => [
+                    'label' => 'No overnight layovers',
+                    'hint' => 'Hides connections spent waiting between 23:00 and 06:00.',
+                    'on' => isset($chosen[FlightFilters::DIM_NO_NIGHT]),
+                    'available' => (bool) ($available[FlightFilters::DIM_NO_NIGHT] ?? false),
+                ],
+            ],
+            'sliders' => [
+                FlightFilters::DIM_PRICE => $this->sliderOption(
+                    $bounds[FlightFilters::DIM_PRICE] ?? null,
+                    $chosen[FlightFilters::DIM_PRICE] ?? null,
+                    self::PRICE_STEPS,
+                ),
+                FlightFilters::DIM_DURATION => $this->sliderOption(
+                    $bounds[FlightFilters::DIM_DURATION] ?? null,
+                    $chosen[FlightFilters::DIM_DURATION] ?? null,
+                    self::DURATION_STEPS,
+                ),
+            ],
+            // Which groups hold something the visitor has set, so a filter is
+            // never left hidden behind a collapsed heading.
+            'active' => $this->activeSections($chosen),
+            // Whether anything is filtered, so the sidebar can offer a way out.
+            'any_applied' => !FlightFilters::fromQuery($this->get)->isEmpty(),
+            'clear_url' => $this->clearFiltersUrl(),
+        ];
+    }
+
+    /**
+     * Whether each sidebar group has a filter applied.
+     *
+     * A collapsed group hides its controls, so one carrying an active filter
+     * has to open itself — otherwise the only clue that a search is narrowed is
+     * the result count.
+     *
+     * @param array<string, string|list<string>|null> $chosen
+     * @return array<string, bool>
+     */
+    private function activeSections(array $chosen): array
+    {
+        // Section id => the query keys it owns.
+        $groups = [
+            'stops' => [FlightFilters::DIM_STOPS],
+            'conditions' => [
+                FlightFilters::DIM_SINGLE_CARRIER,
+                FlightFilters::DIM_NO_VISA,
+                FlightFilters::DIM_NO_GULF,
+                FlightFilters::DIM_NO_NIGHT,
+            ],
+            'price' => [FlightFilters::DIM_PRICE],
+            'duration' => [FlightFilters::DIM_DURATION],
+            'times' => [
+                FlightFilters::DIM_DEPART_TIME,
+                FlightFilters::QUERY_DEPART_BUCKETS,
+                FlightFilters::DIM_ARRIVE_TIME,
+                FlightFilters::QUERY_ARRIVE_BUCKETS,
+            ],
+            'arrdate' => [FlightFilters::DIM_ARRIVE_DATE],
+            'airlines' => [FlightFilters::DIM_AIRLINES],
+            'via' => [FlightFilters::DIM_LAYOVER_AIRPORTS],
+            'fromap' => [FlightFilters::DIM_DEPART_AIRPORTS],
+            'toap' => [FlightFilters::DIM_ARRIVE_AIRPORTS],
+            'aircraft' => [FlightFilters::DIM_AIRCRAFT],
+        ];
+
+        $active = [];
+
+        foreach ($groups as $section => $keys) {
+            $active[$section] = false;
+
+            foreach ($keys as $key) {
+                if (($chosen[$key] ?? null) !== null) {
+                    $active[$section] = true;
+                    break;
+                }
             }
         }
 
-        $carriers = array_values(array_unique($carriers));
+        return $active;
+    }
 
-        if ($carriers === []) {
+    /**
+     * Values chosen for one filter key, from the query as it arrived.
+     *
+     * @param array<string, string|list<string>|null> $chosen
+     * @return list<string>
+     */
+    private function selected(array $chosen, string $key): array
+    {
+        return FlightFilters::values($chosen[$key] ?? null);
+    }
+
+    /**
+     * @param list<string> $available
+     * @param array<string, string|list<string>|null> $chosen
+     * @return list<array<string, mixed>>
+     */
+    private function stopOptions(array $available, array $chosen): array
+    {
+        $picked = $this->selected($chosen, FlightFilters::DIM_STOPS);
+        $options = [];
+
+        // Every level the search can produce, so an unreachable one greys out
+        // in place instead of disappearing from the list.
+        for ($stops = 0; $stops <= (int) Config::get('search.connections.max_stops', 2); $stops++) {
+            $options[] = [
+                'value' => (string) $stops,
+                'label' => $this->presenter()->stopsLabel($stops),
+                'sub' => null,
+                'checked' => in_array((string) $stops, $picked, true),
+                'available' => in_array((string) $stops, $available, true),
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param list<string> $available
+     * @param array<string, string|list<string>|null> $chosen
+     * @return list<array<string, mixed>>
+     */
+    private function airlineOptions(array $available, array $chosen): array
+    {
+        if ($available === []) {
             return [];
         }
 
-        return new AirlineRepository($this->connection())->search($carriers, false);
+        $picked = $this->selected($chosen, FlightFilters::DIM_AIRLINES);
+
+        // The lookup returns rows alphabetically; $available is ordered by how
+        // many itineraries each carrier flies, which is the order worth showing.
+        $titles = [];
+
+        foreach (new AirlineRepository($this->connection())->search($available, false) as $airline) {
+            $titles[(string) $airline['code']] = (string) $airline['title'];
+        }
+
+        $options = [];
+
+        foreach ($available as $code) {
+            $options[] = [
+                'value' => $code,
+                'label' => $titles[$code] ?? $code,
+                'sub' => $code,
+                'logo_url' => $this->presenter()->carrierLogo($code),
+                'checked' => in_array($code, $picked, true),
+                'available' => true,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param list<string> $available
+     * @param array<string, string|list<string>|null> $chosen
+     * @return list<array<string, mixed>>
+     */
+    private function airportOptions(array $available, string $key, array $chosen): array
+    {
+        if ($available === []) {
+            return [];
+        }
+
+        $picked = $this->selected($chosen, $key);
+        $rows = [];
+
+        foreach (new AirportRepository($this->connection())->byCodes($available) as $airport) {
+            $rows[(string) $airport['code']] = $airport;
+        }
+
+        $options = [];
+
+        // Busiest first, as the availability list came back.
+        foreach ($available as $code) {
+            $airport = $rows[$code] ?? null;
+
+            $options[] = [
+                'value' => $code,
+                'label' => $airport === null ? $code : (string) $airport['city'],
+                'sub' => $airport === null ? null : trim(sprintf('%s %s', $airport['title'], $code)),
+                'note' => $airport === null ? '' : (string) ($airport['country'] ?? ''),
+                'checked' => in_array($code, $picked, true),
+                'available' => true,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param list<string> $available
+     * @param array<string, string|list<string>|null> $chosen
+     * @return list<array<string, mixed>>
+     */
+    private function aircraftOptions(array $available, array $chosen): array
+    {
+        if ($available === []) {
+            return [];
+        }
+
+        $picked = $this->selected($chosen, FlightFilters::DIM_AIRCRAFT);
+        $types = new AircraftRepository($this->connection())->all();
+        $options = [];
+
+        foreach ($available as $code) {
+            $options[] = [
+                'value' => $code,
+                'label' => $types[$code]['title'] ?? $code,
+                'sub' => null,
+                'checked' => in_array($code, $picked, true),
+                'available' => true,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * @param list<string> $available
+     * @param array<string, string|list<string>|null> $chosen
+     * @return list<array<string, mixed>>
+     */
+    private function dateOptions(array $available, array $chosen): array
+    {
+        $picked = $this->selected($chosen, FlightFilters::DIM_ARRIVE_DATE);
+        $options = [];
+
+        sort($available);
+
+        foreach ($available as $date) {
+            $options[] = [
+                'value' => $date,
+                'label' => date('j F, D', (int) strtotime($date)),
+                'sub' => null,
+                'checked' => in_array($date, $picked, true),
+                'available' => true,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * Parts of the day, always all of them: an empty one greys out rather than
+     * vanishing, so the row of pills keeps its shape between searches.
+     *
+     * @param list<string> $available
+     * @param array<string, string|list<string>|null> $chosen
+     * @return list<array<string, mixed>>
+     */
+    private function bucketOptions(array $available, string $key, array $chosen): array
+    {
+        $picked = array_map(strtolower(...), FlightFilters::values($chosen[$key] ?? null));
+        $options = [];
+
+        /** @var array<string, array{title: string, icon: string, from: int, to: int}> $buckets */
+        $buckets = (array) Config::get('search.filters.time_buckets', []);
+
+        foreach ($buckets as $bucket => $meta) {
+            $options[] = [
+                'value' => (string) $bucket,
+                'label' => (string) $meta['title'],
+                'icon' => (string) $meta['icon'],
+                'checked' => in_array((string) $bucket, $picked, true),
+                'available' => in_array((string) $bucket, $available, true),
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
+     * A slider's ends and step, rounded to numbers worth reading.
+     *
+     * The raw span comes from the results, so it is something like 1107-15941
+     * or 499-3413 minutes. Snapping the ends outwards to a whole step gives
+     * "$16,000" and "57h" instead of "$15,941" and "56h 53m", and stepping by
+     * that same unit means every value the handle can stop on is round too.
+     * The ends move outwards only, so nothing reachable is excluded.
+     *
+     * @param array{min: int, max: int}|null $bound
+     * @param list<int> $steps allowed step sizes, smallest first
+     * @return array<string, mixed>|null
+     */
+    private function sliderOption(?array $bound, mixed $value, array $steps): ?array
+    {
+        // Nothing to drag between when every option costs or lasts the same.
+        if ($bound === null || $bound['max'] <= $bound['min']) {
+            return null;
+        }
+
+        $step = $this->niceStep($bound['max'] - $bound['min'], $steps);
+        $min = (int) floor($bound['min'] / $step) * $step;
+        $max = (int) ceil($bound['max'] / $step) * $step;
+
+        return [
+            'min' => $min,
+            'max' => $max,
+            'step' => $step,
+            'value' => is_numeric($value) ? max($min, min((int) $value, $max)) : $max,
+        ];
+    }
+
+    /**
+     * The smallest allowed step that keeps the handle to roughly SLIDER_STOPS
+     * positions — fine enough to be useful, coarse enough to stay readable.
+     *
+     * @param list<int> $steps
+     */
+    private function niceStep(int $span, array $steps): int
+    {
+        $wanted = max(1, (int) round($span / self::SLIDER_STOPS));
+
+        foreach ($steps as $step) {
+            if ($wanted <= $step) {
+                return $step;
+            }
+        }
+
+        return $steps[count($steps) - 1];
+    }
+
+    /**
+     * The same search with every filter dropped.
+     */
+    private function clearFiltersUrl(): string
+    {
+        $kept = $this->get;
+
+        foreach (FlightFilters::QUERY_KEYS as $key) {
+            $kept[$key] = null;
+        }
+
+        return sprintf(
+            '%s?%s',
+            Helper::getUrlPath(),
+            $this->queryString(array_merge($kept, [self::GET_PAGE => null])),
+        );
     }
 
     /**
@@ -383,7 +785,7 @@ class SearchController extends AbstractController
         return sprintf(
             '%s?%s',
             Helper::getUrlPath(),
-            http_build_query(array_merge($this->get, [
+            $this->queryString(array_merge($this->get, [
                 self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
                 self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
                 self::GET_PAGE => null,
@@ -401,7 +803,7 @@ class SearchController extends AbstractController
         return sprintf(
             '%s?%s',
             Helper::getUrlPath(),
-            http_build_query(array_merge($this->get, [
+            $this->queryString(array_merge($this->get, [
                 self::GET_RETURN_ITIN => implode(',', $ids),
                 self::GET_PAGE => null,
             ])),
@@ -481,28 +883,43 @@ class SearchController extends AbstractController
         return sprintf(
             '%s?%s',
             Helper::getUrlPath(),
-            http_build_query(array_merge($this->get, [self::GET_PAGE => $page])),
+            $this->queryString(array_merge($this->get, [self::GET_PAGE => $page])),
         );
     }
 
     /**
-     * Generating string for Time Range javascript
+     * A query string with commas left as commas.
+     *
+     * http_build_query percent-encodes them, which turns a readable
+     * `airlines=BA,AI` into `airlines=BA%2CAI`. A comma is a legal sub-delimiter
+     * in a query string, so decoding them back costs nothing and the list
+     * filters stay legible in the address bar.
+     *
+     * @param array<string, mixed> $params
      */
-    private function generateTimeRange(): string
+    private function queryString(array $params): string
     {
-        $startTime = new DateTime('00:00');
-        $endTime = new DateTime('23:59');
-        $interval = new DateInterval('PT30M');
+        return str_replace('%2C', ',', http_build_query($params));
+    }
 
-        $range = [];
+    /**
+     * The current query as hidden-field material, minus the keys a form sets
+     * itself. Page and hash always go: a new filtering starts at page one, and
+     * the hash has already been resolved to a real URL.
+     *
+     * @param list<string> $without
+     * @return array<string, string|list<string>>
+     */
+    private function carried(array $without): array
+    {
+        $drop = [self::GET_PAGE, self::GET_HASH, ...$without];
 
-        for ($time = clone $startTime; $time <= $endTime; $time->add($interval)) {
-            $range[] = $time->format('H:i');
-        }
-
-        $range[] = '23:59';
-
-        return "'" . implode("','", $range) . "'";
+        return array_filter(
+            $this->get,
+            static fn(mixed $v, string $k): bool => $v !== null && $v !== '' && $v !== []
+                && !in_array($k, $drop, true),
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 
     /**
@@ -513,7 +930,7 @@ class SearchController extends AbstractController
      * produced it — including a value the parser rejected, which stays visible
      * in the address bar instead of silently vanishing.
      *
-     * @return array<string, string|null>
+     * @return array<string, string|list<string>|null>
      */
     private function filterQuery(): array
     {
@@ -521,7 +938,11 @@ class SearchController extends AbstractController
 
         foreach (FlightFilters::QUERY_KEYS as $key) {
             $value = $_GET[$key] ?? null;
-            $carried[$key] = is_string($value) && $value !== '' ? $value : null;
+
+            // A checkbox group arrives as an array, a shared link as a string.
+            $carried[$key] = (is_string($value) && $value !== '') || (is_array($value) && $value !== [])
+                ? $value
+                : null;
         }
 
         return $carried;

@@ -99,29 +99,28 @@ final class FlightFilterSearchTest extends IntegrationTestCase
         }
     }
 
-    public function testAnAirlineIsOfferedOnlyWhenItCanFlyTheWholeTrip(): void
+    public function testChoosingAnAirlineReturnsTripsThatUseIt(): void
     {
-        // The rule that made this test worth writing: an airline flying one leg
-        // of a two-carrier connection must not be offered, because selecting it
-        // demands every leg and would return nothing.
         $available = $this->requireResults()['available'];
         $offered = (array) $available[FlightFilters::DIM_AIRLINES];
 
-        self::assertNotEmpty($offered);
+        self::assertNotEmpty($offered, 'A route with results should offer airlines to filter by.');
 
         foreach (array_slice($offered, 0, self::PROBE_LIMIT) as $code) {
             $result = $this->search(new FlightFilters(airlines: [(string) $code]));
 
             self::assertGreaterThan(0, $result['total']);
 
-            // And what comes back really is flown end to end by that airline.
+            // Every itinerary returned flies at least one leg on that airline —
+            // not necessarily all of them, which is what the single-carrier
+            // toggle is for.
             foreach ($result['rows'] as $row) {
-                $carriers = array_unique(array_map(
+                $carriers = array_map(
                     static fn(array $leg): string => (string) $leg['carrier'],
                     $row['legs'],
-                ));
+                );
 
-                self::assertSame([$code], array_values($carriers));
+                self::assertContains($code, $carriers);
             }
         }
     }

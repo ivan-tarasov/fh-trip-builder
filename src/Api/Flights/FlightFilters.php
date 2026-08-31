@@ -117,12 +117,8 @@ final readonly class FlightFilters
     public static function fromQuery(array $query): self
     {
         $csv = static function (mixed $raw, string $pattern, int $limit = 100): array {
-            if (!is_string($raw) || $raw === '') {
-                return [];
-            }
-
             $values = array_filter(
-                array_map(trim(...), explode(',', strtoupper($raw))),
+                self::values($raw),
                 static fn(string $v): bool => preg_match($pattern, $v) === 1,
             );
 
@@ -140,15 +136,11 @@ final readonly class FlightFilters
         };
 
         $buckets = static function (mixed $raw): array {
-            if (!is_string($raw) || $raw === '') {
-                return [];
-            }
-
             /** @var array<string, mixed> $known */
             $known = (array) Config::get('search.filters.time_buckets', []);
 
             return array_values(array_filter(
-                array_map(trim(...), explode(',', strtolower($raw))),
+                array_map(strtolower(...), self::values($raw)),
                 static fn(string $key): bool => isset($known[$key]),
             ));
         };
@@ -180,6 +172,31 @@ final readonly class FlightFilters
     }
 
     /**
+     * The values of a multi-valued filter, however they arrived.
+     *
+     * A checkbox group posts `stops[]=0&stops[]=1`; a hand-written or shared
+     * link is more likely to say `stops=0,1`. Both are read the same way, so a
+     * URL stays writable by hand without the form having to build one.
+     *
+     * @return list<string>
+     */
+    public static function values(mixed $raw): array
+    {
+        if (is_array($raw)) {
+            $raw = implode(',', array_filter($raw, static fn(mixed $v): bool => is_string($v) || is_int($v)));
+        }
+
+        if (!is_string($raw) || $raw === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map(trim(...), explode(',', strtoupper($raw))),
+            static fn(string $v): bool => $v !== '',
+        ));
+    }
+
+    /**
      * A "from-to" minute-of-day range, or null when it is missing, malformed,
      * or covers the whole day (in which case it constrains nothing).
      *
@@ -206,12 +223,8 @@ final readonly class FlightFilters
      */
     private static function dates(mixed $raw): array
     {
-        if (!is_string($raw) || $raw === '') {
-            return [];
-        }
-
         return array_values(array_filter(
-            array_map(trim(...), explode(',', $raw)),
+            self::values($raw),
             // Real calendar dates only: date() would happily echo back 2026-13-45.
             static fn(string $d): bool => preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) === 1
                 && date('Y-m-d', (int) strtotime($d)) === $d,
@@ -281,18 +294,23 @@ final readonly class FlightFilters
             self::DIM_STOPS => fn(array $c): bool => $this->stops === []
                 || in_array((int) $c['stops'], $this->stops, true),
 
-            // An itinerary qualifies when every leg is flown by a chosen
-            // airline — not merely one of them, or a filtered search would
-            // still show a connection onto a carrier you excluded.
+            // Flying a leg is enough. Requiring every leg reads better in
+            // principle — pick an airline, fly that airline — but almost no
+            // generated itinerary is single-carrier, so it left the filter
+            // offering nothing on most searches. Use the "All flights with one
+            // airline" toggle alongside it to demand the whole trip.
             self::DIM_AIRLINES => fn(array $c): bool => $this->airlines === []
-                || $this->listOf($c, 'carriers') !== []
-                && array_diff($this->listOf($c, 'carriers'), $this->airlines) === [],
+                || array_intersect($this->listOf($c, 'carriers'), $this->airlines) !== [],
 
             self::DIM_SINGLE_CARRIER => fn(array $c): bool => !$this->singleCarrier
                 || count(array_unique($this->listOf($c, 'carriers'))) <= 1,
 
+            // `price_offset` is whatever the other half of a round trip adds
+            // before this row is shown; without it a limit set against the
+            // displayed total would be compared to one leg's share of it.
             self::DIM_PRICE => fn(array $c): bool => $this->maxPrice === null
-                || (float) $c['price_base'] + (float) $c['price_tax'] <= $this->maxPrice,
+                || (float) $c['price_base'] + (float) $c['price_tax']
+                    + (float) ($c['price_offset'] ?? 0) <= $this->maxPrice,
 
             self::DIM_DURATION => fn(array $c): bool => $this->maxDuration === null
                 || (int) $c['duration'] <= $this->maxDuration,

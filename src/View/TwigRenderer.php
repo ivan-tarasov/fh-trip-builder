@@ -45,6 +45,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('config', Config::get(...)));
 
         // ...and the dynamic header/footer data (see LayoutData).
+        $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));
         $this->twig->addFunction(new TwigFunction('current_page', $this->layout->currentPage(...)));
         $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
         $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));

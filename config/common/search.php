@@ -36,6 +36,7 @@ return [
     'sort' => [
         'recommended' => [
             'id' => 'Recommended',
+            'icon' => 'fa-thumbs-up',
             'title' => 'Recommended',
             'note' => 'The best balance of price and travel time',
             'order' => 'asc',
@@ -50,6 +51,7 @@ return [
         ],
         'price' => [
             'id' => 'Price',
+            'icon' => 'fa-tag',
             'title' => 'Cheap ones first',
             'note' => 'Easy way to find most cheaper tickets',
             'order' => 'asc',
@@ -64,6 +66,7 @@ return [
         ],
         'duration' => [
             'id' => 'FlightTime',
+            'icon' => 'fa-gauge-high',
             'title' => 'Flight time',
             'note' => 'We show lowest duration flights first',
             'order' => 'asc',
@@ -78,6 +81,7 @@ return [
         ],
         'depart_time' => [
             'id' => 'Departure',
+            'icon' => 'fa-plane-departure',
             'title' => 'Departure time',
             'note' => 'Tickets with earlier departure time will at the top of the list',
             'order' => 'asc',
@@ -92,6 +96,7 @@ return [
         ],
         'arrive_time' => [
             'id' => 'Arrival',
+            'icon' => 'fa-plane-arrival',
             'title' => 'Arrival time',
             'note' => 'Tickets with earlier arrival time will at the top of the list',
             'order' => 'asc',
@@ -106,6 +111,7 @@ return [
         ],
         'layover_short' => [
             'id' => 'ShortLayovers',
+            'icon' => 'fa-hourglass-half',
             'title' => 'Short layovers',
             'note' => 'Least time spent waiting between flights',
             'order' => 'asc',
@@ -120,6 +126,7 @@ return [
         ],
         'rating' => [
             'id' => 'Popular',
+            'icon' => 'fa-star',
             'title' => 'Popular first',
             'note' => 'First we show tickets with higher rating',
             'order' => 'desc',

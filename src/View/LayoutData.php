@@ -25,6 +25,22 @@ final class LayoutData
     private ?Connection $connection = null;
 
     /**
+     * A stylesheet or script URL with a version stamp taken from the file's
+     * own modification time.
+     *
+     * Without one, a browser holding a cached copy keeps running the old asset
+     * after a deploy — the markup and the code it needs then disagree, which
+     * shows up as controls that quietly do nothing.
+     */
+    public function asset(string $path): string
+    {
+        $file = Helper::getRootDir() . '/' . ltrim($path, '/');
+        $stamp = is_file($file) ? filemtime($file) : false;
+
+        return $stamp === false ? $path : $path . '?v=' . $stamp;
+    }
+
+    /**
      * Request-scoped footer stats, computed eagerly so their order is fixed:
      * the flights count runs the only query on this connection, and the request
      * counter is read afterwards so it reflects that query (as before).

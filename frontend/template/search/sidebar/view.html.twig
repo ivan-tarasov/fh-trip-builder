@@ -1,6 +1,5 @@
 <!-- SIDEBAR -->
-{% include 'search/sidebar/range.html.twig' %}
-<div class="col-xl-3 col-md-12 order-md-1 mb-4">
+<div class="col-xl-4 col-lg-4 col-md-12 order-md-1 mb-4">
 
     <!-- Get fare alerts BUTTON -->
     <div class="d-grid gap-2">
@@ -11,179 +10,189 @@
     </div>
     <!-- End / Get fare alerts BUTTON -->
 
-    <!--form method="post" id="searchForm" -->
-        <div class="card mb-5">
-            <div class="card-body">
-                <div class="accordion bg-white" id="sidebarAccordion">
-                    <!-- 1 - Sort -->
-                    <div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="sidebar_1_sort">
-                            <button type="button" class="accordion-button border-bottom bg-white" data-bs-toggle="collapse" data-bs-target="#sidebar_1_sort_content" aria-expanded="true" aria-controls="sidebar_1_sort_content">
-                                <i class="fas fa-lg fa-sort-alpha-down pe-2"></i>
-                                Sort
-                            </button>
-                        </h2>
-                        <div id="sidebar_1_sort_content" class="accordion-collapse collapse show" aria-labelledby="sidebar_1_sort">
-                            <div class="accordion-body px-1 py-3">
-                                {# Sort lives in the query string, so this is a GET form and has
-                                   to carry the rest of the search with it. #}
-                                <form method="get" action="{{ form_path }}" id="form_sort">
-                                    {% for name, value in carried_query %}
-                                        <input type="hidden" name="{{ name }}" value="{{ value }}" />
-                                    {% endfor %}
-                                    {% for key, params in config('search.sort') %}
-                                        {% include 'search/sidebar/sort.html.twig' %}
-                                    {% endfor %}
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 2 - Time ranges -->
-                    <div class="accordion-item border-0 %SHOW_TRIP_OPTIONS%">
-                        <h2 class="accordion-header" id="sidebar_2_range">
-                            <button type="button" class="accordion-button border-bottom bg-white collapsed" data-bs-toggle="collapse" data-bs-target="#sidebar_2_range_content" aria-expanded="false" aria-controls="sidebar_2_range_content">
-                                <i class="fas fa-lg fa-clock pe-2"></i>
-                                Time preference
-                            </button>
-                        </h2>
-                        <div id="sidebar_2_range_content" class="accordion-collapse collapse" aria-labelledby="sidebar_2_range">
-                            <div class="accordion-body">
-                                <form method="post">
-                                    <span class="d-block pb-2">Flight to <strong>{{ arrive_city }}</strong></span>
-                                    <input type="text" class="js-range-slider" id="time_range_departure" name="time_range[depart]" value="" />
-                                    <span class="%HIDE_RETURN_RANGE%">
-                                        <hr class="mt-3 mb-3" />
-                                        <span class="d-block pb-2">Flight to <strong>{{ depart_city }}</strong></span>
-                                        <input type="text" class="js-range-slider" id="time_range_returning" name="time_range[return]" value="" />
-                                    </span>
-                                    {% include 'search/sidebar/update-button.html.twig' %}
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 3 - Stops -->
-                    <!--div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="sidebar_3_stops">
-                            <button type="button"
-                                    class="accordion-button border-bottom bg-white collapsed"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#sidebar_3_stops_content"
-                                    aria-expanded="false"
-                                    aria-controls="sidebar_3_stops_content"
-                            >
-                                <i class="fas fa-lg fa-map-marker-alt pe-2"></i>
-                                Stops
-                            </button>
-                        </h2>
-                        <div id="sidebar_3_stops_content" class="accordion-collapse collapse"
-                             aria-labelledby="sidebar_3_stops">
-                            <div class="accordion-body">
-                                <div class="form-check">
-                                    <input type="radio" name="stops" id="stop1" class="form-check-input mt-0" checked/>
-                                    <label class="form-check-label" for="stop1">1 stop</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="radio" name="stops" id="stop2" class="form-check-input mt-0"/>
-                                    <label class="form-check-label" for="stop2">2 stops</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="radio" name="stops" id="stop3" class="form-check-input mt-0"/>
-                                    <label class="form-check-label" for="stop3">3 stops</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="radio" name="stops" id="stop4" class="form-check-input mt-0"/>
-                                    <label class="form-check-label" for="stop4">4 stops</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div-->
-                    <!-- 4 - Comfort -->
-                    <div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="sidebar_4_comfort">
-                            <button type="button" class="accordion-button border-bottom bg-white collapsed" data-bs-toggle="collapse" data-bs-target="#sidebar_4_comfort_content" aria-expanded="false" aria-controls="sidebar_4_comfort_content">
-                                <i class="far fa-lg fa-smile pe-2"></i>
-                                Comfort
-                            </button>
-                        </h2>
-                        <div id="sidebar_4_comfort_content" class="accordion-collapse collapse" aria-labelledby="sidebar_4_comfort">
-                            <div class="accordion-body">
-                                <form method="post">
-                                    <div class="form-check form-switch ms-2">
-                                        <input class="form-check-input mt-0" type="checkbox" role="switch" value="" id="noVisaStops">
-                                        <label class="form-check-label" for="noVisaStops">
-                                            No stops with visa
-                                            <span data-toggle="tooltip" data-placement="right" title="We will hide tickets where a separate visa is needed. But this does not mean that we have found all the cases. You will have to check the visa requirements yourself.">
-                                                <i class="fas ps-1 fa-info-circle"></i>
-                                            </span>
-                                        </label>
-                                    </div>
-                                    <div class="form-check form-switch ms-2">
-                                        <input class="form-check-input mt-0" type="checkbox" role="switch" value="" id="noAirportChange">
-                                        <label class="form-check-label" for="noAirportChange">No airport change</label>
-                                    </div>
-                                    <div class="form-check form-switch ms-2">
-                                        <input class="form-check-input mt-0" type="checkbox" role="switch" value="" id="noNightTransfers">
-                                        <label class="form-check-label" for="noNightTransfers">No night transfers</label>
-                                    </div>
-                                    {% include 'search/sidebar/update-button.html.twig' %}
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 5 - Flight times -->
-                    <!-- 6 - Dates -->
-                    <!-- 7 - Airports -->
-                    <!-- 8 - Baggage -->
-                    <div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="sidebar_8_baggage">
-                            <button type="button" class="accordion-button border-bottom bg-white collapsed" data-bs-toggle="collapse" data-bs-target="#sidebar_8_baggage_content" aria-expanded="false" aria-controls="sidebar_8_baggage_content">
-                                <i class="fas fa-lg fa-suitcase pe-2"></i>
-                                Baggage
-                            </button>
-                        </h2>
-                        <div id="sidebar_8_baggage_content" class="accordion-collapse collapse" aria-labelledby="sidebar_8_baggage">
-                            <div class="accordion-body">
-                                <form method="post">
-                                    <div class="form-check form-switch ms-2">
-                                        <input class="form-check-input mt-0" type="checkbox" role="switch" value="" id="baggageIncluded">
-                                        <label class="form-check-label" for="baggageIncluded">Baggage included</label>
-                                    </div>
-                                    {% include 'search/sidebar/update-button.html.twig' %}
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 9 - Airlines -->
-                    <div class="accordion-item border-0">
-                        <h2 class="accordion-header" id="sidebar_9_airlines">
-                            <button type="button" class="accordion-button bg-white collapsed" data-bs-toggle="collapse" data-bs-target="#sidebar_9_airlines_content" aria-expanded="false" aria-controls="sidebar_9_airlines_content">
-                                <i class="fas fa-lg fa-plane pe-2"></i>
-                                Airlines
-                            </button>
-                        </h2>
-                        <div id="sidebar_9_airlines_content" class="accordion-collapse collapse"
-                             aria-labelledby="sidebar_9_airlines">
-                            <div class="accordion-body">
-                                <form method="post">
-                                    <button type="button" class="btn btn-sm btn-link d-block ps-0" id="airlinesSelectAll">
-                                        <i class="fas fa-check-double pe-2"></i>Select all airlines
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-link d-block ps-0" id="airlinesSelectClear">
-                                        <i class="far fa-minus-square pe-2"></i>Clear selection
-                                    </button>
-                                    <hr class="mt-2 mb-3"/>
-                                    {% for airline in airlines %}
-                                        {% include 'search/sidebar/airlines.html.twig' %}
-                                    {% endfor %}
-                                    {% include 'search/sidebar/update-button.html.twig' %}
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="card filters mb-5">
+        <div class="card-body">
+
+            {# Sorting applies on its own, against the filters already applied.
+               It carries them as hidden fields rather than reading the filter
+               form, so choosing a sort never commits a half-set filter. #}
+            <form method="get" action="{{ form_path }}" id="form_sort">
+                {% for name, value in carried_query %}
+                    {% if value is iterable %}
+                        {% for item in value %}<input type="hidden" name="{{ name }}[]" value="{{ item }}" />{% endfor %}
+                    {% else %}
+                        <input type="hidden" name="{{ name }}" value="{{ value }}" />
+                    {% endif %}
+                {% endfor %}
+
+                {% embed 'search/sidebar/section.html.twig' with { 'id': 'sort', 'title': 'Sort' } %}
+                    {% block body %}
+                        {% for key, params in config('search.sort') %}
+                            {% include 'search/sidebar/sort.html.twig' %}
+                        {% endfor %}
+                    {% endblock %}
+                {% endembed %}
+            </form>
+
+            {# Everything else applies together. One form, so Apply submits the
+               whole sidebar — per-group forms would each have to carry copies
+               of every other group's state and would drop whatever they missed. #}
+            <form method="get" action="{{ form_path }}" id="form_filters">
+                {% for name, value in carried_search %}
+                    {% if value is iterable %}
+                        {% for item in value %}<input type="hidden" name="{{ name }}[]" value="{{ item }}" />{% endfor %}
+                    {% else %}
+                        <input type="hidden" name="{{ name }}" value="{{ value }}" />
+                    {% endif %}
+                {% endfor %}
+                {# Only when it is not the default, so a plain search stays clean. #}
+                {% if session_sort != 'price' %}
+                    <input type="hidden" name="sort" value="{{ session_sort }}" />
+                {% endif %}
+
+                {# --- Stops --- #}
+                {% embed 'search/sidebar/section.html.twig' with { 'id': 'stops', 'title': 'Stops' } %}
+                    {% block body %}
+                        {% include 'search/sidebar/checklist.html.twig' with {
+                            'id': 'stops', 'name': 'stops', 'options': sidebar.stops
+                        } only %}
+                    {% endblock %}
+                {% endembed %}
+
+                {# --- Layover conditions --- #}
+                {% embed 'search/sidebar/section.html.twig' with { 'id': 'conditions', 'title': 'Layover conditions', 'open': sidebar.active.conditions } %}
+                    {% block body %}
+                        {% for name, toggle in sidebar.toggles %}
+                            {% include 'search/sidebar/toggle.html.twig' with { 'name': name, 'toggle': toggle } only %}
+                        {% endfor %}
+                    {% endblock %}
+                {% endembed %}
+
+                {# --- Price --- #}
+                {% if sidebar.sliders.max_price %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'price', 'title': 'Price', 'open': sidebar.active.price } %}
+                        {% block body %}
+                            {% include 'search/sidebar/slider.html.twig' with {
+                                'id': 'max_price', 'name': 'max_price', 'kind': 'money', 'label': 'Up to',
+                                'min': sidebar.sliders.max_price.min, 'max': sidebar.sliders.max_price.max,
+                                'step': sidebar.sliders.max_price.step, 'value': sidebar.sliders.max_price.value,
+                                'display': '$' ~ sidebar.sliders.max_price.value|number_format
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {# --- Travel time --- #}
+                {% if sidebar.sliders.max_duration %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'duration', 'title': 'Travel time', 'open': sidebar.active.duration } %}
+                        {% block body %}
+                            {% include 'search/sidebar/slider.html.twig' with {
+                                'id': 'max_duration', 'name': 'max_duration', 'kind': 'minutes', 'label': 'Up to',
+                                'min': sidebar.sliders.max_duration.min, 'max': sidebar.sliders.max_duration.max,
+                                'step': sidebar.sliders.max_duration.step, 'value': sidebar.sliders.max_duration.value,
+                                'display': sidebar.sliders.max_duration.value
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {# --- Departure / arrival time of day --- #}
+                {% embed 'search/sidebar/section.html.twig' with { 'id': 'times', 'title': 'Flight times', 'open': sidebar.active.times } %}
+                    {% block body %}
+                        <div class="filter-subhead">Departure</div>
+                        {% include 'search/sidebar/pills.html.twig' with {
+                            'name': 'dep_when', 'options': sidebar.depart_buckets
+                        } only %}
+
+                        <div class="filter-subhead mt-3">Arrival</div>
+                        {% include 'search/sidebar/pills.html.twig' with {
+                            'name': 'arr_when', 'options': sidebar.arrive_buckets
+                        } only %}
+                    {% endblock %}
+                {% endembed %}
+
+                {# --- Arrival date --- #}
+                {% if sidebar.arrive_dates|length > 1 %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'arrdate', 'title': 'Arrival date', 'select_all': true, 'open': sidebar.active.arrdate } %}
+                        {% block body %}
+                            {% include 'search/sidebar/checklist.html.twig' with {
+                                'id': 'arrdate', 'name': 'arr_date', 'options': sidebar.arrive_dates
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {# --- Airlines --- #}
+                {% if sidebar.airlines %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'airlines', 'title': 'Airlines', 'select_all': true, 'open': sidebar.active.airlines } %}
+                        {% block body %}
+                            {% include 'search/sidebar/checklist.html.twig' with {
+                                'id': 'airlines', 'name': 'airlines', 'options': sidebar.airlines,
+                                'search': true, 'limit': 8, 'placeholder': 'Airline, IATA code'
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {# --- Layover airports --- #}
+                {% if sidebar.layover_airports %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'via', 'title': 'Layover airports', 'select_all': true, 'open': sidebar.active.via } %}
+                        {% block body %}
+                            {% include 'search/sidebar/checklist.html.twig' with {
+                                'id': 'via', 'name': 'via', 'options': sidebar.layover_airports,
+                                'search': true, 'limit': 8, 'placeholder': 'Airport, city, country, code'
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {# --- Airports at either end, only where there is a choice --- #}
+                {% if sidebar.depart_airports|length > 1 %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'fromap', 'title': 'Departure airports', 'select_all': true, 'open': sidebar.active.fromap } %}
+                        {% block body %}
+                            {% include 'search/sidebar/checklist.html.twig' with {
+                                'id': 'fromap', 'name': 'from_ap', 'options': sidebar.depart_airports
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {% if sidebar.arrive_airports|length > 1 %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'toap', 'title': 'Arrival airports', 'select_all': true, 'open': sidebar.active.toap } %}
+                        {% block body %}
+                            {% include 'search/sidebar/checklist.html.twig' with {
+                                'id': 'toap', 'name': 'to_ap', 'options': sidebar.arrive_airports
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {# --- Aircraft --- #}
+                {% if sidebar.aircraft %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'aircraft', 'title': 'Aircraft', 'select_all': true, 'open': sidebar.active.aircraft } %}
+                        {% block body %}
+                            {% include 'search/sidebar/checklist.html.twig' with {
+                                'id': 'aircraft', 'name': 'aircraft', 'options': sidebar.aircraft,
+                                'search': true, 'limit': 8, 'placeholder': 'Aircraft model'
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+            </form>
+
+            {# Held against the bottom of the screen for as long as any of the
+               sidebar is in view, so Apply is never somewhere you have to go
+               looking for. It sits outside the form and reaches it by id —
+               being the last thing in the card is what gives sticky the room
+               to hold it there. #}
+            <div class="filters__apply">
+                <button type="submit" form="form_filters" class="btn btn-primary w-100">Apply filters</button>
+                {% if sidebar.any_applied %}
+                    <a href="{{ sidebar.clear_url }}" class="filters__clear">Clear all filters</a>
+                {% endif %}
             </div>
         </div>
-        <!-- update button -->
-    <!--/form-->
+    </div>
 </div>
 <!-- End / SIDEBAR -->

@@ -75,7 +75,9 @@ final readonly class FlightRepository
      * return something — that is what greys out a control the sidebar cannot
      * usefully offer.
      *
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>}
+     * `bounds` gives each slider its ends, measured the same way.
+     *
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, bounds: array<string, array{min: int, max: int}>}
      */
     public function searchDirection(
         string $from,
@@ -84,9 +86,10 @@ final readonly class FlightRepository
         SortMethod $sort,
         int $page,
         ?FlightFilters $filters = null,
+        float $priceOffset = 0.0,
     ): array {
         $filters ??= new FlightFilters();
-        $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => []];
+        $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => []];
 
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
@@ -113,14 +116,19 @@ final readonly class FlightRepository
         // the hot path and its joins were tuned around a fixed shape, while a
         // candidate row already carries everything a filter asks about.
         $candidates = $this->withLayoverCountries($candidates);
+        // Half of a round trip is priced as the whole trip on screen, so the
+        // price filter and its slider work against that same total rather than
+        // this direction's share of it.
+        $candidates = $this->withPriceOffset($candidates, $priceOffset);
         $available = $this->availability($candidates, $filters);
+        $bounds = $this->bounds($candidates, $filters);
         $matching = array_values(array_filter(
             $candidates,
             static fn(array $c): bool => $filters->matches($c),
         ));
 
         if ($matching === []) {
-            return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available];
+            return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available, 'bounds' => $bounds];
         }
 
         // A sort that scores an itinerary against the rest of the set can only
@@ -148,7 +156,7 @@ final readonly class FlightRepository
             $matching,
         ));
 
-        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available];
+        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available, 'bounds' => $bounds];
     }
 
     /**
@@ -165,29 +173,34 @@ final readonly class FlightRepository
     {
         $available = [];
 
-        // Airlines and layover airports qualify an itinerary only when *every*
-        // one of its values is selected, so "does this value appear" is the
-        // wrong question — an airline can fly a leg of something without any
-        // ticket being wholly its own. Ask what adding it would unlock instead.
-        foreach ([
-            FlightFilters::DIM_AIRLINES => ['carriers', $filters->airlines],
-            FlightFilters::DIM_LAYOVER_AIRPORTS => ['stops_at', $filters->layoverAirports],
-        ] as $dimension => [$column, $selected]) {
-            $available[$dimension] = $this->subsetAvailability($candidates, $filters, $dimension, $column, $selected);
-        }
-
-        // Any leg on the type is enough, so appearing is the same as being
-        // selectable.
-        $available[FlightFilters::DIM_AIRCRAFT] = $this->distinct(
+        // A layover airport qualifies an itinerary only when *every* connection
+        // it makes is selected, so "does this value appear" is the wrong
+        // question — ask what adding it would unlock instead.
+        $available[FlightFilters::DIM_LAYOVER_AIRPORTS] = $this->subsetAvailability(
             $candidates,
             $filters,
-            FlightFilters::DIM_AIRCRAFT,
-            static function (array $c): array {
-                $raw = (string) ($c['aircraft'] ?? '');
-
-                return $raw === '' ? [] : explode(',', $raw);
-            },
+            FlightFilters::DIM_LAYOVER_AIRPORTS,
+            'stops_at',
+            $filters->layoverAirports,
         );
+
+        // Airlines and aircraft both match on any leg, so appearing anywhere is
+        // the same as being selectable.
+        foreach ([
+            FlightFilters::DIM_AIRLINES => 'carriers',
+            FlightFilters::DIM_AIRCRAFT => 'aircraft',
+        ] as $dimension => $column) {
+            $available[$dimension] = $this->distinct(
+                $candidates,
+                $filters,
+                $dimension,
+                static function (array $c) use ($column): array {
+                    $raw = (string) ($c[$column] ?? '');
+
+                    return $raw === '' ? [] : explode(',', $raw);
+                },
+            );
+        }
 
         $singles = [
             FlightFilters::DIM_DEPART_AIRPORTS => 'dep_airport',
@@ -237,6 +250,49 @@ final readonly class FlightRepository
         }
 
         return $available;
+    }
+
+    /**
+     * The span each slider should cover: the smallest and largest value still
+     * reachable, with that slider's own filter lifted so dragging it never
+     * shrinks its own track out from under the handle.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return array<string, array{min: int, max: int}>
+     */
+    private function bounds(array $candidates, FlightFilters $filters): array
+    {
+        $measures = [
+            // Includes the offset, so the slider spans what the cards say.
+            FlightFilters::DIM_PRICE => static fn(array $c): float => (float) $c['price_base']
+                + (float) $c['price_tax'] + (float) ($c['price_offset'] ?? 0),
+            FlightFilters::DIM_DURATION => static fn(array $c): float => (float) $c['duration'],
+        ];
+
+        $bounds = [];
+
+        foreach ($measures as $dimension => $measure) {
+            $values = [];
+
+            foreach ($candidates as $candidate) {
+                if ($filters->matches($candidate, $dimension)) {
+                    $values[] = $measure($candidate);
+                }
+            }
+
+            if ($values === []) {
+                continue;
+            }
+
+            // Rounded outwards, so the extremes stay selectable once the
+            // handle snaps to a whole unit.
+            $bounds[$dimension] = [
+                'min' => (int) floor(min($values)),
+                'max' => (int) ceil(max($values)),
+            ];
+        }
+
+        return $bounds;
     }
 
     /**
@@ -344,7 +400,12 @@ final readonly class FlightRepository
 
     /**
      * Distinct values a dimension takes across the candidates that pass every
-     * other filter.
+     * other filter, commonest first.
+     *
+     * Frequency rather than alphabet: a list of sixty airlines is only useful
+     * if the ones actually flying this route are at the top, and the eight rows
+     * shown before "Show all" should be the eight worth seeing. Ties break
+     * alphabetically so the order is stable between searches.
      *
      * @param list<array<string, mixed>> $candidates
      * @param callable(array<string, mixed>): list<string> $values
@@ -352,24 +413,26 @@ final readonly class FlightRepository
      */
     private function distinct(array $candidates, FlightFilters $filters, string $dimension, callable $values): array
     {
-        $seen = [];
+        $counts = [];
 
         foreach ($candidates as $candidate) {
             if (!$filters->matches($candidate, $dimension)) {
                 continue;
             }
 
-            foreach ($values($candidate) as $value) {
+            // Once per itinerary, however many of its legs use the value —
+            // otherwise a carrier flying both legs of a connection outranks one
+            // flying a whole other itinerary.
+            foreach (array_unique($values($candidate)) as $value) {
                 if ($value !== '') {
-                    $seen[$value] = true;
+                    $counts[$value] = ($counts[$value] ?? 0) + 1;
                 }
             }
         }
 
-        $found = array_keys($seen);
-        sort($found);
+        uksort($counts, static fn(string $a, string $b): int => $counts[$b] <=> $counts[$a] ?: strcmp($a, $b));
 
-        return array_map(strval(...), $found);
+        return array_map(strval(...), array_keys($counts));
     }
 
     /**
@@ -416,6 +479,26 @@ final readonly class FlightRepository
 
             $candidate['origin_country'] = $countries[(string) $candidate['dep_airport']] ?? null;
             $candidate['destination_country'] = $countries[(string) $candidate['arr_airport']] ?? null;
+
+            return $candidate;
+        }, $candidates);
+    }
+
+    /**
+     * Record on each candidate what will be added to its price before it is
+     * shown, so a filter can compare against the displayed figure.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return list<array<string, mixed>>
+     */
+    private function withPriceOffset(array $candidates, float $offset): array
+    {
+        if ($offset <= 0.0) {
+            return $candidates;
+        }
+
+        return array_map(static function (array $candidate) use ($offset): array {
+            $candidate['price_offset'] = $offset;
 
             return $candidate;
         }, $candidates);

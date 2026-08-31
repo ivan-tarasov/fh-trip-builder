@@ -1,0 +1,11 @@
+{# A soft panel with the label on the left and the current value as a pill on
+   the right, the way the reference draws its ranges. #}
+<div class="filter-slider">
+    <div class="filter-slider__head">
+        <span class="filter-slider__label">{{ label }}</span>
+        <span class="filter-slider__value" id="val-{{ id }}">{{ display }}</span>
+    </div>
+    <input type="text" class="js-filter-slider" id="{{ id }}" name="{{ name }}"
+           data-min="{{ min }}" data-max="{{ max }}" data-from="{{ value }}" data-step="{{ step }}"
+           data-kind="{{ kind }}" data-output="val-{{ id }}" value="{{ value }}" />
+</div>

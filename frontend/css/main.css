@@ -1724,3 +1724,337 @@ textarea {
 }
 
 .price--lg .price__whole { font-size: 2.5rem; }
+
+/* ==========================================================================
+   Search sidebar
+   ==========================================================================
+   Built from the same tokens as the flight cards — the #f8f9fa panel, the
+   pill radii, the orange hover — so the two halves of the page read as one
+   design rather than two.
+   ========================================================================== */
+
+.filters .card-body { padding: .5rem 1rem 1rem; }
+
+/* --- Section: title, optional Select all, chevron ------------------------ */
+.filter-section { border-bottom: 1px solid #f1f3f5; }
+.filter-section:last-of-type { border-bottom: 0; }
+
+.filter-section__head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Takes the slack so the link and the chevron are pushed to the right. */
+.filter-section__toggle {
+  flex: 1;
+  padding: 1rem 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.filter-section__chevron-btn {
+  flex: 0 0 auto;
+  padding: 1rem 0 1rem .75rem;
+  border: 0;
+  background: none;
+  line-height: 1;
+}
+
+.filter-section__title {
+  font-weight: 600;
+  color: #212529;
+}
+
+.filter-section__chevron {
+  color: #adb5bd;
+  font-size: .8125rem;
+  transition: transform .2s ease;
+}
+
+.filter-section__chevron-btn.collapsed .filter-section__chevron { transform: rotate(180deg); }
+
+.filter-section__link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--bs-primary);
+  font-size: .875rem;
+  white-space: nowrap;
+}
+
+.filter-section__link:hover { text-decoration: underline; }
+
+/* Select all belongs to the controls it acts on, so it goes away with them
+   rather than sitting next to a heading with nothing under it. */
+.filter-section__toggle.collapsed ~ .filter-section__link { display: none; }
+
+/* Label reflects what the button will do; JS flips the class. */
+.filter-section__link .if-some { display: none; }
+.filter-section__link.has-selection .if-none { display: none; }
+.filter-section__link.has-selection .if-some { display: inline; }
+
+.filter-section__body { padding-bottom: 1rem; }
+
+.filter-subhead {
+  font-size: .875rem;
+  color: #6c757d;
+  margin-bottom: .5rem;
+}
+
+/* --- Sort options -------------------------------------------------------- */
+.sort-option {
+  display: flex;
+  align-items: stretch;
+  gap: .75rem;
+}
+
+/* Spans the full height of the option — title and note both — and centres in
+   it, rather than perching next to the first line. Fixed width so the labels
+   line up whatever the glyph. */
+.sort-option__icon {
+  display: flex;
+  flex: 0 0 2.25rem;
+  align-items: center;
+  justify-content: center;
+  /* Sized to the two lines beside it, so the glyph reads as the block's mark
+     rather than a bullet next to the title. */
+  font-size: 1.75rem;
+  line-height: 1;
+  color: #adb5bd;
+}
+
+.sort-option__text { flex: 1; min-width: 0; }
+
+/* The chosen option is filled, so its icon has to read against that. */
+.list-group-item-check:checked + .sort-option .sort-option__icon { color: inherit; }
+
+/* --- Rows in a checkbox list -------------------------------------------- */
+.filter-list { display: flex; flex-direction: column; }
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .4rem .5rem;
+  margin: 0 -.5rem;
+  border-radius: .5rem;
+  cursor: pointer;
+}
+
+.filter-row:hover { background-color: #f8f9fa; }
+
+.filter-row__logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.filter-row__text { flex: 1; min-width: 0; }
+
+.filter-row__label {
+  display: block;
+  font-size: .9375rem;
+  color: #212529;
+}
+
+/* The code sits with the name, quieter, the way the reference prints it. */
+.filter-row__sub {
+  color: #adb5bd;
+  padding-left: .35rem;
+}
+
+.filter-row__note {
+  display: block;
+  font-size: .8125rem;
+  color: #adb5bd;
+}
+
+.filter-row__check { flex: 0 0 auto; margin: 0; }
+
+/* A list longer than its limit keeps the tail hidden until asked. */
+.filter-row.is-over-limit,
+.filter-row.is-filtered-out { display: none; }
+.filter-list.is-expanded .filter-row.is-over-limit { display: flex; }
+.filter-list.is-expanded .filter-row.is-filtered-out { display: none; }
+
+.filter-more {
+  border: 0;
+  background: none;
+  padding: .5rem 0 0;
+  color: var(--bs-primary);
+  font-size: .875rem;
+}
+
+.filter-more:hover { text-decoration: underline; }
+
+/* --- Search field above a long list ------------------------------------- */
+.filter-search { position: relative; margin-bottom: .5rem; }
+
+.filter-search__icon {
+  position: absolute;
+  left: .75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #adb5bd;
+  font-size: .875rem;
+}
+
+.filter-search__input {
+  width: 100%;
+  border: 0;
+  border-radius: .625rem;
+  background-color: #f1f3f5;
+  padding: .5rem .75rem .5rem 2.25rem;
+  font-size: .9375rem;
+}
+
+.filter-search__input::placeholder { color: #adb5bd; }
+
+/* --- Toggles ------------------------------------------------------------- */
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .5rem 0;
+  cursor: pointer;
+}
+
+.filter-toggle__text {
+  font-size: .9375rem;
+  color: #212529;
+}
+
+.filter-toggle__info {
+  color: #adb5bd;
+  font-size: .8125rem;
+  padding-left: .25rem;
+  cursor: help;
+}
+
+.filter-toggle .form-switch .form-check-input {
+  width: 2.5rem;
+  height: 1.4rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* --- Time-of-day pills ---------------------------------------------------- */
+.filter-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+.filter-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem .75rem;
+  border-radius: 999px;
+  background-color: #f1f3f5;
+  color: #212529;
+  font-size: .875rem;
+  cursor: pointer;
+  transition: background-color .12s ease, color .12s ease;
+}
+
+/* The box still has to submit, so it is hidden by size rather than by
+   display:none. It needs an explicit one — an absolutely positioned input with
+   no width takes its natural one and pushes the page sideways. */
+.filter-pill input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.filter-pill:hover { background-color: #e9ecef; }
+.filter-pill__icon { color: #868e96; font-size: .8125rem; }
+
+/* A selected pill. `is-on` is set by JS on load and on every change.
+   :has(input:checked) would express this in CSS alone, but the state is then
+   defined in two places that can drift. The sidebar already needs JS for its
+   sliders, so one mechanism it is. */
+.filter-pill.is-on {
+  background-color: var(--bs-primary);
+  color: #fff;
+}
+
+.filter-pill.is-on .filter-pill__icon { color: #fff; }
+
+/* --- Sliders -------------------------------------------------------------- */
+.filter-slider {
+  background-color: #f8f9fa;
+  border-radius: .75rem;
+  padding: .75rem .875rem 1.25rem;
+}
+
+.filter-slider__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .25rem;
+}
+
+.filter-slider__label { font-size: .9375rem; color: #212529; }
+
+.filter-slider__value {
+  background-color: #e9ecef;
+  border-radius: .5rem;
+  padding: .2rem .6rem;
+  font-size: .875rem;
+  font-weight: 600;
+  color: #212529;
+  white-space: nowrap;
+}
+
+/* --- Apply --------------------------------------------------------------- */
+/* Pinned to the bottom of the screen so Apply is reachable without scrolling
+   back down a long sidebar. It needs an opaque background and a shadow: the
+   controls above scroll underneath it, and without those the two would blur
+   together. */
+/* Held against the bottom of the screen while the sidebar is in view, and
+   settling into place once you reach the end of the list. Opaque with a shadow
+   because the filter groups scroll underneath it. */
+.filters__apply {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 0 -1rem -1rem;
+  padding: 1rem;
+  background-color: #fff;
+  border-top: 1px solid #e9ecef;
+  border-radius: 0 0 var(--bs-card-border-radius) var(--bs-card-border-radius);
+  box-shadow: 0 -.5rem 1rem -.5rem rgba(0, 0, 0, .1);
+  text-align: center;
+}
+
+
+.filters__clear {
+  display: inline-block;
+  margin-top: .5rem;
+  font-size: .875rem;
+  color: #868e96;
+}
+
+/* --- Unavailable ---------------------------------------------------------
+   One rule for every control. Availability is the whole point of the
+   greying, so it must look identical wherever it appears rather than being
+   restyled per control. */
+.is-unavailable {
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.filter-row__none {
+  display: block;
+  font-size: .8125rem;
+  color: #adb5bd;
+}
+
+.filter-toggle.is-unavailable .filter-row__none { display: inline; padding-left: .35rem; }

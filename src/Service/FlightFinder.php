@@ -96,7 +96,7 @@ final readonly class FlightFinder
         $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
         $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
 
-        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => []];
+        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => []];
         $addBase = 0.0;
         $addTax = 0.0;
 
@@ -106,6 +106,12 @@ final readonly class FlightFinder
         } elseif ($outbound !== null) {
             // Step 2: the return leg, priced as the real total with the choice.
             $step = 2;
+            // Rows here are priced as the whole trip, so the chosen outbound is
+            // added to each one. Work that out before searching: the price
+            // filter and its slider have to speak in the same money the cards
+            // will show, or a limit of $8,000 lets a $9,700 card through.
+            $addBase = (float) $outbound['price_base'];
+            $addTax = (float) $outbound['price_tax'];
             $result = $flights->searchDirection(
                 $query->to,
                 $query->from,
@@ -113,12 +119,19 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->currentPage,
                 $query->filters,
+                $addBase + $addTax,
             );
-            $addBase = (float) $outbound['price_base'];
-            $addTax = (float) $outbound['price_tax'];
         } else {
             // Step 1 (round trip) or the whole search (one way): the outbound.
             $step = $isRoundtrip ? 1 : null;
+
+            // Round trips show what the whole trip would cost with the cheapest
+            // return, so step 1 prices are comparable with the totals at step 2.
+            // Resolved before the search for the same reason as step 2 above.
+            $addBase = ($step === 1
+                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate)
+                : null) ?? 0.0;
+
             $result = $flights->searchDirection(
                 $query->from,
                 $query->to,
@@ -126,13 +139,8 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->currentPage,
                 $query->filters,
+                $addBase + $addTax,
             );
-
-            // Round trips show what the whole trip would cost with the cheapest
-            // return, so step 1 prices are comparable with the totals at step 2.
-            $addBase = ($step === 1
-                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate)
-                : null) ?? 0.0;
         }
 
         $rows = array_map(fn(array $itinerary): array => [
@@ -179,6 +187,8 @@ final readonly class FlightFinder
             // Which filter options would still return something, so the sidebar
             // can grey out the ones that would empty the page.
             'available' => $result['available'],
+            // The ends each slider should span.
+            'bounds' => $result['bounds'],
             self::RESPONSE_FLIGHTS => $rows,
         ];
     }

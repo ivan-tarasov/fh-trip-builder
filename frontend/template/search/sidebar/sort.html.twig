@@ -7,8 +7,11 @@
            onClick="document.getElementById('form_sort').submit()"
            {{ session_sort == key ? 'checked' : '' }}
     />
-    <label class="list-group-item rounded-3 py-3" for="sort{{ params.id }}">
-        {{ params.title }}
-        <span class="d-block small opacity-50">{{ params.note }}</span>
+    <label class="list-group-item rounded-3 py-3 sort-option" for="sort{{ params.id }}">
+        <i class="fas {{ params.icon|default('fa-sort') }} sort-option__icon"></i>
+        <span class="sort-option__text">
+            {{ params.title }}
+            <span class="d-block small opacity-50">{{ params.note }}</span>
+        </span>
     </label>
 </div>

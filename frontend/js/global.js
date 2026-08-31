@@ -401,12 +401,245 @@
         });
     });
 
-    $("#airlinesSelectAll").click(function () {
-        $('input:checkbox[name="airlines[]"]').attr('checked', 'checked');
+    /*[ Search filters sidebar ]
+    ===========================================================*/
+    // Filters apply together on Apply, so everything here is local: nothing
+    // reloads the page until the form is submitted.
+
+    // Type to narrow a long list. Rows are hidden with a class rather than
+    // removed, so the checked state of a filtered-out row survives.
+    document.querySelectorAll('.js-list-search').forEach(function (input) {
+        const list = document.getElementById(input.dataset.list);
+
+        if (!list) {
+            return;
+        }
+
+        input.addEventListener('input', function () {
+            const term = input.value.trim().toLowerCase();
+
+            list.classList.toggle('is-expanded', term !== '');
+
+            list.querySelectorAll('.filter-row').forEach(function (row) {
+                const hit = term === '' || row.textContent.toLowerCase().indexOf(term) !== -1;
+                row.classList.toggle('is-filtered-out', !hit);
+            });
+        });
     });
 
-    $("#airlinesSelectClear").click(function () {
-        $('input:checkbox[name="airlines[]"]').removeAttr('checked');
+    // "Show all (62)" — reveals the tail and takes itself away.
+    document.querySelectorAll('.js-show-all').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const list = document.getElementById(button.dataset.list);
+
+            if (list) {
+                list.classList.add('is-expanded');
+            }
+
+            button.remove();
+        });
+    });
+
+    // Select all / Clear, one pair per list. The label follows the state, so
+    // the button always says what pressing it will do.
+    document.querySelectorAll('.js-select-all').forEach(function (button) {
+        const list = document.getElementById(button.dataset.list);
+
+        if (!list) {
+            return;
+        }
+
+        const boxes = function () {
+            return Array.prototype.slice.call(
+                list.querySelectorAll('input[type=checkbox]:not(:disabled)')
+            );
+        };
+
+        const sync = function () {
+            button.classList.toggle('has-selection', boxes().some(function (box) {
+                return box.checked;
+            }));
+        };
+
+        button.addEventListener('click', function () {
+            const clearing = boxes().some(function (box) {
+                return box.checked;
+            });
+
+            boxes().forEach(function (box) {
+                box.checked = !clearing;
+            });
+
+            sync();
+        });
+
+        list.addEventListener('change', sync);
+        sync();
+    });
+
+    // Pills paint from a class rather than a :has() selector, so the selected
+    // state has exactly one definition.
+    document.querySelectorAll('.filter-pill').forEach(function (pill) {
+        const input = pill.querySelector('input[type=checkbox]');
+
+        if (!input) {
+            return;
+        }
+
+        const paint = function () {
+            pill.classList.toggle('is-on', input.checked);
+        };
+
+        input.addEventListener('change', paint);
+        paint();
+    });
+
+    // Price and travel-time sliders. The handle carries the value the filter
+    // reads, and the pill beside the label shows it in human terms.
+    function formatMinutes(total) {
+        const hours = Math.floor(total / 60);
+        const minutes = Math.round(total % 60);
+
+        if (hours === 0) {
+            return minutes + 'm';
+        }
+
+        return minutes === 0 ? hours + 'h' : hours + 'h ' + minutes + 'm';
+    }
+
+    function sliderLabel(kind, value) {
+        return kind === 'money'
+            ? '$' + Math.round(value).toLocaleString('en-US')
+            : formatMinutes(value);
+    }
+
+    $('.js-filter-slider').each(function () {
+        const input = this;
+        const kind = input.dataset.kind;
+        const output = document.getElementById(input.dataset.output);
+        const max = parseInt(input.dataset.max, 10);
+
+        const show = function (value) {
+            if (output) {
+                // At the top of the range nothing is excluded, so say so
+                // rather than showing a number that reads like a limit.
+                output.textContent = value >= max ? 'Any' : sliderLabel(kind, value);
+            }
+        };
+
+        $(input).ionRangeSlider({
+            skin: 'round',
+            type: 'single',
+            min: parseInt(input.dataset.min, 10),
+            max: max,
+            from: parseInt(input.dataset.from, 10),
+            step: parseInt(input.dataset.step, 10) || 1,
+            hide_min_max: true,
+            hide_from_to: true,
+            onStart: function (data) { show(data.from); },
+            onChange: function (data) { show(data.from); },
+            // update() does not fire onChange, so the label would go stale
+            // whenever the handle is moved by anything but a drag.
+            onUpdate: function (data) { show(data.from); },
+        });
+
+        show(parseInt(input.dataset.from, 10));
+    });
+
+    // A slider built inside a collapsed section measures zero width and stays
+    // that way — the track never lays out, so the handle cannot be dragged.
+    // Bootstrap tells us when a section has finished opening; that is the first
+    // moment the widget can size itself correctly.
+    document.querySelectorAll('.filter-section .collapse').forEach(function (panel) {
+        panel.addEventListener('shown.bs.collapse', function () {
+            panel.querySelectorAll('.js-filter-slider').forEach(function (input) {
+                const slider = $(input).data('ionRangeSlider');
+
+                if (slider) {
+                    // Pass the current position back in: a bare update() puts
+                    // the handle at the minimum, which would silently disagree
+                    // with the value shown beside the label.
+                    slider.update({ from: parseInt(input.value, 10) });
+                }
+            });
+        });
+    });
+
+    // Submit by building the URL rather than letting the browser serialise the
+    // form: it percent-encodes commas, so `airlines=BA,AI` would reach the
+    // address bar as `airlines=BA%2CAI`. Runs last, after the handlers that
+    // fold checkbox groups into comma lists and drop untouched sliders.
+    function submitReadably(form) {
+        const parts = [];
+
+        new FormData(form).forEach(function (value, key) {
+            if (value === '') {
+                return;
+            }
+
+            parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value).replace(/%2C/g, ','));
+        });
+
+        const action = form.getAttribute('action') || window.location.pathname;
+
+        window.location.assign(parts.length ? action + '?' + parts.join('&') : action);
+    }
+
+    // A slider parked at its maximum excludes nothing, so it must not be
+    // submitted. Leaving it in would put a number in the URL that looks
+    // deliberate, and — because each slider's range is measured from the
+    // current results — a later change to another filter could shrink the set
+    // beneath that stale ceiling and start quietly cutting flights.
+    const filterForm = document.getElementById('form_filters');
+
+    if (filterForm) {
+        // Checkbox groups post one field per box (airlines[]=AF&airlines[]=AS),
+        // which makes for an unreadable URL. The filters read a comma list just
+        // as happily, so collect the boxes into one field per group and take
+        // the boxes themselves out of the submission.
+        filterForm.addEventListener('submit', function () {
+            const groups = {};
+
+            filterForm.querySelectorAll('input[type=checkbox][name$="[]"]').forEach(function (box) {
+                const key = box.name.slice(0, -2);
+
+                if (box.checked) {
+                    (groups[key] = groups[key] || []).push(box.value);
+                }
+
+                box.disabled = true;
+            });
+
+            Object.keys(groups).forEach(function (key) {
+                const field = document.createElement('input');
+                field.type = 'hidden';
+                field.name = key;
+                field.value = groups[key].join(',');
+                filterForm.appendChild(field);
+            });
+        });
+
+        filterForm.addEventListener('submit', function () {
+            filterForm.querySelectorAll('.js-filter-slider').forEach(function (input) {
+                const value = parseInt(input.value, 10);
+                const max = parseInt(input.dataset.max, 10);
+
+                if (!isNaN(value) && !isNaN(max) && value >= max) {
+                    input.disabled = true;
+                }
+            });
+        });
+    }
+
+    ['form_filters', 'form_sort'].forEach(function (id) {
+        const form = document.getElementById(id);
+
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                submitReadably(form);
+            });
+        }
     });
 
     $( ".auto-clear" ).on( "focus", function() {

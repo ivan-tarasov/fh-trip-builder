@@ -1,0 +1,32 @@
+{# A collapsible filter group. The heading row runs title / Select all /
+   chevron, so the arrow is always the rightmost thing in the sidebar and the
+   link sits just before it. Title and chevron are two triggers on the same
+   collapse — one control can't wrap the link without nesting buttons. #}
+<div class="filter-section">
+    <div class="filter-section__head">
+        <button class="filter-section__toggle{{ (open ?? true) ? '' : ' collapsed' }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#sec-{{ id }}"
+                aria-expanded="{{ (open ?? true) ? 'true' : 'false' }}" aria-controls="sec-{{ id }}">
+            <span class="filter-section__title">{{ title }}</span>
+        </button>
+
+        {% if select_all|default(false) %}
+            <button type="button" class="filter-section__link js-select-all" data-list="list-{{ id }}">
+                <span class="if-none">Select all</span>
+                <span class="if-some">Clear</span>
+            </button>
+        {% endif %}
+
+        <button class="filter-section__chevron-btn{{ (open ?? true) ? '' : ' collapsed' }}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#sec-{{ id }}"
+                aria-expanded="{{ (open ?? true) ? 'true' : 'false' }}" aria-controls="sec-{{ id }}"
+                aria-label="{{ (open ?? true) ? 'Collapse' : 'Expand' }} {{ title }}">
+            <i class="fas fa-chevron-up filter-section__chevron"></i>
+        </button>
+    </div>
+    <div class="collapse{{ (open ?? true) ? ' show' : '' }}" id="sec-{{ id }}">
+        <div class="filter-section__body">
+            {% block body %}{% endblock %}
+        </div>
+    </div>
+</div>
