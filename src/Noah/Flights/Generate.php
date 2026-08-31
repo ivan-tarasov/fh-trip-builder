@@ -75,6 +75,10 @@ class Generate extends AbstractCommand
     // size would. Keeps short-haul frequent without starving long-haul.
     private const int ROUTE_DISTANCE_HALVING_KM = 2000;
 
+    // How fast an aircraft's odds fall as its range overshoots the leg: at this
+    // much spare range a type is half as likely as one sized exactly right.
+    private const int AIRCRAFT_FIT_HALVING_KM = 3000;
+
     private const int INSERT_BATCH_SIZE = 500;
 
     private array $count = [
@@ -134,6 +138,19 @@ class Generate extends AbstractCommand
 
         if (count($airports) < 2) {
             $this->io->error('Need at least two airports with a traffic weight to build a network.');
+
+            return Command::INVALID;
+        }
+
+        // Aircraft types, longest-legged last so a lookup can stop at the first
+        // one that cannot reach (see pickAircraft).
+        $fleet = $this->connection()->fetchAll(
+            'SELECT code, max_range_km FROM ' . Table::Aircraft->value
+            . ' WHERE max_range_km > 0 ORDER BY max_range_km ASC',
+        );
+
+        if ($fleet === []) {
+            $this->io->error('No aircraft types are seeded — run app:install first.');
 
             return Command::INVALID;
         }
@@ -202,6 +219,7 @@ class Generate extends AbstractCommand
             $flights[] = new Flight(
                 airline: $airline,
                 number: rand(1, self::NUMBERS_POOL),
+                aircraft: $this->pickAircraft($fleet, $distance),
                 departureAirport: $departAirport['code'],
                 departureTime: $departureDateTime,
                 arrivalAirport: $arriveAirport['code'],
@@ -411,6 +429,45 @@ class Generate extends AbstractCommand
         }
 
         return $low;
+    }
+
+    /**
+     * An aircraft type that could actually fly this leg.
+     *
+     * Only types whose range covers the distance are eligible, and among those
+     * the smaller ones are favoured — weight falls off as a type's range
+     * overshoots what the leg needs. Without that a 400 km hop drew an A380 as
+     * often as an A320, because both can reach.
+     *
+     * @param list<array<string, mixed>> $fleet ordered by max_range_km ascending
+     */
+    private function pickAircraft(array $fleet, int $distance): ?string
+    {
+        $codes = [];
+        $cumulative = [];
+        $running = 0.0;
+
+        foreach ($fleet as $type) {
+            $range = (int) $type['max_range_km'];
+
+            // Ordered ascending, so everything from here on can reach as well —
+            // but keep going, they are the long-haul candidates.
+            if ($range < $distance) {
+                continue;
+            }
+
+            $running += self::AIRCRAFT_FIT_HALVING_KM / (self::AIRCRAFT_FIT_HALVING_KM + ($range - $distance));
+            $codes[] = (string) $type['code'];
+            $cumulative[] = $running;
+        }
+
+        // Longer than anything in the fleet can fly: leave it unassigned rather
+        // than inventing an aircraft that could not make it.
+        if ($codes === []) {
+            return null;
+        }
+
+        return $codes[$this->pickWeighted($cumulative, $running)];
     }
 
     /**

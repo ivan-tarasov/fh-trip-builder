@@ -59,6 +59,15 @@ return [
             'comment' => false,
         ],
         [
+            'name' => 'aircraft',
+            'type' => 'char',
+            'length' => 3,
+            'default' => false,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
             'name' => 'departure_airport',
             'type' => 'char',
             'length' => 3,
