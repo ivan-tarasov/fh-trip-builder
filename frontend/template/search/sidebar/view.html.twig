@@ -54,7 +54,7 @@
                 {% embed 'search/sidebar/section.html.twig' with { 'id': 'stops', 'title': 'Stops' } %}
                     {% block body %}
                         {% include 'search/sidebar/checklist.html.twig' with {
-                            'id': 'stops', 'name': 'stops', 'options': sidebar.stops
+                            'id': 'stops', 'name': sidebar.prefix ~ 'stops', 'options': sidebar.stops
                         } only %}
                     {% endblock %}
                 {% endembed %}
@@ -63,7 +63,7 @@
                 {% embed 'search/sidebar/section.html.twig' with { 'id': 'conditions', 'title': 'Layover conditions', 'open': sidebar.active.conditions } %}
                     {% block body %}
                         {% for name, toggle in sidebar.toggles %}
-                            {% include 'search/sidebar/toggle.html.twig' with { 'name': name, 'toggle': toggle } only %}
+                            {% include 'search/sidebar/toggle.html.twig' with { 'name': sidebar.prefix ~ name, 'toggle': toggle } only %}
                         {% endfor %}
                     {% endblock %}
                 {% endembed %}
@@ -73,7 +73,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'price', 'title': 'Price', 'open': sidebar.active.price } %}
                         {% block body %}
                             {% include 'search/sidebar/slider.html.twig' with {
-                                'id': 'max_price', 'name': 'max_price', 'kind': 'money', 'label': 'Up to',
+                                'id': 'max_price', 'name': sidebar.prefix ~ 'max_price', 'kind': 'money', 'label': 'Up to',
                                 'min': sidebar.sliders.max_price.min, 'max': sidebar.sliders.max_price.max,
                                 'step': sidebar.sliders.max_price.step, 'value': sidebar.sliders.max_price.value,
                                 'display': '$' ~ sidebar.sliders.max_price.value|number_format
@@ -87,7 +87,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'duration', 'title': 'Travel time', 'open': sidebar.active.duration } %}
                         {% block body %}
                             {% include 'search/sidebar/slider.html.twig' with {
-                                'id': 'max_duration', 'name': 'max_duration', 'kind': 'minutes', 'label': 'Up to',
+                                'id': 'max_duration', 'name': sidebar.prefix ~ 'max_duration', 'kind': 'minutes', 'label': 'Up to',
                                 'min': sidebar.sliders.max_duration.min, 'max': sidebar.sliders.max_duration.max,
                                 'step': sidebar.sliders.max_duration.step, 'value': sidebar.sliders.max_duration.value,
                                 'display': sidebar.sliders.max_duration.value
@@ -101,12 +101,12 @@
                     {% block body %}
                         <div class="filter-subhead">Departure</div>
                         {% include 'search/sidebar/pills.html.twig' with {
-                            'name': 'dep_when', 'options': sidebar.depart_buckets
+                            'name': sidebar.prefix ~ 'dep_when', 'options': sidebar.depart_buckets
                         } only %}
 
                         <div class="filter-subhead mt-3">Arrival</div>
                         {% include 'search/sidebar/pills.html.twig' with {
-                            'name': 'arr_when', 'options': sidebar.arrive_buckets
+                            'name': sidebar.prefix ~ 'arr_when', 'options': sidebar.arrive_buckets
                         } only %}
                     {% endblock %}
                 {% endembed %}
@@ -116,7 +116,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'arrdate', 'title': 'Arrival date', 'select_all': true, 'open': sidebar.active.arrdate } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'arrdate', 'name': 'arr_date', 'options': sidebar.arrive_dates
+                                'id': 'arrdate', 'name': sidebar.prefix ~ 'arr_date', 'options': sidebar.arrive_dates
                             } only %}
                         {% endblock %}
                     {% endembed %}
@@ -127,7 +127,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'airlines', 'title': 'Airlines', 'select_all': true, 'open': sidebar.active.airlines } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'airlines', 'name': 'airlines', 'options': sidebar.airlines,
+                                'id': 'airlines', 'name': sidebar.prefix ~ 'airlines', 'options': sidebar.airlines,
                                 'search': true, 'limit': 8, 'placeholder': 'Airline, IATA code'
                             } only %}
                         {% endblock %}
@@ -139,7 +139,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'via', 'title': 'Layover airports', 'select_all': true, 'open': sidebar.active.via } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'via', 'name': 'via', 'options': sidebar.layover_airports,
+                                'id': 'via', 'name': sidebar.prefix ~ 'via', 'options': sidebar.layover_airports,
                                 'search': true, 'limit': 8, 'placeholder': 'Airport, city, country, code'
                             } only %}
                         {% endblock %}
@@ -151,7 +151,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'fromap', 'title': 'Departure airports', 'select_all': true, 'open': sidebar.active.fromap } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'fromap', 'name': 'from_ap', 'options': sidebar.depart_airports
+                                'id': 'fromap', 'name': sidebar.prefix ~ 'from_ap', 'options': sidebar.depart_airports
                             } only %}
                         {% endblock %}
                     {% endembed %}
@@ -161,7 +161,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'toap', 'title': 'Arrival airports', 'select_all': true, 'open': sidebar.active.toap } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'toap', 'name': 'to_ap', 'options': sidebar.arrive_airports
+                                'id': 'toap', 'name': sidebar.prefix ~ 'to_ap', 'options': sidebar.arrive_airports
                             } only %}
                         {% endblock %}
                     {% endembed %}
@@ -172,7 +172,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'aircraft', 'title': 'Aircraft', 'select_all': true, 'open': sidebar.active.aircraft } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'aircraft', 'name': 'aircraft', 'options': sidebar.aircraft,
+                                'id': 'aircraft', 'name': sidebar.prefix ~ 'aircraft', 'options': sidebar.aircraft,
                                 'search': true, 'limit': 8, 'placeholder': 'Aircraft model'
                             } only %}
                         {% endblock %}

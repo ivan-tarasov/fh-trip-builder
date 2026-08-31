@@ -118,7 +118,9 @@ final readonly class FlightFinder
                 $query->returnDate,
                 SortMethod::fromRequest($query->sort),
                 $query->currentPage,
-                $query->filters,
+                // Step 2 lists the return leg, so it filters on the return's
+                // own set — the outbound's filters have already done their job.
+                $query->returnFilters,
                 $addBase + $addTax,
             );
         } else {

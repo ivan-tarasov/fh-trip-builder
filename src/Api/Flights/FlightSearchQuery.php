@@ -19,5 +19,8 @@ final readonly class FlightSearchQuery
         public int $adultNum,
         public int $childNum,
         public ?FlightFilters $filters = null,
+        // The return leg keeps its own set: which one applies depends on the
+        // step, and only the search knows that for certain.
+        public ?FlightFilters $returnFilters = null,
     ) {}
 }

@@ -134,6 +134,50 @@ final class FlightFiltersTest extends TestCase
         );
     }
 
+    public function testEachLegReadsOnlyItsOwnFilters(): void
+    {
+        // Both legs' filters travel in one query string. The outbound reads the
+        // bare keys, the return the prefixed ones, and neither sees the other —
+        // an airline that flies out often does not fly back.
+        $query = [
+            'stops' => '2',
+            'airlines' => 'QF',
+            'return_stops' => '1',
+            'return_airlines' => 'BA',
+        ];
+
+        $outbound = FlightFilters::fromQuery($query);
+        $return = FlightFilters::fromQuery($query, FlightFilters::RETURN_PREFIX);
+
+        self::assertSame([2], $outbound->stops);
+        self::assertSame(['QF'], $outbound->airlines);
+        self::assertSame([1], $return->stops);
+        self::assertSame(['BA'], $return->airlines);
+    }
+
+    public function testAReturnLegWithNoFiltersOfItsOwnStartsClean(): void
+    {
+        // Choosing a departing flight moves on to the return, which should be
+        // unfiltered however heavily the outbound was narrowed.
+        $query = ['stops' => '0', 'airlines' => 'QF', 'no_night' => '1', 'max_price' => '900'];
+
+        self::assertFalse(FlightFilters::fromQuery($query)->isEmpty());
+        self::assertTrue(FlightFilters::fromQuery($query, FlightFilters::RETURN_PREFIX)->isEmpty());
+    }
+
+    public function testQueryKeysArePrefixedForTheReturnLeg(): void
+    {
+        $bare = FlightFilters::queryKeys();
+        $prefixed = FlightFilters::queryKeys(FlightFilters::RETURN_PREFIX);
+
+        self::assertSame(FlightFilters::QUERY_KEYS, $bare);
+        self::assertCount(count($bare), $prefixed);
+        self::assertContains('return_airlines', $prefixed);
+        self::assertContains('return_no_night', $prefixed);
+        // The two sets must not overlap, or one leg would clear the other's.
+        self::assertSame([], array_intersect($bare, $prefixed));
+    }
+
     public function testAnEmptyQueryFiltersNothing(): void
     {
         self::assertTrue(FlightFilters::fromQuery([])->isEmpty());

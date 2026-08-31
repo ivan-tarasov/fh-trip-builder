@@ -105,6 +105,17 @@ final readonly class FlightFilters
     public const string QUERY_ARRIVE_BUCKETS = 'arr_when';
 
     /**
+     * Prefix marking the return leg's own filter set.
+     *
+     * A round trip is chosen one direction at a time and the two rarely want
+     * the same constraints — an airline that flies out may not fly back, and a
+     * morning departure has nothing to say about the flight home. Each leg
+     * therefore carries its own filters, and both sets ride in the URL so
+     * stepping back to a leg finds the filters it had.
+     */
+    public const string RETURN_PREFIX = 'return_';
+
+    /**
      * Read filters out of a query string.
      *
      * Everything here is visitor-supplied, so each value is checked against the
@@ -113,9 +124,13 @@ final readonly class FlightFilters
      * whole search away, which reads as "no flights" rather than "bad link".
      *
      * @param array<string, mixed> $query
+     * @param string $prefix RETURN_PREFIX to read the return leg's set
      */
-    public static function fromQuery(array $query): self
+    public static function fromQuery(array $query, string $prefix = ''): self
     {
+        // Read every key through the prefix, so one leg never sees the other's.
+        $query = self::forPrefix($query, $prefix);
+
         $csv = static function (mixed $raw, string $pattern, int $limit = 100): array {
             $values = array_filter(
                 self::values($raw),
@@ -169,6 +184,41 @@ final readonly class FlightFilters
             noGulfLayover: $flag($query[self::DIM_NO_GULF] ?? null),
             noVisaLayover: $flag($query[self::DIM_NO_VISA] ?? null),
         );
+    }
+
+    /**
+     * The subset of a query belonging to one leg, with the prefix stripped so
+     * the parser can work in plain key names.
+     *
+     * @param array<string, mixed> $query
+     * @return array<string, mixed>
+     */
+    private static function forPrefix(array $query, string $prefix): array
+    {
+        if ($prefix === '') {
+            return $query;
+        }
+
+        $own = [];
+
+        foreach (self::QUERY_KEYS as $key) {
+            if (array_key_exists($prefix . $key, $query)) {
+                $own[$key] = $query[$prefix . $key];
+            }
+        }
+
+        return $own;
+    }
+
+    /**
+     * This leg's query keys, prefixed. The controller carries both legs' keys
+     * through every URL it builds.
+     *
+     * @return list<string>
+     */
+    public static function queryKeys(string $prefix = ''): array
+    {
+        return array_map(static fn(string $key): string => $prefix . $key, self::QUERY_KEYS);
     }
 
     /**

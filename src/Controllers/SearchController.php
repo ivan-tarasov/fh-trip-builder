@@ -104,6 +104,7 @@ class SearchController extends AbstractController
                 adultNum: 1, // FIXME: now we provide only 1 adult count
                 childNum: 0, // FIXME: now we provide only 0 child count
                 filters: FlightFilters::fromQuery($this->get),
+                returnFilters: FlightFilters::fromQuery($this->get, FlightFilters::RETURN_PREFIX),
             );
 
             // Call the flight search directly; reuse the nested-object shape the
@@ -158,7 +159,10 @@ class SearchController extends AbstractController
                 // The filter form supplies filter values from its own controls,
                 // so it must not also carry the applied ones — an unchecked box
                 // would otherwise be re-submitted as a hidden field.
-                'carried_search' => $this->carried([self::GET_SORT, ...FlightFilters::QUERY_KEYS]),
+                'carried_search' => $this->carried([
+                    self::GET_SORT,
+                    ...FlightFilters::queryKeys($this->filterPrefix()),
+                ]),
                 // Which half of a round trip is being chosen (null for one way),
                 // and the outbound already picked, if any.
                 'step' => $this->data->step,
@@ -291,7 +295,10 @@ class SearchController extends AbstractController
         // of maps arrives as nested stdClass. Availability is a map of lists and
         // survives the cast; bounds needs the round trip.
         $bounds = (array) json_decode((string) json_encode($this->data->bounds), true);
-        $chosen = $this->filterQuery();
+        $prefix = $this->filterPrefix();
+        // Only this leg's values: the other leg's ride along in the URL but
+        // must not show up as ticked boxes on this one.
+        $chosen = $this->legFilterQuery($prefix);
 
         $codes = static fn(string $dimension): array => array_map(
             strval(...),
@@ -372,9 +379,11 @@ class SearchController extends AbstractController
             // Which groups hold something the visitor has set, so a filter is
             // never left hidden behind a collapsed heading.
             'active' => $this->activeSections($chosen),
-            // Whether anything is filtered, so the sidebar can offer a way out.
-            'any_applied' => !FlightFilters::fromQuery($this->get)->isEmpty(),
-            'clear_url' => $this->clearFiltersUrl(),
+            // The prefix the controls submit under, so each leg writes its own.
+            'prefix' => $prefix,
+            // Whether this leg is filtered, so the sidebar can offer a way out.
+            'any_applied' => !FlightFilters::fromQuery($this->get, $prefix)->isEmpty(),
+            'clear_url' => $this->clearFiltersUrl($prefix),
         ];
     }
 
@@ -675,13 +684,14 @@ class SearchController extends AbstractController
     }
 
     /**
-     * The same search with every filter dropped.
+     * The same search with this leg's filters dropped, leaving the other leg's
+     * alone — clearing the return should not undo the outbound's.
      */
-    private function clearFiltersUrl(): string
+    private function clearFiltersUrl(string $prefix): string
     {
         $kept = $this->get;
 
-        foreach (FlightFilters::QUERY_KEYS as $key) {
+        foreach (FlightFilters::queryKeys($prefix) as $key) {
             $kept[$key] = null;
         }
 
@@ -923,6 +933,48 @@ class SearchController extends AbstractController
     }
 
     /**
+     * This leg's filter values, keyed without the prefix so the option builders
+     * can work in plain names.
+     *
+     * @return array<string, string|list<string>|null>
+     */
+    private function legFilterQuery(string $prefix): array
+    {
+        $own = [];
+
+        foreach (FlightFilters::QUERY_KEYS as $key) {
+            $own[$key] = $this->get[$prefix . $key] ?? null;
+        }
+
+        return $own;
+    }
+
+    /**
+     * Which leg's filters the sidebar is currently editing.
+     *
+     * Step 2 lists the return, so its controls belong to the return's set.
+     * Everywhere else — step 1, step 3 and a one-way search — the outbound set
+     * is the one on show.
+     */
+    private function filterPrefix(): string
+    {
+        return $this->data?->step === 2 ? FlightFilters::RETURN_PREFIX : '';
+    }
+
+    /**
+     * Every filter key for both legs.
+     *
+     * @return list<string>
+     */
+    private function allFilterKeys(): array
+    {
+        return [
+            ...FlightFilters::queryKeys(),
+            ...FlightFilters::queryKeys(FlightFilters::RETURN_PREFIX),
+        ];
+    }
+
+    /**
      * The filter query keys as they arrived, untouched.
      *
      * They are kept verbatim rather than re-serialised from the parsed filters
@@ -936,7 +988,7 @@ class SearchController extends AbstractController
     {
         $carried = [];
 
-        foreach (FlightFilters::QUERY_KEYS as $key) {
+        foreach ($this->allFilterKeys() as $key) {
             $value = $_GET[$key] ?? null;
 
             // A checkbox group arrives as an array, a shared link as a string.
