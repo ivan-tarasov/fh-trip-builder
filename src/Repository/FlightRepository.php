@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Repository;
 
+use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\SortMethod;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
@@ -36,7 +37,15 @@ final readonly class FlightRepository
 
     // Cap the one-way pagination count so a very connective route can't make the
     // COUNT scan every 2-stop combination; results past this show as "N+".
-    private const int COUNT_CAP = 500;
+    //
+    // Filters are applied to these rows after they come back, so the cap also
+    // bounds what a filter can see — too low and a selective filter would search
+    // only the best N. Measured at 500/1000/2000/5000 across the densest routes
+    // in this data (LON-NYC, PAR-NYC, LON-PAR, and multi-airport pairs both
+    // ways): the union is materialised and sorted regardless, so the limit only
+    // bounds transfer and every setting timed the same. The densest route
+    // produced 353 candidates, so this is headroom rather than a live constraint.
+    private const int COUNT_CAP = 2000;
 
     // A connecting leg departs within this many days of the search date. This
     // constant bound lets the index seek the connecting leg by date (the exact
@@ -62,15 +71,28 @@ final readonly class FlightRepository
      * `cheapest` is the lowest total among the results this search can show, so
      * a row can be priced relative to it without a second query.
      *
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null}
+     * `available` reports, per filter dimension, which options would still
+     * return something — that is what greys out a control the sidebar cannot
+     * usefully offer.
+     *
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>}
      */
-    public function searchDirection(string $from, string $to, string $departDate, SortMethod $sort, int $page): array
-    {
+    public function searchDirection(
+        string $from,
+        string $to,
+        string $departDate,
+        SortMethod $sort,
+        int $page,
+        ?FlightFilters $filters = null,
+    ): array {
+        $filters ??= new FlightFilters();
+        $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => []];
+
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
 
         if ($fromCodes === [] || $toCodes === []) {
-            return ['rows' => [], 'total' => 0, 'cheapest' => null];
+            return $empty;
         }
 
         [$candidateSql, $params] = $this->candidateSql($fromCodes, $toCodes, $departDate);
@@ -84,29 +106,284 @@ final readonly class FlightRepository
         );
 
         if ($candidates === []) {
-            return ['rows' => [], 'total' => 0, 'cheapest' => null];
+            return $empty;
         }
 
-        $total = min(count($candidates), self::COUNT_CAP);
+        // Filters are applied here rather than in the SQL above: that query is
+        // the hot path and its joins were tuned around a fixed shape, while a
+        // candidate row already carries everything a filter asks about.
+        $candidates = $this->withLayoverCountries($candidates);
+        $available = $this->availability($candidates, $filters);
+        $matching = array_values(array_filter(
+            $candidates,
+            static fn(array $c): bool => $filters->matches($c),
+        ));
 
-        // Badges are decided across every candidate, not just this page, so
-        // "cheapest" means cheapest of the whole search.
-        $badges = count($candidates) >= self::BADGE_MIN_CHOICES ? $this->badgeKeys($candidates) : [];
+        if ($matching === []) {
+            return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available];
+        }
 
-        $pageItems = array_slice($candidates, $this->offset($page), self::PER_PAGE);
+        $total = min(count($matching), self::COUNT_CAP);
+
+        // Badges are decided across every match, not just this page, so
+        // "cheapest" means cheapest of what the search can actually show.
+        $badges = count($matching) >= self::BADGE_MIN_CHOICES ? $this->badgeKeys($matching) : [];
+
+        $pageItems = array_slice($matching, $this->offset($page), self::PER_PAGE);
 
         $legs = $this->hydrateLegs($this->collectLegIds($pageItems));
 
         $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs, $badges), $pageItems);
 
-        // Across every candidate, not just this page — otherwise page two would
+        // Across every match, not just this page — otherwise page two would
         // call its own first row the cheapest.
         $cheapest = min(array_map(
             static fn(array $c): float => (float) $c['price_base'] + (float) $c['price_tax'],
-            $candidates,
+            $matching,
         ));
 
-        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest];
+        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available];
+    }
+
+    /**
+     * Which value of each dimension would still return something.
+     *
+     * A dimension is measured with its own filter lifted, so the options on
+     * offer narrow as you choose elsewhere without the dimension you are
+     * choosing in collapsing to the one value you picked.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return array<string, list<string>|list<int>|bool>
+     */
+    private function availability(array $candidates, FlightFilters $filters): array
+    {
+        $available = [];
+
+        // Airlines and layover airports qualify an itinerary only when *every*
+        // one of its values is selected, so "does this value appear" is the
+        // wrong question — an airline can fly a leg of something without any
+        // ticket being wholly its own. Ask what adding it would unlock instead.
+        foreach ([
+            FlightFilters::DIM_AIRLINES => ['carriers', $filters->airlines],
+            FlightFilters::DIM_LAYOVER_AIRPORTS => ['stops_at', $filters->layoverAirports],
+        ] as $dimension => [$column, $selected]) {
+            $available[$dimension] = $this->subsetAvailability($candidates, $filters, $dimension, $column, $selected);
+        }
+
+        // Any leg on the type is enough, so appearing is the same as being
+        // selectable.
+        $available[FlightFilters::DIM_AIRCRAFT] = $this->distinct(
+            $candidates,
+            $filters,
+            FlightFilters::DIM_AIRCRAFT,
+            static function (array $c): array {
+                $raw = (string) ($c['aircraft'] ?? '');
+
+                return $raw === '' ? [] : explode(',', $raw);
+            },
+        );
+
+        $singles = [
+            FlightFilters::DIM_DEPART_AIRPORTS => 'dep_airport',
+            FlightFilters::DIM_ARRIVE_AIRPORTS => 'arr_airport',
+        ];
+
+        foreach ($singles as $dimension => $column) {
+            $available[$dimension] = $this->distinct($candidates, $filters, $dimension, static fn(array $c): array => [(string) $c[$column]]);
+        }
+
+        $available[FlightFilters::DIM_STOPS] = array_map(
+            intval(...),
+            $this->distinct($candidates, $filters, FlightFilters::DIM_STOPS, static fn(array $c): array => [(string) $c['stops']]),
+        );
+
+        $available[FlightFilters::DIM_ARRIVE_DATE] = $this->distinct(
+            $candidates,
+            $filters,
+            FlightFilters::DIM_ARRIVE_DATE,
+            static fn(array $c): array => [date('Y-m-d', (int) strtotime((string) $c['arrive_time']))],
+        );
+
+        foreach ([FlightFilters::DIM_DEPART_TIME => 'depart_time', FlightFilters::DIM_ARRIVE_TIME => 'arrive_time'] as $dimension => $column) {
+            $available[$dimension] = $this->distinct(
+                $candidates,
+                $filters,
+                $dimension,
+                static fn(array $c): array => [self::bucketOf((string) $c[$column])],
+            );
+        }
+
+        // A toggle is worth offering only if switching it on leaves something.
+        foreach ([
+            FlightFilters::DIM_SINGLE_CARRIER => static fn(array $c): bool => count(array_unique(explode(',', (string) $c['carriers']))) <= 1,
+            FlightFilters::DIM_NO_NIGHT => static fn(array $c): bool => new FlightFilters(noNightLayover: true)->matches($c),
+            FlightFilters::DIM_NO_GULF => static fn(array $c): bool => new FlightFilters(noGulfLayover: true)->matches($c),
+            FlightFilters::DIM_NO_VISA => static fn(array $c): bool => new FlightFilters(noVisaLayover: true)->matches($c),
+        ] as $dimension => $wouldKeep) {
+            $available[$dimension] = false;
+
+            foreach ($candidates as $candidate) {
+                if ($filters->matches($candidate, $dimension) && $wouldKeep($candidate)) {
+                    $available[$dimension] = true;
+                    break;
+                }
+            }
+        }
+
+        return $available;
+    }
+
+    /**
+     * Options for a dimension an itinerary only satisfies when all of its
+     * values are selected.
+     *
+     * An option is worth offering when picking it would let something through:
+     * either an itinerary already qualifies, or it needs this one value and
+     * nothing else. Without that an airline flying a single leg of a two-carrier
+     * trip would be offered, and choosing it would return nothing.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @param list<string> $selected values already chosen for this dimension
+     * @return list<string>
+     */
+    private function subsetAvailability(
+        array $candidates,
+        FlightFilters $filters,
+        string $dimension,
+        string $column,
+        array $selected,
+    ): array {
+        $seen = [];
+
+        foreach ($candidates as $candidate) {
+            if (!$filters->matches($candidate, $dimension)) {
+                continue;
+            }
+
+            $raw = (string) ($candidate[$column] ?? '');
+            $values = $raw === '' ? [] : array_values(array_unique(explode(',', $raw)));
+            $missing = $selected === [] ? $values : array_values(array_diff($values, $selected));
+
+            if ($missing === []) {
+                // Already allowed — keep everything it uses selectable, so a
+                // chosen option never greys itself out.
+                foreach ($values as $value) {
+                    $seen[$value] = true;
+                }
+            } elseif (count($missing) === 1) {
+                $seen[$missing[0]] = true;
+            }
+        }
+
+        $found = array_keys($seen);
+        sort($found);
+
+        return array_map(strval(...), $found);
+    }
+
+    /**
+     * Distinct values a dimension takes across the candidates that pass every
+     * other filter.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @param callable(array<string, mixed>): list<string> $values
+     * @return list<string>
+     */
+    private function distinct(array $candidates, FlightFilters $filters, string $dimension, callable $values): array
+    {
+        $seen = [];
+
+        foreach ($candidates as $candidate) {
+            if (!$filters->matches($candidate, $dimension)) {
+                continue;
+            }
+
+            foreach ($values($candidate) as $value) {
+                if ($value !== '') {
+                    $seen[$value] = true;
+                }
+            }
+        }
+
+        $found = array_keys($seen);
+        sort($found);
+
+        return array_map(strval(...), $found);
+    }
+
+    /**
+     * Which time-of-day bucket a stamp falls in, or '' when the buckets do not
+     * cover it (they should, but a misconfigured range must not invent one).
+     */
+    private static function bucketOf(string $stamp): string
+    {
+        $at = (int) date('G', (int) strtotime($stamp)) * 60 + (int) date('i', (int) strtotime($stamp));
+
+        /** @var array<string, array{from: int, to: int}> $buckets */
+        $buckets = (array) Config::get('search.filters.time_buckets', []);
+
+        foreach ($buckets as $key => $range) {
+            if ($at >= (int) $range['from'] && $at < (int) $range['to']) {
+                return (string) $key;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Tag each candidate with the countries its layovers and endpoints sit in,
+     * so the visa and Gulf filters can be decided without joining `airports`
+     * into the search query.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return list<array<string, mixed>>
+     */
+    private function withLayoverCountries(array $candidates): array
+    {
+        $countries = $this->airportCountries();
+
+        return array_map(static function (array $candidate) use ($countries): array {
+            $stops = (string) ($candidate['stops_at'] ?? '');
+
+            $candidate['stop_countries'] = $stops === ''
+                ? []
+                : array_values(array_filter(array_map(
+                    static fn(string $code): ?string => $countries[$code] ?? null,
+                    explode(',', $stops),
+                )));
+
+            $candidate['origin_country'] = $countries[(string) $candidate['dep_airport']] ?? null;
+            $candidate['destination_country'] = $countries[(string) $candidate['arr_airport']] ?? null;
+
+            return $candidate;
+        }, $candidates);
+    }
+
+    /**
+     * Airport code to country, memoised — a few hundred rows that every
+     * candidate in a search looks up.
+     *
+     * @return array<string, string>
+     */
+    private function airportCountries(): array
+    {
+        // Static rather than an instance field because the repository is
+        // readonly, and per-process rather than per-call because a round trip
+        // searches twice and the airport list does not move between them.
+        static $map = null;
+
+        if ($map !== null) {
+            return $map;
+        }
+
+        $map = [];
+
+        foreach ($this->connection->fetchAll('SELECT code, country_code FROM ' . Table::Airports->value) as $row) {
+            $map[(string) $row['code']] = (string) $row['country_code'];
+        }
+
+        return $map;
     }
 
     /**
@@ -233,7 +510,11 @@ final readonly class FlightRepository
             f1.price_base AS price_base, f1.price_tax AS price_tax,
             f1.duration AS duration,
             f1.departure_time AS depart_time, f1.arrival_time AS arrive_time,
-            f1.rating AS rating
+            f1.rating AS rating,
+            f1.airline AS carriers, f1.aircraft AS aircraft,
+            f1.departure_airport AS dep_airport, f1.arrival_airport AS arr_airport,
+            NULL AS stops_at, 0 AS layover_minutes,
+            NULL AS stop1_in, NULL AS stop1_out, NULL AS stop2_in, NULL AS stop2_out
             FROM {$flights} f1
             WHERE f1.departure_airport IN ({$fromPh}) AND f1.arrival_airport IN ({$toPh})
               AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY";
@@ -252,7 +533,14 @@ final readonly class FlightRepository
                     f1.duration + f2.duration
                         + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time) AS duration,
                     f1.departure_time AS depart_time, f2.arrival_time AS arrive_time,
-                    (f1.rating + f2.rating) / 2 AS rating
+                    (f1.rating + f2.rating) / 2 AS rating,
+                    CONCAT_WS(',', f1.airline, f2.airline) AS carriers,
+                    CONCAT_WS(',', f1.aircraft, f2.aircraft) AS aircraft,
+                    f1.departure_airport AS dep_airport, f2.arrival_airport AS arr_airport,
+                    f1.arrival_airport AS stops_at,
+                    TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time) AS layover_minutes,
+                    f1.arrival_time AS stop1_in, f2.departure_time AS stop1_out,
+                    NULL AS stop2_in, NULL AS stop2_out
                     FROM {$flights} f1
                     INNER JOIN {$flights} f2 ON f2.departure_airport = f1.arrival_airport
                         AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE
@@ -280,7 +568,15 @@ final readonly class FlightRepository
                         + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time)
                         + TIMESTAMPDIFF(MINUTE, f2.arrival_time, f3.departure_time) AS duration,
                     f1.departure_time AS depart_time, f3.arrival_time AS arrive_time,
-                    (f1.rating + f2.rating + f3.rating) / 3 AS rating
+                    (f1.rating + f2.rating + f3.rating) / 3 AS rating,
+                    CONCAT_WS(',', f1.airline, f2.airline, f3.airline) AS carriers,
+                    CONCAT_WS(',', f1.aircraft, f2.aircraft, f3.aircraft) AS aircraft,
+                    f1.departure_airport AS dep_airport, f3.arrival_airport AS arr_airport,
+                    CONCAT_WS(',', f1.arrival_airport, f2.arrival_airport) AS stops_at,
+                    TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time)
+                        + TIMESTAMPDIFF(MINUTE, f2.arrival_time, f3.departure_time) AS layover_minutes,
+                    f1.arrival_time AS stop1_in, f2.departure_time AS stop1_out,
+                    f2.arrival_time AS stop2_in, f3.departure_time AS stop2_out
                     FROM {$flights} f1
                     INNER JOIN {$flights} f2 ON f2.departure_airport = f1.arrival_airport
                         AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE

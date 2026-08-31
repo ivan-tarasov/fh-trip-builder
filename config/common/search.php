@@ -119,6 +119,36 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Filters
+    |--------------------------------------------------------------------------
+    |
+    | Time-of-day buckets are half-open minute-of-day windows [from, to), so a
+    | flight belongs to exactly one. `gulf_countries` backs the "no layover in
+    | the Gulf" toggle; a layover country outside both the origin's and the
+    | destination's country is what the transit-visa toggle hides.
+    |
+    */
+
+    'filters' => [
+        'time_buckets' => [
+            'early_morning' => ['title' => 'Early morning', 'icon' => 'cloud-sun', 'from' => 0, 'to' => 360],
+            'morning' => ['title' => 'Morning', 'icon' => 'sun', 'from' => 360, 'to' => 720],
+            'day' => ['title' => 'Afternoon', 'icon' => 'sun', 'from' => 720, 'to' => 1080],
+            'evening' => ['title' => 'Evening', 'icon' => 'cloud-moon', 'from' => 1080, 'to' => 1260],
+            'late_evening' => ['title' => 'Late evening', 'icon' => 'moon', 'from' => 1260, 'to' => 1440],
+        ],
+
+        'gulf_countries' => ['AE', 'SA', 'QA', 'KW', 'BH', 'OM'],
+
+        // What counts as a layover spent overnight. The "Night layover" notice
+        // on a card and the toggle that hides those itineraries read the same
+        // two numbers, so the filter removes exactly what the notice flags.
+        'night_from_hour' => 23,
+        'night_to_hour' => 6,
+    ],
+
     'connections' => [
         'min_connect_minutes' => 45,
         'max_connect_minutes' => 360,

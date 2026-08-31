@@ -22,8 +22,6 @@ class ItineraryPresenter
     private const int LAYOVER_TIGHT_MINUTES = 90;
     private const int LAYOVER_LONG_MINUTES = 300;
     private const int LONG_TRIP_MINUTES = 1440;
-    private const int NIGHT_FROM_HOUR = 23;
-    private const int NIGHT_TO_HOUR = 6;
 
     /**
      * @return array{direction: array<string, mixed>, ids: list<int>}
@@ -251,10 +249,14 @@ class ItineraryPresenter
     {
         $start = strtotime($from);
         $end = strtotime($to);
+        // Shared with the "no night layovers" filter, so the notice and the
+        // filter cannot drift apart.
+        $fromHour = (int) Config::get('search.filters.night_from_hour', 23);
+        $toHour = (int) Config::get('search.filters.night_to_hour', 6);
 
         for ($day = strtotime('midnight', $start) - 86400; $day <= $end; $day += 86400) {
-            $nightStart = $day + self::NIGHT_FROM_HOUR * 3600;
-            $nightEnd = $day + 86400 + self::NIGHT_TO_HOUR * 3600;
+            $nightStart = $day + $fromHour * 3600;
+            $nightEnd = $day + 86400 + $toHour * 3600;
 
             if ($start < $nightEnd && $end > $nightStart) {
                 return true;
