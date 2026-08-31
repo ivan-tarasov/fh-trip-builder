@@ -56,10 +56,11 @@
 
     {# --- Full detail for both halves --- #}
     <div class="card-body border-top pt-1">
-        <button class="btn btn-sm btn-link text-decoration-none collapsed flight-details-toggle" type="button"
+        <button class="btn btn-sm details-toggle collapsed" type="button"
                 data-bs-toggle="collapse" data-bs-target="#package-details" aria-expanded="false">
-            <span class="if-collapsed">Show flight details</span>
-            <span class="if-expanded">Hide flight details</span>
+            <i class="fas fa-circle-info pe-1"></i>
+            <span class="if-collapsed">Flight details</span>
+            <span class="if-expanded">Hide details</span>
             <i class="fas fa-chevron-down ps-1 chevron"></i>
         </button>
         <div class="collapse" id="package-details">

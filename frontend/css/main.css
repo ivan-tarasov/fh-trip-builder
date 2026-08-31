@@ -1349,12 +1349,37 @@ textarea {
 }
 
 
-/* "Show flight details" toggle: swap the label and rotate the chevron by state. */
-.flight-details-toggle .if-expanded { display: none; }
-.flight-details-toggle:not(.collapsed) .if-collapsed { display: none; }
-.flight-details-toggle:not(.collapsed) .if-expanded { display: inline; }
-.flight-details-toggle .chevron { transition: transform 0.2s ease; }
-.flight-details-toggle:not(.collapsed) .chevron { transform: rotate(180deg); }
+/* "Flight details" toggle. A bordered pill rather than a text link: on a card
+   already carrying links and icons, an underlined phrase did not read as the
+   one control that opens the itinerary. Swaps its label and rotates the
+   chevron by state. */
+.details-toggle {
+  border: 1px solid #dee2e6;
+  border-radius: 999px;
+  padding: .25rem .85rem;
+  color: #495057;
+  background-color: #fff;
+  font-weight: 500;
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+
+.details-toggle:hover {
+  background-color: #f1f3f5;
+  border-color: #ced4da;
+  color: #212529;
+}
+
+.details-toggle:not(.collapsed) {
+  background-color: #e7f1ff;
+  border-color: #b6d4fe;
+  color: #0a58ca;
+}
+
+.details-toggle .if-expanded { display: none; }
+.details-toggle:not(.collapsed) .if-collapsed { display: none; }
+.details-toggle:not(.collapsed) .if-expanded { display: inline; }
+.details-toggle .chevron { transition: transform 0.2s ease; }
+.details-toggle:not(.collapsed) .chevron { transform: rotate(180deg); }
 
 /* Two-step search: departing -> returning progress track. */
 .step-track { font-size: .875rem; }
@@ -1406,7 +1431,7 @@ textarea {
 
 /* Route bar: a part per flight leg and per layover, each sized by its minutes.
    Hovering a part highlights just that stretch of the journey. */
-.route { padding-bottom: 1.35rem; }
+.route { padding-bottom: 1rem; }
 
 .route__head {
   display: flex;
@@ -1421,39 +1446,49 @@ textarea {
 
 .route__bar { display: flex; align-items: center; gap: 4px; }
 
+/* Every part is the same height, and the line you see is drawn by ::before.
+   Two things follow, both of which were wrong when the part *was* the line: a
+   2px layover is now a 16px hover target, and because the boxes are identical
+   the airport codes beneath them share one baseline instead of the stop
+   sitting 2px low and jumping as its bar thickened on hover. */
 .route__leg,
 .route__stop {
   position: relative;
   flex-basis: 0;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  height: 16px;
+}
+
+.route__leg::before,
+.route__stop::before {
+  content: "";
+  display: block;
+  width: 100%;
+  border-radius: 3px;
   transition: background-color .12s ease, height .12s ease;
 }
 
 /* A flight is a solid bar; a layover is the thin gap between two flights. */
-.route__leg {
+.route__leg { min-width: 26px; }
+.route__leg::before { height: 6px; background-color: #ced4da; }
+
+.route__stop { min-width: 24px; }
+.route__stop::before { height: 2px; background-color: #dee2e6; }
+
+.route__leg:hover::before { background-color: #f5622d; }
+
+.route__stop:hover::before {
   height: 6px;
-  min-width: 26px;
-  border-radius: 3px;
-  background-color: #ced4da;
-}
-
-.route__stop {
-  height: 2px;
-  min-width: 18px;
-  background-color: #dee2e6;
-}
-
-.route__leg:hover { background-color: #f5622d; }
-
-.route__stop:hover {
-  height: 6px;
-  border-radius: 3px;
   background-color: #f5622d;
 }
 
 .route__code {
   position: absolute;
-  top: 12px;
+  /* Measured from the bottom edge of an equal-height part, so the departure,
+     the connections and the arrival all label the bar from the same line. */
+  top: 100%;
   font-size: .75rem;
   font-weight: 500;
   color: var(--bs-primary);
@@ -1470,6 +1505,16 @@ textarea {
 
 /* The connection airport lights up with its own leg of the journey. */
 .route__stop:hover .route__code { color: #f5622d; }
+
+/* The codes sit below the bar, so they are the only thing occupying that strip
+   and can safely take the pointer. Hovering a code is hovering its part: the
+   tooltip opens and the bar lights up, whether you aim at the line or at the
+   three letters under it. A connection code is centred on a part narrower than
+   itself and is allowed to overhang without widening the bar. */
+.route__code {
+  padding: 2px 3px;
+  margin: -2px -3px;
+}
 
 /* Badge label sitting on the shoulder of a card it describes. */
 .flight-badges {
@@ -1511,6 +1556,14 @@ textarea {
 .icon-btn.is-active { color: #e03131; }
 .icon-btn.is-copied { background-color: #d3f9d8; color: #2b8a3e; }
 
+/* Removing a saved flight: the one destructive control on the saved page. */
+.icon-btn--danger:hover { background-color: #ffe3e3; color: #c92a2a; }
+
+.saved-empty__icon {
+  font-size: 3rem;
+  color: #ced4da;
+}
+
 /* A thing worth knowing before you choose: tight connection, night wait, … */
 .notice {
   display: inline-flex;
@@ -1526,11 +1579,40 @@ textarea {
 /* One treatment for all of them: these are things to look twice at. */
 .notice { background-color: #ffe9e9; color: #d6336c; }
 
-/* The whole card is the click target, forwarded from JS rather than by an
-   overlay — an overlay would sit on top of the timeline and kill its hover. */
-.flight-card { cursor: pointer; }
-.flight-card .card-select { color: #adb5bd; }
-.flight-card:hover .card-select { color: var(--bs-primary); }
+/* Choosing a flight is a button, not the card. A whole-card target competed
+   with everything else on the card that responds to a click — the timeline,
+   the logos, save and share — and gave no visible promise of what it would do.
+   It lives in the footer, on the same line as the details toggle. */
+.card-select {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: .5rem 1.25rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The card's action strip: what you can do with this flight, set apart from
+   the flight itself. More controls will land on this row. */
+.flight-card__footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: .75rem 1rem;
+}
+
+/* The two controls sit on one line until the card is too narrow for both. */
+.flight-card__footer > .d-flex { flex-wrap: wrap; row-gap: .5rem; }
+
+/* Actions split into two groups: red notice icons, then the buttons. */
+.card-actions__divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 .75rem;
+  background-color: #dee2e6;
+}
+
+/* A flex child only shrinks below its content width once this is lifted, and
+   the route bar has to give way to the button beside it. */
+.min-w-0 { min-width: 0; }
 
 /* Icon buttons hold both states and swap with a class, because FontAwesome
    rewrites <i> into <svg> and class edits from JS would not survive. */

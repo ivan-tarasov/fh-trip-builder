@@ -223,45 +223,66 @@
         });
     });
 
-    /*[ Whole-card selection ]
+    /*[ Saved flights ]
     ===========================================================*/
-    // Clicking anywhere on a card selects it, except on the controls that do
-    // their own thing. Done here rather than with a stretched-link overlay,
-    // which would block hovering the timeline, the logos and the price note.
-    document.querySelectorAll('.flight-card').forEach(function (card) {
-        card.addEventListener('click', function (event) {
-            if (event.target.closest('a, button, input, label, [data-bs-toggle]')) {
-                return;
-            }
-
-            const select = card.querySelector('.card-select');
-
-            if (select) {
-                select.click();
-            }
-        });
-    });
-
-    /*[ Saved flights + share link ]
-    ===========================================================*/
+    // Kept in a cookie rather than localStorage so the server can render
+    // /my/saved without the page having to hand the list back over AJAX.
+    // A saved flight is its ordered leg ids, which is all that is needed to
+    // rebuild the itinerary; prices are looked up fresh, never stored.
     const SAVED_KEY = 'tb_saved_flights';
+    const SAVED_MAX = 50;
+    const SAVED_MAX_AGE = 60 * 60 * 24 * 365;
 
     function savedFlights() {
+        const match = document.cookie.match(/(?:^|;\s*)tb_saved_flights=([^;]*)/);
+
+        if (!match) {
+            return [];
+        }
+
         try {
-            return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+            const list = JSON.parse(decodeURIComponent(match[1]));
+
+            return Array.isArray(list) ? list.filter(function (key) {
+                return typeof key === 'string';
+            }) : [];
         } catch (e) {
             return [];
         }
     }
 
     function storeSavedFlights(list) {
-        try {
-            localStorage.setItem(SAVED_KEY, JSON.stringify(list));
-        } catch (e) {
-            // Private browsing or a full quota: the heart still toggles for
-            // this page view, it just will not be remembered.
-        }
+        // This cookie is sent with every request, so cap it. Oldest saves fall
+        // off the end rather than the newest silently failing to stick.
+        const value = encodeURIComponent(JSON.stringify(list.slice(0, SAVED_MAX)));
+
+        document.cookie = SAVED_KEY + '=' + value
+            + ';path=/;max-age=' + SAVED_MAX_AGE + ';samesite=lax'
+            + (window.location.protocol === 'https:' ? ';secure' : '');
     }
+
+    // Anything saved before this moved to a cookie would otherwise vanish.
+    (function migrateFromLocalStorage() {
+        try {
+            const legacy = window.localStorage.getItem(SAVED_KEY);
+
+            if (legacy === null) {
+                return;
+            }
+
+            if (savedFlights().length === 0) {
+                const list = JSON.parse(legacy);
+
+                if (Array.isArray(list) && list.length) {
+                    storeSavedFlights(list);
+                }
+            }
+
+            window.localStorage.removeItem(SAVED_KEY);
+        } catch (e) {
+            // Private browsing, or no localStorage at all: nothing to carry over.
+        }
+    })();
 
     // Saved flights live in this browser only — there is no account to sync to.
     document.querySelectorAll('.js-like').forEach(function (button) {
@@ -270,7 +291,6 @@
         button.classList.toggle('is-active', savedFlights().indexOf(key) !== -1);
 
         button.addEventListener('click', function (event) {
-            // Keep the click off the card, which would navigate away.
             event.preventDefault();
             event.stopPropagation();
 
@@ -278,7 +298,7 @@
             const at = list.indexOf(key);
 
             if (at === -1) {
-                list.push(key);
+                list.unshift(key);
             } else {
                 list.splice(at, 1);
             }
@@ -288,6 +308,43 @@
         });
     });
 
+    // The saved-flights page: dropping one takes its card with it, so the list
+    // does not disagree with the cookie until the next reload.
+    document.querySelectorAll('.js-unsave').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const key = button.dataset.flightKey;
+            const list = savedFlights();
+            const at = list.indexOf(key);
+
+            if (at !== -1) {
+                list.splice(at, 1);
+                storeSavedFlights(list);
+            }
+
+            const card = button.closest('.saved-item');
+
+            if (card) {
+                card.remove();
+            }
+
+            const remaining = document.querySelectorAll('.saved-item').length;
+            const empty = document.querySelector('.js-saved-empty');
+
+            if (remaining === 0 && empty) {
+                empty.classList.remove('d-none');
+                const list_ = document.querySelector('.js-saved-list');
+
+                if (list_) {
+                    list_.remove();
+                }
+            }
+        });
+    });
+
+    /*[ Share link ]
+    ===========================================================*/
     // The clipboard API rejects when the document is not focused, so keep a
     // selection-based fallback rather than dropping the user into a prompt.
     function copyToClipboard(text) {

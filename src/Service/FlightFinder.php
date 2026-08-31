@@ -208,6 +208,30 @@ final readonly class FlightFinder
     }
 
     /**
+     * Rebuild one saved itinerary from its ordered leg ids, shaped like a search
+     * result so the same card renders it. Returns null when the ids no longer
+     * resolve to a connected itinerary — a saved flight can go stale, and the
+     * saved list drops those rather than rendering a broken card.
+     *
+     * @param list<int> $ids
+     * @return array<string, mixed>|null
+     */
+    public function itinerary(array $ids): ?array
+    {
+        $itinerary = new FlightRepository($this->connection)->itineraryByIds($ids);
+
+        if ($itinerary === null) {
+            return null;
+        }
+
+        return [
+            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, self::CABIN_OUTBOUND),
+            self::RESPONSE_PRICE_BASE => (float) $itinerary['price_base'],
+            self::RESPONSE_PRICE_TAX => (float) $itinerary['price_tax'],
+        ];
+    }
+
+    /**
      * A single shaped flight leg by id (for the add-trip flow), or null.
      *
      * @return array<string, mixed>|null
