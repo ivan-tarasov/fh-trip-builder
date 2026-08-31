@@ -50,6 +50,21 @@
                     <input type="hidden" name="sort" value="{{ session_sort }}" />
                 {% endif %}
 
+                {% if sidebar.other_leg %}
+                    {# Each leg filters separately, so say when the other one is
+                       narrowed — otherwise its effect on the trip is invisible
+                       from here. #}
+                    <div class="filters__other-leg">
+                        <i class="fas fa-circle-info"></i>
+                        <span>
+                            Your <strong>{{ sidebar.other_leg.leg }}</strong> flight has
+                            {{ sidebar.other_leg.count }} filter{{ sidebar.other_leg.count == 1 ? '' : 's' }}
+                            applied. These controls only affect the
+                            {{ sidebar.other_leg.leg == 'departing' ? 'returning' : 'departing' }} flight.
+                        </span>
+                    </div>
+                {% endif %}
+
                 {# --- Stops --- #}
                 {% embed 'search/sidebar/section.html.twig' with { 'id': 'stops', 'title': 'Stops' } %}
                     {% block body %}

@@ -173,22 +173,12 @@ final readonly class FlightRepository
     {
         $available = [];
 
-        // A layover airport qualifies an itinerary only when *every* connection
-        // it makes is selected, so "does this value appear" is the wrong
-        // question — ask what adding it would unlock instead.
-        $available[FlightFilters::DIM_LAYOVER_AIRPORTS] = $this->subsetAvailability(
-            $candidates,
-            $filters,
-            FlightFilters::DIM_LAYOVER_AIRPORTS,
-            'stops_at',
-            $filters->layoverAirports,
-        );
-
-        // Airlines and aircraft both match on any leg, so appearing anywhere is
-        // the same as being selectable.
+        // Airlines, aircraft and layover airports all match on any leg, so
+        // appearing anywhere is the same as being selectable.
         foreach ([
             FlightFilters::DIM_AIRLINES => 'carriers',
             FlightFilters::DIM_AIRCRAFT => 'aircraft',
+            FlightFilters::DIM_LAYOVER_AIRPORTS => 'stops_at',
         ] as $dimension => $column) {
             $available[$dimension] = $this->distinct(
                 $candidates,
@@ -293,54 +283,6 @@ final readonly class FlightRepository
         }
 
         return $bounds;
-    }
-
-    /**
-     * Options for a dimension an itinerary only satisfies when all of its
-     * values are selected.
-     *
-     * An option is worth offering when picking it would let something through:
-     * either an itinerary already qualifies, or it needs this one value and
-     * nothing else. Without that an airline flying a single leg of a two-carrier
-     * trip would be offered, and choosing it would return nothing.
-     *
-     * @param list<array<string, mixed>> $candidates
-     * @param list<string> $selected values already chosen for this dimension
-     * @return list<string>
-     */
-    private function subsetAvailability(
-        array $candidates,
-        FlightFilters $filters,
-        string $dimension,
-        string $column,
-        array $selected,
-    ): array {
-        $seen = [];
-
-        foreach ($candidates as $candidate) {
-            if (!$filters->matches($candidate, $dimension)) {
-                continue;
-            }
-
-            $raw = (string) ($candidate[$column] ?? '');
-            $values = $raw === '' ? [] : array_values(array_unique(explode(',', $raw)));
-            $missing = $selected === [] ? $values : array_values(array_diff($values, $selected));
-
-            if ($missing === []) {
-                // Already allowed — keep everything it uses selectable, so a
-                // chosen option never greys itself out.
-                foreach ($values as $value) {
-                    $seen[$value] = true;
-                }
-            } elseif (count($missing) === 1) {
-                $seen[$missing[0]] = true;
-            }
-        }
-
-        $found = array_keys($seen);
-        sort($found);
-
-        return array_map(strval(...), $found);
     }
 
     /**

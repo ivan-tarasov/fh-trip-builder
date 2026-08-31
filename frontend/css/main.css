@@ -1735,6 +1735,22 @@ textarea {
 
 .filters .card-body { padding: .5rem 1rem 1rem; }
 
+/* A quiet note that the other half of the trip is filtered too. */
+.filters__other-leg {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin: .75rem 0 .25rem;
+  padding: .625rem .75rem;
+  border-radius: .5rem;
+  background-color: #e7f1ff;
+  color: #0a58ca;
+  font-size: .8125rem;
+  line-height: 1.35;
+}
+
+.filters__other-leg i { margin-top: .1rem; }
+
 /* --- Section: title, optional Select all, chevron ------------------------ */
 .filter-section { border-bottom: 1px solid #f1f3f5; }
 .filter-section:last-of-type { border-bottom: 0; }

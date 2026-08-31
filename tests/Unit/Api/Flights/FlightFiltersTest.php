@@ -178,6 +178,24 @@ final class FlightFiltersTest extends TestCase
         self::assertSame([], array_intersect($bare, $prefixed));
     }
 
+    public function testAppliedCountCountsEachControlOnce(): void
+    {
+        // Drives the "your departing flight has N filters applied" note.
+        self::assertSame(0, new FlightFilters()->appliedCount());
+        self::assertSame(1, new FlightFilters(stops: [0, 1])->appliedCount());
+        self::assertSame(3, new FlightFilters(
+            stops: [0],
+            airlines: ['QF'],
+            noNightLayover: true,
+        )->appliedCount());
+
+        // A bucket and a custom window are the same control, counted once.
+        self::assertSame(1, new FlightFilters(
+            departWindow: [360, 720],
+            departBuckets: ['morning'],
+        )->appliedCount());
+    }
+
     public function testAnEmptyQueryFiltersNothing(): void
     {
         self::assertTrue(FlightFilters::fromQuery([])->isEmpty());
@@ -325,23 +343,29 @@ final class FlightFiltersTest extends TestCase
         self::assertTrue($filters->matches($this->candidate(['depart_time' => '2026-09-15 00:30:00'])));
     }
 
-    public function testLayoverAirportsAllowDirectFlightsThrough(): void
+    public function testChoosingALayoverAirportFindsTripsThroughIt(): void
     {
-        // The control is "connections I will accept". A direct flight has none
-        // to object to, so restricting connections must not hide it.
-        $direct = $this->candidate(['stops' => 0, 'stops_at' => '', 'carriers' => 'AF']);
-
-        self::assertTrue(new FlightFilters(layoverAirports: ['LHR'])->matches($direct));
-        self::assertFalse(new FlightFilters(layoverAirports: ['LHR'])->matches($this->candidate()));
-        self::assertTrue(new FlightFilters(layoverAirports: ['AMS'])->matches($this->candidate()));
-    }
-
-    public function testEveryLayoverMustBeAllowedNotJustOne(): void
-    {
+        // "Show me trips through Amsterdam" — one connection matching is
+        // enough. Requiring every connection to be chosen meant a two-stop
+        // itinerary needed both its airports picked, so on a route flown mostly
+        // with two stops no single airport could return anything and the list
+        // offered one option out of eleven on the cards.
         $twoStop = $this->candidate(['stops' => 2, 'stops_at' => 'AMS,IAD']);
 
-        self::assertFalse(new FlightFilters(layoverAirports: ['AMS'])->matches($twoStop));
+        self::assertTrue(new FlightFilters(layoverAirports: ['AMS'])->matches($twoStop));
+        self::assertTrue(new FlightFilters(layoverAirports: ['IAD'])->matches($twoStop));
         self::assertTrue(new FlightFilters(layoverAirports: ['AMS', 'IAD'])->matches($twoStop));
+        self::assertFalse(new FlightFilters(layoverAirports: ['LHR'])->matches($twoStop));
+    }
+
+    public function testADirectFlightIsNotATripThroughAnywhere(): void
+    {
+        // It connects nowhere, so asking for trips through Heathrow excludes it.
+        $direct = $this->candidate(['stops' => 0, 'stops_at' => '', 'carriers' => 'AF']);
+
+        self::assertFalse(new FlightFilters(layoverAirports: ['LHR'])->matches($direct));
+        // With no airport chosen the filter is off and it passes as before.
+        self::assertTrue(new FlightFilters()->matches($direct));
     }
 
     public function testAircraftMatchesWhenAnyLegUsesTheType(): void

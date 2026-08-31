@@ -381,6 +381,8 @@ class SearchController extends AbstractController
             'active' => $this->activeSections($chosen),
             // The prefix the controls submit under, so each leg writes its own.
             'prefix' => $prefix,
+            // What the leg you are not looking at is filtered by.
+            'other_leg' => $this->otherLegNote($prefix),
             // Whether this leg is filtered, so the sidebar can offer a way out.
             'any_applied' => !FlightFilters::fromQuery($this->get, $prefix)->isEmpty(),
             'clear_url' => $this->clearFiltersUrl($prefix),
@@ -930,6 +932,38 @@ class SearchController extends AbstractController
                 && !in_array($k, $drop, true),
             ARRAY_FILTER_USE_BOTH,
         );
+    }
+
+    /**
+     * A note about the leg that is not on screen, or null when it is unfiltered.
+     *
+     * Each leg of a round trip keeps its own filters, so standing on one of
+     * them the other's narrowing is invisible — the result count moves for
+     * reasons the sidebar does not explain.
+     *
+     * @return array{leg: string, count: int}|null
+     */
+    private function otherLegNote(string $prefix): ?array
+    {
+        $step = $this->data?->step;
+
+        // Only a round trip mid-choice has another leg to speak of: a one-way
+        // search has none, and step 3 lists nothing to filter.
+        if ($step === null || $step === 3) {
+            return null;
+        }
+
+        $otherPrefix = $prefix === '' ? FlightFilters::RETURN_PREFIX : '';
+        $count = FlightFilters::fromQuery($this->get, $otherPrefix)->appliedCount();
+
+        if ($count === 0) {
+            return null;
+        }
+
+        return [
+            'leg' => $otherPrefix === '' ? 'departing' : 'returning',
+            'count' => $count,
+        ];
     }
 
     /**

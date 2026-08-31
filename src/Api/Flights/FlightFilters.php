@@ -306,6 +306,35 @@ final readonly class FlightFilters
     }
 
     /**
+     * How many filters are set, counting each control once.
+     *
+     * Used to tell a visitor standing on one leg of a round trip that the other
+     * leg is narrowed — otherwise the only clue is the query string.
+     */
+    public function appliedCount(): int
+    {
+        $set = [
+            $this->stops !== [],
+            $this->airlines !== [],
+            $this->singleCarrier,
+            $this->maxPrice !== null,
+            $this->maxDuration !== null,
+            $this->departWindow !== null || $this->departBuckets !== [],
+            $this->arriveWindow !== null || $this->arriveBuckets !== [],
+            $this->arriveDates !== [],
+            $this->layoverAirports !== [],
+            $this->departAirports !== [],
+            $this->arriveAirports !== [],
+            $this->aircraft !== [],
+            $this->noNightLayover,
+            $this->noGulfLayover,
+            $this->noVisaLayover,
+        ];
+
+        return count(array_filter($set));
+    }
+
+    /**
      * Whether any active filter needs to know which country a layover is in.
      * Resolving that costs a lookup, so the search only pays it when asked.
      */
@@ -380,10 +409,14 @@ final readonly class FlightFilters
             self::DIM_ARRIVE_DATE => fn(array $c): bool => $this->arriveDates === []
                 || in_array(date('Y-m-d', (int) strtotime((string) $c['arrive_time'])), $this->arriveDates, true),
 
-            // Every connection has to be somewhere you allowed; a direct
-            // itinerary has no connection to object to, so it always passes.
+            // Connecting anywhere chosen is enough. Requiring *every*
+            // connection to be chosen is the stricter reading, and it made the
+            // filter almost unusable: on a route served mostly by two-stop
+            // itineraries no single airport could unlock anything, so the list
+            // offered one airport out of eleven on the cards. A direct flight
+            // connects nowhere, so it is not "a trip through Hong Kong".
             self::DIM_LAYOVER_AIRPORTS => fn(array $c): bool => $this->layoverAirports === []
-                || array_diff($this->listOf($c, 'stops_at'), $this->layoverAirports) === [],
+                || array_intersect($this->listOf($c, 'stops_at'), $this->layoverAirports) !== [],
 
             self::DIM_DEPART_AIRPORTS => fn(array $c): bool => $this->departAirports === []
                 || in_array((string) $c['dep_airport'], $this->departAirports, true),
