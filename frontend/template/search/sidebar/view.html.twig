@@ -45,7 +45,7 @@
                 {% endif %}
 
                 {# --- Stops --- #}
-                {% embed 'search/sidebar/section.html.twig' with { 'id': 'stops', 'title': 'Stops' } %}
+                {% embed 'search/sidebar/section.html.twig' with { 'id': 'stops', 'title': 'Stops', 'select_all': true } %}
                     {% block body %}
                         {% include 'search/sidebar/checklist.html.twig' with {
                             'id': 'stops', 'name': sidebar.prefix ~ 'stops', 'options': sidebar.stops

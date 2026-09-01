@@ -440,40 +440,68 @@
         });
     });
 
-    // Select all / Clear, one pair per list. The label follows the state, so
-    // the button always says what pressing it will do.
-    document.querySelectorAll('.js-select-all').forEach(function (button) {
-        const list = document.getElementById(button.dataset.list);
+    // Select all / Clear, one per filter group, covering whatever controls that
+    // group happens to hold — boxes, switches or a slider. The label follows
+    // the state, so the button always says what pressing it will do.
+    document.querySelectorAll('.filter-section').forEach(function (section) {
+        const button = section.querySelector('.js-section-reset');
 
-        if (!list) {
+        if (!button) {
             return;
         }
 
         const boxes = function () {
             return Array.prototype.slice.call(
-                list.querySelectorAll('input[type=checkbox]:not(:disabled)')
+                section.querySelectorAll('input[type=checkbox]:not(:disabled)')
             );
         };
 
+        const sliders = function () {
+            return Array.prototype.slice.call(section.querySelectorAll('.js-filter-slider'));
+        };
+
+        // A slider counts as set only when it is off its maximum; parked at the
+        // top it excludes nothing, which is the same as untouched.
+        const isSet = function () {
+            return boxes().some(function (box) { return box.checked; })
+                || sliders().some(function (input) {
+                    return parseInt(input.value, 10) < parseInt(input.dataset.max, 10);
+                });
+        };
+
         const sync = function () {
-            button.classList.toggle('has-selection', boxes().some(function (box) {
-                return box.checked;
-            }));
+            section.classList.toggle('has-selection', isSet());
         };
 
         button.addEventListener('click', function () {
-            const clearing = boxes().some(function (box) {
-                return box.checked;
-            });
+            if (isSet()) {
+                boxes().forEach(function (box) {
+                    box.checked = false;
+                    box.dispatchEvent(new Event('change', { bubbles: true }));
+                });
 
-            boxes().forEach(function (box) {
-                box.checked = !clearing;
-            });
+                sliders().forEach(function (input) {
+                    const slider = $(input).data('ionRangeSlider');
+                    const max = parseInt(input.dataset.max, 10);
+
+                    if (slider) {
+                        slider.update({ from: max });
+                    }
+
+                    input.value = max;
+                });
+            } else {
+                // Only reachable on a group that offers "Select all".
+                boxes().forEach(function (box) {
+                    box.checked = true;
+                    box.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            }
 
             sync();
         });
 
-        list.addEventListener('change', sync);
+        section.addEventListener('change', sync);
         sync();
     });
 
@@ -527,6 +555,13 @@
             }
         };
 
+        // ion.rangeSlider writes the value straight onto the input without
+        // firing anything, so the group's Clear button would never learn that
+        // the slider had moved. Announce it ourselves.
+        const announce = function () {
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
         $(input).ionRangeSlider({
             skin: 'round',
             type: 'single',
@@ -538,9 +573,11 @@
             hide_from_to: true,
             onStart: function (data) { show(data.from); },
             onChange: function (data) { show(data.from); },
+            // Once, on release, rather than on every pixel of the drag.
+            onFinish: function (data) { show(data.from); announce(); },
             // update() does not fire onChange, so the label would go stale
             // whenever the handle is moved by anything but a drag.
-            onUpdate: function (data) { show(data.from); },
+            onUpdate: function (data) { show(data.from); announce(); },
         });
 
         show(parseInt(input.dataset.from, 10));

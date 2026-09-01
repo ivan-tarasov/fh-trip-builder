@@ -11,6 +11,11 @@
 <div class="filter-list js-list" id="list-{{ id }}" data-limit="{{ limit|default(0) }}">
     {% for option in options %}
         <label class="filter-row{{ option.available ? '' : ' is-unavailable' }}{% if limit|default(0) and loop.index > limit %} is-over-limit{% endif %}">
+            {# The control leads the row: it is the state you scan a list for, and
+               a column of them down the left edge is read in one pass. #}
+            <input type="checkbox" class="form-check-input filter-row__check" name="{{ name }}[]"
+                   value="{{ option.value }}"{{ option.checked ? ' checked' : '' }}{{ option.available ? '' : ' disabled' }} />
+
             {% if option.logo_url is defined and option.logo_url %}
                 <img src="{{ option.logo_url }}" class="filter-row__logo" alt="" />
             {% endif %}
@@ -27,8 +32,6 @@
             {% if option.price is defined and option.price %}
                 <span class="filter-row__price">${{ option.price.whole }}</span>
             {% endif %}
-            <input type="checkbox" class="form-check-input filter-row__check" name="{{ name }}[]"
-                   value="{{ option.value }}"{{ option.checked ? ' checked' : '' }}{{ option.available ? '' : ' disabled' }} />
         </label>
     {% endfor %}
 </div>

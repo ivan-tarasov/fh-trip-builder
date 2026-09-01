@@ -1939,10 +1939,15 @@ textarea {
    rather than sitting next to a heading with nothing under it. */
 .filter-section__toggle.collapsed ~ .filter-section__link { display: none; }
 
-/* Label reflects what the button will do; JS flips the class. */
+/* Label reflects what the button will do; JS flips the class on the section. */
 .filter-section__link .if-some { display: none; }
-.filter-section__link.has-selection .if-none { display: none; }
-.filter-section__link.has-selection .if-some { display: inline; }
+.filter-section.has-selection .filter-section__link .if-none { display: none; }
+.filter-section.has-selection .filter-section__link .if-some { display: inline; }
+
+/* A group with nothing to "select all" shows the button only once there is
+   something to clear — an always-visible dead control is worse than none. */
+.filter-section__link--clear-only { display: none; }
+.filter-section.has-selection .filter-section__link--clear-only { display: inline; }
 
 .filter-section__body { padding-bottom: 1rem; }
 
@@ -2003,6 +2008,12 @@ textarea {
 }
 
 .filter-row__text { flex: 1; min-width: 0; }
+
+/* With the control moved to the front, the price is the last thing in every
+   row of every group — so all of them right-align to one column instead of
+   each group ending wherever its own control happened to be wide. */
+.filter-row__check,
+.filter-toggle .form-check { order: -1; }
 
 .filter-row__label {
   display: block;

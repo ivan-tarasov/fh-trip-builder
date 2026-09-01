@@ -10,12 +10,15 @@
             <span class="filter-section__title">{{ title }}</span>
         </button>
 
-        {% if select_all|default(false) %}
-            <button type="button" class="filter-section__link js-select-all" data-list="list-{{ id }}">
-                <span class="if-none">Select all</span>
-                <span class="if-some">Clear</span>
-            </button>
-        {% endif %}
+        {# Every group can be cleared, not just the lists: a slider you have
+           dragged or a switch you have flipped needs an undo as much as a
+           checkbox does. "Select all" is only offered where selecting all
+           means something — you cannot select all of a price. #}
+        <button type="button"
+                class="filter-section__link js-section-reset{{ select_all|default(false) ? '' : ' filter-section__link--clear-only' }}">
+            {% if select_all|default(false) %}<span class="if-none">Select all</span>{% endif %}
+            <span class="if-some">Clear</span>
+        </button>
 
         <button class="filter-section__chevron-btn{{ (open ?? true) ? '' : ' collapsed' }}" type="button"
                 data-bs-toggle="collapse" data-bs-target="#sec-{{ id }}"
