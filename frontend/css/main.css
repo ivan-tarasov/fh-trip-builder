@@ -1444,6 +1444,16 @@ textarea {
 
 .route__summary { flex: 1; text-align: center; }
 
+.route__transit { display: block; }
+
+/* Quieter than the transit line above it: the waits are detail you read once
+   you have decided the total time is acceptable. */
+.route__waits {
+  display: block;
+  color: #adb5bd;
+  font-size: .75rem;
+}
+
 .route__bar { display: flex; align-items: center; gap: 4px; }
 
 /* Every part is the same height, and the line you see is drawn by ::before.
