@@ -1,15 +1,28 @@
 {# One switch. Unavailable means turning it on would leave no flights at all,
    so it reads the same as an unavailable option anywhere else. #}
 <label class="filter-toggle{{ toggle.available ? '' : ' is-unavailable' }}">
+    {# The icon travels with the last word of the label, inside a span that
+       cannot break. Removing the whitespace between them was not enough: an
+       inline-block is itself a break opportunity, so the icon still landed
+       alone on the next line whenever the label filled its line. #}
     <span class="filter-toggle__text">
-        {{ toggle.label }}
-        {% if toggle.hint %}
-            <i class="fas fa-info-circle filter-toggle__info"
-               data-toggle="tooltip" data-placement="top" title="{{ toggle.hint }}"></i>
-        {% endif %}
-        {% if not toggle.available %}<span class="filter-row__none">no flights</span>{% endif %}
+        {%- set words = toggle.label|split(' ') -%}
+        {%- if words|length > 1 %}{{ words|slice(0, words|length - 1)|join(' ') }} {% endif -%}
+        <span class="filter-toggle__tail">
+            {{- words|last -}}
+            {%- if toggle.hint -%}
+                <i class="fas fa-info-circle filter-toggle__info"
+                   data-toggle="tooltip" data-placement="top" title="{{ toggle.hint }}"></i>
+            {%- endif -%}
+        </span>
     </span>
-    {% if toggle.price is defined and toggle.price %}
+
+    {# "no flights" and a price never both apply, so they share the slot beside
+       the switch. Inside the label it squeezed the text into three lines and
+       broke mid-phrase. #}
+    {% if not toggle.available %}
+        <span class="filter-row__none filter-row__none--inline">no flights</span>
+    {% elseif toggle.price is defined and toggle.price %}
         <span class="filter-row__price">${{ toggle.price.whole }}</span>
     {% endif %}
     <span class="form-check form-switch mb-0">

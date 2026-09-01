@@ -352,14 +352,14 @@ class SearchController extends AbstractController
             // A toggle is available when switching it on would leave something.
             'toggles' => [
                 FlightFilters::DIM_SINGLE_CARRIER => [
-                    'label' => 'All flights with one airline',
+                    'label' => 'All flights, one airline',
                     'hint' => 'One carrier for the whole trip, so bags are checked through.',
                     'on' => isset($chosen[FlightFilters::DIM_SINGLE_CARRIER]),
                     'available' => (bool) ($available[FlightFilters::DIM_SINGLE_CARRIER] ?? false),
                     'price' => $this->optionPrice(FlightFilters::DIM_SINGLE_CARRIER, '1'),
                 ],
                 FlightFilters::DIM_NO_VISA => [
-                    'label' => 'No transit visa needed',
+                    'label' => 'No transit visa',
                     'hint' => 'Hides connections in a country that is neither your origin nor your'
                         . ' destination. Check the requirements yourself before booking.',
                     'on' => isset($chosen[FlightFilters::DIM_NO_VISA]),
