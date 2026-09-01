@@ -17,10 +17,10 @@ final class SortMethodTest extends TestCase
         self::assertSame(SortMethod::Recommended, SortMethod::fromRequest('recommended'));
     }
 
-    public function testFromRequestFallsBackToPrice(): void
+    public function testFromRequestFallsBackToTheDefaultSort(): void
     {
-        self::assertSame(SortMethod::Price, SortMethod::fromRequest('bogus'));
-        self::assertSame(SortMethod::Price, SortMethod::fromRequest(''));
+        self::assertSame(SortMethod::Recommended, SortMethod::fromRequest('bogus'));
+        self::assertSame(SortMethod::Recommended, SortMethod::fromRequest(''));
     }
 
     public function testCandidateOrderByLeadsWithItsOwnKey(): void

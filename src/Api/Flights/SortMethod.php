@@ -21,12 +21,13 @@ enum SortMethod: string
     case Recommended = 'recommended';
 
     /**
-     * Resolve a requested sort string, falling back to Price for anything
-     * unknown (matches the legacy `?? SORT[...price]` behaviour).
+     * Resolve a requested sort string, falling back to the app's default for
+     * anything unknown — the same sort a visitor gets with no `sort` at all,
+     * so a mangled link lands where a bare search would.
      */
     public static function fromRequest(string $sort): self
     {
-        return self::tryFrom($sort) ?? self::Price;
+        return self::tryFrom($sort) ?? self::Recommended;
     }
 
     /**

@@ -25,7 +25,7 @@
                     {% endif %}
                 {% endfor %}
                 {# Only when it is not the default, so a plain search stays clean. #}
-                {% if session_sort != 'price' %}
+                {% if session_sort != default_sort %}
                     <input type="hidden" name="sort" value="{{ session_sort }}" />
                 {% endif %}
 

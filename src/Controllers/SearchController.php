@@ -8,6 +8,7 @@ use Exception;
 use stdClass;
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\FlightSearchQuery;
+use TripBuilder\Api\Flights\SortMethod;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
@@ -37,7 +38,10 @@ class SearchController extends AbstractController
         GET_RETURN_ITIN = 'return_itin',
         GET_SORT = 'sort';
 
-    private const string DEFAULT_SORT = 'price';
+    // The balanced sort, as the market leads with. It is the one sort ranked
+    // across the whole result set rather than by ORDER BY, so it costs a pass
+    // over the candidates that the others do not.
+    private const string DEFAULT_SORT = 'recommended';
 
     // The three that earn a tab of their own; the rest sit in the dropdown.
     private const array PRIMARY_SORTS = ['recommended', 'price', 'duration'];
@@ -154,6 +158,7 @@ class SearchController extends AbstractController
                 // and carry the rest of the search as hidden fields.
                 'form_path' => Helper::getUrlPath(),
                 'session_sort' => $this->sort(),
+                'default_sort' => self::DEFAULT_SORT,
                 // Sorting moved out of the sidebar and above the results, where
                 // each option can show what choosing it would get you.
                 'sort_tabs' => $this->sortTabs(),
@@ -1263,7 +1268,10 @@ class SearchController extends AbstractController
     {
         $sort = $this->get[self::GET_SORT] ?? null;
 
-        return is_string($sort) && $sort !== '' ? $sort : self::DEFAULT_SORT;
+        // Anything unrecognised resolves to the default, so the tab strip
+        // agrees with the order the results actually came back in — and a
+        // mangled value is not carried on into every link on the page.
+        return is_string($sort) && SortMethod::tryFrom($sort) !== null ? $sort : self::DEFAULT_SORT;
     }
 
     private function presenter(): ItineraryPresenter
