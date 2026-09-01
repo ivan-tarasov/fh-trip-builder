@@ -32,6 +32,7 @@ final readonly class FlightFilters
     public const string DIM_ARRIVE_TIME = 'arr_time';
     public const string DIM_ARRIVE_DATE = 'arr_date';
     public const string DIM_LAYOVER_AIRPORTS = 'via';
+    public const string DIM_LAYOVER_RANGE = 'layover';
     public const string DIM_DEPART_AIRPORTS = 'from_ap';
     public const string DIM_ARRIVE_AIRPORTS = 'to_ap';
     public const string DIM_AIRCRAFT = 'aircraft';
@@ -47,6 +48,7 @@ final readonly class FlightFilters
      * @param list<string> $departBuckets time_buckets keys
      * @param list<string> $arriveBuckets time_buckets keys
      * @param list<string> $arriveDates Y-m-d
+     * @param array{0: int, 1: int}|null $layoverRange minutes each wait must fall in
      * @param list<string> $layoverAirports allowed connection airports
      * @param list<string> $departAirports allowed first-leg departure airports
      * @param list<string> $arriveAirports allowed last-leg arrival airports
@@ -64,6 +66,7 @@ final readonly class FlightFilters
         public array $arriveBuckets = [],
         public array $arriveDates = [],
         public array $layoverAirports = [],
+        public ?array $layoverRange = null,
         public array $departAirports = [],
         public array $arriveAirports = [],
         public array $aircraft = [],
@@ -91,6 +94,7 @@ final readonly class FlightFilters
         self::QUERY_ARRIVE_BUCKETS,
         self::DIM_ARRIVE_DATE,
         self::DIM_LAYOVER_AIRPORTS,
+        self::DIM_LAYOVER_RANGE,
         self::DIM_DEPART_AIRPORTS,
         self::DIM_ARRIVE_AIRPORTS,
         self::DIM_AIRCRAFT,
@@ -177,6 +181,7 @@ final readonly class FlightFilters
             arriveBuckets: $buckets($query[self::QUERY_ARRIVE_BUCKETS] ?? null),
             arriveDates: self::dates($query[self::DIM_ARRIVE_DATE] ?? null),
             layoverAirports: $csv($query[self::DIM_LAYOVER_AIRPORTS] ?? null, '/^[A-Z]{3}$/'),
+            layoverRange: self::minutesRange($query[self::DIM_LAYOVER_RANGE] ?? null),
             departAirports: $csv($query[self::DIM_DEPART_AIRPORTS] ?? null, '/^[A-Z]{3}$/'),
             arriveAirports: $csv($query[self::DIM_ARRIVE_AIRPORTS] ?? null, '/^[A-Z]{3}$/'),
             aircraft: $csv($query[self::DIM_AIRCRAFT] ?? null, '/^[A-Z0-9]{3}$/'),
@@ -297,6 +302,7 @@ final readonly class FlightFilters
             && $this->arriveBuckets === []
             && $this->arriveDates === []
             && $this->layoverAirports === []
+            && $this->layoverRange === null
             && $this->departAirports === []
             && $this->arriveAirports === []
             && $this->aircraft === []
@@ -323,6 +329,7 @@ final readonly class FlightFilters
             $this->arriveWindow !== null || $this->arriveBuckets !== [],
             $this->arriveDates !== [],
             $this->layoverAirports !== [],
+            $this->layoverRange !== null,
             $this->departAirports !== [],
             $this->arriveAirports !== [],
             $this->aircraft !== [],
@@ -418,6 +425,13 @@ final readonly class FlightFilters
             self::DIM_LAYOVER_AIRPORTS => fn(array $c): bool => $this->layoverAirports === []
                 || array_intersect($this->listOf($c, 'stops_at'), $this->layoverAirports) !== [],
 
+            // Each wait separately, not their total: the point is to rule out a
+            // connection too tight to make or too long to sit through, and a
+            // sum hides both. A direct flight has no connection to fall foul
+            // of the range, so it passes.
+            self::DIM_LAYOVER_RANGE => fn(array $c): bool => $this->layoverRange === null
+                || $this->waitsWithin($c, $this->layoverRange),
+
             self::DIM_DEPART_AIRPORTS => fn(array $c): bool => $this->departAirports === []
                 || in_array((string) $c['dep_airport'], $this->departAirports, true),
 
@@ -473,6 +487,69 @@ final readonly class FlightFilters
         }
 
         return false;
+    }
+
+    /**
+     * Every wait on this itinerary, in minutes.
+     *
+     * @param array<string, mixed> $candidate
+     * @return list<int>
+     */
+    public static function waits(array $candidate): array
+    {
+        $waits = [];
+
+        foreach ([['stop1_in', 'stop1_out'], ['stop2_in', 'stop2_out']] as [$in, $out]) {
+            if (($candidate[$in] ?? null) === null || ($candidate[$out] ?? null) === null) {
+                continue;
+            }
+
+            // A wait happens at one airport, so its local stamps subtract safely.
+            $waits[] = (int) round(
+                (strtotime((string) $candidate[$out]) - strtotime((string) $candidate[$in])) / 60,
+            );
+        }
+
+        return $waits;
+    }
+
+    /**
+     * @param array<string, mixed> $candidate
+     * @param array{0: int, 1: int} $range
+     */
+    private function waitsWithin(array $candidate, array $range): bool
+    {
+        foreach (self::waits($candidate) as $wait) {
+            if ($wait < $range[0] || $wait > $range[1]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * A "min-max" range in minutes, or null when it is missing or malformed.
+     *
+     * Unlike a time-of-day window this has no natural ceiling to compare
+     * against, so a range covering everything cannot be recognised here — the
+     * sidebar simply does not submit a slider it has not moved.
+     *
+     * @return array{0: int, 1: int}|null
+     */
+    private static function minutesRange(mixed $raw): ?array
+    {
+        // Either separator: the slider widget writes "from;to" while a
+        // hand-written link says "from-to". Rejecting one would drop the filter
+        // without a word.
+        if (!is_string($raw) || preg_match('/^(\d{1,5})[;-](\d{1,5})$/', $raw, $match) !== 1) {
+            return null;
+        }
+
+        $from = (int) $match[1];
+        $to = (int) $match[2];
+
+        return $from > $to ? null : [$from, $to];
     }
 
     /**

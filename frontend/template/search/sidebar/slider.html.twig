@@ -5,7 +5,12 @@
         <span class="filter-slider__label">{{ label }}</span>
         <span class="filter-slider__value" id="val-{{ id }}">{{ display }}</span>
     </div>
+    {# `to` present means two handles: a range with a floor as well as a
+       ceiling. Its submitted value is "from-to"; a single handle submits the
+       number itself. #}
     <input type="text" class="js-filter-slider" id="{{ id }}" name="{{ name }}"
            data-min="{{ min }}" data-max="{{ max }}" data-from="{{ value }}" data-step="{{ step }}"
-           data-kind="{{ kind }}" data-output="val-{{ id }}" value="{{ value }}" />
+           {% if to is defined %}data-to="{{ to }}"{% endif %}
+           data-kind="{{ kind }}" data-output="val-{{ id }}"
+           value="{{ to is defined ? value ~ '-' ~ to : value }}" />
 </div>

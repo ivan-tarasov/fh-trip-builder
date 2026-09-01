@@ -2015,6 +2015,31 @@ textarea {
 .filter-row__check,
 .filter-toggle .form-check { order: -1; }
 
+/* The price under a long name rather than beside it. */
+.filter-row__price--below {
+  display: block;
+  margin-top: .05rem;
+  font-size: .75rem;
+}
+
+/* "Only" narrows to one option. Hidden until the row is hovered or focused, so
+   fourteen of them do not compete with the names for attention. */
+.filter-row__only {
+  flex: 0 0 auto;
+  border: 1px solid #dee2e6;
+  border-radius: 999px;
+  background-color: #fff;
+  padding: .1rem .55rem;
+  font-size: .75rem;
+  color: var(--bs-primary);
+  opacity: 0;
+  transition: opacity .12s ease, background-color .12s ease;
+}
+
+.filter-row:hover .filter-row__only,
+.filter-row__only:focus-visible { opacity: 1; }
+.filter-row__only:hover { background-color: #e7f1ff; }
+
 .filter-row__label {
   display: block;
   font-size: .9375rem;

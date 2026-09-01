@@ -122,7 +122,24 @@
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
                                 'id': 'airlines', 'name': sidebar.prefix ~ 'airlines', 'options': sidebar.airlines,
-                                'search': true, 'limit': 8, 'placeholder': 'Airline, IATA code'
+                                'search': true, 'limit': 8, 'placeholder': 'Airline, IATA code',
+                                'price_below': true, 'only_action': true
+                            } only %}
+                        {% endblock %}
+                    {% endembed %}
+                {% endif %}
+
+                {# --- Layover duration --- #}
+                {% if sidebar.ranges.layover %}
+                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'layover', 'title': 'Layovers', 'open': sidebar.active.layover } %}
+                        {% block body %}
+                            {% include 'search/sidebar/slider.html.twig' with {
+                                'id': 'layover', 'name': sidebar.prefix ~ 'layover', 'kind': 'minutes',
+                                'label': 'Each layover',
+                                'min': sidebar.ranges.layover.min, 'max': sidebar.ranges.layover.max,
+                                'step': sidebar.ranges.layover.step,
+                                'value': sidebar.ranges.layover.from, 'to': sidebar.ranges.layover.to,
+                                'display': 'Any'
                             } only %}
                         {% endblock %}
                     {% endembed %}

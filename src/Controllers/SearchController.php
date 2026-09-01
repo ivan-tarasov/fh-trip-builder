@@ -382,6 +382,13 @@ class SearchController extends AbstractController
                     'price' => $this->optionPrice(FlightFilters::DIM_NO_NIGHT, '1'),
                 ],
             ],
+            'ranges' => [
+                FlightFilters::DIM_LAYOVER_RANGE => $this->rangeOption(
+                    $bounds[FlightFilters::DIM_LAYOVER_RANGE] ?? null,
+                    $chosen[FlightFilters::DIM_LAYOVER_RANGE] ?? null,
+                    self::DURATION_STEPS,
+                ),
+            ],
             'sliders' => [
                 FlightFilters::DIM_PRICE => $this->sliderOption(
                     $bounds[FlightFilters::DIM_PRICE] ?? null,
@@ -449,6 +456,7 @@ class SearchController extends AbstractController
             ],
             'arrdate' => [FlightFilters::DIM_ARRIVE_DATE],
             'airlines' => [FlightFilters::DIM_AIRLINES],
+            'layover' => [FlightFilters::DIM_LAYOVER_RANGE],
             'via' => [FlightFilters::DIM_LAYOVER_AIRPORTS],
             'fromap' => [FlightFilters::DIM_DEPART_AIRPORTS],
             'toap' => [FlightFilters::DIM_ARRIVE_AIRPORTS],
@@ -712,6 +720,37 @@ class SearchController extends AbstractController
             'step' => $step,
             'value' => is_numeric($value) ? max($min, min((int) $value, $max)) : $max,
         ];
+    }
+
+    /**
+     * A two-handled slider's ends, step and current pair.
+     *
+     * Same rounding as a single slider, but both handles matter: a layover
+     * range rules out connections that are too tight as well as too long.
+     *
+     * @param array{min: int, max: int}|null $bound
+     * @param list<int> $steps
+     * @return array<string, mixed>|null
+     */
+    private function rangeOption(?array $bound, mixed $value, array $steps): ?array
+    {
+        if ($bound === null || $bound['max'] <= $bound['min']) {
+            return null;
+        }
+
+        $step = $this->niceStep($bound['max'] - $bound['min'], $steps);
+        $min = (int) floor($bound['min'] / $step) * $step;
+        $max = (int) ceil($bound['max'] / $step) * $step;
+
+        $from = $min;
+        $to = $max;
+
+        if (is_string($value) && preg_match('/^(\d{1,5})-(\d{1,5})$/', $value, $match) === 1) {
+            $from = max($min, min((int) $match[1], $max));
+            $to = max($from, min((int) $match[2], $max));
+        }
+
+        return ['min' => $min, 'max' => $max, 'step' => $step, 'from' => $from, 'to' => $to];
     }
 
     /**

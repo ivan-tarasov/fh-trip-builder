@@ -440,6 +440,27 @@
         });
     });
 
+    // "Only": keep this option and drop the rest of its list. The row is a
+    // <label>, so the click has to be stopped from reaching the checkbox it
+    // wraps — otherwise the box would toggle on top of what we just set.
+    document.querySelectorAll('.js-only').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const list = document.getElementById(button.dataset.list);
+
+            if (!list) {
+                return;
+            }
+
+            list.querySelectorAll('input[type=checkbox]:not(:disabled)').forEach(function (box) {
+                box.checked = box.value === button.dataset.value;
+                box.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+    });
+
     // Select all / Clear, one per filter group, covering whatever controls that
     // group happens to hold — boxes, switches or a slider. The label follows
     // the state, so the button always says what pressing it will do.
@@ -462,11 +483,22 @@
 
         // A slider counts as set only when it is off its maximum; parked at the
         // top it excludes nothing, which is the same as untouched.
+        const untouched = function (input) {
+            const min = parseInt(input.dataset.min, 10);
+            const max = parseInt(input.dataset.max, 10);
+
+            if (input.dataset.to === undefined) {
+                return parseInt(input.value, 10) >= max;
+            }
+
+            const pair = String(input.value).split(/[;-]/);
+
+            return parseInt(pair[0], 10) <= min && parseInt(pair[1], 10) >= max;
+        };
+
         const isSet = function () {
             return boxes().some(function (box) { return box.checked; })
-                || sliders().some(function (input) {
-                    return parseInt(input.value, 10) < parseInt(input.dataset.max, 10);
-                });
+                || sliders().some(function (input) { return !untouched(input); });
         };
 
         const sync = function () {
@@ -482,13 +514,15 @@
 
                 sliders().forEach(function (input) {
                     const slider = $(input).data('ionRangeSlider');
+                    const min = parseInt(input.dataset.min, 10);
                     const max = parseInt(input.dataset.max, 10);
+                    const both = input.dataset.to !== undefined;
 
                     if (slider) {
-                        slider.update({ from: max });
+                        slider.update(both ? { from: min, to: max } : { from: max });
                     }
 
-                    input.value = max;
+                    input.value = both ? min + '-' + max : String(max);
                 });
             } else {
                 // Only reachable on a group that offers "Select all".
@@ -545,14 +579,27 @@
         const input = this;
         const kind = input.dataset.kind;
         const output = document.getElementById(input.dataset.output);
+        const min = parseInt(input.dataset.min, 10);
         const max = parseInt(input.dataset.max, 10);
+        // Two handles when the server supplied an upper one.
+        const isRange = input.dataset.to !== undefined;
 
-        const show = function (value) {
-            if (output) {
+        const show = function (from, to) {
+            if (!output) {
+                return;
+            }
+
+            if (!isRange) {
                 // At the top of the range nothing is excluded, so say so
                 // rather than showing a number that reads like a limit.
-                output.textContent = value >= max ? 'Any' : sliderLabel(kind, value);
+                output.textContent = from >= max ? 'Any' : sliderLabel(kind, from);
+
+                return;
             }
+
+            output.textContent = from <= min && to >= max
+                ? 'Any'
+                : sliderLabel(kind, from) + ' \u2013 ' + sliderLabel(kind, to);
         };
 
         // ion.rangeSlider writes the value straight onto the input without
@@ -562,25 +609,32 @@
             input.dispatchEvent(new Event('change', { bubbles: true }));
         };
 
+        // ion.rangeSlider writes "from;to" into a double input; the filters read
+        // "from-to", so keep the value ourselves.
+        const store = function (data) {
+            input.value = isRange ? data.from + '-' + data.to : String(data.from);
+        };
+
         $(input).ionRangeSlider({
             skin: 'round',
-            type: 'single',
-            min: parseInt(input.dataset.min, 10),
+            type: isRange ? 'double' : 'single',
+            min: min,
             max: max,
             from: parseInt(input.dataset.from, 10),
+            to: isRange ? parseInt(input.dataset.to, 10) : undefined,
             step: parseInt(input.dataset.step, 10) || 1,
             hide_min_max: true,
             hide_from_to: true,
-            onStart: function (data) { show(data.from); },
-            onChange: function (data) { show(data.from); },
+            onStart: function (data) { show(data.from, data.to); },
+            onChange: function (data) { show(data.from, data.to); store(data); },
             // Once, on release, rather than on every pixel of the drag.
-            onFinish: function (data) { show(data.from); announce(); },
+            onFinish: function (data) { show(data.from, data.to); store(data); announce(); },
             // update() does not fire onChange, so the label would go stale
-            // whenever the handle is moved by anything but a drag.
-            onUpdate: function (data) { show(data.from); announce(); },
+            // whenever a handle is moved by anything but a drag.
+            onUpdate: function (data) { show(data.from, data.to); store(data); announce(); },
         });
 
-        show(parseInt(input.dataset.from, 10));
+        show(parseInt(input.dataset.from, 10), isRange ? parseInt(input.dataset.to, 10) : undefined);
     });
 
     // A slider built inside a collapsed section measures zero width and stays
@@ -667,10 +721,28 @@
 
         filterForm.addEventListener('submit', function () {
             filterForm.querySelectorAll('.js-filter-slider').forEach(function (input) {
-                const value = parseInt(input.value, 10);
+                const min = parseInt(input.dataset.min, 10);
                 const max = parseInt(input.dataset.max, 10);
+                const slider = $(input).data('ionRangeSlider');
 
-                if (!isNaN(value) && !isNaN(max) && value >= max) {
+                // ion.rangeSlider writes a double as "from;to" over whatever we
+                // set, and the filters read "from-to". Take the value from the
+                // widget itself, which is the one thing that is never stale.
+                if (slider && input.dataset.to !== undefined) {
+                    input.value = slider.result.from + '-' + slider.result.to;
+                }
+
+                if (input.dataset.to === undefined) {
+                    if (parseInt(input.value, 10) >= max) {
+                        input.disabled = true;
+                    }
+
+                    return;
+                }
+
+                const pair = String(input.value).split(/[;-]/);
+
+                if (parseInt(pair[0], 10) <= min && parseInt(pair[1], 10) >= max) {
                     input.disabled = true;
                 }
             });

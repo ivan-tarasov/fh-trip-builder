@@ -333,9 +333,16 @@ final readonly class FlightRepository
     {
         $measures = [
             // Includes the offset, so the slider spans what the cards say.
-            FlightFilters::DIM_PRICE => static fn(array $c): float => (float) $c['price_base']
-                + (float) $c['price_tax'] + (float) ($c['price_offset'] ?? 0),
-            FlightFilters::DIM_DURATION => static fn(array $c): float => (float) $c['duration'],
+            FlightFilters::DIM_PRICE => static fn(array $c): array => [
+                (float) $c['price_base'] + (float) $c['price_tax'] + (float) ($c['price_offset'] ?? 0),
+            ],
+            FlightFilters::DIM_DURATION => static fn(array $c): array => [(float) $c['duration']],
+            // Every wait, not their total: the slider constrains connections
+            // one at a time, so its ends have to span single waits.
+            FlightFilters::DIM_LAYOVER_RANGE => static fn(array $c): array => array_map(
+                floatval(...),
+                FlightFilters::waits($c),
+            ),
         ];
 
         $bounds = [];
@@ -345,7 +352,7 @@ final readonly class FlightRepository
 
             foreach ($candidates as $candidate) {
                 if ($filters->matches($candidate, $dimension)) {
-                    $values[] = $measure($candidate);
+                    $values = [...$values, ...$measure($candidate)];
                 }
             }
 

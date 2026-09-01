@@ -196,6 +196,51 @@ final class FlightFiltersTest extends TestCase
         )->appliedCount());
     }
 
+    public function testLayoverRangeJudgesEachWaitNotTheirTotal(): void
+    {
+        // Two 3-hour waits total 6 hours. A filter for "no layover over 4h"
+        // must accept it, and one for "no layover under 4h" must not — which a
+        // filter on the total would get backwards both times.
+        $twoStop = $this->candidate([
+            'stops' => 2,
+            'stops_at' => 'AMS,IAD',
+            'stop1_in' => '2026-09-15 10:00:00',
+            'stop1_out' => '2026-09-15 13:00:00',
+            'stop2_in' => '2026-09-15 18:00:00',
+            'stop2_out' => '2026-09-15 21:00:00',
+            'layover_minutes' => 360,
+        ]);
+
+        self::assertTrue(new FlightFilters(layoverRange: [60, 240])->matches($twoStop));
+        self::assertFalse(new FlightFilters(layoverRange: [240, 600])->matches($twoStop));
+        // A single wait outside the range fails the itinerary.
+        self::assertFalse(new FlightFilters(layoverRange: [60, 150])->matches(
+            $this->candidate(['stop1_out' => '2026-09-15 14:00:00']),
+        ));
+    }
+
+    public function testADirectFlightHasNoLayoverToFallFoulOfTheRange(): void
+    {
+        // Unlike choosing a layover airport, this is a constraint rather than a
+        // selection: a flight with no connection breaks no rule about them.
+        $direct = $this->candidate([
+            'stops' => 0, 'stops_at' => '', 'carriers' => 'AF',
+            'stop1_in' => null, 'stop1_out' => null,
+        ]);
+
+        self::assertTrue(new FlightFilters(layoverRange: [120, 180])->matches($direct));
+    }
+
+    public function testLayoverRangeAcceptsEitherSeparator(): void
+    {
+        // The slider widget writes "from;to"; a hand-written link says
+        // "from-to". Both have to parse, or the filter vanishes in silence.
+        self::assertSame([90, 240], FlightFilters::fromQuery(['layover' => '90-240'])->layoverRange);
+        self::assertSame([90, 240], FlightFilters::fromQuery(['layover' => '90;240'])->layoverRange);
+        self::assertNull(FlightFilters::fromQuery(['layover' => '240-90'])->layoverRange);
+        self::assertNull(FlightFilters::fromQuery(['layover' => 'soon'])->layoverRange);
+    }
+
     public function testAnEmptyQueryFiltersNothing(): void
     {
         self::assertTrue(FlightFilters::fromQuery([])->isEmpty());
