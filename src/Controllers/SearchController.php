@@ -399,6 +399,17 @@ class SearchController extends AbstractController
             'active' => $this->activeSections($chosen),
             // The prefix the controls submit under, so each leg writes its own.
             'prefix' => $prefix,
+            // Where this leg starts and ends. Reversed on the return, so the
+            // time filters name the airports they actually apply to rather than
+            // the ones the search was typed with.
+            'leg' => [
+                'from' => $prefix === FlightFilters::RETURN_PREFIX
+                    ? (string) $this->data->arrive_city_name
+                    : (string) $this->data->depart_city_name,
+                'to' => $prefix === FlightFilters::RETURN_PREFIX
+                    ? (string) $this->data->depart_city_name
+                    : (string) $this->data->arrive_city_name,
+            ],
             // What the leg you are not looking at is filtered by.
             'other_leg' => $this->otherLegNote($prefix),
             // Whether this leg is filtered, so the sidebar can offer a way out.

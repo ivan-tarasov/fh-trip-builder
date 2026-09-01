@@ -82,9 +82,14 @@ final readonly class FlightFinder
         new AirportRepository($this->connection)->recordSearch($query->from, $query->to);
 
         $airports = new AirportRepository($this->connection);
+        // Both forms, from the one lookup: "Melbourne (MEL)" heads the results,
+        // while the sidebar wants the bare name.
+        $departCity = (string) $airports->cityByCode($query->from);
+        $arriveCity = (string) $airports->cityByCode($query->to);
+
         $cities = [
-            self::RESPONSE_DEPART => sprintf('%s (%s)', $airports->cityByCode($query->from), $query->from),
-            self::RESPONSE_ARRIVE => sprintf('%s (%s)', $airports->cityByCode($query->to), $query->to),
+            self::RESPONSE_DEPART => sprintf('%s (%s)', $departCity, $query->from),
+            self::RESPONSE_ARRIVE => sprintf('%s (%s)', $arriveCity, $query->to),
         ];
 
         $flights = new FlightRepository($this->connection);
@@ -184,6 +189,8 @@ final readonly class FlightFinder
             'package_price' => $packagePrice,
             self::RESPONSE_DEPART => $cities[self::RESPONSE_DEPART],
             self::RESPONSE_ARRIVE => $cities[self::RESPONSE_ARRIVE],
+            'depart_city_name' => $departCity,
+            'arrive_city_name' => $arriveCity,
             'adult_count' => $query->adultNum,
             'child_count' => $query->childNum,
             // Which filter options would still return something, so the sidebar

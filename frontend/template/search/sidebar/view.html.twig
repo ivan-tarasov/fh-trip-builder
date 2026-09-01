@@ -93,12 +93,12 @@
                 {# --- Departure / arrival time of day --- #}
                 {% embed 'search/sidebar/section.html.twig' with { 'id': 'times', 'title': 'Flight times', 'open': sidebar.active.times } %}
                     {% block body %}
-                        <div class="filter-subhead">Departure</div>
+                        <div class="filter-subhead">Departure from {{ sidebar.leg.from }}</div>
                         {% include 'search/sidebar/pills.html.twig' with {
                             'name': sidebar.prefix ~ 'dep_when', 'options': sidebar.depart_buckets
                         } only %}
 
-                        <div class="filter-subhead mt-3">Arrival</div>
+                        <div class="filter-subhead mt-3">Arrival in {{ sidebar.leg.to }}</div>
                         {% include 'search/sidebar/pills.html.twig' with {
                             'name': sidebar.prefix ~ 'arr_when', 'options': sidebar.arrive_buckets
                         } only %}
