@@ -23,15 +23,36 @@ final class SortMethodTest extends TestCase
         self::assertSame(SortMethod::Price, SortMethod::fromRequest(''));
     }
 
-    public function testCandidateOrderByExpressions(): void
+    public function testCandidateOrderByLeadsWithItsOwnKey(): void
     {
-        self::assertSame('(price_base + price_tax) ASC', SortMethod::Price->candidateOrderBy());
-        self::assertSame('duration ASC', SortMethod::Duration->candidateOrderBy());
-        self::assertSame('depart_time ASC', SortMethod::Depart->candidateOrderBy());
-        self::assertSame('arrive_time ASC', SortMethod::Arrive->candidateOrderBy());
+        self::assertStringStartsWith('(price_base + price_tax) ASC', SortMethod::Price->candidateOrderBy());
+        self::assertStringStartsWith('duration ASC', SortMethod::Duration->candidateOrderBy());
+        self::assertStringStartsWith('depart_time ASC', SortMethod::Depart->candidateOrderBy());
+        self::assertStringStartsWith('arrive_time ASC', SortMethod::Arrive->candidateOrderBy());
         // Rating sorts highest-first.
-        self::assertSame('rating DESC', SortMethod::Rating->candidateOrderBy());
-        self::assertSame('layover_minutes ASC', SortMethod::LayoverShort->candidateOrderBy());
+        self::assertStringStartsWith('rating DESC', SortMethod::Rating->candidateOrderBy());
+        self::assertStringStartsWith('layover_minutes ASC', SortMethod::LayoverShort->candidateOrderBy());
+    }
+
+    public function testEverySortEndsWithTheSameTieBreak(): void
+    {
+        // Ties are common — layover_minutes is 0 for every direct flight — and
+        // without a deterministic tail the database picks the winner, so the
+        // same search can order equal rows differently from page to page.
+        foreach (SortMethod::cases() as $sort) {
+            self::assertStringEndsWith(
+                ', (price_base + price_tax) ASC, seg1 ASC',
+                $sort->candidateOrderBy(),
+                $sort->value . ' has no tie-break',
+            );
+        }
+    }
+
+    public function testRecommendedStillSurvivesTheTieBreakTail(): void
+    {
+        // It is ranked in PHP afterwards, but the SQL still has to cut a stable
+        // set of candidates for it to rank.
+        self::assertStringStartsWith('(price_base + price_tax) ASC', SortMethod::Recommended->candidateOrderBy());
     }
 
     public function testOnlyRecommendedNeedsTheWholeResultSet(): void
@@ -43,20 +64,13 @@ final class SortMethodTest extends TestCase
         }
     }
 
-    public function testRecommendedStillOrdersTheCandidatesItKeeps(): void
-    {
-        // It is ranked afterwards, but the SQL still needs an order to decide
-        // which candidates survive the cap — and cheapest-first is the right
-        // set to keep.
-        self::assertSame('(price_base + price_tax) ASC', SortMethod::Recommended->candidateOrderBy());
-    }
-
     public function testEveryCaseHasACandidateOrderBy(): void
     {
         // Each direction of a trip is ranked by these columns, so every sort
         // option must map to a valid ORDER BY over the candidate aggregates.
         foreach (SortMethod::cases() as $sort) {
             self::assertMatchesRegularExpression('/^[^;]+ (ASC|DESC)$/', $sort->candidateOrderBy());
+            self::assertStringNotContainsString(';', $sort->candidateOrderBy());
         }
     }
 }

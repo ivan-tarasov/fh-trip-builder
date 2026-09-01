@@ -4,6 +4,10 @@
         <div class="wrapper pb-0">
             {% include 'search/cards/step-header.html.twig' %}
 
+            {% if step != 3 and sort_tabs.primary %}
+                {% include 'search/cards/sort-tabs.html.twig' %}
+            {% endif %}
+
             {% if step == 3 %}
                 {# Both halves chosen: show the trip, not more options. #}
                 {% include 'search/cards/package.html.twig' %}

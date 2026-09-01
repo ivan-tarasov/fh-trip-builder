@@ -36,6 +36,7 @@ return [
     'sort' => [
         'recommended' => [
             'id' => 'Recommended',
+            'tab_title' => 'Recommended',
             'icon' => 'fa-thumbs-up',
             'title' => 'Recommended',
             'note' => 'The best balance of price and travel time',
@@ -51,6 +52,7 @@ return [
         ],
         'price' => [
             'id' => 'Price',
+            'tab_title' => 'Cheapest',
             'icon' => 'fa-tag',
             'title' => 'Cheap ones first',
             'note' => 'Easy way to find most cheaper tickets',
@@ -66,6 +68,7 @@ return [
         ],
         'duration' => [
             'id' => 'FlightTime',
+            'tab_title' => 'Fastest',
             'icon' => 'fa-gauge-high',
             'title' => 'Flight time',
             'note' => 'We show lowest duration flights first',
@@ -81,6 +84,7 @@ return [
         ],
         'depart_time' => [
             'id' => 'Departure',
+            'tab_title' => 'Earliest out',
             'icon' => 'fa-plane-departure',
             'title' => 'Departure time',
             'note' => 'Tickets with earlier departure time will at the top of the list',
@@ -96,6 +100,7 @@ return [
         ],
         'arrive_time' => [
             'id' => 'Arrival',
+            'tab_title' => 'Earliest in',
             'icon' => 'fa-plane-arrival',
             'title' => 'Arrival time',
             'note' => 'Tickets with earlier arrival time will at the top of the list',
@@ -111,6 +116,7 @@ return [
         ],
         'layover_short' => [
             'id' => 'ShortLayovers',
+            'tab_title' => 'Short layovers',
             'icon' => 'fa-hourglass-half',
             'title' => 'Short layovers',
             'note' => 'Least time spent waiting between flights',
@@ -126,6 +132,7 @@ return [
         ],
         'rating' => [
             'id' => 'Popular',
+            'tab_title' => 'Popular',
             'icon' => 'fa-star',
             'title' => 'Popular first',
             'note' => 'First we show tickets with higher rating',

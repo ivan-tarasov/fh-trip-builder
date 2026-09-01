@@ -213,6 +213,42 @@ final class FlightRepositoryTest extends IntegrationTestCase
         self::assertContains('value', $result['rows'][0]['badges']);
     }
 
+    public function testEverySortTabPromisesWhatThatSortActuallyReturns(): void
+    {
+        // The tabs above the results advertise a price and a travel time for
+        // each sort. If the advertised pair is not the pair you get on choosing
+        // it, the control is lying about the trade it offers.
+        $repository = $this->repository();
+        $highlights = $repository->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Price, 1)['highlights'];
+
+        if ($highlights === []) {
+            self::markTestSkipped('No generated flights on this route.');
+        }
+
+        foreach ($highlights as $sort => $promised) {
+            $first = $repository->searchDirection(
+                'PAR',
+                'NYC',
+                '2026-09-15',
+                SortMethod::fromRequest((string) $sort),
+                1,
+            )['rows'][0] ?? null;
+
+            self::assertNotNull($first, sprintf('%s returned nothing', $sort));
+            self::assertEqualsWithDelta(
+                $promised['price'],
+                $first['price_base'] + $first['price_tax'],
+                0.01,
+                sprintf('%s advertises a price it does not deliver', $sort),
+            );
+            self::assertSame(
+                $promised['duration'],
+                $first['duration'],
+                sprintf('%s advertises a duration it does not deliver', $sort),
+            );
+        }
+    }
+
     /**
      * @param array<string, mixed> $itin
      */

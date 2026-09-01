@@ -13,27 +13,6 @@
     <div class="card filters mb-5">
         <div class="card-body">
 
-            {# Sorting applies on its own, against the filters already applied.
-               It carries them as hidden fields rather than reading the filter
-               form, so choosing a sort never commits a half-set filter. #}
-            <form method="get" action="{{ form_path }}" id="form_sort">
-                {% for name, value in carried_query %}
-                    {% if value is iterable %}
-                        {% for item in value %}<input type="hidden" name="{{ name }}[]" value="{{ item }}" />{% endfor %}
-                    {% else %}
-                        <input type="hidden" name="{{ name }}" value="{{ value }}" />
-                    {% endif %}
-                {% endfor %}
-
-                {% embed 'search/sidebar/section.html.twig' with { 'id': 'sort', 'title': 'Sort' } %}
-                    {% block body %}
-                        {% for key, params in config('search.sort') %}
-                            {% include 'search/sidebar/sort.html.twig' %}
-                        {% endfor %}
-                    {% endblock %}
-                {% endembed %}
-            </form>
-
             {# Everything else applies together. One form, so Apply submits the
                whole sidebar — per-group forms would each have to carry copies
                of every other group's state and would drop whatever they missed. #}

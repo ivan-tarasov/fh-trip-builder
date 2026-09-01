@@ -565,6 +565,15 @@
         });
     });
 
+    // The overflow sort list navigates on choice; its options carry the URL.
+    document.querySelectorAll('.js-sort-select').forEach(function (select) {
+        select.addEventListener('change', function () {
+            if (select.value) {
+                window.location.assign(select.value);
+            }
+        });
+    });
+
     // Submit by building the URL rather than letting the browser serialise the
     // form: it percent-encodes commas, so `airlines=BA,AI` would reach the
     // address bar as `airlines=BA%2CAI`. Runs last, after the handlers that

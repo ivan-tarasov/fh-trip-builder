@@ -35,6 +35,16 @@ enum SortMethod: string
      */
     public function candidateOrderBy(): string
     {
+        // Every ordering ends with the same two keys. Without them a sort with
+        // many ties — layover_minutes is 0 for every direct flight — leaves the
+        // winner to the database, so the same search can order ties differently
+        // between pages and the "what you get" figure on a sort tab can name an
+        // itinerary the sort does not actually return first.
+        return $this->primaryOrderBy() . ', (price_base + price_tax) ASC, seg1 ASC';
+    }
+
+    private function primaryOrderBy(): string
+    {
         return match ($this) {
             self::Price => '(price_base + price_tax) ASC',
             self::Duration => 'duration ASC',

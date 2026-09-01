@@ -39,6 +39,9 @@ class SearchController extends AbstractController
 
     private const string DEFAULT_SORT = 'price';
 
+    // The three that earn a tab of their own; the rest sit in the dropdown.
+    private const array PRIMARY_SORTS = ['recommended', 'price', 'duration'];
+
     // Roughly how many positions a slider handle should have.
     private const int SLIDER_STOPS = 40;
 
@@ -148,6 +151,9 @@ class SearchController extends AbstractController
                 // and carry the rest of the search as hidden fields.
                 'form_path' => Helper::getUrlPath(),
                 'session_sort' => $this->sort(),
+                // Sorting moved out of the sidebar and above the results, where
+                // each option can show what choosing it would get you.
+                'sort_tabs' => $this->sortTabs(),
                 'sidebar' => $this->sidebarFilters(),
                 // What the sidebar needs to draw itself: the filters currently
                 // applied, and which options are worth offering at all.
@@ -155,7 +161,6 @@ class SearchController extends AbstractController
                 'available' => (array) $this->data->available,
                 // Hidden fields a GET form needs so submitting one control does
                 // not drop the rest of the search.
-                'carried_query' => $this->carried([self::GET_SORT]),
                 // The filter form supplies filter values from its own controls,
                 // so it must not also carry the applied ones — an unchecked box
                 // would otherwise be re-submitted as a hidden field.
@@ -981,6 +986,72 @@ class SearchController extends AbstractController
         }
 
         return $own;
+    }
+
+    /**
+     * The sort options as tabs, each carrying the price and travel time it
+     * would put first.
+     *
+     * Primary ones lead; the rest follow in a dropdown, because seven tabs is a
+     * list, not a choice.
+     *
+     * @return array{primary: list<array<string, mixed>>, more: list<array<string, mixed>>, current: string}
+     */
+    private function sortTabs(): array
+    {
+        $highlights = (array) json_decode((string) json_encode($this->data->highlights ?? []), true);
+        $current = $this->sort();
+        $triptype = $this->get[self::GET_TRIPTYPE];
+
+        $primary = [];
+        $more = [];
+
+        /** @var array<string, array<string, mixed>> $options */
+        $options = (array) Config::get('search.sort', []);
+
+        foreach ($options as $key => $params) {
+            // Some sorts only make sense one way round (arriving early says
+            // nothing about a trip you have not chosen the return for yet).
+            if (($params[$triptype] ?? 1) != 1) {
+                continue;
+            }
+
+            $best = $highlights[(string) $key] ?? null;
+
+            $tab = [
+                'key' => (string) $key,
+                'title' => (string) ($params['tab_title'] ?? $params['title']),
+                'note' => (string) $params['note'],
+                'icon' => (string) ($params['icon'] ?? 'fa-sort'),
+                'current' => (string) $key === $current,
+                'url' => $this->sortUrl((string) $key),
+                'price' => $best === null ? null : $this->presenter()->priceParts((float) $best['price']),
+                'duration' => $best === null ? null : $this->presenter()->minutesToStringTime((int) $best['duration']),
+            ];
+
+            if (in_array((string) $key, self::PRIMARY_SORTS, true)) {
+                $primary[] = $tab;
+            } else {
+                $more[] = $tab;
+            }
+        }
+
+        return ['primary' => $primary, 'more' => $more, 'current' => $current];
+    }
+
+    /**
+     * This search, sorted differently. Page one, since the order changed.
+     */
+    private function sortUrl(string $sort): string
+    {
+        return sprintf(
+            '%s?%s',
+            Helper::getUrlPath(),
+            $this->queryString(array_merge($this->get, [
+                self::GET_SORT => $sort === self::DEFAULT_SORT ? null : $sort,
+                self::GET_PAGE => null,
+            ])),
+        );
     }
 
     /**

@@ -96,7 +96,7 @@ final readonly class FlightFinder
         $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
         $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
 
-        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => []];
+        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => [], 'highlights' => []];
         $addBase = 0.0;
         $addTax = 0.0;
 
@@ -191,6 +191,14 @@ final readonly class FlightFinder
             'available' => $result['available'],
             // The ends each slider should span.
             'bounds' => $result['bounds'],
+            // What each sort would put first, in the money the cards show.
+            'highlights' => array_map(
+                static fn(array $best): array => [
+                    'price' => round($best['price'] + $addBase + $addTax, 2),
+                    'duration' => $best['duration'],
+                ],
+                $result['highlights'],
+            ),
             self::RESPONSE_FLIGHTS => $rows,
         ];
     }

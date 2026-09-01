@@ -75,9 +75,11 @@ final readonly class FlightRepository
      * return something — that is what greys out a control the sidebar cannot
      * usefully offer.
      *
-     * `bounds` gives each slider its ends, measured the same way.
+     * `bounds` gives each slider its ends, measured the same way, and
+     * `highlights` says what each sort option would put first — the price and
+     * the travel time you would get by choosing it.
      *
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, bounds: array<string, array{min: int, max: int}>}
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     public function searchDirection(
         string $from,
@@ -89,7 +91,7 @@ final readonly class FlightRepository
         float $priceOffset = 0.0,
     ): array {
         $filters ??= new FlightFilters();
-        $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => []];
+        $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => [], 'highlights' => []];
 
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
@@ -128,7 +130,7 @@ final readonly class FlightRepository
         ));
 
         if ($matching === []) {
-            return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available, 'bounds' => $bounds];
+            return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available, 'bounds' => $bounds, 'highlights' => []];
         }
 
         // A sort that scores an itinerary against the rest of the set can only
@@ -156,7 +158,8 @@ final readonly class FlightRepository
             $matching,
         ));
 
-        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available, 'bounds' => $bounds];
+        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available,
+            'bounds' => $bounds, 'highlights' => $this->highlights($matching)];
     }
 
     /**
@@ -240,6 +243,65 @@ final readonly class FlightRepository
         }
 
         return $available;
+    }
+
+    /**
+     * What each sort option would put at the top: its price and travel time.
+     *
+     * Sorting is a trade — cheapest is rarely quickest — and the choice is
+     * blind unless both numbers are on the control. One pass per option over
+     * the same rows the page was built from, so this costs nothing extra.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return array<string, array{price: float, duration: int}>
+     */
+    private function highlights(array $candidates): array
+    {
+        if ($candidates === []) {
+            return [];
+        }
+
+        $scores = $this->valueScores($candidates);
+        $total = static fn(array $c): float => (float) $c['price_base'] + (float) $c['price_tax'];
+
+        // How each option decides which itinerary wins. Lower is better in all
+        // of them except rating, which is negated to keep one comparison.
+        $rank = [
+            SortMethod::Recommended->value => static fn(array $c, int $i): float => $scores[$i],
+            SortMethod::Price->value => static fn(array $c, int $i): float => $total($c),
+            SortMethod::Duration->value => static fn(array $c, int $i): float => (float) $c['duration'],
+            SortMethod::LayoverShort->value => static fn(array $c, int $i): float => (float) $c['layover_minutes'],
+            SortMethod::Rating->value => static fn(array $c, int $i): float => -(float) $c['rating'],
+            SortMethod::Depart->value => static fn(array $c, int $i): float => (float) strtotime((string) $c['depart_time']),
+            SortMethod::Arrive->value => static fn(array $c, int $i): float => (float) strtotime((string) $c['arrive_time']),
+        ];
+
+        $highlights = [];
+
+        foreach ($rank as $sort => $key) {
+            $winner = null;
+            $best = null;
+
+            foreach ($candidates as $i => $candidate) {
+                // Same tie-break as the SQL ordering, or a sort with many equal
+                // rows would advertise a different one than it returns.
+                $value = [$key($candidate, $i), $total($candidate), (int) $candidate['seg1']];
+
+                if ($best === null || $value < $best) {
+                    $best = $value;
+                    $winner = $candidate;
+                }
+            }
+
+            if ($winner !== null) {
+                $highlights[$sort] = [
+                    'price' => $total($winner),
+                    'duration' => (int) $winner['duration'],
+                ];
+            }
+        }
+
+        return $highlights;
     }
 
     /**

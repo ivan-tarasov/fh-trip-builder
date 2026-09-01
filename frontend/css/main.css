@@ -1745,6 +1745,79 @@ textarea {
 
 .filters .card-body { padding: .5rem 1rem 1rem; }
 
+/* --- Sort tabs above the results ----------------------------------------
+   Each carries the price and travel time it would put first, so the trade
+   between cheap and quick is visible before you choose rather than after. */
+.sort-tabs {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+
+.sort-tab {
+  flex: 1 1 0;
+  min-width: 8rem;
+  padding: .625rem .875rem;
+  border: 1px solid #e9ecef;
+  border-radius: .625rem;
+  background-color: #fff;
+  color: #495057;
+  text-decoration: none;
+  transition: border-color .12s ease, background-color .12s ease;
+}
+
+.sort-tab:hover {
+  border-color: #ced4da;
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+.sort-tab.is-current {
+  border-color: var(--bs-primary);
+  background-color: #e7f1ff;
+  color: #0a58ca;
+}
+
+.sort-tab__title {
+  display: block;
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+/* The number is the point of the tab, so it outweighs the label. */
+.sort-tab__outcome {
+  display: block;
+  margin-top: .1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+.sort-tab.is-current .sort-tab__outcome { color: #0a58ca; }
+.sort-tab__dot { padding: 0 .25rem; color: #adb5bd; font-weight: 400; }
+
+.sort-tab__outcome--empty {
+  font-size: .75rem;
+  font-weight: 400;
+  color: #adb5bd;
+}
+
+.sort-tabs__more {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .15rem;
+  flex: 0 0 auto;
+  min-width: 11rem;
+}
+
+.sort-tabs__more-label {
+  font-size: .75rem;
+  color: #6c757d;
+}
+
 /* A quiet note that the other half of the trip is filtered too. */
 .filters__other-leg {
   display: flex;
