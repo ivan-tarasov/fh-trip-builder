@@ -79,7 +79,7 @@ final readonly class FlightRepository
      * `highlights` says what each sort option would put first — the price and
      * the travel time you would get by choosing it.
      *
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     public function searchDirection(
         string $from,
@@ -91,7 +91,7 @@ final readonly class FlightRepository
         float $priceOffset = 0.0,
     ): array {
         $filters ??= new FlightFilters();
-        $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => [], 'highlights' => []];
+        $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'option_prices' => [], 'bounds' => [], 'highlights' => []];
 
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
@@ -122,7 +122,7 @@ final readonly class FlightRepository
         // price filter and its slider work against that same total rather than
         // this direction's share of it.
         $candidates = $this->withPriceOffset($candidates, $priceOffset);
-        $available = $this->availability($candidates, $filters);
+        ['available' => $available, 'prices' => $optionPrices] = $this->availability($candidates, $filters);
         $bounds = $this->bounds($candidates, $filters);
         $matching = array_values(array_filter(
             $candidates,
@@ -130,7 +130,7 @@ final readonly class FlightRepository
         ));
 
         if ($matching === []) {
-            return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available, 'bounds' => $bounds, 'highlights' => []];
+            return ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => $available, 'option_prices' => $optionPrices, 'bounds' => $bounds, 'highlights' => []];
         }
 
         // A sort that scores an itinerary against the rest of the set can only
@@ -158,7 +158,7 @@ final readonly class FlightRepository
             $matching,
         ));
 
-        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available,
+        return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available, 'option_prices' => $optionPrices,
             'bounds' => $bounds, 'highlights' => $this->highlights($matching)];
     }
 
@@ -170,11 +170,14 @@ final readonly class FlightRepository
      * choosing in collapsing to the one value you picked.
      *
      * @param list<array<string, mixed>> $candidates
-     * @return array<string, list<string>|list<int>|bool>
+     * @return array{available: array<string, list<string>|list<int>|bool>, prices: array<string, array<array-key, float>>}
      */
     private function availability(array $candidates, FlightFilters $filters): array
     {
         $available = [];
+        // What each option would cost, keyed the same way, so the sidebar can
+        // print a price beside every row.
+        $prices = [];
 
         // Airlines, aircraft and layover airports all match on any leg, so
         // appearing anywhere is the same as being selectable.
@@ -183,7 +186,7 @@ final readonly class FlightRepository
             FlightFilters::DIM_AIRCRAFT => 'aircraft',
             FlightFilters::DIM_LAYOVER_AIRPORTS => 'stops_at',
         ] as $dimension => $column) {
-            $available[$dimension] = $this->distinct(
+            $byValue = $this->distinct(
                 $candidates,
                 $filters,
                 $dimension,
@@ -193,6 +196,9 @@ final readonly class FlightRepository
                     return $raw === '' ? [] : explode(',', $raw);
                 },
             );
+
+            $available[$dimension] = array_keys($byValue);
+            $prices[$dimension] = $byValue;
         }
 
         $singles = [
@@ -201,28 +207,33 @@ final readonly class FlightRepository
         ];
 
         foreach ($singles as $dimension => $column) {
-            $available[$dimension] = $this->distinct($candidates, $filters, $dimension, static fn(array $c): array => [(string) $c[$column]]);
+            $byValue = $this->distinct($candidates, $filters, $dimension, static fn(array $c): array => [(string) $c[$column]]);
+            $available[$dimension] = array_keys($byValue);
+            $prices[$dimension] = $byValue;
         }
 
-        $available[FlightFilters::DIM_STOPS] = array_map(
-            intval(...),
-            $this->distinct($candidates, $filters, FlightFilters::DIM_STOPS, static fn(array $c): array => [(string) $c['stops']]),
-        );
+        $byStops = $this->distinct($candidates, $filters, FlightFilters::DIM_STOPS, static fn(array $c): array => [(string) $c['stops']]);
+        $available[FlightFilters::DIM_STOPS] = array_map(intval(...), array_keys($byStops));
+        $prices[FlightFilters::DIM_STOPS] = $byStops;
 
-        $available[FlightFilters::DIM_ARRIVE_DATE] = $this->distinct(
+        $byDate = $this->distinct(
             $candidates,
             $filters,
             FlightFilters::DIM_ARRIVE_DATE,
             static fn(array $c): array => [date('Y-m-d', (int) strtotime((string) $c['arrive_time']))],
         );
+        $available[FlightFilters::DIM_ARRIVE_DATE] = array_keys($byDate);
+        $prices[FlightFilters::DIM_ARRIVE_DATE] = $byDate;
 
         foreach ([FlightFilters::DIM_DEPART_TIME => 'depart_time', FlightFilters::DIM_ARRIVE_TIME => 'arrive_time'] as $dimension => $column) {
-            $available[$dimension] = $this->distinct(
+            $byBucket = $this->distinct(
                 $candidates,
                 $filters,
                 $dimension,
                 static fn(array $c): array => [self::bucketOf((string) $c[$column])],
             );
+            $available[$dimension] = array_keys($byBucket);
+            $prices[$dimension] = $byBucket;
         }
 
         // A toggle is worth offering only if switching it on leaves something.
@@ -233,16 +244,22 @@ final readonly class FlightRepository
             FlightFilters::DIM_NO_VISA => static fn(array $c): bool => new FlightFilters(noVisaLayover: true)->matches($c),
         ] as $dimension => $wouldKeep) {
             $available[$dimension] = false;
+            $cheapest = null;
 
             foreach ($candidates as $candidate) {
                 if ($filters->matches($candidate, $dimension) && $wouldKeep($candidate)) {
                     $available[$dimension] = true;
-                    break;
+                    $total = $this->displayTotal($candidate);
+                    $cheapest = $cheapest === null ? $total : min($cheapest, $total);
                 }
+            }
+
+            if ($cheapest !== null) {
+                $prices[$dimension] = ['1' => $cheapest];
             }
         }
 
-        return $available;
+        return ['available' => $available, 'prices' => $prices];
     }
 
     /**
@@ -403,40 +420,69 @@ final readonly class FlightRepository
     }
 
     /**
-     * Distinct values a dimension takes across the candidates that pass every
-     * other filter, commonest first.
+     * What each value of a dimension would cost and how often it appears,
+     * across the candidates that pass every other filter. Commonest first.
      *
      * Frequency rather than alphabet: a list of sixty airlines is only useful
      * if the ones actually flying this route are at the top, and the eight rows
      * shown before "Show all" should be the eight worth seeing. Ties break
      * alphabetically so the order is stable between searches.
      *
+     * The price is the cheapest itinerary carrying that value — what you would
+     * pay if you picked it and nothing else changed.
+     *
      * @param list<array<string, mixed>> $candidates
      * @param callable(array<string, mixed>): list<string> $values
-     * @return list<string>
+     * @return array<array-key, float> value => cheapest total, ordered
+     *         (PHP narrows numeric keys such as a stop count to int)
      */
     private function distinct(array $candidates, FlightFilters $filters, string $dimension, callable $values): array
     {
         $counts = [];
+        $prices = [];
 
         foreach ($candidates as $candidate) {
             if (!$filters->matches($candidate, $dimension)) {
                 continue;
             }
 
+            $total = $this->displayTotal($candidate);
+
             // Once per itinerary, however many of its legs use the value —
             // otherwise a carrier flying both legs of a connection outranks one
             // flying a whole other itinerary.
             foreach (array_unique($values($candidate)) as $value) {
-                if ($value !== '') {
-                    $counts[$value] = ($counts[$value] ?? 0) + 1;
+                if ($value === '') {
+                    continue;
                 }
+
+                $counts[$value] = ($counts[$value] ?? 0) + 1;
+                $prices[$value] = min($prices[$value] ?? $total, $total);
             }
         }
 
         uksort($counts, static fn(string $a, string $b): int => $counts[$b] <=> $counts[$a] ?: strcmp($a, $b));
 
-        return array_map(strval(...), array_keys($counts));
+        $ordered = [];
+
+        foreach (array_keys($counts) as $value) {
+            $ordered[(string) $value] = $prices[$value];
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * An itinerary's price as the cards will show it, including whatever the
+     * other half of a round trip adds.
+     *
+     * @param array<string, mixed> $candidate
+     */
+    private function displayTotal(array $candidate): float
+    {
+        return (float) $candidate['price_base']
+            + (float) $candidate['price_tax']
+            + (float) ($candidate['price_offset'] ?? 0);
     }
 
     /**

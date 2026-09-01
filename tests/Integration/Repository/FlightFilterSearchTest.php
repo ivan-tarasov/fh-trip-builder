@@ -27,7 +27,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     private const PROBE_LIMIT = 2;
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>}
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function search(?FlightFilters $filters = null): array
     {
@@ -36,7 +36,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     }
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>}
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function requireResults(): array
     {
@@ -157,6 +157,59 @@ final class FlightFilterSearchTest extends IntegrationTestCase
         foreach ($direct['rows'] as $row) {
             self::assertSame(0, $row['stops']);
             self::assertGreaterThanOrEqual($direct['cheapest'] - 0.01, $row['price_base'] + $row['price_tax']);
+        }
+    }
+
+    public function testTheAdvertisedPriceIsThePriceYouGet(): void
+    {
+        // Each filter option shows the cheapest itinerary carrying it. If
+        // picking the option returns something dearer, the sidebar is quoting a
+        // price the search cannot honour.
+        $result = $this->requireResults();
+        $prices = $result['option_prices'];
+
+        $probes = [
+            FlightFilters::DIM_AIRLINES => static fn(string $v): FlightFilters => new FlightFilters(airlines: [$v]),
+            FlightFilters::DIM_LAYOVER_AIRPORTS => static fn(string $v): FlightFilters => new FlightFilters(layoverAirports: [$v]),
+            FlightFilters::DIM_STOPS => static fn(string $v): FlightFilters => new FlightFilters(stops: [(int) $v]),
+        ];
+
+        foreach ($probes as $dimension => $make) {
+            $options = array_slice($prices[$dimension] ?? [], 0, self::PROBE_LIMIT, true);
+
+            foreach ($options as $value => $advertised) {
+                $chosen = $this->search($make((string) $value));
+
+                self::assertNotNull(
+                    $chosen['cheapest'],
+                    sprintf('%s "%s" is priced but returns nothing', $dimension, $value),
+                );
+                self::assertEqualsWithDelta(
+                    $advertised,
+                    $chosen['cheapest'],
+                    0.01,
+                    sprintf('%s "%s" advertises %.2f but delivers %.2f', $dimension, $value, $advertised, $chosen['cheapest']),
+                );
+            }
+        }
+    }
+
+    public function testAnUnavailableOptionIsNotPriced(): void
+    {
+        // A greyed option returns nothing, so there is no price to quote — a
+        // number beside it would suggest it is choosable.
+        $result = $this->requireResults();
+
+        foreach ($result['option_prices'] as $dimension => $byValue) {
+            $offered = array_map(strval(...), (array) ($result['available'][$dimension] ?? []));
+
+            foreach (array_keys($byValue) as $value) {
+                self::assertContains(
+                    (string) $value,
+                    $offered,
+                    sprintf('%s "%s" is priced but not offered', $dimension, $value),
+                );
+            }
         }
     }
 

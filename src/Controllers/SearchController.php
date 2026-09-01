@@ -57,6 +57,9 @@ class SearchController extends AbstractController
 
     private ?ItineraryPresenter $presenter = null;
 
+    /** @var array<string, array<array-key, float>> */
+    private array $optionPrices = [];
+
     public function index(): void
     {
         try {
@@ -310,6 +313,12 @@ class SearchController extends AbstractController
             (array) ($available[$dimension] ?? []),
         );
 
+        // Cheapest itinerary carrying each option, so a row can say what
+        // choosing it would cost — the single thing that turns the sidebar from
+        // a set of switches into something you can shop with.
+        $optionPrices = (array) json_decode((string) json_encode($this->data->option_prices ?? []), true);
+        $this->optionPrices = $optionPrices;
+
         return [
             'stops' => $this->stopOptions($codes(FlightFilters::DIM_STOPS), $chosen),
             'airlines' => $this->airlineOptions($codes(FlightFilters::DIM_AIRLINES), $chosen),
@@ -347,6 +356,7 @@ class SearchController extends AbstractController
                     'hint' => 'One carrier for the whole trip, so bags are checked through.',
                     'on' => isset($chosen[FlightFilters::DIM_SINGLE_CARRIER]),
                     'available' => (bool) ($available[FlightFilters::DIM_SINGLE_CARRIER] ?? false),
+                    'price' => $this->optionPrice(FlightFilters::DIM_SINGLE_CARRIER, '1'),
                 ],
                 FlightFilters::DIM_NO_VISA => [
                     'label' => 'No transit visa needed',
@@ -354,6 +364,7 @@ class SearchController extends AbstractController
                         . ' destination. Check the requirements yourself before booking.',
                     'on' => isset($chosen[FlightFilters::DIM_NO_VISA]),
                     'available' => (bool) ($available[FlightFilters::DIM_NO_VISA] ?? false),
+                    'price' => $this->optionPrice(FlightFilters::DIM_NO_VISA, '1'),
                 ],
                 FlightFilters::DIM_NO_GULF => [
                     'label' => 'No layovers in the Gulf',
@@ -361,12 +372,14 @@ class SearchController extends AbstractController
                         . ' Kuwait, Bahrain and Oman.',
                     'on' => isset($chosen[FlightFilters::DIM_NO_GULF]),
                     'available' => (bool) ($available[FlightFilters::DIM_NO_GULF] ?? false),
+                    'price' => $this->optionPrice(FlightFilters::DIM_NO_GULF, '1'),
                 ],
                 FlightFilters::DIM_NO_NIGHT => [
                     'label' => 'No overnight layovers',
                     'hint' => 'Hides connections spent waiting between 23:00 and 06:00.',
                     'on' => isset($chosen[FlightFilters::DIM_NO_NIGHT]),
                     'available' => (bool) ($available[FlightFilters::DIM_NO_NIGHT] ?? false),
+                    'price' => $this->optionPrice(FlightFilters::DIM_NO_NIGHT, '1'),
                 ],
             ],
             'sliders' => [
@@ -448,6 +461,19 @@ class SearchController extends AbstractController
     }
 
     /**
+     * The cheapest total for one option of one dimension, formatted, or null
+     * when the search could not price it.
+     *
+     * @return array{whole: string, cents: string}|null
+     */
+    private function optionPrice(string $dimension, string $value): ?array
+    {
+        $price = $this->optionPrices[$dimension][$value] ?? null;
+
+        return is_numeric($price) ? $this->presenter()->priceParts((float) $price) : null;
+    }
+
+    /**
      * Values chosen for one filter key, from the query as it arrived.
      *
      * @param array<string, string|list<string>|null> $chosen
@@ -475,6 +501,7 @@ class SearchController extends AbstractController
                 'value' => (string) $stops,
                 'label' => $this->presenter()->stopsLabel($stops),
                 'sub' => null,
+                'price' => $this->optionPrice(FlightFilters::DIM_STOPS, (string) $stops),
                 'checked' => in_array((string) $stops, $picked, true),
                 'available' => in_array((string) $stops, $available, true),
             ];
@@ -512,6 +539,7 @@ class SearchController extends AbstractController
                 'label' => $titles[$code] ?? $code,
                 'sub' => $code,
                 'logo_url' => $this->presenter()->carrierLogo($code),
+                'price' => $this->optionPrice(FlightFilters::DIM_AIRLINES, $code),
                 'checked' => in_array($code, $picked, true),
                 'available' => true,
             ];
@@ -549,6 +577,7 @@ class SearchController extends AbstractController
                 'label' => $airport === null ? $code : (string) $airport['city'],
                 'sub' => $airport === null ? null : trim(sprintf('%s %s', $airport['title'], $code)),
                 'note' => $airport === null ? '' : (string) ($airport['country'] ?? ''),
+                'price' => $this->optionPrice($key, $code),
                 'checked' => in_array($code, $picked, true),
                 'available' => true,
             ];
@@ -577,6 +606,7 @@ class SearchController extends AbstractController
                 'value' => $code,
                 'label' => $types[$code]['title'] ?? $code,
                 'sub' => null,
+                'price' => $this->optionPrice(FlightFilters::DIM_AIRCRAFT, $code),
                 'checked' => in_array($code, $picked, true),
                 'available' => true,
             ];
@@ -602,6 +632,7 @@ class SearchController extends AbstractController
                 'value' => $date,
                 'label' => date('j F, D', (int) strtotime($date)),
                 'sub' => null,
+                'price' => $this->optionPrice(FlightFilters::DIM_ARRIVE_DATE, $date),
                 'checked' => in_array($date, $picked, true),
                 'available' => true,
             ];
@@ -631,6 +662,7 @@ class SearchController extends AbstractController
                 'value' => (string) $bucket,
                 'label' => (string) $meta['title'],
                 'icon' => (string) $meta['icon'],
+                'price' => $this->optionPrice($key, (string) $bucket),
                 'checked' => in_array((string) $bucket, $picked, true),
                 'available' => in_array((string) $bucket, $available, true),
             ];

@@ -24,6 +24,9 @@
                 {% endif %}
                 {% if not option.available %}<span class="filter-row__none">no flights</span>{% endif %}
             </span>
+            {% if option.price is defined and option.price %}
+                <span class="filter-row__price">${{ option.price.whole }}</span>
+            {% endif %}
             <input type="checkbox" class="form-check-input filter-row__check" name="{{ name }}[]"
                    value="{{ option.value }}"{{ option.checked ? ' checked' : '' }}{{ option.available ? '' : ' disabled' }} />
         </label>

@@ -7,6 +7,9 @@
                    {{ option.checked ? ' checked' : '' }}{{ option.available ? '' : ' disabled' }} />
             <i class="fas fa-{{ option.icon }} filter-pill__icon"></i>
             <span>{{ option.label }}{% if not option.available %} (no flights){% endif %}</span>
+            {% if option.price is defined and option.price %}
+                <span class="filter-pill__price">${{ option.price.whole }}</span>
+            {% endif %}
         </label>
     {% endfor %}
 </div>

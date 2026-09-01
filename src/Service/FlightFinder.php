@@ -96,7 +96,7 @@ final readonly class FlightFinder
         $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
         $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
 
-        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'bounds' => [], 'highlights' => []];
+        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'option_prices' => [], 'bounds' => [], 'highlights' => []];
         $addBase = 0.0;
         $addTax = 0.0;
 
@@ -189,6 +189,9 @@ final readonly class FlightFinder
             // Which filter options would still return something, so the sidebar
             // can grey out the ones that would empty the page.
             'available' => $result['available'],
+            // What each filter option would cost, already in the money the
+            // cards show — the repository folds the other leg in.
+            'option_prices' => $result['option_prices'],
             // The ends each slider should span.
             'bounds' => $result['bounds'],
             // What each sort would put first, in the money the cards show.

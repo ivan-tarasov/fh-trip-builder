@@ -1974,6 +1974,23 @@ textarea {
 
 .filter-row__check { flex: 0 0 auto; margin: 0; }
 
+/* What picking this option would cost. Quiet, but aligned in a column so the
+   list can be read down as a price list rather than option by option. */
+.filter-row__price {
+  flex: 0 0 auto;
+  font-size: .8125rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+.filter-pill__price {
+  padding-left: .35rem;
+  font-size: .75rem;
+  opacity: .75;
+}
+
+.filter-pill.is-on .filter-pill__price { opacity: .9; }
+
 /* A list longer than its limit keeps the tail hidden until asked. */
 .filter-row.is-over-limit,
 .filter-row.is-filtered-out { display: none; }

@@ -9,6 +9,9 @@
         {% endif %}
         {% if not toggle.available %}<span class="filter-row__none">no flights</span>{% endif %}
     </span>
+    {% if toggle.price is defined and toggle.price %}
+        <span class="filter-row__price">${{ toggle.price.whole }}</span>
+    {% endif %}
     <span class="form-check form-switch mb-0">
         <input class="form-check-input" type="checkbox" role="switch" name="{{ name }}" value="1"
                {{ toggle.on ? ' checked' : '' }}{{ toggle.available ? '' : ' disabled' }} />
