@@ -136,4 +136,29 @@ class Helper
     {
         return number_format($id, 0, '', '-');
     }
+
+    /**
+     * An airport's name with the city it is in stripped off the front.
+     *
+     * Where the two are shown together, "Amsterdam" above "Amsterdam Airport
+     * Schiphol" stutters and costs a line of wrapping. Only a whole leading
+     * word goes, or a city called "San" would maul "Santiago"; a name that is
+     * nothing but the city leaves nothing behind, and no city strips nothing.
+     */
+    public static function airportNameAfterCity(string $title, string $city): string
+    {
+        if ($city === '') {
+            return $title;
+        }
+
+        if (strcasecmp($title, $city) === 0) {
+            return '';
+        }
+
+        $prefix = $city . ' ';
+
+        return strncasecmp($title, $prefix, strlen($prefix)) === 0
+            ? substr($title, strlen($prefix))
+            : $title;
+    }
 }

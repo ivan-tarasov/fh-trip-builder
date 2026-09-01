@@ -595,7 +595,7 @@ class SearchController extends AbstractController
                 'label' => $airport === null ? $code : (string) $airport['city'],
                 'sub' => $airport === null ? null : trim(sprintf(
                     '%s %s',
-                    self::airportSuffix((string) $airport['title'], (string) $airport['city']),
+                    Helper::airportNameAfterCity((string) $airport['title'], (string) $airport['city']),
                     $code,
                 )),
                 'note' => $airport === null ? '' : (string) ($airport['country'] ?? ''),
@@ -606,32 +606,6 @@ class SearchController extends AbstractController
         }
 
         return $options;
-    }
-
-    /**
-     * The airport's name with the city stripped off the front.
-     *
-     * The row names the city on its own line, so "Amsterdam" above "Amsterdam
-     * Airport Schiphol" stutters and costs the row a second line of wrapping.
-     * Only a whole leading word goes, or a city called "San" would maul
-     * "Santiago"; a name that is nothing but the city leaves the IATA code to
-     * speak for it.
-     */
-    private static function airportSuffix(string $title, string $city): string
-    {
-        if ($city === '') {
-            return $title;
-        }
-
-        if (strcasecmp($title, $city) === 0) {
-            return '';
-        }
-
-        $prefix = $city . ' ';
-
-        return strncasecmp($title, $prefix, strlen($prefix)) === 0
-            ? substr($title, strlen($prefix))
-            : $title;
     }
 
     /**

@@ -72,4 +72,39 @@ final class HelperTest extends TestCase
         ];
     }
 
+    #[DataProvider('airportNameProvider')]
+    public function testAirportNameAfterCity(string $expected, string $title, string $city): void
+    {
+        self::assertSame($expected, Helper::airportNameAfterCity($title, $city));
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string, 2: string}>
+     */
+    public static function airportNameProvider(): array
+    {
+        return [
+            'city leads the name' => ['Airport Schiphol', 'Amsterdam Airport Schiphol', 'Amsterdam'],
+            'city leads a longer name' => ['Gatwick Airport', 'London Gatwick Airport', 'London'],
+            'name does not repeat the city' => ['Heathrow', 'Heathrow', 'London'],
+            // Mid-name is not a prefix: cutting there would leave "Adolfo
+            // Suarez -Barajas Airport".
+            'city appears mid-name' => [
+                'Adolfo Suarez Madrid-Barajas Airport',
+                'Adolfo Suarez Madrid-Barajas Airport',
+                'Madrid',
+            ],
+            // Whole words only, or the city would eat into the next one.
+            'city is a prefix of the first word' => ['Santiago International', 'Santiago International', 'San'],
+            'hyphen is not a word break' => ['Amsterdam-Schiphol', 'Amsterdam-Schiphol', 'Amsterdam'],
+            'name is only the city' => ['', 'Karachi', 'Karachi'],
+            'name is only the city, cased differently' => ['', 'karachi', 'Karachi'],
+            'city cased differently' => ['Airport Schiphol', 'amsterdam Airport Schiphol', 'Amsterdam'],
+            // Nothing to strip by, so nothing is stripped — the name must
+            // survive whole rather than come back empty.
+            'no city' => ['Paris Charles de Gaulle', 'Paris Charles de Gaulle', ''],
+            'no name' => ['', '', 'London'],
+        ];
+    }
+
 }
