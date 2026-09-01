@@ -62,7 +62,7 @@
                                     'min': sidebar.ranges.layover.min, 'max': sidebar.ranges.layover.max,
                                     'step': sidebar.ranges.layover.step,
                                     'value': sidebar.ranges.layover.from, 'to': sidebar.ranges.layover.to,
-                                    'display': 'Any'
+                                    'display': sidebar.ranges.layover.caption, 'on': sidebar.ranges.layover.on
                                 } only %}
                             </div>
                         {% endif %}
@@ -83,10 +83,10 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'price', 'title': 'Price', 'open': sidebar.active.price } %}
                         {% block body %}
                             {% include 'search/sidebar/slider.html.twig' with {
-                                'id': 'max_price', 'name': sidebar.prefix ~ 'max_price', 'kind': 'money', 'label': 'Up to',
+                                'id': 'max_price', 'name': sidebar.prefix ~ 'max_price', 'kind': 'money', 'label': 'Trip total',
                                 'min': sidebar.sliders.max_price.min, 'max': sidebar.sliders.max_price.max,
                                 'step': sidebar.sliders.max_price.step, 'value': sidebar.sliders.max_price.value,
-                                'display': '$' ~ sidebar.sliders.max_price.value|number_format
+                                'display': sidebar.sliders.max_price.caption, 'on': sidebar.sliders.max_price.on
                             } only %}
                         {% endblock %}
                     {% endembed %}
@@ -97,10 +97,10 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'duration', 'title': 'Travel time', 'open': sidebar.active.duration } %}
                         {% block body %}
                             {% include 'search/sidebar/slider.html.twig' with {
-                                'id': 'max_duration', 'name': sidebar.prefix ~ 'max_duration', 'kind': 'minutes', 'label': 'Up to',
+                                'id': 'max_duration', 'name': sidebar.prefix ~ 'max_duration', 'kind': 'minutes', 'label': 'Door to door',
                                 'min': sidebar.sliders.max_duration.min, 'max': sidebar.sliders.max_duration.max,
                                 'step': sidebar.sliders.max_duration.step, 'value': sidebar.sliders.max_duration.value,
-                                'display': sidebar.sliders.max_duration.value
+                                'display': sidebar.sliders.max_duration.caption, 'on': sidebar.sliders.max_duration.on
                             } only %}
                         {% endblock %}
                     {% endembed %}

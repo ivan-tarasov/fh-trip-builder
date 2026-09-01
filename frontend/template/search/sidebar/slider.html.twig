@@ -1,9 +1,20 @@
 {# A soft panel with the label on the left and the current value as a pill on
-   the right, the way the reference draws its ranges. #}
+   the right, the way the reference draws its ranges. The pill names the end
+   that is set — "Up to 6h", "From 2h", "From 2h to 6h" — and carries its own
+   clear button once it is set, so one control can be undone without reaching
+   for the group's Clear. #}
 <div class="filter-slider">
     <div class="filter-slider__head">
         <span class="filter-slider__label">{{ label }}</span>
-        <span class="filter-slider__value" id="val-{{ id }}">{{ display }}</span>
+        <span class="filter-slider__value{{ on|default(false) ? ' is-on' : '' }}" id="val-{{ id }}">
+            <span class="filter-slider__caption">{{ display }}</span>
+            {# Hidden rather than absent, so the JS has it to reveal the moment a
+               handle moves. #}
+            <button type="button" class="filter-slider__clear js-slider-clear"
+                    aria-label="Clear {{ label|lower }}"{{ on|default(false) ? '' : ' hidden' }}>
+                <i class="fas fa-xmark"></i>
+            </button>
+        </span>
     </div>
     {# `to` present means two handles: a range with a floor as well as a
        ceiling. Its submitted value is "from-to"; a single handle submits the

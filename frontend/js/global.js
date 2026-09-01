@@ -575,6 +575,22 @@
             : formatMinutes(value);
     }
 
+    // Names the end that is actually set: "Up to 6h" says more than a bare
+    // "6h", and a floor dragged up has to read "From" or the same number would
+    // mean two opposite things. Keep in step with
+    // SearchController::sliderCaption, which paints the first render.
+    function sliderCaption(kind, from, to, min, max) {
+        if (to === undefined) {
+            return 'Up to ' + sliderLabel(kind, from);
+        }
+
+        if (from > min && to < max) {
+            return 'From ' + sliderLabel(kind, from) + ' to ' + sliderLabel(kind, to);
+        }
+
+        return from > min ? 'From ' + sliderLabel(kind, from) : 'Up to ' + sliderLabel(kind, to);
+    }
+
     $('.js-filter-slider').each(function () {
         const input = this;
         const kind = input.dataset.kind;
@@ -584,22 +600,31 @@
         // Two handles when the server supplied an upper one.
         const isRange = input.dataset.to !== undefined;
 
+        const caption = output && output.querySelector('.filter-slider__caption');
+        const clearButton = output && output.querySelector('.js-slider-clear');
+
         const show = function (from, to) {
             if (!output) {
                 return;
             }
 
-            if (!isRange) {
-                // At the top of the range nothing is excluded, so say so
-                // rather than showing a number that reads like a limit.
-                output.textContent = from >= max ? 'Any' : sliderLabel(kind, from);
+            // Parked at the ends the slider excludes nothing, so the pill stays
+            // grey and keeps its clear button out of the way — there is nothing
+            // to clear.
+            const set = isRange ? from > min || to < max : from < max;
+            const text = sliderCaption(kind, from, isRange ? to : undefined, min, max);
 
-                return;
+            if (caption) {
+                caption.textContent = text;
+            } else {
+                output.textContent = text;
             }
 
-            output.textContent = from <= min && to >= max
-                ? 'Any'
-                : sliderLabel(kind, from) + ' \u2013 ' + sliderLabel(kind, to);
+            output.classList.toggle('is-on', set);
+
+            if (clearButton) {
+                clearButton.hidden = !set;
+            }
         };
 
         // ion.rangeSlider writes the value straight onto the input without
@@ -635,6 +660,25 @@
         });
 
         show(parseInt(input.dataset.from, 10), isRange ? parseInt(input.dataset.to, 10) : undefined);
+
+        // Back to the full range. update() fires onUpdate, which repaints the
+        // pill and tells the group's Clear button that this slider let go.
+        if (clearButton) {
+            clearButton.addEventListener('click', function (event) {
+                event.preventDefault();
+
+                const slider = $(input).data('ionRangeSlider');
+
+                if (slider) {
+                    slider.update(isRange ? { from: min, to: max } : { from: max });
+
+                    return;
+                }
+
+                input.value = isRange ? min + '-' + max : String(max);
+                show(min, max);
+            });
+        }
     });
 
     // A slider built inside a collapsed section measures zero width and stays

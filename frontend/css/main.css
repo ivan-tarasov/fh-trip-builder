@@ -2222,17 +2222,56 @@ textarea {
   margin-bottom: .25rem;
 }
 
-.filter-slider__label { font-size: .9375rem; color: #212529; }
+/* The pill takes what it needs and the label gives way, so a two-ended
+   caption never pushes the row into a second line. */
+.filter-slider__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .9375rem;
+  color: #212529;
+}
 
 .filter-slider__value {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  flex: 0 0 auto;
   background-color: #e9ecef;
-  border-radius: .5rem;
+  border-radius: 999px;
   padding: .2rem .6rem;
   font-size: .875rem;
   font-weight: 600;
   color: #212529;
   white-space: nowrap;
 }
+
+/* Set, so it reads as a filter you have applied rather than a reading of the
+   range on offer. */
+.filter-slider__value.is-on {
+  background-color: var(--bs-primary);
+  color: #fff;
+  padding-right: .2rem;
+}
+
+.filter-slider__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 0;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, .3);
+  padding: 0;
+  font-size: .625rem;
+  line-height: 1;
+  color: #fff;
+}
+.filter-slider__clear:hover { background-color: rgba(255, 255, 255, .55); }
+.filter-slider__clear[hidden] { display: none; }
 
 /* --- Apply --------------------------------------------------------------- */
 /* Pinned to the bottom of the screen so Apply is reachable without scrolling

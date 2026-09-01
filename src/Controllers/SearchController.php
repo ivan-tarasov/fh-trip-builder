@@ -387,6 +387,7 @@ class SearchController extends AbstractController
                     $bounds[FlightFilters::DIM_LAYOVER_RANGE] ?? null,
                     $chosen[FlightFilters::DIM_LAYOVER_RANGE] ?? null,
                     self::DURATION_STEPS,
+                    'minutes',
                 ),
             ],
             'sliders' => [
@@ -394,11 +395,13 @@ class SearchController extends AbstractController
                     $bounds[FlightFilters::DIM_PRICE] ?? null,
                     $chosen[FlightFilters::DIM_PRICE] ?? null,
                     self::PRICE_STEPS,
+                    'money',
                 ),
                 FlightFilters::DIM_DURATION => $this->sliderOption(
                     $bounds[FlightFilters::DIM_DURATION] ?? null,
                     $chosen[FlightFilters::DIM_DURATION] ?? null,
                     self::DURATION_STEPS,
+                    'minutes',
                 ),
             ],
             // Which groups hold something the visitor has set, so a filter is
@@ -706,22 +709,45 @@ class SearchController extends AbstractController
      * @param list<int> $steps allowed step sizes, smallest first
      * @return array<string, mixed>|null
      */
-    private function sliderOption(?array $bound, mixed $value, array $steps): ?array
+    private function sliderOption(?array $bound, mixed $value, array $steps, string $kind): ?array
     {
-        // Nothing to drag between when every option costs or lasts the same.
-        if ($bound === null || $bound['max'] <= $bound['min']) {
+        if ($bound === null) {
             return null;
         }
 
-        $step = $this->niceStep($bound['max'] - $bound['min'], $steps);
-        $min = (int) floor($bound['min'] / $step) * $step;
-        $max = (int) ceil($bound['max'] / $step) * $step;
+        $chosen = is_numeric($value) ? (int) $value : null;
+
+        // Nothing to drag between when every option costs or lasts the same —
+        // unless a ceiling is set, in which case the control has to stay: it is
+        // the way back out, and a form missing the input drops the filter
+        // without saying so.
+        if ($bound['max'] <= $bound['min'] && $chosen === null) {
+            return null;
+        }
+
+        // The ends have to contain the chosen ceiling as well as what is on
+        // offer, or the handle gets clamped somewhere nobody asked for.
+        $low = $bound['min'];
+        $high = $chosen === null ? $bound['max'] : max($bound['max'], $chosen);
+
+        $step = $this->niceStep(max(1, $high - $low), $steps);
+        $min = (int) floor($low / $step) * $step;
+        $max = (int) ceil($high / $step) * $step;
+
+        // One step wide at worst, so the track is draggable rather than a dot.
+        if ($max <= $min) {
+            $max = $min + $step;
+        }
+
+        $value = $chosen === null ? $max : max($min, min($chosen, $max));
 
         return [
             'min' => $min,
             'max' => $max,
             'step' => $step,
-            'value' => is_numeric($value) ? max($min, min((int) $value, $max)) : $max,
+            'value' => $value,
+            'caption' => Helper::sliderCaption($kind, $value, null, $min, $max),
+            'on' => $value < $max,
         ];
     }
 
@@ -735,7 +761,7 @@ class SearchController extends AbstractController
      * @param list<int> $steps
      * @return array<string, mixed>|null
      */
-    private function rangeOption(?array $bound, mixed $value, array $steps): ?array
+    private function rangeOption(?array $bound, mixed $value, array $steps, string $kind): ?array
     {
         if ($bound === null) {
             return null;
@@ -779,7 +805,15 @@ class SearchController extends AbstractController
             $to = max($from, min($chosen[1], $max));
         }
 
-        return ['min' => $min, 'max' => $max, 'step' => $step, 'from' => $from, 'to' => $to];
+        return [
+            'min' => $min,
+            'max' => $max,
+            'step' => $step,
+            'from' => $from,
+            'to' => $to,
+            'caption' => Helper::sliderCaption($kind, $from, $to, $min, $max),
+            'on' => $from > $min || $to < $max,
+        ];
     }
 
     /**
@@ -1140,7 +1174,7 @@ class SearchController extends AbstractController
                 // Hours, never days: the whole point of the bar is comparing
                 // these three side by side, and "1d 5h" against "21h 56m" is a
                 // sum the reader has to do. 29h 12m against 21h 56m is not.
-                'duration' => $best === null ? null : $this->hoursAndMinutes((int) $best['duration']),
+                'duration' => $best === null ? null : Helper::hoursAndMinutes((int) $best['duration']),
             ];
 
             if (in_array((string) $key, self::PRIMARY_SORTS, true)) {
@@ -1156,18 +1190,6 @@ class SearchController extends AbstractController
     /**
      * A duration in hours and minutes, without rolling over into days.
      */
-    private function hoursAndMinutes(int $minutes): string
-    {
-        $hours = intdiv($minutes, 60);
-        $rest = $minutes % 60;
-
-        if ($hours === 0) {
-            return $rest . 'm';
-        }
-
-        return $rest === 0 ? $hours . 'h' : sprintf('%dh %dm', $hours, $rest);
-    }
-
     /**
      * This search, sorted differently. Page one, since the order changed.
      */

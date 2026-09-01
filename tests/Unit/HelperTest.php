@@ -72,6 +72,59 @@ final class HelperTest extends TestCase
         ];
     }
 
+    #[DataProvider('hoursAndMinutesProvider')]
+    public function testHoursAndMinutes(string $expected, int $minutes): void
+    {
+        self::assertSame($expected, Helper::hoursAndMinutes($minutes));
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: int}>
+     */
+    public static function hoursAndMinutesProvider(): array
+    {
+        return [
+            'nothing' => ['0m', 0],
+            'under an hour' => ['45m', 45],
+            'exactly an hour' => ['1h', 60],
+            'hour and change' => ['1h 30m', 90],
+            'whole day' => ['24h', 1440],
+            // Hours run past 24 rather than rolling into days: a 33-hour trip
+            // is easier to compare against a 26-hour one than "1d 9h" is.
+            'more than a day' => ['33h 20m', 2000],
+        ];
+    }
+
+    #[DataProvider('sliderCaptionProvider')]
+    public function testSliderCaption(string $expected, string $kind, int $from, ?int $to, int $min, int $max): void
+    {
+        self::assertSame($expected, Helper::sliderCaption($kind, $from, $to, $min, $max));
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string, 2: int, 3: int|null, 4: int, 5: int}>
+     */
+    public static function sliderCaptionProvider(): array
+    {
+        return [
+            // One handle can only ever have set a ceiling, wherever it sits.
+            'single handle' => ['Up to 6h', 'minutes', 360, null, 50, 360],
+            'single handle, money' => ['Up to $12,000', 'money', 12000, null, 500, 20000],
+            // Both ends open: there is no filter, so the pill reads as the top
+            // of what is on offer rather than as a limit someone chose.
+            'range at both ends' => ['Up to 6h', 'minutes', 50, 360, 50, 360],
+            'floor moved' => ['From 2h', 'minutes', 120, 360, 50, 360],
+            'ceiling moved' => ['Up to 3h 20m', 'minutes', 50, 200, 50, 360],
+            'both moved' => ['From 1h 30m to 4h', 'minutes', 90, 240, 50, 360],
+            'both moved, money' => ['From $500 to $1,200', 'money', 500, 1200, 100, 5000],
+            // A handle at or under its end excludes nothing, so it is not
+            // announced. rangeOption() widens the bounds to contain whatever
+            // was chosen, so this is the shape a stale floor arrives in.
+            'floor at or below the minimum' => ['Up to 6h', 'minutes', 40, 360, 50, 360],
+            'ceiling at or above the maximum' => ['From 2h', 'minutes', 120, 400, 50, 360],
+        ];
+    }
+
     #[DataProvider('airportNameProvider')]
     public function testAirportNameAfterCity(string $expected, string $title, string $city): void
     {

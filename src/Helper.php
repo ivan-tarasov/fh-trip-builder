@@ -137,6 +137,44 @@ class Helper
         return number_format($id, 0, '', '-');
     }
 
+    public static function hoursAndMinutes(int $minutes): string
+    {
+        $hours = intdiv($minutes, 60);
+        $rest = $minutes % 60;
+
+        if ($hours === 0) {
+            return $rest . 'm';
+        }
+
+        return $rest === 0 ? $hours . 'h' : sprintf('%dh %dm', $hours, $rest);
+    }
+
+    /**
+     * What a range control's pill reads, naming the end that is actually set.
+     *
+     * "Up to 6h" says more than a bare "6h", and a floor that has been dragged
+     * up has to say "From", or the same number would mean two opposite things.
+     * A `null` ceiling is a single-handled control, which can only ever have
+     * set one. Mirrored by sliderCaption() in global.js, which repaints the
+     * pill as a handle moves.
+     */
+    public static function sliderCaption(string $kind, int $from, ?int $to, int $min, int $max): string
+    {
+        $show = static fn(int $value): string => $kind === 'money'
+            ? '$' . number_format($value)
+            : self::hoursAndMinutes($value);
+
+        if ($to === null) {
+            return 'Up to ' . $show($from);
+        }
+
+        if ($from > $min && $to < $max) {
+            return sprintf('From %s to %s', $show($from), $show($to));
+        }
+
+        return $from > $min ? 'From ' . $show($from) : 'Up to ' . $show($to);
+    }
+
     /**
      * An airport's name with the city it is in stripped off the front.
      *
