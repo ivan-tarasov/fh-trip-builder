@@ -1745,77 +1745,121 @@ textarea {
 
 .filters .card-body { padding: .5rem 1rem 1rem; }
 
-/* --- Sort tabs above the results ----------------------------------------
-   Each carries the price and travel time it would put first, so the trade
-   between cheap and quick is visible before you choose rather than after. */
-.sort-tabs {
+/* --- Results column: one block per idea, ruled apart -------------------
+   The step track, the heading, the sort bar and the results were four things
+   in one undifferentiated stack. A rule between them says where each ends. */
+.results-block { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e9ecef; }
+.results-block--steps { padding-bottom: .875rem; margin-bottom: .875rem; }
+.results-block--title { padding-bottom: .875rem; margin-bottom: .875rem; }
+/* Ruled off from the results too, so the bar reads as a control over the
+   list rather than the first item in it. */
+.results-block--sort { padding-bottom: 1rem; margin-bottom: 1rem; }
+.results-block--sort .sort-bar { margin-bottom: 0; }
+
+/* --- Column widths -------------------------------------------------------
+   The sidebar needs less than a third once sorting moved out of it; the extra
+   goes to the results, where the route bar and the card footer use it. */
+@media (min-width: 992px) {
+  .search-sidebar { flex: 0 0 auto; width: 28%; }
+  .search-results { flex: 0 0 auto; width: 72%; }
+}
+
+/* --- Sort bar above the results ------------------------------------------
+   Three readings of the same list, so one connected control rather than three
+   cards: the prices sit in a row and can be compared without moving the eye
+   between boxes. The chosen one is filled dark rather than brand blue — blue
+   is what a "Select this flight" button means here, and a sort is not that. */
+.sort-bar {
   display: flex;
   align-items: stretch;
-  flex-wrap: wrap;
-  gap: .5rem;
   margin-bottom: 1rem;
-}
-
-.sort-tab {
-  flex: 1 1 0;
-  min-width: 8rem;
-  padding: .625rem .875rem;
-  border: 1px solid #e9ecef;
-  border-radius: .625rem;
-  background-color: #fff;
-  color: #495057;
-  text-decoration: none;
-  transition: border-color .12s ease, background-color .12s ease;
-}
-
-.sort-tab:hover {
-  border-color: #ced4da;
+  border-radius: .75rem;
+  /* A light ground, so the chosen tab reads as filled rather than as the only
+     thing with a border. */
   background-color: #f8f9fa;
-  color: #212529;
+  overflow: hidden;
 }
 
-.sort-tab.is-current {
-  border-color: var(--bs-primary);
-  background-color: #e7f1ff;
-  color: #0a58ca;
+.sort-bar__tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: .75rem 1.125rem;
+  border-right: 1px solid #e9ecef;
+  color: #6c757d;
+  text-decoration: none;
+  cursor: pointer;
+  /* The tab is a target, not a passage of text: without this the pointer
+     turns into a caret over the label and the price. */
+  user-select: none;
+  transition: background-color .12s ease, color .12s ease;
 }
 
-.sort-tab__title {
+.sort-bar__tab:hover { background-color: #e9ecef; }
+
+/* Brand blue, the same as the navbar and the Select button — a neutral dark
+   read as a different design language from the rest of the page. */
+.sort-bar__tab.is-current {
+  background-color: var(--bs-primary);
+  border-right-color: var(--bs-primary);
+  color: #fff;
+}
+
+.sort-bar__label {
   display: block;
-  font-size: .875rem;
-  font-weight: 600;
+  font-size: .8125rem;
+  line-height: 1.2;
 }
 
-/* The number is the point of the tab, so it outweighs the label. */
-.sort-tab__outcome {
+/* The number is what the tab is for, so it carries the weight. */
+.sort-bar__price {
   display: block;
   margin-top: .1rem;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.15;
   color: #212529;
 }
 
-.sort-tab.is-current .sort-tab__outcome { color: #0a58ca; }
-.sort-tab__dot { padding: 0 .25rem; color: #adb5bd; font-weight: 400; }
+.sort-bar__tab.is-current .sort-bar__price { color: #fff; }
+.sort-bar__price--none { color: #ced4da; }
 
-.sort-tab__outcome--empty {
+.sort-bar__meta {
+  display: block;
   font-size: .75rem;
-  font-weight: 400;
+  line-height: 1.3;
   color: #adb5bd;
 }
 
-.sort-tabs__more {
+.sort-bar__tab.is-current .sort-bar__meta { color: rgba(255, 255, 255, .7); }
+
+/* The overflow sorts, in the same bar so there is one place to change order. */
+/* Sits in the bar like another tab, so it needs the same footprint and its
+   label centred rather than left-aligned against the divider. */
+.sort-bar__more {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: .15rem;
   flex: 0 0 auto;
-  min-width: 11rem;
+  min-width: 8rem;
+  padding: 0 .5rem;
 }
 
-.sort-tabs__more-label {
-  font-size: .75rem;
-  color: #6c757d;
+.sort-bar__select {
+  border: 0;
+  background: none;
+  text-align: center;
+  text-align-last: center;
+  padding: .5rem 1.75rem .5rem 1.75rem;
+  font-size: .9375rem;
+  font-weight: 600;
+  color: #212529;
+  cursor: pointer;
+  user-select: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23212529'%3E%3Cpath d='M4.5 6.5 8 10l3.5-3.5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .5rem center;
+  background-size: 1rem;
 }
 
 /* A quiet note that the other half of the trip is filtered too. */

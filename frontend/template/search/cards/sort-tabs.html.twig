@@ -1,29 +1,33 @@
-{# Sorting above the results rather than in the sidebar, with the outcome on
-   the control: cheapest and quickest are rarely the same itinerary, and the
-   choice is blind unless both numbers are visible before you make it. #}
-<div class="sort-tabs">
+{# Sorting above the results, with the outcome on the control: cheapest and
+   quickest are rarely the same itinerary, and the choice is blind unless both
+   numbers are visible before you make it.
+
+   One connected bar rather than separate cards — these are three readings of
+   the same list, so they belong in one control, and the prices line up as a
+   row to be compared at a glance. #}
+<div class="sort-bar">
     {% for tab in sort_tabs.primary %}
-        <a href="{{ tab.url }}" class="sort-tab{{ tab.current ? ' is-current' : '' }}"
+        <a href="{{ tab.url }}" class="sort-bar__tab{{ tab.current ? ' is-current' : '' }}"
            {{ tab.current ? 'aria-current="true"' : '' }}>
-            <span class="sort-tab__title">
-                <i class="fas {{ tab.icon }} pe-1"></i>{{ tab.title }}
-            </span>
+            <span class="sort-bar__label">{{ tab.title }}</span>
             {% if tab.price %}
-                <span class="sort-tab__outcome">${{ tab.price.whole }}{% if tab.duration %}<span class="sort-tab__dot">&middot;</span>{{ tab.duration }}{% endif %}</span>
+                <span class="sort-bar__price">${{ tab.price.whole }}</span>
+                <span class="sort-bar__meta">{{ tab.duration }}</span>
             {% else %}
-                <span class="sort-tab__outcome sort-tab__outcome--empty">{{ tab.note }}</span>
+                <span class="sort-bar__price sort-bar__price--none">&mdash;</span>
+                <span class="sort-bar__meta">{{ tab.note }}</span>
             {% endif %}
         </a>
     {% endfor %}
 
     {% if sort_tabs.more %}
-        <div class="sort-tabs__more">
-            <label class="sort-tabs__more-label" for="sortMore">Or sort by</label>
-            <select id="sortMore" class="form-select form-select-sm js-sort-select">
-                <option value="">Choose…</option>
+        <div class="sort-bar__more">
+            <label class="visually-hidden" for="sortMore">Other ways to sort</label>
+            <select id="sortMore" class="sort-bar__select js-sort-select">
+                <option value="">Sort</option>
                 {% for tab in sort_tabs.more %}
                     <option value="{{ tab.url }}"{{ tab.current ? ' selected' : '' }}>
-                        {{ tab.title }}{% if tab.price %} — ${{ tab.price.whole }}{% if tab.duration %}, {{ tab.duration }}{% endif %}{% endif %}
+                        {{ tab.title }}{% if tab.price %} · ${{ tab.price.whole }}{% endif %}
                     </option>
                 {% endfor %}
             </select>

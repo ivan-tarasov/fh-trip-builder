@@ -1058,7 +1058,10 @@ class SearchController extends AbstractController
                 'current' => (string) $key === $current,
                 'url' => $this->sortUrl((string) $key),
                 'price' => $best === null ? null : $this->presenter()->priceParts((float) $best['price']),
-                'duration' => $best === null ? null : $this->presenter()->minutesToStringTime((int) $best['duration']),
+                // Hours, never days: the whole point of the bar is comparing
+                // these three side by side, and "1d 5h" against "21h 56m" is a
+                // sum the reader has to do. 29h 12m against 21h 56m is not.
+                'duration' => $best === null ? null : $this->hoursAndMinutes((int) $best['duration']),
             ];
 
             if (in_array((string) $key, self::PRIMARY_SORTS, true)) {
@@ -1069,6 +1072,21 @@ class SearchController extends AbstractController
         }
 
         return ['primary' => $primary, 'more' => $more, 'current' => $current];
+    }
+
+    /**
+     * A duration in hours and minutes, without rolling over into days.
+     */
+    private function hoursAndMinutes(int $minutes): string
+    {
+        $hours = intdiv($minutes, 60);
+        $rest = $minutes % 60;
+
+        if ($hours === 0) {
+            return $rest . 'm';
+        }
+
+        return $rest === 0 ? $hours . 'h' : sprintf('%dh %dm', $hours, $rest);
     }
 
     /**

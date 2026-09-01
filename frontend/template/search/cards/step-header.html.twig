@@ -1,5 +1,5 @@
 {# Where the traveller is: departing, then returning, then the assembled trip. #}
-<div class="mb-4">
+<div class="results-block results-block--steps">
     {% if step %}
         <ol class="step-track list-unstyled d-flex align-items-center gap-2 mb-3">
             <li class="step-track__item {{ step == 1 ? 'is-current' : 'is-done' }}">
@@ -19,6 +19,9 @@
         </ol>
     {% endif %}
 
+</div>
+
+<div class="results-block results-block--title">
     <h2 class="h4 mb-1">{{ step_title }}</h2>
     <p class="text-muted mb-0">
         {{ step_route }}
