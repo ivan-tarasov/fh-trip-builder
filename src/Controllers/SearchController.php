@@ -439,7 +439,7 @@ class SearchController extends AbstractController
     {
         // Section id => the query keys it owns.
         $groups = [
-            'stops' => [FlightFilters::DIM_STOPS],
+            'stops' => [FlightFilters::DIM_STOPS, FlightFilters::DIM_LAYOVER_RANGE],
             'conditions' => [
                 FlightFilters::DIM_SINGLE_CARRIER,
                 FlightFilters::DIM_NO_VISA,
@@ -456,7 +456,6 @@ class SearchController extends AbstractController
             ],
             'arrdate' => [FlightFilters::DIM_ARRIVE_DATE],
             'airlines' => [FlightFilters::DIM_AIRLINES],
-            'layover' => [FlightFilters::DIM_LAYOVER_RANGE],
             'via' => [FlightFilters::DIM_LAYOVER_AIRPORTS],
             'fromap' => [FlightFilters::DIM_DEPART_AIRPORTS],
             'toap' => [FlightFilters::DIM_ARRIVE_AIRPORTS],
@@ -594,7 +593,11 @@ class SearchController extends AbstractController
             $options[] = [
                 'value' => $code,
                 'label' => $airport === null ? $code : (string) $airport['city'],
-                'sub' => $airport === null ? null : trim(sprintf('%s %s', $airport['title'], $code)),
+                'sub' => $airport === null ? null : trim(sprintf(
+                    '%s %s',
+                    self::airportSuffix((string) $airport['title'], (string) $airport['city']),
+                    $code,
+                )),
                 'note' => $airport === null ? '' : (string) ($airport['country'] ?? ''),
                 'price' => $this->optionPrice($key, $code),
                 'checked' => in_array($code, $picked, true),
@@ -603,6 +606,32 @@ class SearchController extends AbstractController
         }
 
         return $options;
+    }
+
+    /**
+     * The airport's name with the city stripped off the front.
+     *
+     * The row names the city on its own line, so "Amsterdam" above "Amsterdam
+     * Airport Schiphol" stutters and costs the row a second line of wrapping.
+     * Only a whole leading word goes, or a city called "San" would maul
+     * "Santiago"; a name that is nothing but the city leaves the IATA code to
+     * speak for it.
+     */
+    private static function airportSuffix(string $title, string $city): string
+    {
+        if ($city === '') {
+            return $title;
+        }
+
+        if (strcasecmp($title, $city) === 0) {
+            return '';
+        }
+
+        $prefix = $city . ' ';
+
+        return strncasecmp($title, $prefix, strlen($prefix)) === 0
+            ? substr($title, strlen($prefix))
+            : $title;
     }
 
     /**
@@ -734,20 +763,46 @@ class SearchController extends AbstractController
      */
     private function rangeOption(?array $bound, mixed $value, array $steps): ?array
     {
-        if ($bound === null || $bound['max'] <= $bound['min']) {
+        if ($bound === null) {
             return null;
         }
 
-        $step = $this->niceStep($bound['max'] - $bound['min'], $steps);
-        $min = (int) floor($bound['min'] / $step) * $step;
-        $max = (int) ceil($bound['max'] / $step) * $step;
+        // Either separator, so the control shows the state the filter actually
+        // applied: FlightFilters accepts both, and a slider reading "Any" over
+        // a filtered page would drop the filter on the next Apply.
+        $chosen = is_string($value) && preg_match('/^(\d{1,5})[;-](\d{1,5})$/', $value, $match) === 1
+            ? [(int) $match[1], (int) $match[2]]
+            : null;
+
+        // Nothing left to choose between and nothing chosen: no control worth
+        // drawing. With a filter applied it has to stay whatever the spread,
+        // since hiding it is the one way out of a narrow filter — and a form
+        // missing the input drops that filter without saying so.
+        if ($bound['max'] <= $bound['min'] && $chosen === null) {
+            return null;
+        }
+
+        // The ends have to contain the chosen range as well as what is on
+        // offer, or the handles get clamped to somewhere the user never asked
+        // for.
+        $low = $chosen === null ? $bound['min'] : min($bound['min'], $chosen[0]);
+        $high = $chosen === null ? $bound['max'] : max($bound['max'], $chosen[1]);
+
+        $step = $this->niceStep(max(1, $high - $low), $steps);
+        $min = (int) floor($low / $step) * $step;
+        $max = (int) ceil($high / $step) * $step;
+
+        // One step wide at worst, so the track is draggable rather than a dot.
+        if ($max <= $min) {
+            $max = $min + $step;
+        }
 
         $from = $min;
         $to = $max;
 
-        if (is_string($value) && preg_match('/^(\d{1,5})-(\d{1,5})$/', $value, $match) === 1) {
-            $from = max($min, min((int) $match[1], $max));
-            $to = max($from, min((int) $match[2], $max));
+        if ($chosen !== null) {
+            $from = max($min, min($chosen[0], $max));
+            $to = max($from, min($chosen[1], $max));
         }
 
         return ['min' => $min, 'max' => $max, 'step' => $step, 'from' => $from, 'to' => $to];

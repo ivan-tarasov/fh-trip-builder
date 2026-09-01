@@ -44,12 +44,28 @@
                     </div>
                 {% endif %}
 
-                {# --- Stops --- #}
-                {% embed 'search/sidebar/section.html.twig' with { 'id': 'stops', 'title': 'Stops', 'select_all': true } %}
+                {# --- Layovers: how many, and how long each one lasts --- #}
+                {% embed 'search/sidebar/section.html.twig' with { 'id': 'stops', 'title': 'Layovers', 'select_all': true } %}
                     {% block body %}
                         {% include 'search/sidebar/checklist.html.twig' with {
                             'id': 'stops', 'name': sidebar.prefix ~ 'stops', 'options': sidebar.stops
                         } only %}
+
+                        {# The same subject as the count above it, so the two sit
+                           together: how many connections, then how long you
+                           spend in each. Clear covers both at once. #}
+                        {% if sidebar.ranges.layover %}
+                            <div class="mt-3">
+                                {% include 'search/sidebar/slider.html.twig' with {
+                                    'id': 'layover', 'name': sidebar.prefix ~ 'layover', 'kind': 'minutes',
+                                    'label': 'Each layover',
+                                    'min': sidebar.ranges.layover.min, 'max': sidebar.ranges.layover.max,
+                                    'step': sidebar.ranges.layover.step,
+                                    'value': sidebar.ranges.layover.from, 'to': sidebar.ranges.layover.to,
+                                    'display': 'Any'
+                                } only %}
+                            </div>
+                        {% endif %}
                     {% endblock %}
                 {% endembed %}
 
@@ -129,29 +145,14 @@
                     {% endembed %}
                 {% endif %}
 
-                {# --- Layover duration --- #}
-                {% if sidebar.ranges.layover %}
-                    {% embed 'search/sidebar/section.html.twig' with { 'id': 'layover', 'title': 'Layovers', 'open': sidebar.active.layover } %}
-                        {% block body %}
-                            {% include 'search/sidebar/slider.html.twig' with {
-                                'id': 'layover', 'name': sidebar.prefix ~ 'layover', 'kind': 'minutes',
-                                'label': 'Each layover',
-                                'min': sidebar.ranges.layover.min, 'max': sidebar.ranges.layover.max,
-                                'step': sidebar.ranges.layover.step,
-                                'value': sidebar.ranges.layover.from, 'to': sidebar.ranges.layover.to,
-                                'display': 'Any'
-                            } only %}
-                        {% endblock %}
-                    {% endembed %}
-                {% endif %}
-
                 {# --- Layover airports --- #}
                 {% if sidebar.layover_airports %}
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'via', 'title': 'Layover airports', 'select_all': true, 'open': sidebar.active.via } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
                                 'id': 'via', 'name': sidebar.prefix ~ 'via', 'options': sidebar.layover_airports,
-                                'search': true, 'limit': 8, 'placeholder': 'Airport, city, country, code'
+                                'search': true, 'limit': 8, 'placeholder': 'Airport, city, country, code',
+                                'price_below': true
                             } only %}
                         {% endblock %}
                     {% endembed %}
@@ -162,7 +163,8 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'fromap', 'title': 'Departure airports', 'select_all': true, 'open': sidebar.active.fromap } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'fromap', 'name': sidebar.prefix ~ 'from_ap', 'options': sidebar.depart_airports
+                                'id': 'fromap', 'name': sidebar.prefix ~ 'from_ap', 'options': sidebar.depart_airports,
+                                'price_below': true
                             } only %}
                         {% endblock %}
                     {% endembed %}
@@ -172,7 +174,8 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'toap', 'title': 'Arrival airports', 'select_all': true, 'open': sidebar.active.toap } %}
                         {% block body %}
                             {% include 'search/sidebar/checklist.html.twig' with {
-                                'id': 'toap', 'name': sidebar.prefix ~ 'to_ap', 'options': sidebar.arrive_airports
+                                'id': 'toap', 'name': sidebar.prefix ~ 'to_ap', 'options': sidebar.arrive_airports,
+                                'price_below': true
                             } only %}
                         {% endblock %}
                     {% endembed %}
