@@ -107,9 +107,10 @@ final class HelperTest extends TestCase
     public static function sliderCaptionProvider(): array
     {
         return [
-            // One handle can only ever have set a ceiling, wherever it sits.
-            'single handle' => ['Up to 6h', 'minutes', 360, null, 50, 360],
-            'single handle, money' => ['Up to $12,000', 'money', 12000, null, 500, 20000],
+            // One handle sits under a label that already says "Up to", so the
+            // pill must not say it twice.
+            'single handle' => ['6h', 'minutes', 360, null, 50, 360],
+            'single handle, money' => ['$12,000', 'money', 12000, null, 500, 20000],
             // Both ends open: there is no filter, so the pill reads as the top
             // of what is on offer rather than as a limit someone chose.
             'range at both ends' => ['Up to 6h', 'minutes', 50, 360, 50, 360],

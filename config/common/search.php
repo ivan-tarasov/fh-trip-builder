@@ -35,10 +35,12 @@ return [
 
     'sort' => [
         'recommended' => [
-            'id' => 'Recommended',
-            'tab_title' => 'Recommended',
+            'id' => 'Best',
+            'tab_title' => 'Best',
             'icon' => 'fa-thumbs-up',
-            'title' => 'Recommended',
+            'title' => 'Best',
+            // The key stays 'recommended': it is the sort's value in every URL
+            // already shared or bookmarked.
             'note' => 'The best balance of price and travel time',
             'order' => 'asc',
             'roundtrip' => 1,

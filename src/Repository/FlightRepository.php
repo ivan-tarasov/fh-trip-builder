@@ -377,8 +377,8 @@ final readonly class FlightRepository
      * Both are min-max scaled across the set being ranked, so the score says
      * "how far from the best on offer" rather than comparing dollars to
      * minutes. This is the one definition of a good itinerary in the app: the
-     * "Best value" badge marks its minimum and the Recommended sort orders by
-     * it, so the top row of that sort is the badged one.
+     * "Best value" badge marks its minimum and the Best sort orders by it, so
+     * the top row of that sort is the badged one.
      *
      * @param list<array<string, mixed>> $candidates
      * @return list<float>

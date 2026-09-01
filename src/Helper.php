@@ -152,11 +152,12 @@ class Helper
     /**
      * What a range control's pill reads, naming the end that is actually set.
      *
-     * "Up to 6h" says more than a bare "6h", and a floor that has been dragged
-     * up has to say "From", or the same number would mean two opposite things.
-     * A `null` ceiling is a single-handled control, which can only ever have
-     * set one. Mirrored by sliderCaption() in global.js, which repaints the
-     * pill as a handle moves.
+     * On two handles the end matters: a floor that has been dragged up has to
+     * say "From", or the same number would mean two opposite things. A `null`
+     * ceiling is a single-handled control, which sits under a label that
+     * already says which end it is, so the pill carries the number alone.
+     * Mirrored by sliderCaption() in global.js, which repaints the pill as a
+     * handle moves.
      */
     public static function sliderCaption(string $kind, int $from, ?int $to, int $min, int $max): string
     {
@@ -165,7 +166,7 @@ class Helper
             : self::hoursAndMinutes($value);
 
         if ($to === null) {
-            return 'Up to ' . $show($from);
+            return $show($from);
         }
 
         if ($from > $min && $to < $max) {

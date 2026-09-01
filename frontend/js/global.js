@@ -575,13 +575,14 @@
             : formatMinutes(value);
     }
 
-    // Names the end that is actually set: "Up to 6h" says more than a bare
-    // "6h", and a floor dragged up has to read "From" or the same number would
-    // mean two opposite things. Keep in step with
-    // SearchController::sliderCaption, which paints the first render.
+    // On two handles the end matters: a floor dragged up has to read "From" or
+    // the same number would mean two opposite things. One handle sits under a
+    // label that already says which end it is, so the pill carries the number
+    // alone. Keep in step with Helper::sliderCaption, which paints the first
+    // render.
     function sliderCaption(kind, from, to, min, max) {
         if (to === undefined) {
-            return 'Up to ' + sliderLabel(kind, from);
+            return sliderLabel(kind, from);
         }
 
         if (from > min && to < max) {

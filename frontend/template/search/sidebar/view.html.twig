@@ -83,7 +83,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'price', 'title': 'Price', 'open': sidebar.active.price } %}
                         {% block body %}
                             {% include 'search/sidebar/slider.html.twig' with {
-                                'id': 'max_price', 'name': sidebar.prefix ~ 'max_price', 'kind': 'money', 'label': 'Trip total',
+                                'id': 'max_price', 'name': sidebar.prefix ~ 'max_price', 'kind': 'money', 'label': 'Up to',
                                 'min': sidebar.sliders.max_price.min, 'max': sidebar.sliders.max_price.max,
                                 'step': sidebar.sliders.max_price.step, 'value': sidebar.sliders.max_price.value,
                                 'display': sidebar.sliders.max_price.caption, 'on': sidebar.sliders.max_price.on
@@ -97,7 +97,7 @@
                     {% embed 'search/sidebar/section.html.twig' with { 'id': 'duration', 'title': 'Travel time', 'open': sidebar.active.duration } %}
                         {% block body %}
                             {% include 'search/sidebar/slider.html.twig' with {
-                                'id': 'max_duration', 'name': sidebar.prefix ~ 'max_duration', 'kind': 'minutes', 'label': 'Door to door',
+                                'id': 'max_duration', 'name': sidebar.prefix ~ 'max_duration', 'kind': 'minutes', 'label': 'Up to',
                                 'min': sidebar.sliders.max_duration.min, 'max': sidebar.sliders.max_duration.max,
                                 'step': sidebar.sliders.max_duration.step, 'value': sidebar.sliders.max_duration.value,
                                 'display': sidebar.sliders.max_duration.caption, 'on': sidebar.sliders.max_duration.on

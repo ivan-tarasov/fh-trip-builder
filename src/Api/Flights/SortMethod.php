@@ -64,7 +64,7 @@ enum SortMethod: string
     /**
      * Whether this sort can only be decided once every result is known.
      *
-     * "Recommended" scores each itinerary against the best and worst of the
+     * "Best" scores each itinerary against the cheapest and quickest of the
      * set, so there is no ORDER BY that expresses it — the repository ranks it
      * after filtering instead.
      */
