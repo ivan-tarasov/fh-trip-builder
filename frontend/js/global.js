@@ -129,16 +129,19 @@
                     if (result.value.status == 'success') {
                         $(this).prop('disabled', true);
 
+                        // Reload when the confirmation closes, not on a
+                        // second timer of its own. The two used to be set
+                        // separately -- 3s for the message, 1s for the
+                        // reload -- so the page tore the message down two
+                        // seconds into reading it. One timing, one owner.
                         Swal.fire({
                             title: `${result.value.message}`,
                             icon: 'success',
                             showConfirmButton: false,
                             timer: 3000
-                        });
-
-                        setTimeout(function () {
+                        }).then(function () {
                             location.reload();
-                        }, 1000);
+                        });
                     } else {
                         Swal.fire({
                             title: `${result.value.status} => ${result.value.message}`,
@@ -151,15 +154,6 @@
     } catch (err) {
         console.log(err);
     }
-
-    function scrollToAnchor(aid) {
-        let aTag = $("#top");
-        $('html,body').animate({scrollTop: aTag.offset().top}, 0);
-    }
-
-    $("#linktotop").click(function () {
-        scrollToAnchor('top');
-    });
 
     // Cards arrive after load too, when the list grows, so this has to be
     // callable again. getOrCreateInstance rather than new: running it twice
@@ -289,23 +283,61 @@
                 storeSavedFlights(list);
             }
 
+            // Counted after the card has actually gone, not before.
+            const settle = function () {
+                const remaining = document.querySelectorAll('.saved-item').length;
+                const empty = document.querySelector('.js-saved-empty');
+
+                if (remaining === 0 && empty) {
+                    empty.classList.remove('d-none');
+                    const list_ = document.querySelector('.js-saved-list');
+
+                    if (list_) {
+                        list_.remove();
+                    }
+                }
+            };
+
             const card = button.closest('.saved-item');
 
-            if (card) {
-                card.remove();
+            if (!card) {
+                settle();
+                return;
             }
 
-            const remaining = document.querySelectorAll('.saved-item').length;
-            const empty = document.querySelector('.js-saved-empty');
+            let removed = false;
 
-            if (remaining === 0 && empty) {
-                empty.classList.remove('d-none');
-                const list_ = document.querySelector('.js-saved-list');
-
-                if (list_) {
-                    list_.remove();
+            const finish = function () {
+                if (removed) {
+                    return;
                 }
-            }
+
+                removed = true;
+                card.remove();
+                settle();
+            };
+
+            // An explicit height first, or there is nothing for the collapse
+            // to run from; then the class and the target in the next frame.
+            card.style.height = card.offsetHeight + 'px';
+
+            window.requestAnimationFrame(function () {
+                card.classList.add('is-leaving');
+                card.style.height = '0px';
+            });
+
+            // The fade is the cue, but the removal never depends on it: a
+            // stylesheet, a reduced-motion preference or a backgrounded tab
+            // can all stop a transition from finishing, and a card that stays
+            // behind after being dropped is worse than one that goes without
+            // ceremony.
+            card.addEventListener('transitionend', function (event) {
+                if (event.propertyName === 'opacity') {
+                    finish();
+                }
+            });
+
+            window.setTimeout(finish, 400);
         });
     });
 
@@ -511,6 +543,10 @@
 
         let ticking = false;
 
+        // Read on every use, not once, so a preference changed mid-session is
+        // honoured without a reload.
+        const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
         const paint = function () {
             const past = window.scrollY > THRESHOLD;
 
@@ -525,6 +561,17 @@
                 });
             } else {
                 button.classList.remove('is-visible');
+
+                // Belt and braces. The stylesheet keeps the opacity fade
+                // under reduced motion, so `transitionend` below does still
+                // fire -- but it is the only thing that puts `hidden` back,
+                // and any future rule that drops the transition would leave
+                // an invisible button parked in the tab order for exactly
+                // the readers who opted out. Hiding straight away costs a
+                // fade nobody asked to see.
+                if (still.matches) {
+                    button.hidden = true;
+                }
             }
 
             ticking = false;
@@ -545,9 +592,7 @@
         }, { passive: true });
 
         button.addEventListener('click', function () {
-            const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-            window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
+            window.scrollTo({ top: 0, behavior: still.matches ? 'auto' : 'smooth' });
 
             // Scrolling moves the page, not the keyboard. Without this a tab
             // press would carry on from the button at the bottom, which is not
@@ -628,10 +673,33 @@
                     return response.text();
                 })
                 .then(function (html) {
+                    // Counted first, so the cards the fragment brings can be
+                    // told apart from the ones already on the page.
+                    const settled = results.querySelectorAll('.flight-card').length;
+
                     // The fragment brings its own "show more", so the old one
                     // is replaced rather than updated.
                     holder.insertAdjacentHTML('beforebegin', html);
                     holder.remove();
+
+                    // Marked in the same task as the insert, before the
+                    // browser has a chance to paint, so the new cards never
+                    // show at full opacity and then blink out. The class comes
+                    // off a frame later, which is what gives the transition
+                    // something to run from.
+                    const arrived = Array.from(
+                        results.querySelectorAll('.flight-card')
+                    ).slice(settled);
+
+                    arrived.forEach(function (card) {
+                        card.classList.add('is-arriving');
+                    });
+
+                    window.requestAnimationFrame(function () {
+                        arrived.forEach(function (card) {
+                            card.classList.remove('is-arriving');
+                        });
+                    });
 
                     // Cards that arrived have arrived. An enhancement that
                     // throws must not send us down the failure path, which
@@ -654,8 +722,11 @@
                     watch();
                 })
                 .catch(function () {
-                    // Put the link back the way it was: clicking it navigates,
-                    // which is the no-JS behaviour and still gets more results.
+                    // Put the control back so it can be pressed again. The
+                    // click handler calls preventDefault unconditionally, so
+                    // a retry comes back through here rather than following
+                    // the href -- the no-JS path is for visitors without this
+                    // script at all, not for a failed request.
                     link.classList.remove('is-loading');
 
                     if (label) {
@@ -664,6 +735,29 @@
 
                     if (spinner) {
                         spinner.hidden = true;
+                    }
+
+                    // And say what happened. Sliding back to the resting
+                    // state and nothing else is indistinguishable from a
+                    // press that never registered, which leaves somebody
+                    // waiting for cards that are not coming. The note under
+                    // the button already exists to describe what is left to
+                    // load, so it is the honest place to say that nothing
+                    // did. A successful retry replaces this whole block,
+                    // message included.
+                    const note = holder && holder.querySelector('.show-more__note');
+
+                    if (note) {
+                        note.textContent = 'Could not load more results. Check your connection and try again.';
+                    }
+
+                    // Nothing about the button changing shape reaches a
+                    // screen reader, so route it through the same live
+                    // region that announces arrivals.
+                    const live = document.querySelector('.js-results-live');
+
+                    if (live) {
+                        live.textContent = 'Could not load more results.';
                     }
 
                     loading = false;

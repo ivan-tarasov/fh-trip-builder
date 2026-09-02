@@ -1,4 +1,42 @@
 /* ==========================================================================
+   #MOTION
+   ==========================================================================
+   Every duration and curve in this file used to be a literal, repeated at
+   each site: changing the hover speed meant editing a dozen declarations
+   across fifteen hundred lines. Two durations cover almost everything, and
+   the two curves are stronger than the CSS keywords, which are too gentle to
+   read as deliberate.
+
+   Which curve is a decision, not a default:
+     - arriving or leaving  -> --ease-out   (fast first, so it feels answered)
+     - moving on screen     -> --ease-in-out (only the card flip earns it)
+     - hover and colour     -> plain `ease` is right; it is not movement
+     - constant motion      -> linear (the spinner, and only the spinner) */
+:root {
+  --dur-fast: .12s;   /* hover feedback, press, small reveals */
+  --dur-base: .2s;    /* chevrons and anything that rotates or slides */
+  --dur-slow: .5s;    /* the card flip -- deliberately unhurried */
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Asking for reduced motion is not asking for no feedback. Colour, shadow,
+   opacity and filter all still carry meaning and none of them is vestibular,
+   so they keep their transitions; what goes is travel, so a transform lands
+   at its destination instead of moving there. Overriding the property list
+   rather than the duration is what buys that distinction -- zeroing every
+   duration would take the comprehension along with the movement.
+   The one looping animation in this file is stopped where it is defined. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-property: color, background-color, border-color, box-shadow, opacity, filter !important;
+  }
+}
+
+/* ==========================================================================
    #GRID
    ========================================================================== */
 .row {
@@ -164,10 +202,10 @@ img {
 a {
   display: inline-block;
   text-decoration: none;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
+  /* Colour only: `all` also animated layout and paint properties that no
+     anchor state here changes. .12s to match the rest of the file's hover
+     feedback -- 0.4s was long enough to read as lag on a link. */
+  transition: color var(--dur-fast) ease;
 }
 
 a:link {
@@ -317,82 +355,8 @@ a:active {
   margin: 0 auto;
 }
 
-.wrapper--w480 {
-  max-width: 480px;
-}
-
-.wrapper--w600 {
-  max-width: 600px;
-}
-
-.wrapper--w680 {
-  max-width: 680px;
-}
-
-.wrapper--w720 {
-  max-width: 720px;
-}
-
 .wrapper--w768 {
   max-width: 768px;
-}
-
-.wrapper--w900 {
-  max-width: 900px;
-}
-
-.wrapper--w1024 {
-  max-width: 1024px;
-}
-
-.wrapper--w1382 {
-  max-width: 1382px;
-}
-
-/* ==========================================================================
-   #BUTTON
-   ========================================================================== */
-.btn-submit {
-  display: block;
-  width: 100%;
-  line-height: 60px;
-  font-family: inherit;
-  background: #6c7ae0;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
-}
-.btn-submit-small {
-  line-height: 30px;
-  font-size: 14px;
-}
-
-.btn-submit:hover {
-  background: #5866cc;
-}
-
-.m-t-0 {
-  margin-top: 0;
-}
-
-.m-t-15 {
-  margin-top: 15px;
-}
-
-.m-t-25 {
-  margin-top: 35px;
-}
-
-.m-t-35 {
-  margin-top: 35px;
 }
 
 /* ==========================================================================
@@ -608,70 +572,6 @@ button {
   cursor: pointer;
 }
 
-.input-group {
-  position: relative;
-  margin-bottom: 15px;
-  background: #ffffff;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  border-radius: 10px;
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: center;
-  -webkit-align-items: center;
-  -moz-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
-  padding: 0 20px;
-}
-
-.input-group-big {
-  padding: 10px 20px;
-  padding-right: 60px;
-}
-
-.input-group-symbol {
-  position: absolute;
-  font-size: 36px;
-  color: #ccc;
-  right: 30px;
-  top: 50%;
-  -webkit-transform: translateY(-50%);
-  -moz-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  -o-transform: translateY(-50%);
-  transform: translateY(-50%);
-}
-
-.input-group-icon {
-  position: relative;
-  width: 100%;
-}
-
-.input-icon {
-  font-size: 24px;
-  color: #808080;
-  position: absolute;
-  line-height: 60px;
-  right: 0;
-  top: 0;
-  width: 20px;
-  background: #fff;
-  text-align: center;
-  cursor: pointer;
-}
-
-.input-icon::before {
-  display: block;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
-}
-
 .label {
   font-size: 14px;
   color: #333;
@@ -680,45 +580,6 @@ button {
   font-weight: 700;
   white-space: nowrap;
   margin-right: 30px;
-}
-
-.input--style-1 {
-  font-size: 14px;
-  padding: 3px 0;
-  color: #666;
-  font-family: inherit;
-}
-
-.input--style-1::-webkit-input-placeholder {
-  /* WebKit, Blink, Edge */
-  color: #ccc;
-}
-
-.input--style-1:-moz-placeholder {
-  /* Mozilla Firefox 4 to 18 */
-  color: #ccc;
-  opacity: 1;
-}
-
-.input--style-1::-moz-placeholder {
-  /* Mozilla Firefox 19+ */
-  color: #ccc;
-  opacity: 1;
-}
-
-.input--style-1:-ms-input-placeholder {
-  /* Internet Explorer 10-11 */
-  color: #ccc;
-}
-
-.input--style-1:-ms-input-placeholder {
-  /* Microsoft Edge */
-  color: #ccc;
-}
-
-.input--style-1-small {
-  font-size: 16px;
-  padding: 20.5px 0;
 }
 
 .hidden {
@@ -732,70 +593,6 @@ button {
 
 /* CHECKBOX */
 /* Radio button */
-.radio-row {
-  padding-top: 10px;
-}
-
-.radio-container {
-  display: inline-block;
-  position: relative;
-  padding-left: 30px;
-  cursor: pointer;
-  font-size: 15px;
-  color: #fff;
-  font-weight: 700;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.radio-container input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.radio-checkmark {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 20px;
-  width: 20px;
-  background-color: #eee;
-  -webkit-border-radius: 50%;
-  -moz-border-radius: 50%;
-  border-radius: 50%;
-}
-
-.radio-container:hover input ~ .radio-checkmark {
-  background-color: #fff;
-}
-
-.radio-container input:checked ~ .radio-checkmark {
-  background-color: #fff;
-}
-
-.radio-checkmark:after {
-  content: "";
-  position: absolute;
-  display: none;
-}
-
-.radio-container input:checked ~ .radio-checkmark:after {
-  display: block;
-}
-
-.radio-container .radio-checkmark:after {
-  top: 4px;
-  left: 4px;
-  width: 12px;
-  height: 12px;
-  -webkit-border-radius: 50%;
-  -moz-border-radius: 50%;
-  border-radius: 50%;
-  background: #00ad5f;
-}
 
 .search.dropdown-menu {
   /* position: absolute !important; */
@@ -816,162 +613,11 @@ button {
 /* ==========================================================================
    #SELECT
    ========================================================================== */
-.quantity {
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  float: right;
-}
-
-@media (max-width: 575px) {
-  .quantity {
-    float: none;
-    margin-top: 10px;
-  }
-}
-
-.quantity > input {
-  -webkit-appearance: none;
-  width: 55px;
-  text-align: center;
-  font-size: 18px;
-  color: #555;
-  font-weight: 700;
-}
-
-.minus,
-.plus {
-  display: inline-block;
-  width: 32px;
-  height: 32px;
-  line-height: 26px;
-  text-align: center;
-  border: 2px solid #ccc;
-  font-size: 24px;
-  color: #ccc;
-  -webkit-border-radius: 50%;
-  -moz-border-radius: 50%;
-  border-radius: 50%;
-  cursor: pointer;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
-}
-
-.minus:hover,
-.plus:hover {
-  background: #6c7ae0;
-  border-color: #6c7ae0;
-  color: #fff;
-}
-
-.list-room {
-  list-style: none;
-  max-height: 324px;
-  overflow-y: auto;
-  padding-right: 20px;
-}
-
-.list-room__item {
-  margin-bottom: 20px;
-}
-
-.list-room__footer {
-  padding-top: 22px;
-  border-top: 1px solid #e5e5e5;
-}
-
-.list-room__name {
-  margin-bottom: 27px;
-  display: block;
-  font-weight: 700;
-  color: #999;
-}
-
-.list-person {
-  list-style: none;
-}
-
-.list-person .list-person__item:last-child {
-  margin-bottom: 0;
-}
-
-.list-person__item {
-  margin-bottom: 34px;
-}
-
-.list-person__item::after {
-  content: "";
-  clear: both;
-  display: table;
-}
-
-.list-person__item .name {
-  font-size: 18px;
-  color: #555;
-  font-weight: 700;
-  display: inline-block;
-  margin-top: 5px;
-}
 
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-
-#btn-add-room {
-  font-family: inherit;
-  font-size: 16px;
-  color: #6c7ae0;
-  font-weight: 700;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
-}
-
-#btn-add-room:hover {
-  text-decoration: underline;
-}
-
-.dropdown-select {
-  display: none;
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -webkit-calc(100% + 2px);
-  top: -moz-calc(100% + 2px);
-  top: calc(100% + 2px);
-  background: #fff;
-  z-index: 999;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  border-radius: 10px;
-  -webkit-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  -moz-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  padding: 30px 45px;
-  padding-right: 25px;
-}
-
-.dropdown-select.show {
-  display: block;
-}
-
-.open .input-icon::before {
-  -webkit-transform: rotate(-180deg);
-  -moz-transform: rotate(-180deg);
-  -ms-transform: rotate(-180deg);
-  -o-transform: rotate(-180deg);
-  transform: rotate(-180deg);
 }
 
 /* ==========================================================================
@@ -1033,10 +679,7 @@ input[type=number]::-webkit-outer-spin-button {
   content: '\f2f9';
   font-size: 24px;
   color: #808080;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
+  transition: transform var(--dur-base) var(--ease-out);
 }
 
 .rs-select2 .select2-container.select2-container--open .select2-selection--single .select2-selection__arrow::after {
@@ -1072,52 +715,6 @@ input[type=number]::-webkit-outer-spin-button {
 /* ==========================================================================
    #TAB
    ========================================================================== */
-.tab-list {
-  list-style: none;
-  padding: 0 10px;
-  padding-top: 25px;
-}
-
-.tab-list::after {
-  content: "";
-  clear: both;
-  display: table;
-}
-
-@media (max-width: 767px) {
-  .tab-list {
-    padding: 0 10px;
-    padding-top: 40px;
-  }
-}
-
-.tab-list__item {
-  float: left;
-}
-
-.tab-list__link {
-  display: block;
-  text-transform: uppercase;
-  font-family: "Poppins", "Arial", "Helvetica Neue", sans-serif;
-  font-weight: 500;
-  font-size: 16px;
-  color: rgba(128, 128, 128, 0.6);
-  padding: 0 20px;
-}
-
-.tab-list__link:hover {
-  color: #fff;
-}
-
-@media (max-width: 767px) {
-  .tab-list__link {
-    font-size: 22px;
-  }
-}
-
-.tab-list .tab-list__link.active {
-  color: #fff;
-}
 
 .tab-content > .tab-pane {
   display: none;
@@ -1224,16 +821,6 @@ input[type=number]::-webkit-outer-spin-button {
   background: rgba(0, 0, 0, 0.8);
 }
 
-.btn-buy {
-  background-color: #ff6f32;
-  color: #fff;
-}
-
-.btn-buy:hover {
-  background-color: #ff9f76;
-  color: #fff;
-}
-
 /* ==========================================================================
    #BADGES
    ========================================================================== */
@@ -1273,7 +860,6 @@ input[type=number]::-webkit-outer-spin-button {
   background-color: var(--bs-danger-text);
 }
 
-
 /* ==========================================================================
    #AIRLINES
    ========================================================================== */
@@ -1282,17 +868,6 @@ input[type=number]::-webkit-outer-spin-button {
   width: 4rem;
   height: 4rem;
   border-radius: .75rem;
-}
-
-.icon-link>.bi {
-  margin-top: .125rem;
-  margin-left: .125rem;
-  fill: currentcolor;
-  transition: transform .25s ease-in-out;
-}
-
-.icon-link:hover>.bi {
-  transform: translate(.25rem);
 }
 
 .icon-square {
@@ -1348,7 +923,6 @@ textarea {
   color: #212529 !important;
 }
 
-
 /* "Flight details" toggle. A bordered pill rather than a text link: on a card
    already carrying links and icons, an underlined phrase did not read as the
    one control that opens the itinerary. Swaps its label and rotates the
@@ -1360,7 +934,7 @@ textarea {
   color: #495057;
   background-color: #fff;
   font-weight: 500;
-  transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .details-toggle:hover {
@@ -1378,7 +952,7 @@ textarea {
 .details-toggle .if-expanded { display: none; }
 .details-toggle:not(.collapsed) .if-collapsed { display: none; }
 .details-toggle:not(.collapsed) .if-expanded { display: inline; }
-.details-toggle .chevron { transition: transform 0.2s ease; }
+.details-toggle .chevron { transition: transform var(--dur-base) var(--ease-out); }
 .details-toggle:not(.collapsed) .chevron { transform: rotate(180deg); }
 
 /* Two-step search: departing -> returning progress track. */
@@ -1415,9 +989,25 @@ textarea {
   background-color: #ced4da;
 }
 
-/* Lift the option the pointer is on, so rows read as choosable. */
-.flight-card { transition: box-shadow .15s ease, transform .15s ease; }
-.flight-card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1) !important; }
+/* Mark the option the pointer is over. This is deliberately only a shadow:
+   the card is a plain div with no handler on it, and the only thing that
+   advances a step is the Select button inside, so lifting the whole card
+   would advertise a press that does nothing. The transition used to reserve
+   `transform` for that lift -- the reservation outlived the idea.
+   Hover-gated: on a touchscreen :hover latches on tap, and a single card
+   left holding a raised shadow in a list of two hundred reads as chosen. */
+.flight-card { transition: box-shadow var(--dur-fast) ease, opacity var(--dur-base) var(--ease-out); }
+
+/* Twenty cards arriving in a single frame reads as the page flinching. A fade
+   is enough to say "these are new" without holding up the read -- no stagger
+   and no movement, because this is a list being scanned for a price, not an
+   entrance worth watching. Only appended cards get it: the first ten arrive
+   with the page and should be there the instant it paints. */
+.flight-card.is-arriving { opacity: 0; }
+
+@media (hover: hover) and (pointer: fine) {
+  .flight-card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1) !important; }
+}
 
 /* The assembled round trip, set apart from the option lists. */
 .trip-package { border: 2px solid var(--bs-primary); }
@@ -1477,7 +1067,7 @@ textarea {
   display: block;
   width: 100%;
   border-radius: 3px;
-  transition: background-color .12s ease, height .12s ease;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
 }
 
 /* A flight is a solid bar; a layover is the thin gap between two flights.
@@ -1492,13 +1082,28 @@ textarea {
 .route__leg::before { height: 6px; background-color: #ced4da; }
 
 .route__stop { min-width: 2.25rem; }
-.route__stop::before { height: 2px; background-color: #dee2e6; }
-
-.route__leg:hover::before { background-color: #f5622d; }
-
-.route__stop:hover::before {
+/* Drawn at a leg's thickness and scaled down to a layover's, so the hover
+   animates `transform` and not `height`. This bar is the most-hovered surface
+   in the product -- several parts per card, up to 210 cards -- and `height`
+   put a layout pass on every one of them. scaleY works from the centre and
+   the parent already centres the bar, so nothing shifts; at full scale the
+   stop is geometrically identical to the leg beside it. */
+.route__stop::before {
   height: 6px;
-  background-color: #f5622d;
+  transform: scaleY(.3333);
+  background-color: #dee2e6;
+}
+
+/* Hover is a pointer affordance. On a touchscreen :hover latches on tap and
+   stays latched, leaving a segment of somebody's flight highlighted for no
+   reason they can undo. */
+@media (hover: hover) and (pointer: fine) {
+  .route__leg:hover::before { background-color: #f5622d; }
+
+  .route__stop:hover::before {
+    transform: scaleY(1);
+    background-color: #f5622d;
+  }
 }
 
 .route__code {
@@ -1520,8 +1125,11 @@ textarea {
   transform: translateX(-50%);
 }
 
-/* The connection airport lights up with its own leg of the journey. */
-.route__stop:hover .route__code { color: #f5622d; }
+/* The connection airport lights up with its own leg of the journey -- gated
+   with the bar above it, so the pair stay in step on a touchscreen. */
+@media (hover: hover) and (pointer: fine) {
+  .route__stop:hover .route__code { color: #f5622d; }
+}
 
 /* The codes sit below the bar, so they are the only thing occupying that strip
    and can safely take the pointer. Hovering a code is hovering its part: the
@@ -1566,7 +1174,7 @@ textarea {
   border-radius: 50%;
   background-color: #f1f3f5;
   color: #495057;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .icon-btn:hover { background-color: #e9ecef; }
@@ -1576,7 +1184,30 @@ textarea {
 /* Removing a saved flight: the one destructive control on the saved page. */
 .icon-btn--danger:hover { background-color: #ffe3e3; color: #c92a2a; }
 
-.saved-empty__icon {
+/* Dropping a saved flight used to delete the card mid-click, so everything
+   below jumped up under the pointer at the exact moment it was busy. The card
+   now collapses out of the way first: the fade says which one is going, the
+   height says where the list is about to close up.
+   The transition is restated in full because this rule sits after
+   .flight-card at the same specificity and would otherwise take the hover
+   shadow with it. Under reduced motion the collapse is instant and only the
+   fade runs -- and the removal does not wait on either. */
+.saved-item {
+  transition: box-shadow var(--dur-fast) ease,
+              opacity var(--dur-base) var(--ease-out),
+              height var(--dur-base) var(--ease-out),
+              margin-bottom var(--dur-base) var(--ease-out);
+}
+
+.saved-item.is-leaving {
+  overflow: hidden;
+  opacity: 0;
+  margin-bottom: 0;
+}
+
+/* Empty states share one icon treatment: large enough to anchor the block,
+   pale enough not to compete with the sentence explaining what goes here. */
+.empty-state__icon {
   font-size: 3rem;
   color: #ced4da;
 }
@@ -1802,7 +1433,7 @@ textarea {
   /* The tab is a target, not a passage of text: without this the pointer
      turns into a caret over the label and the price. */
   user-select: none;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .sort-bar__tab:hover { background-color: #e9ecef; }
@@ -1930,7 +1561,7 @@ textarea {
 .filter-section__chevron {
   color: #adb5bd;
   font-size: .8125rem;
-  transition: transform .2s ease;
+  transition: transform var(--dur-base) var(--ease-out);
 }
 
 .filter-section__chevron-btn.collapsed .filter-section__chevron { transform: rotate(180deg); }
@@ -2044,7 +1675,7 @@ textarea {
   font-size: .75rem;
   color: var(--bs-primary);
   opacity: 0;
-  transition: opacity .12s ease, background-color .12s ease;
+  transition: opacity var(--dur-fast) var(--ease-out), background-color var(--dur-fast) ease;
 }
 
 .filter-row:hover .filter-row__only,
@@ -2190,7 +1821,7 @@ textarea {
   color: #212529;
   font-size: .875rem;
   cursor: pointer;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 /* The box still has to submit, so it is hidden by size rather than by
@@ -2305,7 +1936,6 @@ textarea {
   text-align: center;
 }
 
-
 .filters__clear {
   display: inline-block;
   margin-top: .5rem;
@@ -2334,7 +1964,6 @@ textarea {
 /* On a toggle it sits in the price slot rather than under the label. */
 .filter-row__none--inline { flex: 0 0 auto; }
 
-
 /* --------------------------------------------------------------------------
    A list that grows
    -------------------------------------------------------------------------- */
@@ -2357,7 +1986,7 @@ textarea {
   color: var(--bs-primary);
   font-weight: 600;
   text-decoration: none;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .show-more__button:hover {
   background-color: var(--bs-primary);
@@ -2418,7 +2047,8 @@ textarea {
      animate out instead of vanishing under the reader's cursor. */
   opacity: 0;
   transform: translateY(.5rem);
-  transition: opacity .15s ease, transform .15s ease, background-color .12s ease, color .12s ease;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .to-top.is-visible {
   opacity: 1;
@@ -2436,10 +2066,6 @@ textarea {
     right: .75rem;
     bottom: .75rem;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .to-top { transition: none; }
 }
 
 /* --------------------------------------------------------------------------
@@ -2537,7 +2163,7 @@ textarea {
   font-size: .9375rem;
   color: #212529;
   background-color: #fff;
-  transition: border-color .12s ease, box-shadow .12s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .field__input:focus {
   outline: none;
@@ -2575,7 +2201,7 @@ textarea {
   position: relative;
   aspect-ratio: 1.586;            /* ISO/IEC 7810 ID-1, as a real card */
   transform-style: preserve-3d;
-  transition: transform .5s ease;
+  transition: transform var(--dur-slow) var(--ease-in-out);
 }
 .pay-card.is-flipped .pay-card__faces { transform: rotateY(180deg); }
 
@@ -2661,10 +2287,6 @@ textarea {
 }
 .pay-card__back-note { margin: .75rem 0 0; font-size: .6875rem; opacity: .65; }
 
-@media (prefers-reduced-motion: reduce) {
-  .pay-card__faces { transition: none; }
-}
-
 /* --- accept and pay ----------------------------------------------------- */
 .accept { display: flex; gap: .625rem; font-size: .875rem; color: #495057; }
 
@@ -2695,7 +2317,7 @@ textarea {
   font-weight: 600;
   text-align: center;
   text-decoration: none;
-  transition: filter .12s ease;
+  transition: filter var(--dur-fast) ease;
 }
 .checkout__pay:hover { filter: brightness(.92); color: #fff; }
 .checkout__pay--link { max-width: 18rem; }
@@ -2906,9 +2528,45 @@ textarea {
   font-weight: 500;
   color: #495057;
   text-decoration: none;
-  transition: border-color .12s ease, color .12s ease;
+  transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .review__change:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
 
 .review__total { margin: 0 0 .875rem; }
 .rules__more { margin: .875rem 0 0; font-size: .75rem; color: #adb5bd; }
+
+/* --------------------------------------------------------------------------
+   Press feedback
+   --------------------------------------------------------------------------
+   Before this block the file had exactly one :active rule in 2,459 lines, and
+   it only changed a colour -- so every button in the product did nothing at
+   all on the way down. A press wants answering while the finger is still on
+   it; waiting for the click to navigate or submit is what makes a control
+   feel disconnected. Kept deliberately small: 0.97 and 120ms reads as the
+   control responding, not as an animation, which is what the filter controls
+   need since they are pressed dozens of times in one refinement pass.
+   ease-out rather than the file's usual bare `ease` so the movement is
+   quickest at the moment of contact.
+   The transition lives on :active, so the press eases down and the release
+   snaps back -- none of these controls carry `transform` in their resting
+   transition, Bootstrap's .btn included. That asymmetry is wanted: the press
+   is the user's deliberate half, the release is the system getting out of
+   the way.
+   Reduced motion is handled globally, not here. */
+.btn:active,
+.checkout__pay:active,
+.icon-btn:active,
+.details-toggle:active,
+.show-more__button:active,
+.sort-bar__tab:active,
+.filter-pill:active,
+.filter-more:active,
+.filter-row__only:active,
+.filter-slider__clear:active,
+.filter-section__toggle:active,
+.filter-section__chevron-btn:active,
+.review__change:active,
+.to-top:active {
+  transform: scale(.97);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
