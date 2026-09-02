@@ -1,1 +1,13 @@
-<img src="{{ cdn(config('site.static.endpoint.images') ~ '/not-found.png') }}" alt="No bookings found" title="No bookings found" class="img-fluid" />
+{# Nothing booked yet. Built to the same shape as the saved page's empty
+   state: name the state, say what will fill it, and offer the one action that
+   does. What this replaced was a single "not found" image, which told a
+   visitor that something was missing without saying what, why, or what to do
+   about it -- and read as an error on a page that is working correctly. #}
+<div class="text-center py-5">
+    <i class="fas fa-plane-departure empty-state__icon"></i>
+    <h2 class="h4 mt-3">No bookings yet</h2>
+    <p class="text-muted mb-4">
+        Once you book a flight it will be listed here, with its reference and the full itinerary.
+    </p>
+    <a href="/" class="btn btn-primary">Search for flights</a>
+</div>

@@ -1205,7 +1205,9 @@ textarea {
   margin-bottom: 0;
 }
 
-.saved-empty__icon {
+/* Empty states share one icon treatment: large enough to anchor the block,
+   pale enough not to compete with the sentence explaining what goes here. */
+.empty-state__icon {
   font-size: 3rem;
   color: #ced4da;
 }
