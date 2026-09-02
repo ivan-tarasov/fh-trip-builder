@@ -2457,3 +2457,39 @@ textarea {
 
 .review__total { margin: 0 0 .875rem; }
 .rules__more { margin: .875rem 0 0; font-size: .75rem; color: #adb5bd; }
+
+/* --------------------------------------------------------------------------
+   Press feedback
+   --------------------------------------------------------------------------
+   Before this block the file had exactly one :active rule in 2,459 lines, and
+   it only changed a colour -- so every button in the product did nothing at
+   all on the way down. A press wants answering while the finger is still on
+   it; waiting for the click to navigate or submit is what makes a control
+   feel disconnected. Kept deliberately small: 0.97 and 120ms reads as the
+   control responding, not as an animation, which is what the filter controls
+   need since they are pressed dozens of times in one refinement pass.
+   ease-out rather than the file's usual bare `ease` so the movement is
+   quickest at the moment of contact.
+   The transition lives on :active, so the press eases down and the release
+   snaps back -- none of these controls carry `transform` in their resting
+   transition, Bootstrap's .btn included. That asymmetry is wanted: the press
+   is the user's deliberate half, the release is the system getting out of
+   the way.
+   Reduced motion is handled globally, not here. */
+.btn:active,
+.checkout__pay:active,
+.icon-btn:active,
+.details-toggle:active,
+.show-more__button:active,
+.sort-bar__tab:active,
+.filter-pill:active,
+.filter-more:active,
+.filter-row__only:active,
+.filter-slider__clear:active,
+.filter-section__toggle:active,
+.filter-section__chevron-btn:active,
+.review__change:active,
+.to-top:active {
+  transform: scale(.97);
+  transition: transform .12s ease-out;
+}
