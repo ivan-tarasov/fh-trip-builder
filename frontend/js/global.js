@@ -129,16 +129,19 @@
                     if (result.value.status == 'success') {
                         $(this).prop('disabled', true);
 
+                        // Reload when the confirmation closes, not on a
+                        // second timer of its own. The two used to be set
+                        // separately -- 3s for the message, 1s for the
+                        // reload -- so the page tore the message down two
+                        // seconds into reading it. One timing, one owner.
                         Swal.fire({
                             title: `${result.value.message}`,
                             icon: 'success',
                             showConfirmButton: false,
                             timer: 3000
-                        });
-
-                        setTimeout(function () {
+                        }).then(function () {
                             location.reload();
-                        }, 1000);
+                        });
                     } else {
                         Swal.fire({
                             title: `${result.value.status} => ${result.value.message}`,
@@ -658,8 +661,11 @@
                     watch();
                 })
                 .catch(function () {
-                    // Put the link back the way it was: clicking it navigates,
-                    // which is the no-JS behaviour and still gets more results.
+                    // Put the control back so it can be pressed again. The
+                    // click handler calls preventDefault unconditionally, so
+                    // a retry comes back through here rather than following
+                    // the href -- the no-JS path is for visitors without this
+                    // script at all, not for a failed request.
                     link.classList.remove('is-loading');
 
                     if (label) {
@@ -668,6 +674,29 @@
 
                     if (spinner) {
                         spinner.hidden = true;
+                    }
+
+                    // And say what happened. Sliding back to the resting
+                    // state and nothing else is indistinguishable from a
+                    // press that never registered, which leaves somebody
+                    // waiting for cards that are not coming. The note under
+                    // the button already exists to describe what is left to
+                    // load, so it is the honest place to say that nothing
+                    // did. A successful retry replaces this whole block,
+                    // message included.
+                    const note = holder && holder.querySelector('.show-more__note');
+
+                    if (note) {
+                        note.textContent = 'Could not load more results. Check your connection and try again.';
+                    }
+
+                    // Nothing about the button changing shape reaches a
+                    // screen reader, so route it through the same live
+                    // region that announces arrivals.
+                    const live = document.querySelector('.js-results-live');
+
+                    if (live) {
+                        live.textContent = 'Could not load more results.';
                     }
 
                     loading = false;
