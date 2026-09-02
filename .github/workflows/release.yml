@@ -65,21 +65,59 @@ jobs:
 
           echo "Bumping ${latest} -> ${next} (${level})"
           echo "tag=${next}" >> "$GITHUB_OUTPUT"
+          echo "previous=${latest}" >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        env:
+          PREVIOUS: ${{ steps.version.outputs.previous }}
+        run: |
+          set -euo pipefail
+
+          # Everything landing in this release: the commits since the last tag,
+          # oldest first. Merge commits are left out — their subjects name the
+          # branch, not the change.
+          if git rev-parse -q --verify "refs/tags/${PREVIOUS}" >/dev/null; then
+            range="${PREVIOUS}..HEAD"
+          else
+            range="HEAD"
+          fi
+
+          {
+            echo "## What's Changed"
+            echo
+
+            # Committer date rather than author date: git records no push time,
+            # and the committer stamp is when the commit reached this history.
+            TZ=UTC git log --no-merges --reverse \
+              --date=format:'%Y-%m-%d %H:%M' \
+              --pretty=format:'- %s — %cd UTC' \
+              "$range"
+
+            echo
+          } > release-notes.md
+
+          # grep exits 1 when it counts nothing, which `set -e` would take for
+          # a failure rather than the answer it is.
+          listed=$(grep -c '^- ' release-notes.md || true)
+
+          if [ "$listed" -eq 0 ]; then
+            echo "- No commits in this release" >> release-notes.md
+          fi
+
+          cat release-notes.md
 
       - name: Create the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
-          TITLE: ${{ github.event.pull_request.title }}
         run: |
           set -euo pipefail
 
-          # Tags the merge commit and lets GitHub write the notes from the
-          # pull requests included since the previous release.
+          # Title is the version and nothing else; the notes carry the detail.
           gh release create "$TAG" \
             --target "${{ github.event.pull_request.merge_commit_sha }}" \
-            --title "$TAG — $TITLE" \
-            --generate-notes
+            --title "$TAG" \
+            --notes-file release-notes.md
 
       - name: Summary
         run: |

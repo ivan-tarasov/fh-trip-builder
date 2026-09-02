@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration\Repository;
 
+use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\SortMethod;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -194,8 +195,25 @@ final class FlightRepositoryTest extends IntegrationTestCase
         sort($ordered);
 
         self::assertSame($ordered, $waits);
-        // A direct itinerary waits nowhere, so it belongs at the top.
-        self::assertSame(0, $waits[0]);
+
+        // A direct itinerary waits nowhere, so where the route has one the sort
+        // has to lead with it. Not every route on every date does — the top of
+        // the list is then the shortest connection, which the ordering above
+        // already covers. Asserting the zero outright reads as a claim about
+        // the sort but is really a claim about the data.
+        $directs = $this->repository()->searchDirection(
+            'PAR',
+            'NYC',
+            '2026-09-15',
+            SortMethod::Price,
+            0,
+            1,
+            new FlightFilters(stops: [0]),
+        )['total'];
+
+        if ($directs > 0) {
+            self::assertSame(0, $waits[0]);
+        }
     }
 
     public function testRecommendedSortLeadsWithTheBestValueItinerary(): void

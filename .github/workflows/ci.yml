@@ -108,5 +108,13 @@ jobs:
       - name: Provision database schema + seed data
         run: php noah app:install --no-ansi
 
+      # The integration tests search real routes on real dates and skip
+      # themselves when a route has nothing, so without generated flights the
+      # whole integration suite passes by doing nothing. The count is a density
+      # trade-off, not a fixture: a specific route on a specific day only has
+      # itineraries once the network is dense enough to connect through.
+      - name: Generate flights for the integration tests
+        run: php noah flights:add 200000 --no-ansi --no-interaction
+
       - name: Tests (unit + integration)
         run: composer test
