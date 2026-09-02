@@ -1,4 +1,27 @@
 /* ==========================================================================
+   #MOTION
+   ==========================================================================
+   Every duration and curve in this file used to be a literal, repeated at
+   each site: changing the hover speed meant editing a dozen declarations
+   across fifteen hundred lines. Two durations cover almost everything, and
+   the two curves are stronger than the CSS keywords, which are too gentle to
+   read as deliberate.
+
+   Which curve is a decision, not a default:
+     - arriving or leaving  -> --ease-out   (fast first, so it feels answered)
+     - moving on screen     -> --ease-in-out (only the card flip earns it)
+     - hover and colour     -> plain `ease` is right; it is not movement
+     - constant motion      -> linear (the spinner, and only the spinner) */
+:root {
+  --dur-fast: .12s;   /* hover feedback, press, small reveals */
+  --dur-base: .2s;    /* chevrons and anything that rotates or slides */
+  --dur-slow: .5s;    /* the card flip -- deliberately unhurried */
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ==========================================================================
    #GRID
    ========================================================================== */
 .row {
@@ -167,7 +190,7 @@ a {
   /* Colour only: `all` also animated layout and paint properties that no
      anchor state here changes. .12s to match the rest of the file's hover
      feedback -- 0.4s was long enough to read as lag on a link. */
-  transition: color .12s ease;
+  transition: color var(--dur-fast) ease;
 }
 
 a:link {
@@ -641,7 +664,7 @@ input[type=number]::-webkit-outer-spin-button {
   content: '\f2f9';
   font-size: 24px;
   color: #808080;
-  transition: transform .2s ease;
+  transition: transform var(--dur-base) var(--ease-out);
 }
 
 .rs-select2 .select2-container.select2-container--open .select2-selection--single .select2-selection__arrow::after {
@@ -896,7 +919,7 @@ textarea {
   color: #495057;
   background-color: #fff;
   font-weight: 500;
-  transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .details-toggle:hover {
@@ -914,7 +937,7 @@ textarea {
 .details-toggle .if-expanded { display: none; }
 .details-toggle:not(.collapsed) .if-collapsed { display: none; }
 .details-toggle:not(.collapsed) .if-expanded { display: inline; }
-.details-toggle .chevron { transition: transform 0.2s ease; }
+.details-toggle .chevron { transition: transform var(--dur-base) var(--ease-out); }
 .details-toggle:not(.collapsed) .chevron { transform: rotate(180deg); }
 
 /* Two-step search: departing -> returning progress track. */
@@ -952,7 +975,7 @@ textarea {
 }
 
 /* Lift the option the pointer is on, so rows read as choosable. */
-.flight-card { transition: box-shadow .15s ease, transform .15s ease; }
+.flight-card { transition: box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease; }
 .flight-card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1) !important; }
 
 /* The assembled round trip, set apart from the option lists. */
@@ -1013,7 +1036,7 @@ textarea {
   display: block;
   width: 100%;
   border-radius: 3px;
-  transition: background-color .12s ease, transform .12s ease;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
 }
 
 /* A flight is a solid bar; a layover is the thin gap between two flights.
@@ -1120,7 +1143,7 @@ textarea {
   border-radius: 50%;
   background-color: #f1f3f5;
   color: #495057;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .icon-btn:hover { background-color: #e9ecef; }
@@ -1356,7 +1379,7 @@ textarea {
   /* The tab is a target, not a passage of text: without this the pointer
      turns into a caret over the label and the price. */
   user-select: none;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .sort-bar__tab:hover { background-color: #e9ecef; }
@@ -1484,7 +1507,7 @@ textarea {
 .filter-section__chevron {
   color: #adb5bd;
   font-size: .8125rem;
-  transition: transform .2s ease;
+  transition: transform var(--dur-base) var(--ease-out);
 }
 
 .filter-section__chevron-btn.collapsed .filter-section__chevron { transform: rotate(180deg); }
@@ -1598,7 +1621,7 @@ textarea {
   font-size: .75rem;
   color: var(--bs-primary);
   opacity: 0;
-  transition: opacity .12s ease, background-color .12s ease;
+  transition: opacity var(--dur-fast) var(--ease-out), background-color var(--dur-fast) ease;
 }
 
 .filter-row:hover .filter-row__only,
@@ -1744,7 +1767,7 @@ textarea {
   color: #212529;
   font-size: .875rem;
   cursor: pointer;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 /* The box still has to submit, so it is hidden by size rather than by
@@ -1909,7 +1932,7 @@ textarea {
   color: var(--bs-primary);
   font-weight: 600;
   text-decoration: none;
-  transition: background-color .12s ease, color .12s ease;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .show-more__button:hover {
   background-color: var(--bs-primary);
@@ -1970,7 +1993,8 @@ textarea {
      animate out instead of vanishing under the reader's cursor. */
   opacity: 0;
   transform: translateY(.5rem);
-  transition: opacity .15s ease, transform .15s ease, background-color .12s ease, color .12s ease;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .to-top.is-visible {
   opacity: 1;
@@ -2089,7 +2113,7 @@ textarea {
   font-size: .9375rem;
   color: #212529;
   background-color: #fff;
-  transition: border-color .12s ease, box-shadow .12s ease;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .field__input:focus {
   outline: none;
@@ -2127,7 +2151,7 @@ textarea {
   position: relative;
   aspect-ratio: 1.586;            /* ISO/IEC 7810 ID-1, as a real card */
   transform-style: preserve-3d;
-  transition: transform .5s ease;
+  transition: transform var(--dur-slow) var(--ease-in-out);
 }
 .pay-card.is-flipped .pay-card__faces { transform: rotateY(180deg); }
 
@@ -2247,7 +2271,7 @@ textarea {
   font-weight: 600;
   text-align: center;
   text-decoration: none;
-  transition: filter .12s ease;
+  transition: filter var(--dur-fast) ease;
 }
 .checkout__pay:hover { filter: brightness(.92); color: #fff; }
 .checkout__pay--link { max-width: 18rem; }
@@ -2458,7 +2482,7 @@ textarea {
   font-weight: 500;
   color: #495057;
   text-decoration: none;
-  transition: border-color .12s ease, color .12s ease;
+  transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .review__change:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
 
@@ -2498,5 +2522,5 @@ textarea {
 .review__change:active,
 .to-top:active {
   transform: scale(.97);
-  transition: transform .12s ease-out;
+  transition: transform var(--dur-fast) var(--ease-out);
 }
