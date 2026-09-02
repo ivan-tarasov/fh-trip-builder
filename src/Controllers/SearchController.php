@@ -745,7 +745,7 @@ class SearchController extends AbstractController
      * that same unit means every value the handle can stop on is round too.
      * The ends move outwards only, so nothing reachable is excluded.
      *
-     * @param array{min: int, max: int}|null $bound
+     * @param array{min: int, max: int, floor_max: int, ceiling_min: int}|null $bound
      * @param list<int> $steps allowed step sizes, smallest first
      * @return array<string, mixed>|null
      */
@@ -797,7 +797,7 @@ class SearchController extends AbstractController
      * Same rounding as a single slider, but both handles matter: a layover
      * range rules out connections that are too tight as well as too long.
      *
-     * @param array{min: int, max: int}|null $bound
+     * @param array{min: int, max: int, floor_max: int, ceiling_min: int}|null $bound
      * @param list<int> $steps
      * @return array<string, mixed>|null
      */
@@ -845,12 +845,28 @@ class SearchController extends AbstractController
             $to = max($from, min($chosen[1], $max));
         }
 
+        // How far each handle may travel. Beyond these the results are empty
+        // whatever the other handle says, and a stretch of track that can only
+        // return nothing is a promise the search cannot keep. Snapped onto the
+        // step grid, since that is where a handle can actually land, and
+        // widened to admit a range already applied so the control can always
+        // show the state it is in.
+        $floorMax = min($max, $min + (int) floor(($bound['floor_max'] - $min) / $step) * $step);
+        $ceilingMin = max($min, $min + (int) ceil(($bound['ceiling_min'] - $min) / $step) * $step);
+
+        if ($chosen !== null) {
+            $floorMax = max($floorMax, $from);
+            $ceilingMin = min($ceilingMin, $to);
+        }
+
         return [
             'min' => $min,
             'max' => $max,
             'step' => $step,
             'from' => $from,
             'to' => $to,
+            'floor_max' => max($min, $floorMax),
+            'ceiling_min' => min($max, $ceilingMin),
             'caption' => Helper::sliderCaption($kind, $from, $to, $min, $max),
             'on' => $from > $min || $to < $max,
         ];

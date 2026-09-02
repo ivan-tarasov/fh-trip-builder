@@ -902,6 +902,11 @@
             from: parseInt(input.dataset.from, 10),
             to: isRange ? parseInt(input.dataset.to, 10) : undefined,
             step: parseInt(input.dataset.step, 10) || 1,
+            // Stops on a handle, where the server has worked out that going
+            // further can only ever return nothing. The track still spans the
+            // real range, so the ends keep telling the truth about the spread.
+            from_max: input.dataset.floorMax === undefined ? undefined : parseInt(input.dataset.floorMax, 10),
+            to_min: input.dataset.ceilingMin === undefined ? undefined : parseInt(input.dataset.ceilingMin, 10),
             hide_min_max: true,
             hide_from_to: true,
             onStart: function (data) { show(data.from, data.to); },

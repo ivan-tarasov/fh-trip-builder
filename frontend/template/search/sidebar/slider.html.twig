@@ -22,6 +22,10 @@
     <input type="text" class="js-filter-slider" id="{{ id }}" name="{{ name }}"
            data-min="{{ min }}" data-max="{{ max }}" data-from="{{ value }}" data-step="{{ step }}"
            {% if to is defined %}data-to="{{ to }}"{% endif %}
+           {# How far each handle may travel: past these the results are empty
+              whatever the other one says. #}
+           {% if floor_max is defined %}data-floor-max="{{ floor_max }}"{% endif %}
+           {% if ceiling_min is defined %}data-ceiling-min="{{ ceiling_min }}"{% endif %}
            data-kind="{{ kind }}" data-output="val-{{ id }}"
            value="{{ to is defined ? value ~ '-' ~ to : value }}" />
 </div>

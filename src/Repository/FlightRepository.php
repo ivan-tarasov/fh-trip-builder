@@ -77,7 +77,7 @@ final readonly class FlightRepository
      * `highlights` says what each sort option would put first — the price and
      * the travel time you would get by choosing it.
      *
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     public function searchDirection(
         string $from,
@@ -330,7 +330,7 @@ final readonly class FlightRepository
      * shrinks its own track out from under the handle.
      *
      * @param list<array<string, mixed>> $candidates
-     * @return array<string, array{min: int, max: int}>
+     * @return array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>
      */
     private function bounds(array $candidates, FlightFilters $filters): array
     {
@@ -351,23 +351,56 @@ final readonly class FlightRepository
         $bounds = [];
 
         foreach ($measures as $dimension => $measure) {
-            $values = [];
+            $lows = [];
+            $highs = [];
+            // An itinerary the range cannot constrain — a direct flight has no
+            // wait to fall outside one — passes whatever the handles say, so
+            // its presence means neither handle can empty the results.
+            $unconstrained = false;
 
             foreach ($candidates as $candidate) {
-                if ($filters->matches($candidate, $dimension)) {
-                    $values = [...$values, ...$measure($candidate)];
+                if (!$filters->matches($candidate, $dimension)) {
+                    continue;
                 }
+
+                $values = $measure($candidate);
+
+                if ($values === []) {
+                    $unconstrained = true;
+
+                    continue;
+                }
+
+                $lows[] = min($values);
+                $highs[] = max($values);
             }
 
-            if ($values === []) {
+            if ($lows === []) {
                 continue;
             }
 
             // Rounded outwards, so the extremes stay selectable once the
             // handle snaps to a whole unit.
+            $min = (int) floor(min($lows));
+            $max = (int) ceil(max($highs));
+
+            // How far each handle can travel before the results empty.
+            //
+            // A measure can yield several values for one itinerary — every
+            // layover in it — and the filter asks that they *all* fall inside
+            // the range. So the shortest wait on the route is not a usable
+            // ceiling: the itinerary it belongs to has longer waits too, and
+            // dragging the ceiling down there returns nothing. The lowest
+            // ceiling worth offering is the shortest *longest* wait, and the
+            // highest floor is the longest *shortest* one.
+            //
+            // Where a measure yields one value per itinerary these collapse to
+            // the ends themselves, which is the same as no limit at all.
             $bounds[$dimension] = [
-                'min' => (int) floor(min($values)),
-                'max' => (int) ceil(max($values)),
+                'min' => $min,
+                'max' => $max,
+                'floor_max' => $unconstrained ? $max : (int) floor(max($lows)),
+                'ceiling_min' => $unconstrained ? $min : (int) ceil(min($highs)),
             ];
         }
 

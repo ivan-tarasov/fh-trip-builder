@@ -22,21 +22,36 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     private const TO = 'NYC';
     private const DATE = '2026-09-15';
 
+    // A long route nobody flies non-stop. A direct itinerary has no wait to
+    // fall outside a layover range, so it satisfies every one — on a route with
+    // directs the range never binds and a test of its ends proves nothing.
+    private const CONNECTING_FROM = 'CMN';
+    private const CONNECTING_TO = 'YVR';
+    private const CONNECTING_DATE = '2026-09-23';
+
     // Each probe is a full search, so every option would cost minutes. Two per
     // dimension is enough to catch a wrong rule while keeping the suite quick.
     private const PROBE_LIMIT = 2;
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function search(?FlightFilters $filters = null): array
     {
-        return new FlightRepository($this->connection())
-            ->searchDirection(self::FROM, self::TO, self::DATE, SortMethod::Price, 0, 10, $filters);
+        return $this->searchRoute(self::FROM, self::TO, self::DATE, $filters);
     }
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
+     */
+    private function searchRoute(string $from, string $to, string $date, ?FlightFilters $filters = null): array
+    {
+        return new FlightRepository($this->connection())
+            ->searchDirection($from, $to, $date, SortMethod::Price, 0, 10, $filters);
+    }
+
+    /**
+     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function requireResults(): array
     {
@@ -210,6 +225,72 @@ final class FlightFilterSearchTest extends IntegrationTestCase
                     sprintf('%s "%s" is priced but not offered', $dimension, $value),
                 );
             }
+        }
+    }
+
+    public function testEveryPositionARangeHandleCanReachReturnsSomething(): void
+    {
+        $route = fn(?FlightFilters $filters = null): array => $this->searchRoute(
+            self::CONNECTING_FROM,
+            self::CONNECTING_TO,
+            self::CONNECTING_DATE,
+            $filters,
+        );
+
+        // The same contract as the lists above, for a slider: the sidebar must
+        // not offer a position that can only answer "no flights".
+        //
+        // A range over layovers is the awkward case. It reads every wait in an
+        // itinerary and asks that they all fall inside, so the shortest wait on
+        // the route is not a usable ceiling — the itinerary it belongs to has
+        // longer waits too, and a ceiling down there matches nothing. The ends
+        // have to be measured the way the filter reads them.
+        $all = $route();
+
+        if ($all['total'] === 0) {
+            self::markTestSkipped('No generated flights on the connecting route (run flights:add).');
+        }
+
+        $bound = $all['bounds'][FlightFilters::DIM_LAYOVER_RANGE] ?? null;
+
+        if ($bound === null) {
+            self::markTestSkipped('No connections on this route to measure a layover range against.');
+        }
+
+        self::assertGreaterThanOrEqual($bound['min'], $bound['ceiling_min']);
+        self::assertLessThanOrEqual($bound['max'], $bound['ceiling_min']);
+        self::assertGreaterThanOrEqual($bound['min'], $bound['floor_max']);
+        self::assertLessThanOrEqual($bound['max'], $bound['floor_max']);
+
+        foreach ([
+            'lowest ceiling' => [$bound['min'], $bound['ceiling_min']],
+            'highest floor' => [$bound['floor_max'], $bound['max']],
+            'the whole range' => [$bound['min'], $bound['max']],
+        ] as $label => [$from, $to]) {
+            self::assertGreaterThan(
+                0,
+                $route(new FlightFilters(layoverRange: [$from, $to]))['total'],
+                sprintf('%s on offer (%d-%d minutes) returns nothing', $label, $from, $to),
+            );
+        }
+
+        // And the stops are where they are for a reason: a step past either one
+        // is the empty result they exist to keep a handle out of. Without this
+        // the test would still pass with the ends left wide open.
+        if ($bound['ceiling_min'] > $bound['min']) {
+            self::assertSame(
+                0,
+                $route(new FlightFilters(layoverRange: [$bound['min'], $bound['ceiling_min'] - 1]))['total'],
+                'a ceiling below the lowest on offer should be the empty result the stop guards against',
+            );
+        }
+
+        if ($bound['floor_max'] < $bound['max']) {
+            self::assertSame(
+                0,
+                $route(new FlightFilters(layoverRange: [$bound['floor_max'] + 1, $bound['max']]))['total'],
+                'a floor above the highest on offer should be the empty result the stop guards against',
+            );
         }
     }
 
