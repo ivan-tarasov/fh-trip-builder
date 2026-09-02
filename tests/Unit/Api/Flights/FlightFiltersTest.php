@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Unit\Api\Flights;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Config;
@@ -236,6 +237,65 @@ final class FlightFiltersTest extends TestCase
         // the maths says every wait in an empty set is long enough.
         self::assertFalse(new FlightFilters(layoverRange: [120, 180])->matches($direct));
         self::assertFalse(new FlightFilters(layoverRange: [360, 360])->matches($direct));
+    }
+
+    #[DataProvider('nonStopProvider')]
+    public function testWhatANonStopMakesOfEveryFilterAboutLayovers(
+        bool $expected,
+        FlightFilters $filters,
+        string $why,
+    ): void {
+        // A non-stop has no layover, so every filter about layovers has to
+        // decide what to make of the absence. Three answers, and which one is
+        // right depends on what the filter is asking:
+        //
+        //   a prohibition  is met by having none      — include it
+        //   a requirement  cannot be met by none      — leave it out
+        //   a selection    has nothing to select from — leave it out
+        //
+        // The vacuous reading, where an empty set satisfies anything, gets the
+        // middle one wrong and answers "layovers of six hours" with a flight
+        // that has no layover at all.
+        $nonStop = $this->candidate([
+            'stops' => 0,
+            'stops_at' => '',
+            'carriers' => 'AF',
+            'aircraft' => '320',
+            'layover_minutes' => 0,
+            'stop1_in' => null,
+            'stop1_out' => null,
+            'stop_countries' => [],
+        ]);
+
+        self::assertSame($expected, $filters->matches($nonStop), $why);
+    }
+
+    /**
+     * @return array<string, array{0: bool, 1: FlightFilters, 2: string}>
+     */
+    public static function nonStopProvider(): array
+    {
+        return [
+            // Prohibitions: having none is the strongest way to satisfy them.
+            'no overnight layovers' => [true, new FlightFilters(noNightLayover: true), 'none to be overnight'],
+            'no layovers in the Gulf' => [true, new FlightFilters(noGulfLayover: true), 'none to be in the Gulf'],
+            'no transit visa' => [true, new FlightFilters(noVisaLayover: true), 'no country passed through'],
+            'a layover ceiling' => [true, new FlightFilters(layoverRange: [null, 180]), 'never waiting longer'],
+            'one airline for the trip' => [true, new FlightFilters(singleCarrier: true), 'one leg is one airline'],
+
+            // A requirement: there has to be a layover for it to be long enough.
+            'a layover floor' => [false, new FlightFilters(layoverRange: [120, 180]), 'no wait to be that long'],
+            'a floor at its lowest' => [false, new FlightFilters(layoverRange: [40, 360]), 'still a floor'],
+
+            // A selection: it connects nowhere, so it is nowhere on the list.
+            'a layover airport' => [false, new FlightFilters(layoverAirports: ['AMS']), 'it connects nowhere'],
+
+            // Attributes it does have are judged on their own terms.
+            'an airline it flies' => [true, new FlightFilters(airlines: ['AF']), 'its own carrier'],
+            'an aircraft it uses' => [true, new FlightFilters(aircraft: ['320']), 'its own aircraft'],
+            'a price it comes under' => [true, new FlightFilters(maxPrice: 1500.0), 'its own price'],
+            'a price it exceeds' => [false, new FlightFilters(maxPrice: 500.0), 'its own price'],
+        ];
     }
 
     public function testACeilingWithNoFloorIsWrittenAsOneNumber(): void
