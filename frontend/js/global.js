@@ -152,15 +152,6 @@
         console.log(err);
     }
 
-    function scrollToAnchor(aid) {
-        let aTag = $("#top");
-        $('html,body').animate({scrollTop: aTag.offset().top}, 0);
-    }
-
-    $("#linktotop").click(function () {
-        scrollToAnchor('top');
-    });
-
     // Cards arrive after load too, when the list grows, so this has to be
     // callable again. getOrCreateInstance rather than new: running it twice
     // over the same element would leave two tooltips fighting over one target.
