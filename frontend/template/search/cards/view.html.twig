@@ -18,13 +18,15 @@
                     {% include 'search/cards/selected.html.twig' %}
                 {% endif %}
 
-                {% for flight in flights %}
-                    {% include 'search/cards/body.html.twig' %}
-                {% endfor %}
+                {# Everything the list grows into lives in one container, so a
+                   "load more" appends into the same place the first ten sit. #}
+                {# Growing the list gives a screen reader no cue, so the
+                   count is announced when new cards arrive. #}
+                <p class="visually-hidden js-results-live" role="status" aria-live="polite"></p>
 
-                {% if pagination %}
-                    {% include 'search/pagination/view.html.twig' %}
-                {% endif %}
+                <div class="js-results">
+                    {% include 'search/cards/list.html.twig' %}
+                </div>
             {% endif %}
         </div>
     </div>

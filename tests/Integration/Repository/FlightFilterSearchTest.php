@@ -32,7 +32,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     private function search(?FlightFilters $filters = null): array
     {
         return new FlightRepository($this->connection())
-            ->searchDirection(self::FROM, self::TO, self::DATE, SortMethod::Price, 1, $filters);
+            ->searchDirection(self::FROM, self::TO, self::DATE, SortMethod::Price, 0, 10, $filters);
     }
 
     /**

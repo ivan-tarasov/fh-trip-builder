@@ -27,8 +27,6 @@ use TripBuilder\TripType;
  */
 final readonly class FlightFinder
 {
-    private const int PER_PAGE_LIMIT = 10;
-
     private const string RESPONSE_FLIGHT_ID = 'id';
     private const string RESPONSE_FLIGHTS = 'flights';
     private const string RESPONSE_ITINERARY = 'itinerary';
@@ -122,7 +120,8 @@ final readonly class FlightFinder
                 $query->from,
                 $query->returnDate,
                 SortMethod::fromRequest($query->sort),
-                $query->currentPage,
+                $query->offset,
+                $query->limit,
                 // Step 2 lists the return leg, so it filters on the return's
                 // own set — the outbound's filters have already done their job.
                 $query->returnFilters,
@@ -144,7 +143,8 @@ final readonly class FlightFinder
                 $query->to,
                 $query->departDate,
                 SortMethod::fromRequest($query->sort),
-                $query->currentPage,
+                $query->offset,
+                $query->limit,
                 $query->filters,
                 $addBase + $addTax,
             );
@@ -166,9 +166,10 @@ final readonly class FlightFinder
         );
 
         return [
-            'current_page' => $query->currentPage,
-            'total_pages' => (int) ceil($result['total'] / self::PER_PAGE_LIMIT),
-            'per_page' => self::PER_PAGE_LIMIT,
+            // How many rows are on screen once these are appended, and whether
+            // asking again would bring back anything new.
+            'shown' => min($query->offset + $query->limit, $result['total']),
+            'has_more' => $result['total'] > $query->offset + $query->limit,
             'total_flights' => $result['total'],
             // The lowest total on offer, in the same money the rows show, so a
             // row can say how much more than the best option it costs.

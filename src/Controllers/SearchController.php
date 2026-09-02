@@ -30,7 +30,7 @@ class SearchController extends AbstractController
         GET_RETURN = 'return',
         GET_TRIPTYPE = 'triptype',
         GET_CLASS = 'class',
-        GET_PAGE = 'page',
+        GET_SHOWN = 'shown',
         // Leg ids of the halves already chosen in a round trip. The outbound
         // moves the search from step 1 (departing) to step 2 (returning); adding
         // the return moves it to step 3, the assembled package.
@@ -42,6 +42,13 @@ class SearchController extends AbstractController
     // across the whole result set rather than by ORDER BY, so it costs a pass
     // over the candidates that the others do not.
     private const string DEFAULT_SORT = 'recommended';
+
+    // Ten is a first screen; after that the visitor is scanning, and more per
+    // load means fewer round trips for the same scroll. MAX_SHOWN bounds what a
+    // crafted URL can ask us to hydrate at once — ten loads' worth.
+    private const int FIRST_SLICE = 10;
+    private const int NEXT_SLICE = 20;
+    private const int MAX_SHOWN = 210;
 
     // The three that earn a tab of their own; the rest sit in the dropdown.
     private const array PRIMARY_SORTS = ['recommended', 'price', 'duration'];
@@ -76,16 +83,24 @@ class SearchController extends AbstractController
                 self::GET_RETURN => $_GET[Config::get('search.form.input.return_date')] ?? null,
                 self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')] ?? null,
                 self::GET_CLASS => $_GET[Config::get('search.form.input.class')] ?? null,
-                self::GET_PAGE => filter_var(
-                    $_GET[Config::get('search.form.input.page')] ?? 1,
+                // How many results to render, not which page: the list grows
+                // by appending, so the URL describes the screen and a refresh
+                // or a Back lands on exactly what was there.
+                self::GET_SHOWN => filter_var(
+                    $_GET[Config::get('search.form.input.shown')] ?? self::FIRST_SLICE,
                     FILTER_VALIDATE_INT,
-                    ['options' => ['default' => 1, 'min_range' => 1]],
+                    ['options' => [
+                        'default' => self::FIRST_SLICE,
+                        'min_range' => self::FIRST_SLICE,
+                        'max_range' => self::MAX_SHOWN,
+                    ]],
                 ),
                 self::GET_DEPART_ITIN => $_GET[self::GET_DEPART_ITIN] ?? null,
                 self::GET_RETURN_ITIN => $_GET[self::GET_RETURN_ITIN] ?? null,
                 // Sort and filters ride in the query string, so stepUrl() and
-                // pageUrl() — which rebuild from $this->get — carry them across
-                // pagination, the step transitions and a shared link for free.
+                // moreUrl() — which rebuild from $this->get — carry them across
+                // a longer list, the step transitions and a shared link for
+                // free.
                 self::GET_SORT => $_GET[self::GET_SORT] ?? null,
                 ...$this->filterQuery(),
             ]);
@@ -104,8 +119,14 @@ class SearchController extends AbstractController
                 return;
             }
 
+            $shown = (int) $this->get[self::GET_SHOWN];
+            // A fragment request already holds everything above `from`, so it
+            // asks only for the part it is missing.
+            $from = $this->fragmentFrom($shown);
+
             $query = new FlightSearchQuery(
-                currentPage: $this->get[self::GET_PAGE] ?? 1,
+                offset: $from,
+                limit: $shown - $from,
                 sort: $this->sort(),
                 from: $this->get[self::GET_FROM],
                 to: $this->get[self::GET_TO],
@@ -139,6 +160,20 @@ class SearchController extends AbstractController
 
             $total_flights = $this->data->total_flights;
 
+            // "Load more" asks for cards, not a page: same query, same filters,
+            // same sort — only the window differs. Rendering the one partial
+            // the full page uses keeps the two from drifting apart.
+            if ($this->isFragment()) {
+                echo new TwigRenderer()->render('search/cards/list.html.twig', [
+                    'flights' => $total_flights != 0 ? $this->buildFlights() : [],
+                    'step' => $this->data->step,
+                    'price_mode' => $this->data->price_mode,
+                    'show_more' => $total_flights != 0 ? $this->buildShowMore() : null,
+                ]);
+
+                return;
+            }
+
             echo new TwigRenderer()->renderPage('search/view.html.twig', [
                 // Lead form + sidebar + cards share the resolved query context.
                 'triptype' => $this->get[self::GET_TRIPTYPE],
@@ -152,7 +187,7 @@ class SearchController extends AbstractController
                 'form_url' => sprintf(
                     '%s?%s',
                     Helper::getUrlPath(),
-                    $this->queryString(array_merge($this->get, [self::GET_PAGE => null])),
+                    $this->queryString(array_merge($this->get, [self::GET_SHOWN => null])),
                 ),
                 // Filter forms submit with GET, so they post to the bare path
                 // and carry the rest of the search as hidden fields.
@@ -217,7 +252,7 @@ class SearchController extends AbstractController
                 'total_flights' => $total_flights,
                 'total_flights_text' => Helper::plural((int) $total_flights, 'option', showNumber: true),
                 'flights' => $total_flights != 0 ? $this->buildFlights() : [],
-                'pagination' => $total_flights != 0 ? $this->buildPagination() : null,
+                'show_more' => $total_flights != 0 ? $this->buildShowMore() : null,
                 'not_found_img' => Cdn::getUrl(sprintf(
                     '%s/%s',
                     Config::get('site.static.endpoint.images'),
@@ -263,7 +298,7 @@ class SearchController extends AbstractController
     {
         // Prevent too many counts from one user: only the first page of a
         // search counts, so paging and re-filtering do not inflate it.
-        if ($this->get[self::GET_PAGE] != 1) {
+        if ($this->get[self::GET_SHOWN] != self::FIRST_SLICE) {
             return;
         }
 
@@ -855,7 +890,7 @@ class SearchController extends AbstractController
         return sprintf(
             '%s?%s',
             Helper::getUrlPath(),
-            $this->queryString(array_merge($kept, [self::GET_PAGE => null])),
+            $this->queryString(array_merge($kept, [self::GET_SHOWN => null])),
         );
     }
 
@@ -955,7 +990,7 @@ class SearchController extends AbstractController
             $this->queryString(array_merge($this->get, [
                 self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
                 self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
-                self::GET_PAGE => null,
+                self::GET_SHOWN => null,
             ])),
         );
     }
@@ -972,7 +1007,7 @@ class SearchController extends AbstractController
             Helper::getUrlPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_RETURN_ITIN => implode(',', $ids),
-                self::GET_PAGE => null,
+                self::GET_SHOWN => null,
             ])),
         );
     }
@@ -997,61 +1032,80 @@ class SearchController extends AbstractController
         return $ids;
     }
 
-
     /**
-     * Build the pagination view-model: previous/next URLs and the page items
-     * (link, current, or skipped ellipsis). Returns null for a single page.
+     * The "show more" control: where the next slice comes from and how much of
+     * the result is still unseen.
      *
-     * @return array<string, mixed>|null
+     * A real URL rather than a JS-only button, so the list still grows without
+     * scripting and the link is something a crawler can follow.
+     *
+     * @return array{url: string|null, from: int, next: int, remaining: int}|null
      */
-    private function buildPagination(): ?array
+    private function buildShowMore(): ?array
     {
-        $totalPages = $this->data->total_pages;
+        $shown = (int) $this->get[self::GET_SHOWN];
+        $total = (int) $this->data->total_flights;
 
-        // If we have only 1 page - skip render
-        if ($totalPages == 1) {
+        if (!$this->data->has_more) {
             return null;
         }
 
-        $page = $this->get[self::GET_PAGE];
-
-        $items = [];
-        $skipPages = false;
-
-        for ($i = 1; $i <= $totalPages; $i++) {
-            $isFirstPage = $i === 1;
-            $isLastPage = $i === $totalPages;
-            $isWithinRange = abs($i - $page) <= 1;
-
-            if ($totalPages >= 10 && !$isFirstPage && !$isLastPage && !$isWithinRange) {
-                $skipPages = true;
-                continue;
-            }
-
-            if ($skipPages) {
-                $items[] = ['type' => 'skipped'];
-                $skipPages = false;
-            }
-
-            $items[] = $i != $page
-                ? ['type' => 'link', 'url' => $this->pageUrl($i), 'number' => $i]
-                : ['type' => 'current', 'number' => $i];
+        // At the cap there is more to see but no more to append. Say so and
+        // name the way through — silently ending the list looks like the
+        // search ran out, and the visitor would have no reason to filter.
+        if ($shown >= self::MAX_SHOWN) {
+            return ['url' => null, 'from' => $shown, 'next' => $shown, 'remaining' => $total - $shown];
         }
 
+        $next = min($shown + self::NEXT_SLICE, self::MAX_SHOWN, $total);
+
         return [
-            'prev' => $page > 1 ? $this->pageUrl($page - 1) : null,
-            'next' => $page < $totalPages ? $this->pageUrl($page + 1) : null,
-            'items' => $items,
+            'url' => $this->moreUrl($next),
+            'from' => $shown,
+            'next' => $next,
+            'remaining' => $total - $shown,
         ];
     }
 
-    private function pageUrl(int $page): string
+    private function moreUrl(int $shown): string
     {
         return sprintf(
             '%s?%s',
             Helper::getUrlPath(),
-            $this->queryString(array_merge($this->get, [self::GET_PAGE => $page])),
+            $this->queryString(array_merge($this->get, [self::GET_SHOWN => $shown])),
         );
+    }
+
+    /**
+     * Where a fragment request should start reading.
+     *
+     * Named `after` rather than `from`, which the search already uses for the
+     * departure airport — a second `from` in the query string overwrites it and
+     * the search collapses to nothing.
+     *
+     * `fragment` and `after` are read straight from the request rather than
+     * kept in $this->get: everything in there is rebuilt into the page's own
+     * links, and a stray `fragment=1` on a sort tab would answer with bare
+     * cards.
+     */
+    private function fragmentFrom(int $shown): int
+    {
+        if (!$this->isFragment()) {
+            return 0;
+        }
+
+        $after = filter_var(
+            $_GET['after'] ?? 0,
+            FILTER_VALIDATE_INT,
+            ['options' => ['default' => 0, 'min_range' => 0, 'max_range' => self::MAX_SHOWN]],
+        );
+
+        return min((int) $after, $shown);
+    }
+
+    private function isFragment(): bool
+    {
+        return ($_GET['fragment'] ?? null) === '1';
     }
 
     /**
@@ -1079,7 +1133,7 @@ class SearchController extends AbstractController
      */
     private function carried(array $without): array
     {
-        $drop = [self::GET_PAGE, self::GET_HASH, ...$without];
+        $drop = [self::GET_SHOWN, self::GET_HASH, ...$without];
 
         return array_filter(
             $this->get,
@@ -1205,7 +1259,7 @@ class SearchController extends AbstractController
             Helper::getUrlPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_SORT => $sort === self::DEFAULT_SORT ? null : $sort,
-                self::GET_PAGE => null,
+                self::GET_SHOWN => null,
             ])),
         );
     }

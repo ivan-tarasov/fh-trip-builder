@@ -13,6 +13,10 @@ use TripBuilder\TripType;
 
 class Response extends AbstractApi
 {
+    // The API's page size. It was the view's too until the search page started
+    // growing its list instead; the API keeps paging, so the number lives here.
+    private const int PAGE_SIZE = 10;
+
     private const string DATA_PAGE = 'page';
     private const string DATA_SORT = 'sort';
     private const string DATA_TRIPTYPE = 'trip_type';
@@ -46,8 +50,15 @@ class Response extends AbstractApi
             ApiResponder::badRequest('Wrong trip type');
         }
 
+        // The JSON API still pages. That is its published contract, and the
+        // browser's growing list is a view concern — so the page number is
+        // turned into the window the search now takes, and the paging fields
+        // are put back on the response below.
+        $page = max(1, (int) ($this->data[self::DATA_PAGE] ?? 1));
+
         $query = new FlightSearchQuery(
-            currentPage: max(1, (int) ($this->data[self::DATA_PAGE] ?? 1)),
+            offset: ($page - 1) * self::PAGE_SIZE,
+            limit: self::PAGE_SIZE,
             sort: $this->data[self::DATA_SORT] ?? SortMethod::Price->value,
             from: $this->data[self::DATA_DEPART],
             to: $this->data[self::DATA_ARRIVE],
@@ -57,7 +68,14 @@ class Response extends AbstractApi
             childNum: (int) ($this->data[self::DATA_CHILD_COUNT] ?? 0),
         );
 
-        $this->sendResponse(HttpStatus::Ok, new FlightFinder($this->connection())->search($query, $tripType));
+        $result = new FlightFinder($this->connection())->search($query, $tripType);
+
+        $this->sendResponse(HttpStatus::Ok, [
+            'current_page' => $page,
+            'total_pages' => (int) ceil($result['total_flights'] / self::PAGE_SIZE),
+            'per_page' => self::PAGE_SIZE,
+            ...$result,
+        ]);
     }
 
     /**

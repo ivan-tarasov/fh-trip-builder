@@ -20,7 +20,7 @@ return [
             'return_date' => 'return',
             'triptype' => 'triptype',
             'class' => 'class',
-            'page' => 'page',
+            'shown' => 'shown',
         ],
     ],
 

@@ -13,7 +13,8 @@ final class FlightSearchQueryTest extends TestCase
     public function testHoldsItsValues(): void
     {
         $query = new FlightSearchQuery(
-            currentPage: 2,
+            offset: 10,
+            limit: 20,
             sort: 'price',
             from: 'YUL',
             to: 'YYZ',
@@ -23,7 +24,8 @@ final class FlightSearchQueryTest extends TestCase
             childNum: 0,
         );
 
-        self::assertSame(2, $query->currentPage);
+        self::assertSame(10, $query->offset);
+        self::assertSame(20, $query->limit);
         self::assertSame('price', $query->sort);
         self::assertSame('YUL', $query->from);
         self::assertSame('YYZ', $query->to);
@@ -35,7 +37,7 @@ final class FlightSearchQueryTest extends TestCase
 
     public function testAllPropertiesAreReadonly(): void
     {
-        foreach (['currentPage', 'sort', 'from', 'to', 'departDate', 'returnDate', 'adultNum', 'childNum'] as $property) {
+        foreach (['offset', 'limit', 'sort', 'from', 'to', 'departDate', 'returnDate', 'adultNum', 'childNum'] as $property) {
             self::assertTrue(
                 (new ReflectionProperty(FlightSearchQuery::class, $property))->isReadOnly(),
                 "$property should be readonly",

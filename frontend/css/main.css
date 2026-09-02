@@ -2323,3 +2323,110 @@ textarea {
 /* On a toggle it sits in the price slot rather than under the label. */
 .filter-row__none--inline { flex: 0 0 auto; }
 
+
+/* --------------------------------------------------------------------------
+   A list that grows
+   -------------------------------------------------------------------------- */
+.show-more {
+  margin: 1.5rem 0 2.5rem;
+  text-align: center;
+}
+
+/* An anchor, not a button: without scripting it loads a longer list. */
+.show-more__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-width: 14rem;
+  border: 1px solid var(--bs-primary);
+  border-radius: 999px;
+  padding: .6rem 1.75rem;
+  background-color: #fff;
+  color: var(--bs-primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color .12s ease, color .12s ease;
+}
+.show-more__button:hover {
+  background-color: var(--bs-primary);
+  color: #fff;
+}
+/* Mid-request the label already says so; dimming it stops a second click
+   reading as a dead button. */
+.show-more__button.is-loading {
+  opacity: .65;
+  pointer-events: none;
+}
+
+.show-more__spinner {
+  width: .85rem;
+  height: .85rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: show-more-spin .7s linear infinite;
+}
+.show-more__spinner[hidden] { display: none; }
+
+@keyframes show-more-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Respect a visitor who has asked for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  .show-more__spinner { animation: none; }
+}
+
+.show-more__note {
+  margin: .6rem 0 0;
+  color: #6c757d;
+  font-size: .875rem;
+}
+
+/* --------------------------------------------------------------------------
+   Back to top
+   -------------------------------------------------------------------------- */
+.to-top {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15);
+  color: var(--bs-primary);
+  font-size: 1rem;
+  /* Faded in by a class rather than by toggling `hidden`, so the button can
+     animate out instead of vanishing under the reader's cursor. */
+  opacity: 0;
+  transform: translateY(.5rem);
+  transition: opacity .15s ease, transform .15s ease, background-color .12s ease, color .12s ease;
+}
+.to-top.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.to-top:hover {
+  background-color: var(--bs-primary);
+  color: #fff;
+}
+.to-top[hidden] { display: none; }
+
+/* Clear of the footer's content on a narrow screen, where the column stacks. */
+@media (max-width: 575.98px) {
+  .to-top {
+    right: .75rem;
+    bottom: .75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .to-top { transition: none; }
+}

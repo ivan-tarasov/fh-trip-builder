@@ -77,7 +77,7 @@ final readonly class FlightFilters
 
     /**
      * Every query-string key a filter reads. The controller carries these
-     * through untouched so pagination, the step links and a shared URL all keep
+     * through untouched so a longer list, the step links and a shared URL keep
      * the filtering that produced the page.
      *
      * @var list<string>

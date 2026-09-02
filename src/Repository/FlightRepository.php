@@ -33,10 +33,8 @@ use TripBuilder\Database\Table;
  */
 final readonly class FlightRepository
 {
-    private const int PER_PAGE = 10;
-
-    // Cap the one-way pagination count so a very connective route can't make the
-    // COUNT scan every 2-stop combination; results past this show as "N+".
+    // Cap the candidate count so a very connective route can't make the COUNT
+    // scan every 2-stop combination; results past this show as "N+".
     //
     // Filters are applied to these rows after they come back, so the cap also
     // bounds what a filter can see — too low and a selective filter would search
@@ -86,7 +84,8 @@ final readonly class FlightRepository
         string $to,
         string $departDate,
         SortMethod $sort,
-        int $page,
+        int $offset,
+        int $limit,
         ?FlightFilters $filters = null,
         float $priceOffset = 0.0,
     ): array {
@@ -145,11 +144,15 @@ final readonly class FlightRepository
         // "cheapest" means cheapest of what the search can actually show.
         $badges = count($matching) >= self::BADGE_MIN_CHOICES ? $this->badgeKeys($matching) : [];
 
-        $pageItems = array_slice($matching, $this->offset($page), self::PER_PAGE);
+        // A window into the ranked set rather than a page of it: the list grows
+        // by appending, so a "load more" asks for what it does not have yet.
+        // Only this window's legs are hydrated, which is what keeps a later
+        // request as cheap as the first.
+        $window = array_slice($matching, max(0, $offset), max(0, $limit));
 
-        $legs = $this->hydrateLegs($this->collectLegIds($pageItems));
+        $legs = $this->hydrateLegs($this->collectLegIds($window));
 
-        $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs, $badges), $pageItems);
+        $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs, $badges), $window);
 
         // Across every match, not just this page — otherwise page two would
         // call its own first row the cheapest.
@@ -1085,10 +1088,6 @@ final readonly class FlightRepository
         return array_map(static fn(array $row): string => (string) $row['code'], $rows);
     }
 
-    private function offset(int $page): int
-    {
-        return ($page - 1) * self::PER_PAGE;
-    }
 
     /**
      * Comma-separated `?` placeholders for an IN (…) list.

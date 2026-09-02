@@ -217,10 +217,17 @@
         scrollToAnchor('top');
     });
 
-    $(function () {
-        document.querySelectorAll('[data-toggle="tooltip"]').forEach(function (el) {
-            new bootstrap.Tooltip(el);
+    // Cards arrive after load too, when the list grows, so this has to be
+    // callable again. getOrCreateInstance rather than new: running it twice
+    // over the same element would leave two tooltips fighting over one target.
+    function initTooltips(root) {
+        (root || document).querySelectorAll('[data-toggle="tooltip"]').forEach(function (el) {
+            bootstrap.Tooltip.getOrCreateInstance(el);
         });
+    }
+
+    $(function () {
+        initTooltips(document);
     });
 
     /*[ Saved flights ]
@@ -285,28 +292,43 @@
     })();
 
     // Saved flights live in this browser only — there is no account to sync to.
-    document.querySelectorAll('.js-like').forEach(function (button) {
-        const key = button.dataset.flightKey;
+    //
+    // The click is delegated because the list grows: a card appended by "show
+    // more" never passes through a querySelectorAll that ran at load. Only the
+    // painting of the saved state is per-element, so it is a function the
+    // append can call again.
+    function paintSavedFlights(root) {
+        const list = savedFlights();
 
-        button.classList.toggle('is-active', savedFlights().indexOf(key) !== -1);
-
-        button.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const list = savedFlights();
-            const at = list.indexOf(key);
-
-            if (at === -1) {
-                list.unshift(key);
-            } else {
-                list.splice(at, 1);
-            }
-
-            button.classList.toggle('is-active', at === -1);
-            storeSavedFlights(list);
+        (root || document).querySelectorAll('.js-like').forEach(function (button) {
+            button.classList.toggle('is-active', list.indexOf(button.dataset.flightKey) !== -1);
         });
+    }
+
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.js-like');
+
+        if (!button) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const list = savedFlights();
+        const at = list.indexOf(button.dataset.flightKey);
+
+        if (at === -1) {
+            list.unshift(button.dataset.flightKey);
+        } else {
+            list.splice(at, 1);
+        }
+
+        button.classList.toggle('is-active', at === -1);
+        storeSavedFlights(list);
     });
+
+    paintSavedFlights(document);
 
     // The saved-flights page: dropping one takes its card with it, so the list
     // does not disagree with the cookie until the next reload.
@@ -380,26 +402,257 @@
         return copied;
     }
 
-    document.querySelectorAll('.js-share').forEach(function (button) {
-        button.addEventListener('click', function (event) {
-            // Keep the click off the card, which would navigate away.
-            event.preventDefault();
-            event.stopPropagation();
+    // Delegated for the same reason as saving: appended cards must work too.
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.js-share');
 
-            // The share URL is a path, so resolve it against this origin.
-            const url = new URL(button.dataset.shareUrl, window.location.origin).href;
+        if (!button) {
+            return;
+        }
 
-            copyToClipboard(url).then(function () {
-                button.classList.add('is-copied');
+        // Keep the click off the card, which would navigate away.
+        event.preventDefault();
+        event.stopPropagation();
 
-                setTimeout(function () {
-                    button.classList.remove('is-copied');
-                }, 1600);
-            }, function () {
-                window.prompt('Copy this link', url);
-            });
+        // The share URL is a path, so resolve it against this origin.
+        const url = new URL(button.dataset.shareUrl, window.location.origin).href;
+
+        copyToClipboard(url).then(function () {
+            button.classList.add('is-copied');
+
+            setTimeout(function () {
+                button.classList.remove('is-copied');
+            }, 1600);
+        }, function () {
+            window.prompt('Copy this link', url);
         });
     });
+
+    /*[ Back to top ]
+    ===========================================================*/
+    (function () {
+        const button = document.querySelector('.js-to-top');
+
+        if (!button) {
+            return;
+        }
+
+        // Roughly a screen and a half: far enough that the header is well out
+        // of reach, near enough that it is there when it is wanted.
+        const THRESHOLD = 800;
+
+        let ticking = false;
+
+        const paint = function () {
+            const past = window.scrollY > THRESHOLD;
+
+            // `hidden` keeps it out of the tab order and off a screen reader
+            // when there is nowhere to go back to; the class does the fading.
+            if (past) {
+                button.hidden = false;
+                // A frame after unhiding, or the transition has nothing to
+                // move from.
+                window.requestAnimationFrame(function () {
+                    button.classList.add('is-visible');
+                });
+            } else {
+                button.classList.remove('is-visible');
+            }
+
+            ticking = false;
+        };
+
+        // The class comes off before the element goes, so the fade can finish.
+        button.addEventListener('transitionend', function (event) {
+            if (event.propertyName === 'opacity' && !button.classList.contains('is-visible')) {
+                button.hidden = true;
+            }
+        });
+
+        window.addEventListener('scroll', function () {
+            if (!ticking) {
+                ticking = true;
+                window.requestAnimationFrame(paint);
+            }
+        }, { passive: true });
+
+        button.addEventListener('click', function () {
+            const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
+
+            // Scrolling moves the page, not the keyboard. Without this a tab
+            // press would carry on from the button at the bottom, which is not
+            // where the reader is now looking.
+            const heading = document.querySelector('h1, .header, header');
+
+            if (heading) {
+                heading.setAttribute('tabindex', '-1');
+                heading.focus({ preventScroll: true });
+            }
+        });
+
+        paint();
+    })();
+
+    /*[ A list that grows ]
+    ===========================================================*/
+    // "Show more" is a real link to a longer list, so this only upgrades it:
+    // fetch the same URL as a fragment, append the cards it returns, and leave
+    // the address bar describing what is on screen. Without scripting the link
+    // still works — it just reloads.
+    (function () {
+        const results = document.querySelector('.js-results');
+
+        if (!results || !window.fetch) {
+            return;
+        }
+
+        // The first slice is always asked for: someone who lands here and reads
+        // one card has not said they want a longer list, and fetching one on
+        // their behalf spends their data to answer a question nobody put.
+        //
+        // A click says otherwise, and buys the two loads after it for free.
+        // Scrolling for ever would take the footer out of reach, so each burst
+        // ends back at the button rather than running on.
+        const AUTO_LOADS = 2;
+
+        // Starts spent, so nothing loads until the button is used.
+        let autoLoaded = AUTO_LOADS;
+        let loading = false;
+        let observer = null;
+
+        const block = function () {
+            return results.querySelector('.js-more-block');
+        };
+
+        const load = function (link) {
+            if (loading) {
+                return;
+            }
+
+            loading = true;
+
+            const holder = link.closest('.js-more-block');
+            const label = link.querySelector('.js-more-label');
+            const spinner = link.querySelector('.show-more__spinner');
+
+            link.classList.add('is-loading');
+
+            if (label) {
+                label.textContent = 'Loading…';
+            }
+
+            if (spinner) {
+                spinner.hidden = false;
+            }
+
+            // `after` is what the page already holds; the href already carries
+            // the new total, along with the search, sort and filters.
+            const url = link.href + '&fragment=1&after=' + encodeURIComponent(link.dataset.after);
+
+            fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+
+                    return response.text();
+                })
+                .then(function (html) {
+                    // The fragment brings its own "show more", so the old one
+                    // is replaced rather than updated.
+                    holder.insertAdjacentHTML('beforebegin', html);
+                    holder.remove();
+
+                    // Cards that arrived have arrived. An enhancement that
+                    // throws must not send us down the failure path, which
+                    // would leave the list grown but the address bar and the
+                    // next control still describing the old one.
+                    try {
+                        paintSavedFlights(results);
+                        initTooltips(results);
+                        announceResults(results);
+                    } catch (error) {
+                        // Nothing to undo: the results are on the page.
+                    }
+
+                    // The URL now describes the screen, so a refresh or a Back
+                    // from a flight lands on the same list rather than the
+                    // first ten.
+                    window.history.replaceState(null, '', link.href);
+
+                    loading = false;
+                    watch();
+                })
+                .catch(function () {
+                    // Put the link back the way it was: clicking it navigates,
+                    // which is the no-JS behaviour and still gets more results.
+                    link.classList.remove('is-loading');
+
+                    if (label) {
+                        label.textContent = 'Show more results';
+                    }
+
+                    if (spinner) {
+                        spinner.hidden = true;
+                    }
+
+                    loading = false;
+                });
+        };
+
+        // Screen readers get no scroll cue, so say what arrived.
+        const announceResults = function (root) {
+            const live = document.querySelector('.js-results-live');
+
+            if (live) {
+                live.textContent = root.querySelectorAll('.flight-card').length + ' results shown';
+            }
+        };
+
+        const watch = function () {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+
+            const holder = block();
+
+            if (!holder || autoLoaded >= AUTO_LOADS || !window.IntersectionObserver) {
+                return;
+            }
+
+            // A margin so the request starts before the visitor reaches the end
+            // and has to wait at it.
+            observer = new IntersectionObserver(function (entries) {
+                if (!entries[0].isIntersecting || loading) {
+                    return;
+                }
+
+                autoLoaded += 1;
+                observer.disconnect();
+                observer = null;
+                load(holder.querySelector('.js-more'));
+            }, { rootMargin: '400px' });
+
+            observer.observe(holder);
+        };
+
+        results.addEventListener('click', function (event) {
+            const link = event.target.closest('.js-more');
+
+            if (!link) {
+                return;
+            }
+
+            event.preventDefault();
+
+            // Asking again re-arms the automatic loads behind it.
+            autoLoaded = 0;
+            load(link);
+        });
+    })();
 
     /*[ Search filters sidebar ]
     ===========================================================*/
