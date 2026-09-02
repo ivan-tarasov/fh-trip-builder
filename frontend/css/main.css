@@ -365,10 +365,7 @@ a:active {
   color: #fff;
   font-size: 18px;
   font-weight: 700;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
+  transition: background-color .12s ease;
 }
 .btn-submit-small {
   line-height: 30px;
@@ -666,10 +663,7 @@ button {
 
 .input-icon::before {
   display: block;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
+  transition: transform .2s ease;
 }
 
 .label {
@@ -859,10 +853,7 @@ button {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease;
 }
 
 .minus:hover,
@@ -932,10 +923,6 @@ input[type=number]::-webkit-outer-spin-button {
   font-size: 16px;
   color: #6c7ae0;
   font-weight: 700;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
 }
 
 #btn-add-room:hover {
@@ -1033,10 +1020,7 @@ input[type=number]::-webkit-outer-spin-button {
   content: '\f2f9';
   font-size: 24px;
   color: #808080;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
+  transition: transform .2s ease;
 }
 
 .rs-select2 .select2-container.select2-container--open .select2-selection--single .select2-selection__arrow::after {
