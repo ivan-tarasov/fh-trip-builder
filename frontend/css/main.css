@@ -2656,7 +2656,19 @@ textarea {
 
 /* --- accept and pay ----------------------------------------------------- */
 .accept { display: flex; gap: .625rem; font-size: .875rem; color: #495057; }
-.accept__box { margin-top: .2rem; flex: 0 0 auto; }
+
+/* Sized explicitly. The form block near the top of this file sets
+   `input { width: 100% }`, and on a flex item that is what flex-basis:auto
+   resolves to — which drew this checkbox as tall as the pane. Every other
+   checkbox here escapes it by carrying Bootstrap's .form-check-input; this one
+   says what it is instead of depending on that. */
+.accept__box {
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: .1rem;
+  accent-color: var(--bs-primary);
+}
 .accept--invalid { color: #842029; }
 
 .checkout__pay {
