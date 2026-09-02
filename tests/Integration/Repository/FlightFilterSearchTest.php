@@ -296,6 +296,11 @@ final class FlightFilterSearchTest extends IntegrationTestCase
 
     public function testAnImpossibleCombinationEmptiesCleanly(): void
     {
+        // The claim below is that a filter emptied the results, not the route.
+        // Without generated flights there is nothing to offer either way, and
+        // the test would be asserting the wrong emptiness.
+        $this->requireResults();
+
         // Two stops, but only one airport allowed to connect at.
         $result = $this->search(new FlightFilters(stops: [2], layoverAirports: ['ZZZ']));
 
