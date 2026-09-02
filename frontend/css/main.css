@@ -989,9 +989,18 @@ textarea {
   background-color: #ced4da;
 }
 
-/* Lift the option the pointer is on, so rows read as choosable. */
-.flight-card { transition: box-shadow var(--dur-fast) ease, transform var(--dur-fast) ease; }
-.flight-card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1) !important; }
+/* Mark the option the pointer is over. This is deliberately only a shadow:
+   the card is a plain div with no handler on it, and the only thing that
+   advances a step is the Select button inside, so lifting the whole card
+   would advertise a press that does nothing. The transition used to reserve
+   `transform` for that lift -- the reservation outlived the idea.
+   Hover-gated: on a touchscreen :hover latches on tap, and a single card
+   left holding a raised shadow in a list of two hundred reads as chosen. */
+.flight-card { transition: box-shadow var(--dur-fast) ease; }
+
+@media (hover: hover) and (pointer: fine) {
+  .flight-card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1) !important; }
+}
 
 /* The assembled round trip, set apart from the option lists. */
 .trip-package { border: 2px solid var(--bs-primary); }
