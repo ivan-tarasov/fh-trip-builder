@@ -3886,3 +3886,15 @@
         margin-top: 20px;
     }
 }
+
+/* This page is one large decorative illustration: a hundred-odd keyframe
+   animations, none of which carries information. For a visitor who has asked
+   for less movement there is nothing here worth animating, so all of it
+   stops. The artwork still reads perfectly well standing still. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+  }
+}

@@ -21,6 +21,21 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
+/* Asking for reduced motion is not asking for no feedback. Colour, shadow,
+   opacity and filter all still carry meaning and none of them is vestibular,
+   so they keep their transitions; what goes is travel, so a transform lands
+   at its destination instead of moving there. Overriding the property list
+   rather than the duration is what buys that distinction -- zeroing every
+   duration would take the comprehension along with the movement.
+   The one looping animation in this file is stopped where it is defined. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-property: color, background-color, border-color, box-shadow, opacity, filter !important;
+  }
+}
+
 /* ==========================================================================
    #GRID
    ========================================================================== */
@@ -2014,10 +2029,6 @@ textarea {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .to-top { transition: none; }
-}
-
 /* --------------------------------------------------------------------------
    Checkout
    -------------------------------------------------------------------------- */
@@ -2236,10 +2247,6 @@ textarea {
   letter-spacing: .12em;
 }
 .pay-card__back-note { margin: .75rem 0 0; font-size: .6875rem; opacity: .65; }
-
-@media (prefers-reduced-motion: reduce) {
-  .pay-card__faces { transition: none; }
-}
 
 /* --- accept and pay ----------------------------------------------------- */
 .accept { display: flex; gap: .625rem; font-size: .875rem; color: #495057; }

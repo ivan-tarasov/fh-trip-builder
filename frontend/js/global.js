@@ -521,10 +521,13 @@
             } else {
                 button.classList.remove('is-visible');
 
-                // Reduced motion means `transition: none` in the stylesheet,
-                // so `transitionend` never arrives to finish the job below.
-                // Waiting for it would leave an invisible button sitting in
-                // the tab order for exactly the readers who opted out.
+                // Belt and braces. The stylesheet keeps the opacity fade
+                // under reduced motion, so `transitionend` below does still
+                // fire -- but it is the only thing that puts `hidden` back,
+                // and any future rule that drops the transition would leave
+                // an invisible button parked in the tab order for exactly
+                // the readers who opted out. Hiding straight away costs a
+                // fade nobody asked to see.
                 if (still.matches) {
                     button.hidden = true;
                 }
