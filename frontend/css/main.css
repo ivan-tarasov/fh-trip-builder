@@ -1184,6 +1184,27 @@ textarea {
 /* Removing a saved flight: the one destructive control on the saved page. */
 .icon-btn--danger:hover { background-color: #ffe3e3; color: #c92a2a; }
 
+/* Dropping a saved flight used to delete the card mid-click, so everything
+   below jumped up under the pointer at the exact moment it was busy. The card
+   now collapses out of the way first: the fade says which one is going, the
+   height says where the list is about to close up.
+   The transition is restated in full because this rule sits after
+   .flight-card at the same specificity and would otherwise take the hover
+   shadow with it. Under reduced motion the collapse is instant and only the
+   fade runs -- and the removal does not wait on either. */
+.saved-item {
+  transition: box-shadow var(--dur-fast) ease,
+              opacity var(--dur-base) var(--ease-out),
+              height var(--dur-base) var(--ease-out),
+              margin-bottom var(--dur-base) var(--ease-out);
+}
+
+.saved-item.is-leaving {
+  overflow: hidden;
+  opacity: 0;
+  margin-bottom: 0;
+}
+
 .saved-empty__icon {
   font-size: 3rem;
   color: #ced4da;

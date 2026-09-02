@@ -283,23 +283,61 @@
                 storeSavedFlights(list);
             }
 
+            // Counted after the card has actually gone, not before.
+            const settle = function () {
+                const remaining = document.querySelectorAll('.saved-item').length;
+                const empty = document.querySelector('.js-saved-empty');
+
+                if (remaining === 0 && empty) {
+                    empty.classList.remove('d-none');
+                    const list_ = document.querySelector('.js-saved-list');
+
+                    if (list_) {
+                        list_.remove();
+                    }
+                }
+            };
+
             const card = button.closest('.saved-item');
 
-            if (card) {
-                card.remove();
+            if (!card) {
+                settle();
+                return;
             }
 
-            const remaining = document.querySelectorAll('.saved-item').length;
-            const empty = document.querySelector('.js-saved-empty');
+            let removed = false;
 
-            if (remaining === 0 && empty) {
-                empty.classList.remove('d-none');
-                const list_ = document.querySelector('.js-saved-list');
-
-                if (list_) {
-                    list_.remove();
+            const finish = function () {
+                if (removed) {
+                    return;
                 }
-            }
+
+                removed = true;
+                card.remove();
+                settle();
+            };
+
+            // An explicit height first, or there is nothing for the collapse
+            // to run from; then the class and the target in the next frame.
+            card.style.height = card.offsetHeight + 'px';
+
+            window.requestAnimationFrame(function () {
+                card.classList.add('is-leaving');
+                card.style.height = '0px';
+            });
+
+            // The fade is the cue, but the removal never depends on it: a
+            // stylesheet, a reduced-motion preference or a backgrounded tab
+            // can all stop a transition from finishing, and a card that stays
+            // behind after being dropped is worse than one that goes without
+            // ceremony.
+            card.addEventListener('transitionend', function (event) {
+                if (event.propertyName === 'opacity') {
+                    finish();
+                }
+            });
+
+            window.setTimeout(finish, 400);
         });
     });
 
