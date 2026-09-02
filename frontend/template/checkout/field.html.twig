@@ -1,0 +1,18 @@
+{# One labelled input, with its error in place of its hint when it has one.
+   A field that failed keeps what was typed — retyping an address because one
+   digit of a postcode was wrong is the fastest way to lose a booking. #}
+<div class="field">
+    <label class="field__label" for="{{ name }}">{{ label }}</label>
+    <input class="field__input{{ errors[name] is defined ? ' is-invalid' : '' }}"
+           id="{{ name }}"
+           name="{{ name }}"
+           type="{{ type|default('text') }}"
+           value="{{ form[name]|default('') }}"
+           {% if placeholder is defined %}placeholder="{{ placeholder }}"{% endif %}
+           {% if autocomplete is defined %}autocomplete="{{ autocomplete }}"{% endif %}
+           {% if attrs is defined %}{{ attrs|raw }}{% endif %}
+           {{ errors[name] is defined ? 'aria-invalid="true"' : '' }} />
+    {% if errors[name] is defined %}
+        <p class="field__error">{{ errors[name] }}</p>
+    {% endif %}
+</div>

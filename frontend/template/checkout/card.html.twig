@@ -1,0 +1,43 @@
+{# The card, drawn as the card.
+
+   It mirrors what is typed rather than owning it — the inputs are the state,
+   this is a reading of them. Two faces: the front carries the number, name and
+   expiry; the back carries the security code where the card carries it, so
+   focusing the CVV field turns the card over and shows you where to look
+   instead of explaining it in a tooltip.
+
+   The scheme logo is whichever one the number identifies, not a row of four.
+   A wrong-looking logo is a faster correction than a validation message. #}
+<div class="pay-card js-pay-card" aria-hidden="true">
+    <div class="pay-card__faces">
+        <div class="pay-card__face pay-card__face--front">
+            <div class="pay-card__top">
+                <span class="pay-card__brand js-card-brand">Card</span>
+                <span class="pay-card__wifi"><i class="fas fa-wifi"></i></span>
+            </div>
+
+            <div class="pay-card__chip"></div>
+
+            <div class="pay-card__number js-card-number">•••• •••• •••• ••••</div>
+
+            <div class="pay-card__bottom">
+                <div class="pay-card__field">
+                    <span class="pay-card__label">Card holder</span>
+                    <span class="pay-card__value js-card-name">YOUR NAME</span>
+                </div>
+                <div class="pay-card__field pay-card__field--expiry">
+                    <span class="pay-card__label">Expires</span>
+                    <span class="pay-card__value js-card-expiry">MM / YY</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="pay-card__face pay-card__face--back">
+            <div class="pay-card__stripe"></div>
+            <div class="pay-card__signature">
+                <span class="pay-card__cvv js-card-cvv">•••</span>
+            </div>
+            <p class="pay-card__back-note">The security code is printed here, on the back of your card.</p>
+        </div>
+    </div>
+</div>

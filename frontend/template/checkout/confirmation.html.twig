@@ -1,0 +1,83 @@
+{% extends 'layout.html.twig' %}
+
+{#
+    The page after the money. Its job is to answer, without being asked: did it
+    work, what did I buy, what was I charged, and what do I quote if I need to
+    ring someone. The reference leads because it is the one thing worth writing
+    down.
+#}
+
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container checkout">
+
+        <div class="done">
+            <i class="fas fa-circle-check done__icon"></i>
+            <h1 class="done__title">You&rsquo;re booked</h1>
+            <p class="done__lead">
+                We sent the ticket to <strong>{{ email }}</strong>. It can take a few minutes
+                to arrive.
+            </p>
+
+            <div class="done__reference">
+                <span class="done__reference-label">Booking reference</span>
+                <span class="done__reference-code">{{ reference }}</span>
+            </div>
+        </div>
+
+        <div class="done__panels">
+            <section class="pane" aria-labelledby="itinerary-heading">
+                <h2 class="pane__heading" id="itinerary-heading">Your flights</h2>
+
+                {% for legs in [outbound, return] %}
+                    {% if legs|length %}
+                        <p class="done__direction">{{ loop.first ? 'Departing' : 'Returning' }}</p>
+                        {% for leg in legs %}
+                            <div class="done__leg">
+                                <div class="done__leg-route">
+                                    <span class="order__code">{{ leg.from }}</span>
+                                    <i class="fas fa-arrow-right order__arrow"></i>
+                                    <span class="order__code">{{ leg.to }}</span>
+                                </div>
+                                <div class="done__leg-when">
+                                    <span>{{ leg.depart }}</span>
+                                    <span class="done__leg-sep">&rarr;</span>
+                                    <span>{{ leg.arrive }}</span>
+                                </div>
+                                <div class="done__leg-carrier">{{ leg.carrier }} · {{ leg.flight }}</div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </section>
+
+            <section class="pane" aria-labelledby="receipt-heading">
+                <h2 class="pane__heading" id="receipt-heading">Receipt</h2>
+
+                <dl class="order__prices">
+                    <div class="order__price-row">
+                        <dt>Passenger</dt>
+                        <dd>{{ passenger }}</dd>
+                    </div>
+                    <div class="order__price-row">
+                        <dt>Paid with</dt>
+                        <dd>{{ card_brand }} ending {{ card_last4 }}</dd>
+                    </div>
+                    <div class="order__price-row order__price-row--total">
+                        <dt>Charged</dt>
+                        <dd>${{ price.whole }}.{{ price.cents }}</dd>
+                    </div>
+                </dl>
+
+                <p class="done__demo">
+                    No money moved — this is a demo booking.
+                </p>
+
+                <a class="checkout__pay checkout__pay--link" href="{{ bookings_url }}">
+                    See all my bookings
+                </a>
+            </section>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -48,22 +48,22 @@ class AjaxController extends AbstractController
             return;
         }
 
-        $request = [
-            'session_id' => session_id(),
-            'departure_time' => $outbound[0]['depart']['date_time'],
-            'flight_outbound' => json_encode($outbound),
-            'flight_return' => $return === [] ? null : json_encode($return),
-        ];
-
-        try {
-            $id = new BookingRepository($this->connection())->create($request);
-            $json = ['status' => 'success', 'message' => "Booking created with ID:\n" . Helper::bookingIdToString($id)];
-        } catch (Throwable $e) {
-            error_log('Booking insert failed: ' . $e->getMessage());
-            $json = ['status' => 'error', 'message' => 'Could not create the booking. Please try again later.'];
-        }
-
-        echo json_encode($json);
+        // A booking now carries the passenger, the contact details and the card
+        // it was paid with, none of which this endpoint ever asked for — the
+        // columns are NOT NULL, so an insert from here cannot succeed. It used
+        // to back the "Add this trip?" dialog; /checkout does that job now.
+        //
+        // Saying so beats failing through the catch below with "please try
+        // again later", which would never come true.
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Bookings are made at checkout now. Choose your flights and continue from there.',
+            'checkout' => sprintf(
+                '/checkout?depart_itin=%s%s',
+                implode(',', $outboundIds),
+                $returnIds === [] ? '' : '&return_itin=' . implode(',', $returnIds),
+            ),
+        ]);
     }
 
     /**

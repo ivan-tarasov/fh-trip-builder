@@ -694,6 +694,45 @@ final readonly class FlightRepository
     }
 
     /**
+     * The fare brand each leg is sold under, in the order the ids were given.
+     *
+     * Kept out of legColumns() on purpose: the brand is only wanted at
+     * checkout, and every card on a search page would otherwise carry a column
+     * it never renders.
+     *
+     * @param list<int> $ids
+     * @return list<string|null>
+     */
+    public function fareBrandsByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $rows = $this->connection->fetchAll(
+            'SELECT id, fare_brand FROM ' . Table::Flights->value
+            . ' WHERE id IN (' . implode(', ', array_fill(0, count($ids), '?')) . ')',
+            $ids,
+        );
+
+        $byId = [];
+
+        foreach ($rows as $row) {
+            $byId[(int) $row['id']] = $row['fare_brand'] === null ? null : (string) $row['fare_brand'];
+        }
+
+        $ordered = [];
+
+        foreach ($ids as $id) {
+            if (array_key_exists($id, $byId)) {
+                $ordered[] = $byId[$id];
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
      * Hydrated legs for an ordered id list, preserving order (booking flow).
      *
      * @param list<int> $ids

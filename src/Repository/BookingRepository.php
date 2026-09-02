@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Repository;
 
+use RuntimeException;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
@@ -38,6 +39,55 @@ final readonly class BookingRepository
             . ' VALUES (' . implode(', ', array_fill(0, count($columns), '?')) . ')';
 
         return $this->connection->insert($sql, array_values($data));
+    }
+
+    /**
+     * One booking by its reference, scoped to the session that made it — the
+     * confirmation page is reachable by URL and a reference is short enough to
+     * guess.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findByReference(string $reference, string $sessionId): ?array
+    {
+        $row = $this->connection->fetchAll(
+            'SELECT * FROM ' . Table::Bookings->value . ' WHERE reference = ? AND session_id = ? LIMIT 1',
+            [$reference, $sessionId],
+        );
+
+        return $row[0] ?? null;
+    }
+
+    /**
+     * A booking reference nobody else holds.
+     *
+     * Six characters from an alphabet with no O/0 or I/1, so a reference read
+     * off a screen and typed back in cannot land on a different booking.
+     */
+    public function unusedReference(): string
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+        // A collision is vanishingly unlikely; looping is still cheaper than
+        // explaining a duplicate key to whoever hits one.
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            $reference = '';
+
+            for ($i = 0; $i < 6; $i++) {
+                $reference .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+
+            $taken = $this->connection->fetchValue(
+                'SELECT COUNT(*) FROM ' . Table::Bookings->value . ' WHERE reference = ?',
+                [$reference],
+            );
+
+            if ((int) $taken === 0) {
+                return $reference;
+            }
+        }
+
+        throw new RuntimeException('Could not allocate a booking reference.');
     }
 
     /**

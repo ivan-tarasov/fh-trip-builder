@@ -72,6 +72,59 @@ final class HelperTest extends TestCase
         ];
     }
 
+    #[DataProvider('cardSchemeProvider')]
+    public function testCardScheme(string $expected, string $number): void
+    {
+        self::assertSame($expected, Helper::cardScheme($number));
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function cardSchemeProvider(): array
+    {
+        return [
+            'visa' => ['Visa', '4563 4563 4563 4567'],
+            'mastercard' => ['Mastercard', '5555 5555 5555 4444'],
+            // The 2-series was added to Mastercard's range in 2017 and is easy
+            // to miss, which lands a real card under the generic label.
+            'mastercard 2-series' => ['Mastercard', '2221000000000009'],
+            'amex' => ['Amex', '3782 822463 10005'],
+            'discover' => ['Discover', '6011111111111117'],
+            // Named from the prefix alone, so a partly-typed number already
+            // knows what it is — that is what lets the form show the logo.
+            'a single digit is enough for visa' => ['Visa', '4'],
+            'nothing yet' => ['Card', ''],
+            'no range matches' => ['Card', '9999999999999999'],
+        ];
+    }
+
+    #[DataProvider('luhnProvider')]
+    public function testIsLuhnValid(bool $expected, string $number): void
+    {
+        self::assertSame($expected, Helper::isLuhnValid($number));
+    }
+
+    /**
+     * @return array<string, array{0: bool, 1: string}>
+     */
+    public static function luhnProvider(): array
+    {
+        return [
+            'a visa test number' => [true, '4563456345634567'],
+            'spaces are not digits' => [true, '4563 4563 4563 4567'],
+            'a mastercard test number' => [true, '5555555555554444'],
+            'a 15-digit amex' => [true, '378282246310005'],
+            // The whole point: one digit out and the check digit disagrees.
+            'one digit mistyped' => [false, '4563456345634568'],
+            'two digits transposed' => [false, '4563456345634657'],
+            'too short to be a card' => [false, '4563456'],
+            'too long to be a card' => [false, '45634563456345671234'],
+            'letters' => [false, 'not-a-card'],
+            'empty' => [false, ''],
+        ];
+    }
+
     #[DataProvider('hoursAndMinutesProvider')]
     public function testHoursAndMinutes(string $expected, int $minutes): void
     {

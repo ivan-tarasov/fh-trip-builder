@@ -13,6 +13,7 @@ final readonly class Flight
         public string $airline,
         public int $number,
         public ?string $aircraft,
+        public ?string $fareBrand,
         public string $departureAirport,
         public string $departureTime,
         public string $arrivalAirport,
@@ -32,9 +33,9 @@ final readonly class Flight
     public static function columns(): array
     {
         return [
-            'airline', 'number', 'aircraft', 'departure_airport', 'departure_time',
-            'arrival_airport', 'arrival_time', 'distance', 'duration',
-            'price_base', 'price_tax', 'rating',
+            'airline', 'number', 'aircraft', 'fare_brand', 'departure_airport',
+            'departure_time', 'arrival_airport', 'arrival_time', 'distance',
+            'duration', 'price_base', 'price_tax', 'rating',
         ];
     }
 
@@ -49,6 +50,7 @@ final readonly class Flight
             $this->airline,
             $this->number,
             $this->aircraft,
+            $this->fareBrand,
             $this->departureAirport,
             $this->departureTime,
             $this->arrivalAirport,
