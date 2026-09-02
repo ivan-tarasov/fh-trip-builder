@@ -1,0 +1,42 @@
+{# What is being bought, and for how much. Sticky, so the total stays in view
+   while the form is filled in — the number is the reason the page exists. #}
+<aside class="order" aria-labelledby="order-heading">
+    <h2 class="order__heading" id="order-heading">Your trip</h2>
+
+    {% for direction in [trip.outbound, trip.return] %}
+        {% if direction %}
+            <div class="order__leg">
+                <p class="order__leg-label">{{ loop.first ? 'Departing' : 'Returning' }}</p>
+                <p class="order__route">
+                    <span class="order__code">{{ direction.direction.depart_code }}</span>
+                    <i class="fas fa-arrow-right order__arrow"></i>
+                    <span class="order__code">{{ direction.direction.arrive_code }}</span>
+                </p>
+                <p class="order__when">
+                    {{ direction.direction.depart_day }} ·
+                    {{ direction.direction.depart_time }} – {{ direction.direction.arrive_time }}
+                </p>
+                <p class="order__detail">
+                    {{ direction.direction.duration }} · {{ direction.direction.stops_label }}
+                </p>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    <dl class="order__prices">
+        <div class="order__price-row">
+            <dt>Fare</dt>
+            <dd>${{ trip.price_base.whole }}.{{ trip.price_base.cents }}</dd>
+        </div>
+        <div class="order__price-row">
+            <dt>Taxes &amp; fees</dt>
+            <dd>${{ trip.price_tax.whole }}.{{ trip.price_tax.cents }}</dd>
+        </div>
+        <div class="order__price-row order__price-row--total">
+            <dt>Total</dt>
+            <dd>${{ trip.price_total.whole }}.{{ trip.price_total.cents }}</dd>
+        </div>
+    </dl>
+
+    <p class="order__note">1 adult, all taxes and fees included.</p>
+</aside>

@@ -9,6 +9,9 @@ class Csrf
     private const string SESSION_KEY = 'csrf_token';
     public const string HEADER = 'X-CSRF-Token';
 
+    // The same token, for a form that posts rather than fetches.
+    public const string FIELD = '_csrf';
+
     /**
      * Return the current session CSRF token, creating one if needed.
      */

@@ -1,0 +1,211 @@
+{% extends 'layout.html.twig' %}
+
+{#
+    One page, three questions: where to send the ticket, who is flying, and how
+    it is paid for. Twelve fields, which is what an airline needs to issue a
+    ticket and no more — everything optional (seats, bags, an account) belongs
+    after the money, not before it.
+
+    The itinerary rides in the query string, so this page can be refreshed,
+    shared and reached with Back. The price shown is resolved from the database
+    on every render; nothing about the money is taken from the form.
+#}
+
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container checkout">
+
+        <div class="checkout__head">
+            <h1 class="checkout__title">Checkout</h1>
+            <a class="checkout__change" href="{{ change_url }}">
+                <i class="fas fa-chevron-left"></i> Change flights
+            </a>
+        </div>
+
+        {% if errors.form is defined %}
+            <div class="checkout__alert" role="alert">
+                <i class="fas fa-circle-exclamation"></i> {{ errors.form }}
+            </div>
+        {% elseif errors|length %}
+            <div class="checkout__alert" role="alert">
+                <i class="fas fa-circle-exclamation"></i>
+                {{ errors|length }} {{ errors|length == 1 ? 'field needs' : 'fields need' }} another look.
+            </div>
+        {% endif %}
+
+        <div class="checkout__grid">
+            <form class="checkout__form" method="post" action="{{ form_action }}" novalidate>
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}" />
+
+                {# --- Contact --- #}
+                <section class="pane" aria-labelledby="contact-heading">
+                    <h2 class="pane__heading" id="contact-heading">
+                        <span class="pane__step">1</span> Contact details
+                    </h2>
+                    <p class="pane__hint">The ticket goes to this address, and the airline uses
+                        the number if anything about the flight changes.</p>
+
+                    <div class="field-row">
+                        {% include 'checkout/field.html.twig' with {
+                            'name': 'email', 'label': 'Email', 'type': 'email',
+                            'autocomplete': 'email', 'errors': errors, 'form': form
+                        } only %}
+                        {% include 'checkout/field.html.twig' with {
+                            'name': 'phone', 'label': 'Phone', 'type': 'tel',
+                            'autocomplete': 'tel', 'errors': errors, 'form': form
+                        } only %}
+                    </div>
+                </section>
+
+                {# --- Passenger --- #}
+                <section class="pane" aria-labelledby="passenger-heading">
+                    <h2 class="pane__heading" id="passenger-heading">
+                        <span class="pane__step">2</span> Passenger
+                    </h2>
+                    <p class="pane__hint">Exactly as printed on the passport or ID you will
+                        travel with — airlines will not board a name that does not match.</p>
+
+                    <div class="field-row">
+                        {% include 'checkout/field.html.twig' with {
+                            'name': 'first_name', 'label': 'First name',
+                            'autocomplete': 'given-name', 'errors': errors, 'form': form
+                        } only %}
+                        {% include 'checkout/field.html.twig' with {
+                            'name': 'last_name', 'label': 'Last name',
+                            'autocomplete': 'family-name', 'errors': errors, 'form': form
+                        } only %}
+                    </div>
+
+                    <div class="field-row">
+                        {% include 'checkout/field.html.twig' with {
+                            'name': 'dob', 'label': 'Date of birth', 'type': 'date',
+                            'autocomplete': 'bday', 'errors': errors, 'form': form
+                        } only %}
+
+                        <div class="field">
+                            <label class="field__label" for="gender">Gender</label>
+                            <select class="field__input{{ errors.gender is defined ? ' is-invalid' : '' }}"
+                                    id="gender" name="gender">
+                                <option value="">Choose…</option>
+                                {% for value, label in genders %}
+                                    <option value="{{ value }}"{{ form.gender|default('') == value ? ' selected' : '' }}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if errors.gender is defined %}
+                                <p class="field__error">{{ errors.gender }}</p>
+                            {% else %}
+                                <p class="field__note">Required by airlines for security checks.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                {# --- Payment --- #}
+                <section class="pane" aria-labelledby="payment-heading">
+                    <h2 class="pane__heading" id="payment-heading">
+                        <span class="pane__step">3</span> Payment
+                    </h2>
+
+                    <div class="pay">
+                        <div class="pay__fields">
+                            {% include 'checkout/field.html.twig' with {
+                                'name': 'card_name', 'label': 'Name on card',
+                                'autocomplete': 'cc-name', 'errors': errors, 'form': form,
+                                'attrs': 'data-card="name"'
+                            } only %}
+
+                            {% include 'checkout/field.html.twig' with {
+                                'name': 'card_number', 'label': 'Card number',
+                                'autocomplete': 'cc-number', 'errors': errors, 'form': form,
+                                'attrs': 'data-card="number" inputmode="numeric" maxlength="23"'
+                            } only %}
+
+                            <div class="field-row">
+                                {% include 'checkout/field.html.twig' with {
+                                    'name': 'card_expiry', 'label': 'Expiry', 'placeholder': 'MM / YY',
+                                    'autocomplete': 'cc-exp', 'errors': errors, 'form': form,
+                                    'attrs': 'data-card="expiry" inputmode="numeric" maxlength="7"'
+                                } only %}
+                                {% include 'checkout/field.html.twig' with {
+                                    'name': 'card_cvv', 'label': 'Security code',
+                                    'autocomplete': 'cc-csc', 'errors': errors, 'form': form,
+                                    'attrs': 'data-card="cvv" inputmode="numeric" maxlength="4"'
+                                } only %}
+                            </div>
+
+                            <div class="field-row">
+                                {% include 'checkout/field.html.twig' with {
+                                    'name': 'billing_postcode', 'label': 'Billing postcode',
+                                    'autocomplete': 'postal-code', 'errors': errors, 'form': form
+                                } only %}
+
+                                <div class="field">
+                                    <label class="field__label" for="billing_country">Billing country</label>
+                                    <select class="field__input{{ errors.billing_country is defined ? ' is-invalid' : '' }}"
+                                            id="billing_country" name="billing_country" autocomplete="country">
+                                        <option value="">Choose…</option>
+                                        {% for code, name in {
+                                            'CA': 'Canada', 'US': 'United States', 'GB': 'United Kingdom',
+                                            'FR': 'France', 'DE': 'Germany', 'AU': 'Australia'
+                                        } %}
+                                            <option value="{{ code }}"{{ form.billing_country|default('') == code ? ' selected' : '' }}>
+                                                {{ name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if errors.billing_country is defined %}
+                                        <p class="field__error">{{ errors.billing_country }}</p>
+                                    {% else %}
+                                        <p class="field__note">Checked against your card.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pay__preview">
+                            {% include 'checkout/card.html.twig' %}
+                            <p class="pay__secure">
+                                <i class="fas fa-lock"></i>
+                                Your card details are sent over an encrypted connection. We store
+                                only the card type and its last four digits.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                {# --- Accept and pay --- #}
+                <section class="pane pane--accept">
+                    <label class="accept{{ errors.accept_rules is defined ? ' accept--invalid' : '' }}">
+                        <input type="checkbox" class="accept__box" name="accept_rules" value="1"
+                               {{ form.accept_rules|default('') == '1' ? 'checked' : '' }} />
+                        <span>
+                            I have read and accept the fare rules and restrictions for this trip,
+                            including the baggage, change and cancellation terms shown alongside.
+                        </span>
+                    </label>
+                    {% if errors.accept_rules is defined %}
+                        <p class="field__error">{{ errors.accept_rules }}</p>
+                    {% endif %}
+
+                    <button type="submit" class="checkout__pay">
+                        Pay ${{ trip.price_total.whole }}.{{ trip.price_total.cents }}
+                    </button>
+
+                    <p class="checkout__test">
+                        Nothing is charged — this is a demo. Card
+                        <code>{{ decline_card }}</code> is declined on purpose; any other valid
+                        number is approved.
+                    </p>
+                </section>
+            </form>
+
+            <div class="checkout__aside">
+                {% include 'checkout/summary.html.twig' %}
+                {% include 'checkout/rules.html.twig' %}
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -68,6 +68,15 @@ return [
             'comment' => false,
         ],
         [
+            'name' => 'fare_brand',
+            'type' => 'char',
+            'length' => 2,
+            'default' => false,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
             'name' => 'departure_airport',
             'type' => 'char',
             'length' => 3,

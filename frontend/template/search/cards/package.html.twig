@@ -44,12 +44,13 @@
                 </div>
             </div>
             <div class="col-md-6 text-md-end pt-3 pt-md-0">
-                <button type="button" class="btn btn-buy btn-lg px-4"
-                        id="addTrip_{{ package_ids.outbound }}_{{ package_ids.return }}"
-                        data-flight-departing-ids="{{ package_ids.outbound }}"
-                        data-flight-returning-ids="{{ package_ids.return }}">
-                    Confirm my selection <i class="fas fa-arrow-right ps-1"></i>
-                </button>
+                {# A link to checkout rather than a confirm dialog: the details a
+                   booking needs do not fit in a popup, and a real URL can be
+                   refreshed and reached with Back. #}
+                <a class="btn btn-buy btn-lg px-4"
+                   href="/checkout?depart_itin={{ package_ids.outbound }}{% if package_ids.return %}&amp;return_itin={{ package_ids.return }}{% endif %}">
+                    Continue to checkout <i class="fas fa-arrow-right ps-1"></i>
+                </a>
             </div>
         </div>
     </div>

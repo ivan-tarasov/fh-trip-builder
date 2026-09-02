@@ -1,0 +1,21 @@
+{% extends 'layout.html.twig' %}
+
+{# The legs named in the URL no longer resolve — regenerated away, or never
+   real. Say so plainly and point back at a search rather than showing an empty
+   checkout that cannot be completed. #}
+
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container checkout">
+        <div class="checkout__gone">
+            <i class="fas fa-plane-slash checkout__gone-icon"></i>
+            <h1 class="checkout__title">That trip is no longer available</h1>
+            <p class="checkout__gone-note">
+                Flights come and go while you are deciding. Search again and the same
+                route will almost certainly still be there.
+            </p>
+            <a class="checkout__pay checkout__pay--link" href="{{ search_url }}">Search flights</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

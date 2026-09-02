@@ -1,0 +1,39 @@
+{# Rules & restrictions, one block per direction.
+
+   The rules are folded to the strictest of the legs a direction flies, so what
+   is listed holds for the whole journey rather than for its first flight. A
+   restriction is marked as one — the point of the list is what the ticket will
+   not let you do, and a bullet reads the same whichever way it falls. #}
+<section class="rules" aria-labelledby="rules-heading">
+    <h2 class="rules__heading" id="rules-heading">Rules &amp; restrictions</h2>
+
+    {% for block in trip.rules %}
+        <div class="rules__block">
+            <p class="rules__route">
+                Fare rules for {{ block.route }}
+                <span class="rules__brand">{{ block.title }}</span>
+            </p>
+            <ul class="rules__list">
+                {% for line in block.lines %}
+                    <li class="rules__item{{ line.allowed ? '' : ' rules__item--restricted' }}">
+                        <i class="fas {{ line.allowed ? 'fa-check' : 'fa-xmark' }} rules__icon"></i>
+                        {{ line.text }}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endfor %}
+
+    <ul class="rules__notes">
+        <li>
+            If you book a fare that allows changes, the airline may charge a change or cancel
+            fee, plus any fare difference. Airlines set change and cancel policies and fee
+            amounts. We may collect these change or cancel fees, which are then passed on to
+            the airline.
+        </li>
+        <li>
+            <strong>Tickets are nonrefundable and nontransferable</strong> unless the fare says
+            otherwise above. Name changes are not allowed.
+        </li>
+    </ul>
+</section>

@@ -137,6 +137,62 @@ class Helper
         return number_format($id, 0, '', '-');
     }
 
+    /**
+     * The card scheme a number belongs to, from the digits that identify it.
+     *
+     * Issuer ranges, not lengths: the first one or two digits settle it, which
+     * is why a form can name the scheme before the number is finished. Mirrored
+     * by SCHEMES in global.js, which also needs the grouping.
+     */
+    public static function cardScheme(string $number): string
+    {
+        $digits = preg_replace('/\D+/', '', $number) ?? '';
+
+        return match (true) {
+            str_starts_with($digits, '4') => 'Visa',
+            (bool) preg_match('/^(5[1-5]|2[2-7])/', $digits) => 'Mastercard',
+            (bool) preg_match('/^3[47]/', $digits) => 'Amex',
+            (bool) preg_match('/^6(011|5|4[4-9])/', $digits) => 'Discover',
+            default => 'Card',
+        };
+    }
+
+    /**
+     * Whether a card number's check digit agrees with the rest of it.
+     *
+     * Catches a mistyped or transposed digit before anything is submitted. It
+     * says nothing about whether the card exists or has money on it — only a
+     * gateway can answer that.
+     */
+    public static function isLuhnValid(string $number): bool
+    {
+        $digits = preg_replace('/\D+/', '', $number) ?? '';
+
+        if (preg_match('/^\d{13,19}$/', $digits) !== 1) {
+            return false;
+        }
+
+        $sum = 0;
+        $double = false;
+
+        for ($i = strlen($digits) - 1; $i >= 0; $i--) {
+            $value = (int) $digits[$i];
+
+            if ($double) {
+                $value *= 2;
+
+                if ($value > 9) {
+                    $value -= 9;
+                }
+            }
+
+            $sum += $value;
+            $double = !$double;
+        }
+
+        return $sum % 10 === 0;
+    }
+
     public static function hoursAndMinutes(int $minutes): string
     {
         $hours = intdiv($minutes, 60);

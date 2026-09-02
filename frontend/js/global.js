@@ -93,62 +93,6 @@
             });
         });
 
-        $("button[id^=addTrip_]").click(function () {
-            // Comma-separated segment ids per direction (an itinerary can have
-            // more than one leg). jQuery coerces a single-id value to a Number,
-            // so normalise to a string before sending.
-            let departIds = String($(this).data('flight-departing-ids') ?? '');
-            let returnIds = String($(this).data('flight-returning-ids') ?? '');
-
-            Swal.fire({
-                title: 'Add this trip?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Add trip',
-                showLoaderOnConfirm: true,
-                preConfirm: () => {
-                    return fetch('/ajax/add-trip', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-CSRF-Token': csrfToken()
-                        },
-                        body: new URLSearchParams({depart_ids: departIds, return_ids: returnIds})
-                    })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(response.statusText)
-                            }
-                            return response.json()
-                        })
-                        .catch(error => {
-                            Swal.showValidationMessage(
-                                `Request failed: ${error}`
-                            )
-                        });
-                },
-                allowOutsideClick: () => !Swal.isLoading()
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    if (result.value.status == 'success') {
-                        $(this).prop('disabled', true);
-
-                        Swal.fire({
-                            title: `${result.value.message}`,
-                            icon: 'success',
-                            showConfirmButton: false,
-                            timer: 2000
-                        });
-                    } else {
-                        Swal.fire({
-                            title: `${result.value.status} => ${result.value.message}`,
-                            icon: 'error',
-                        })
-                    }
-                }
-            })
-        });
-
         $("button[id^=deleteBooking_]").click(function () {
             let bookingID = $(this).data('booking-id');
 
@@ -427,6 +371,130 @@
             window.prompt('Copy this link', url);
         });
     });
+
+    /*[ Checkout card ]
+    ===========================================================*/
+    // The card drawing mirrors the inputs; the inputs stay the state. Nothing
+    // here validates on the server's behalf — it formats, identifies the
+    // scheme, and turns the card over when the security code is being typed.
+    (function () {
+        const card = document.querySelector('.js-pay-card');
+
+        if (!card) {
+            return;
+        }
+
+        const field = function (name) {
+            return document.querySelector('[data-card="' + name + '"]');
+        };
+
+        // Prefix ranges are how a scheme is identified; the grouping is how it
+        // is printed. Amex is 4-6-5, everyone else 4-4-4-4.
+        const SCHEMES = [
+            { name: 'Visa', test: /^4/, groups: [4, 4, 4, 4], cvv: 3 },
+            { name: 'Mastercard', test: /^(5[1-5]|2[2-7])/, groups: [4, 4, 4, 4], cvv: 3 },
+            { name: 'Amex', test: /^3[47]/, groups: [4, 6, 5], cvv: 4 },
+            { name: 'Discover', test: /^6(011|5|4[4-9])/, groups: [4, 4, 4, 4], cvv: 3 },
+        ];
+
+        const schemeOf = function (digits) {
+            for (const scheme of SCHEMES) {
+                if (scheme.test.test(digits)) {
+                    return scheme;
+                }
+            }
+
+            return { name: 'Card', groups: [4, 4, 4, 4], cvv: 3 };
+        };
+
+        const group = function (digits, groups) {
+            const parts = [];
+            let at = 0;
+
+            for (const size of groups) {
+                if (at >= digits.length) {
+                    break;
+                }
+
+                parts.push(digits.slice(at, at + size));
+                at += size;
+            }
+
+            return parts.join(' ');
+        };
+
+        const paintNumber = function () {
+            const input = field('number');
+            const digits = input.value.replace(/\D+/g, '').slice(0, 19);
+            const scheme = schemeOf(digits);
+
+            // Reformat in place. The caret is left at the end, which is where it
+            // is during typing; a mid-string edit is rare enough not to justify
+            // the arithmetic.
+            input.value = group(digits, scheme.groups);
+
+            card.dataset.scheme = scheme.name;
+            document.querySelector('.js-card-brand').textContent = scheme.name;
+
+            const shown = group(digits, scheme.groups);
+            const placeholder = group('••••••••••••••••'.slice(0, scheme.groups.reduce(function (a, b) {
+                return a + b;
+            }, 0)), scheme.groups);
+
+            document.querySelector('.js-card-number').textContent =
+                shown === '' ? placeholder : shown + placeholder.slice(shown.length);
+
+            field('cvv').setAttribute('maxlength', String(scheme.cvv));
+        };
+
+        const paintName = function () {
+            const value = field('name').value.trim();
+
+            document.querySelector('.js-card-name').textContent =
+                value === '' ? 'YOUR NAME' : value.toUpperCase();
+        };
+
+        const paintExpiry = function () {
+            const input = field('expiry');
+            const digits = input.value.replace(/\D+/g, '').slice(0, 4);
+
+            // Slash inserted as soon as a month is complete, so the format is
+            // shown rather than demanded.
+            input.value = digits.length > 2 ? digits.slice(0, 2) + ' / ' + digits.slice(2) : digits;
+
+            document.querySelector('.js-card-expiry').textContent =
+                input.value === '' ? 'MM / YY' : input.value;
+        };
+
+        const paintCvv = function () {
+            const value = field('cvv').value.replace(/\D+/g, '');
+
+            field('cvv').value = value;
+
+            // Shown, not masked. The whole card number is on the front; hiding
+            // three digits on the back would only stop you checking them.
+            document.querySelector('.js-card-cvv').textContent = value === '' ? '•••' : value;
+        };
+
+        field('number').addEventListener('input', paintNumber);
+        field('name').addEventListener('input', paintName);
+        field('expiry').addEventListener('input', paintExpiry);
+        field('cvv').addEventListener('input', paintCvv);
+
+        // Amex prints its code on the front, so that one does not turn over.
+        field('cvv').addEventListener('focus', function () {
+            card.classList.toggle('is-flipped', card.dataset.scheme !== 'Amex');
+        });
+
+        field('cvv').addEventListener('blur', function () {
+            card.classList.remove('is-flipped');
+        });
+
+        paintNumber();
+        paintName();
+        paintExpiry();
+        paintCvv();
+    })();
 
     /*[ Back to top ]
     ===========================================================*/

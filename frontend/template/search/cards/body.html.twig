@@ -103,13 +103,13 @@
                     <i class="fas fa-chevron-right ps-1"></i>
                 </a>
             {% else %}
-                <button type="button" class="btn btn-primary card-select"
-                        id="addTrip_{{ row_id }}"
-                        data-flight-departing-ids="{{ flight.outbound_ids|join(',') }}"
-                        data-flight-returning-ids="{{ flight.return_ids|join(',') }}">
-                    {{ select_label }}
+                {# A one-way search books from the list, so this is the last stop
+                   before checkout rather than another step. #}
+                <a class="btn btn-primary card-select"
+                   href="/checkout?depart_itin={{ flight.outbound_ids|join(',') }}{% if flight.return_ids|length %}&amp;return_itin={{ flight.return_ids|join(',') }}{% endif %}">
+                    Continue to checkout
                     <i class="fas fa-chevron-right ps-1"></i>
-                </button>
+                </a>
             {% endif %}
         </div>
 

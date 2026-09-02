@@ -155,6 +155,28 @@ class Generate extends AbstractCommand
             return Command::INVALID;
         }
 
+        // The fare each leg is sold under. Cumulative weights so a brand is one
+        // binary search rather than a scan, the same shape as the fleet draw.
+        $brands = $this->connection()->fetchAll(
+            'SELECT code, weight FROM ' . Table::FareBrands->value . ' WHERE weight > 0',
+        );
+
+        if ($brands === []) {
+            $this->io->error('No fare brands are seeded — run app:install first.');
+
+            return Command::INVALID;
+        }
+
+        $brandCodes = [];
+        $brandCumulative = [];
+        $brandTotal = 0.0;
+
+        foreach ($brands as $brand) {
+            $brandTotal += (float) $brand['weight'];
+            $brandCodes[] = (string) $brand['code'];
+            $brandCumulative[] = $brandTotal;
+        }
+
         // Precompute how the network is shaped before generating anything (see
         // routeDistribution): each flight is then a single weighted draw that
         // yields the route, the airline flying it, and the distance already
@@ -220,6 +242,7 @@ class Generate extends AbstractCommand
                 airline: $airline,
                 number: rand(1, self::NUMBERS_POOL),
                 aircraft: $this->pickAircraft($fleet, $distance),
+                fareBrand: $brandCodes[$this->pickWeighted($brandCumulative, $brandTotal)],
                 departureAirport: $departAirport['code'],
                 departureTime: $departureDateTime,
                 arrivalAirport: $arriveAirport['code'],

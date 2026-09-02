@@ -1,0 +1,6 @@
+code,title,weight,carry_on,checked_bag,changes,cancellation,seat_selection,refundable
+BA,Basic,45,0,0,0,0,0,0
+LT,Light,30,1,1,0,0,1,0
+ST,Standard,18,1,1,1,1,1,0
+FL,Flex,6,1,2,2,2,2,1
+BZ,Business,1,1,2,2,2,2,1
