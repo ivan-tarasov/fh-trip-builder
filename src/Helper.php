@@ -177,6 +177,59 @@ class Helper
     }
 
     /**
+     * The scale a filter slider draws on: a readable step, and the ends snapped
+     * onto it.
+     *
+     * Which way the bottom end rounds depends on what the handle there means.
+     * A single handle is a ceiling, and a ceiling rounded *down* lands under
+     * the cheapest thing on offer — "up to $6,000" over a $6,042 flight
+     * matches nothing, and the far left of the track is the one place a
+     * visitor is certain to drag to. A range has a floor down there instead,
+     * and a floor under everything excludes nothing, so that one rounds down
+     * and keeps the true spread visible.
+     *
+     * @param list<int> $steps allowed step sizes, smallest first
+     * @param int $stops roughly how many positions the handle should have
+     * @return array{min: int, max: int, step: int}
+     */
+    public static function sliderScale(
+        int $low,
+        int $high,
+        array $steps,
+        int $stops,
+        bool $ceilingOnly,
+    ): array {
+        $step = self::sliderStep(max(1, $high - $low), $steps, $stops);
+
+        $min = $ceilingOnly
+            ? (int) ceil($low / $step) * $step
+            : (int) floor($low / $step) * $step;
+        $max = (int) ceil($high / $step) * $step;
+
+        // One step wide at worst, so the track is draggable rather than a dot.
+        return ['min' => $min, 'max' => max($max, $min + $step), 'step' => $step];
+    }
+
+    /**
+     * The smallest allowed step that keeps the handle to roughly $stops
+     * positions, so a slider is neither jumpy nor pixel-precise.
+     *
+     * @param list<int> $steps
+     */
+    public static function sliderStep(int $span, array $steps, int $stops): int
+    {
+        $wanted = max(1, (int) round($span / $stops));
+
+        foreach ($steps as $step) {
+            if ($wanted <= $step) {
+                return $step;
+            }
+        }
+
+        return $steps[count($steps) - 1];
+    }
+
+    /**
      * An airport's name with the city it is in stripped off the front.
      *
      * Where the two are shown together, "Amsterdam" above "Amsterdam Airport

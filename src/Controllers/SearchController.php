@@ -770,13 +770,19 @@ class SearchController extends AbstractController
         $low = $bound['min'];
         $high = $chosen === null ? $bound['max'] : max($bound['max'], $chosen);
 
-        $step = $this->niceStep(max(1, $high - $low), $steps);
-        $min = (int) floor($low / $step) * $step;
-        $max = (int) ceil($high / $step) * $step;
+        ['min' => $min, 'max' => $max, 'step' => $step] = Helper::sliderScale(
+            $low,
+            $high,
+            $steps,
+            self::SLIDER_STOPS,
+            ceilingOnly: true,
+        );
 
-        // One step wide at worst, so the track is draggable rather than a dot.
-        if ($max <= $min) {
-            $max = $min + $step;
+        // A ceiling set below where the track starts is still a ceiling that
+        // works; the control has to be able to show it rather than quietly
+        // snapping to a stricter one.
+        if ($chosen !== null && $chosen < $min) {
+            $min = $chosen;
         }
 
         $value = $chosen === null ? $max : max($min, min($chosen, $max));
@@ -807,12 +813,17 @@ class SearchController extends AbstractController
             return null;
         }
 
-        // Either separator, so the control shows the state the filter actually
-        // applied: FlightFilters accepts both, and a slider reading "Any" over
-        // a filtered page would drop the filter on the next Apply.
-        $chosen = is_string($value) && preg_match('/^(\d{1,5})[;-](\d{1,5})$/', $value, $match) === 1
-            ? [(int) $match[1], (int) $match[2]]
-            : null;
+        // Every form FlightFilters accepts, so the control shows the state the
+        // filter actually applied — a slider reading "Any" over a filtered page
+        // would drop the filter on the next Apply. A bare number is a ceiling
+        // with no floor under it, and the floor handle rests at the bottom.
+        $chosen = null;
+
+        if (is_string($value) && preg_match('/^(\d{1,5})$/', $value, $match) === 1) {
+            $chosen = [null, (int) $match[1]];
+        } elseif (is_string($value) && preg_match('/^(\d{1,5})[;-](\d{1,5})$/', $value, $match) === 1) {
+            $chosen = [(int) $match[1], (int) $match[2]];
+        }
 
         // Nothing left to choose between and nothing chosen: no control worth
         // drawing. With a filter applied it has to stay whatever the spread,
@@ -825,23 +836,27 @@ class SearchController extends AbstractController
         // The ends have to contain the chosen range as well as what is on
         // offer, or the handles get clamped to somewhere the user never asked
         // for.
-        $low = $chosen === null ? $bound['min'] : min($bound['min'], $chosen[0]);
+        $low = $chosen === null || $chosen[0] === null
+            ? $bound['min']
+            : min($bound['min'], $chosen[0]);
         $high = $chosen === null ? $bound['max'] : max($bound['max'], $chosen[1]);
 
-        $step = $this->niceStep(max(1, $high - $low), $steps);
-        $min = (int) floor($low / $step) * $step;
-        $max = (int) ceil($high / $step) * $step;
-
-        // One step wide at worst, so the track is draggable rather than a dot.
-        if ($max <= $min) {
-            $max = $min + $step;
-        }
+        // A floor handle down there, so the bottom end rounds down: a floor
+        // under everything excludes nothing, and the track keeps showing the
+        // real spread. The ceiling handle gets its own stop below.
+        ['min' => $min, 'max' => $max, 'step' => $step] = Helper::sliderScale(
+            $low,
+            $high,
+            $steps,
+            self::SLIDER_STOPS,
+            ceilingOnly: false,
+        );
 
         $from = $min;
         $to = $max;
 
         if ($chosen !== null) {
-            $from = max($min, min($chosen[0], $max));
+            $from = $chosen[0] === null ? $min : max($min, min($chosen[0], $max));
             $to = max($from, min($chosen[1], $max));
         }
 
@@ -872,24 +887,6 @@ class SearchController extends AbstractController
         ];
     }
 
-    /**
-     * The smallest allowed step that keeps the handle to roughly SLIDER_STOPS
-     * positions — fine enough to be useful, coarse enough to stay readable.
-     *
-     * @param list<int> $steps
-     */
-    private function niceStep(int $span, array $steps): int
-    {
-        $wanted = max(1, (int) round($span / self::SLIDER_STOPS));
-
-        foreach ($steps as $step) {
-            if ($wanted <= $step) {
-                return $step;
-            }
-        }
-
-        return $steps[count($steps) - 1];
-    }
 
     /**
      * The same search with this leg's filters dropped, leaving the other leg's

@@ -126,6 +126,94 @@ final class HelperTest extends TestCase
         ];
     }
 
+    /**
+     * @param array{min: int, max: int, step: int} $expected
+     * @param list<int> $steps
+     */
+    #[DataProvider('sliderScaleProvider')]
+    public function testSliderScale(array $expected, int $low, int $high, array $steps, bool $ceilingOnly): void
+    {
+        self::assertSame($expected, Helper::sliderScale($low, $high, $steps, 40, $ceilingOnly));
+    }
+
+    /**
+     * @return array<string, array{0: array{min: int, max: int, step: int}, 1: int, 2: int, 3: list<int>, 4: bool}>
+     */
+    public static function sliderScaleProvider(): array
+    {
+        $prices = [5, 10, 25, 50, 100, 250, 500, 1000];
+
+        return [
+            // The bug this exists to catch: a lone handle is a ceiling, and
+            // rounding its bottom end down to 6000 puts the far-left position
+            // under the 6042 flight, where the search can only answer nothing.
+            'a ceiling never starts under the cheapest' => [
+                ['min' => 6250, 'max' => 14250, 'step' => 250], 6042, 14181, $prices, true,
+            ],
+            // A floor there instead: under everything excludes nothing, so it
+            // rounds the other way and the track shows the true spread.
+            'a floor may start under the cheapest' => [
+                ['min' => 6000, 'max' => 14250, 'step' => 250], 6042, 14181, $prices, false,
+            ],
+            'ends already on the step are left alone' => [
+                ['min' => 6000, 'max' => 14000, 'step' => 250], 6000, 14000, $prices, true,
+            ],
+            // Everything costs the same: still a step wide, or the handle has
+            // nowhere to go and the track draws as a dot.
+            'a span of nothing is still draggable' => [
+                ['min' => 5000, 'max' => 5005, 'step' => 5], 5000, 5000, $prices, true,
+            ],
+        ];
+    }
+
+    public function testACeilingScaleNeverStartsBelowWhatItMeasures(): void
+    {
+        // The property behind the examples above, over a spread of shapes. A
+        // ceiling slider's far-left position is the one a visitor is certain to
+        // drag to; if it sits under the cheapest result it can only ever answer
+        // "no flights", however tidy the number looks.
+        $steps = [5, 10, 25, 50, 100, 250, 500, 1000];
+
+        foreach ([[6042, 14181], [1, 2], [999, 1000], [40, 360], [7, 7], [12345, 12346]] as [$low, $high]) {
+            $scale = Helper::sliderScale($low, $high, $steps, 40, ceilingOnly: true);
+
+            self::assertGreaterThanOrEqual(
+                $low,
+                $scale['min'],
+                sprintf('a ceiling at %d would exclude everything down to %d', $scale['min'], $low),
+            );
+            self::assertGreaterThanOrEqual($high, $scale['max']);
+            self::assertGreaterThan($scale['min'], $scale['max']);
+        }
+    }
+
+    /**
+     * @param list<int> $steps
+     */
+    #[DataProvider('sliderStepProvider')]
+    public function testSliderStep(int $expected, int $span, array $steps): void
+    {
+        self::assertSame($expected, Helper::sliderStep($span, $steps, 40));
+    }
+
+    /**
+     * @return array<string, array{0: int, 1: int, 2: list<int>}>
+     */
+    public static function sliderStepProvider(): array
+    {
+        $steps = [5, 10, 25, 50, 100];
+
+        return [
+            'a narrow span takes the smallest step' => [5, 40, $steps],
+            'roughly forty positions' => [10, 400, $steps],
+            'rounds up to an allowed step' => [25, 800, $steps],
+            // Wider than the table can divide: the largest step, and more
+            // positions than asked for, rather than an unusable fraction.
+            'a span past the table' => [100, 100000, $steps],
+            'a span of nothing still has a step' => [5, 0, $steps],
+        ];
+    }
+
     #[DataProvider('airportNameProvider')]
     public function testAirportNameAfterCity(string $expected, string $title, string $city): void
     {

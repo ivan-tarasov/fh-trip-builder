@@ -48,7 +48,8 @@ final readonly class FlightFilters
      * @param list<string> $departBuckets time_buckets keys
      * @param list<string> $arriveBuckets time_buckets keys
      * @param list<string> $arriveDates Y-m-d
-     * @param array{0: int, 1: int}|null $layoverRange minutes each wait must fall in
+     * @param array{0: int|null, 1: int}|null $layoverRange minutes each wait must fall in;
+     *     a null floor is a ceiling on its own, which a direct flight also meets
      * @param list<string> $layoverAirports allowed connection airports
      * @param list<string> $departAirports allowed first-leg departure airports
      * @param list<string> $arriveAirports allowed last-leg arrival airports
@@ -255,7 +256,7 @@ final readonly class FlightFilters
      * A "from-to" minute-of-day range, or null when it is missing, malformed,
      * or covers the whole day (in which case it constrains nothing).
      *
-     * @return array{0: int, 1: int}|null
+     * @return array{0: int|null, 1: int}|null
      */
     private static function window(mixed $raw): ?array
     {
@@ -519,8 +520,19 @@ final readonly class FlightFilters
      */
     private function waitsWithin(array $candidate, array $range): bool
     {
-        foreach (self::waits($candidate) as $wait) {
-            if ($wait < $range[0] || $wait > $range[1]) {
+        $waits = self::waits($candidate);
+
+        // A direct flight has no layover at all. That meets a ceiling — you
+        // will never be waiting longer than it — but it cannot meet a floor:
+        // there is no wait to be that long, and answering "layovers of six
+        // hours" with a flight that has none is not an answer. The maths would
+        // say otherwise, every wait in an empty set being within any range.
+        if ($waits === []) {
+            return $range[0] === null;
+        }
+
+        foreach ($waits as $wait) {
+            if (($range[0] !== null && $wait < $range[0]) || $wait > $range[1]) {
                 return false;
             }
         }
@@ -535,14 +547,24 @@ final readonly class FlightFilters
      * against, so a range covering everything cannot be recognised here — the
      * sidebar simply does not submit a slider it has not moved.
      *
-     * @return array{0: int, 1: int}|null
+     * @return array{0: int|null, 1: int}|null
      */
     private static function minutesRange(mixed $raw): ?array
     {
+        if (!is_string($raw)) {
+            return null;
+        }
+
+        // A bare number is a ceiling on its own — nobody asked for a floor, so
+        // there is none, and a flight with no layover at all still qualifies.
+        if (preg_match('/^(\d{1,5})$/', $raw, $match) === 1) {
+            return [null, (int) $match[1]];
+        }
+
         // Either separator: the slider widget writes "from;to" while a
         // hand-written link says "from-to". Rejecting one would drop the filter
         // without a word.
-        if (!is_string($raw) || preg_match('/^(\d{1,5})[;-](\d{1,5})$/', $raw, $match) !== 1) {
+        if (preg_match('/^(\d{1,5})[;-](\d{1,5})$/', $raw, $match) !== 1) {
             return null;
         }
 

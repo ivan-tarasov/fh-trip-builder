@@ -353,10 +353,11 @@ final readonly class FlightRepository
         foreach ($measures as $dimension => $measure) {
             $lows = [];
             $highs = [];
-            // An itinerary the range cannot constrain — a direct flight has no
-            // wait to fall outside one — passes whatever the handles say, so
-            // its presence means neither handle can empty the results.
-            $unconstrained = false;
+            // A direct flight has no wait to fall outside a range, so it meets
+            // any ceiling — while it is on offer the ceiling handle cannot
+            // empty the results. It cannot meet a floor, though, so the floor's
+            // reach is still measured from the itineraries that connect.
+            $meetsAnyCeiling = false;
 
             foreach ($candidates as $candidate) {
                 if (!$filters->matches($candidate, $dimension)) {
@@ -366,7 +367,7 @@ final readonly class FlightRepository
                 $values = $measure($candidate);
 
                 if ($values === []) {
-                    $unconstrained = true;
+                    $meetsAnyCeiling = true;
 
                     continue;
                 }
@@ -399,8 +400,8 @@ final readonly class FlightRepository
             $bounds[$dimension] = [
                 'min' => $min,
                 'max' => $max,
-                'floor_max' => $unconstrained ? $max : (int) floor(max($lows)),
-                'ceiling_min' => $unconstrained ? $min : (int) ceil(min($highs)),
+                'floor_max' => (int) floor(max($lows)),
+                'ceiling_min' => $meetsAnyCeiling ? $min : (int) ceil(min($highs)),
             ];
         }
 

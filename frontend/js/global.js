@@ -1028,13 +1028,6 @@
                 const max = parseInt(input.dataset.max, 10);
                 const slider = $(input).data('ionRangeSlider');
 
-                // ion.rangeSlider writes a double as "from;to" over whatever we
-                // set, and the filters read "from-to". Take the value from the
-                // widget itself, which is the one thing that is never stale.
-                if (slider && input.dataset.to !== undefined) {
-                    input.value = slider.result.from + '-' + slider.result.to;
-                }
-
                 if (input.dataset.to === undefined) {
                     if (parseInt(input.value, 10) >= max) {
                         input.disabled = true;
@@ -1043,11 +1036,23 @@
                     return;
                 }
 
-                const pair = String(input.value).split(/[;-]/);
+                // ion.rangeSlider writes a double as "from;to" over whatever we
+                // set, and the filters read "from-to". Take the value from the
+                // widget itself, which is the one thing that is never stale.
+                const from = slider ? slider.result.from : min;
+                const to = slider ? slider.result.to : max;
 
-                if (parseInt(pair[0], 10) <= min && parseInt(pair[1], 10) >= max) {
+                if (from <= min && to >= max) {
                     input.disabled = true;
+
+                    return;
                 }
+
+                // A floor resting at the bottom of the track is not a floor
+                // anyone asked for, and sending it as one would rule out every
+                // direct flight — they have no layover to be that long. Send
+                // the ceiling alone instead.
+                input.value = from <= min ? String(to) : from + '-' + to;
             });
         });
     }

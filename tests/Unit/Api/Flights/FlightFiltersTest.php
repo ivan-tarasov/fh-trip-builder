@@ -219,16 +219,32 @@ final class FlightFiltersTest extends TestCase
         ));
     }
 
-    public function testADirectFlightHasNoLayoverToFallFoulOfTheRange(): void
+    public function testADirectFlightMeetsACeilingButNotAFloor(): void
     {
-        // Unlike choosing a layover airport, this is a constraint rather than a
-        // selection: a flight with no connection breaks no rule about them.
         $direct = $this->candidate([
             'stops' => 0, 'stops_at' => '', 'carriers' => 'AF',
             'stop1_in' => null, 'stop1_out' => null,
         ]);
 
-        self::assertTrue(new FlightFilters(layoverRange: [120, 180])->matches($direct));
+        // Nothing to wait for, so nothing can keep you waiting longer than the
+        // ceiling. A ceiling on its own is written with no floor under it.
+        self::assertTrue(new FlightFilters(layoverRange: [null, 180])->matches($direct));
+
+        // A floor is a different question: it asks for a layover of at least
+        // that long, and this flight has none to offer. Answering "layovers of
+        // two hours or more" with a non-stop is not answering it — even though
+        // the maths says every wait in an empty set is long enough.
+        self::assertFalse(new FlightFilters(layoverRange: [120, 180])->matches($direct));
+        self::assertFalse(new FlightFilters(layoverRange: [360, 360])->matches($direct));
+    }
+
+    public function testACeilingWithNoFloorIsWrittenAsOneNumber(): void
+    {
+        // What the slider submits when its floor is still resting at the bottom
+        // of the track. Sending that floor as a real one would quietly drop
+        // every direct flight from the results.
+        self::assertSame([null, 240], FlightFilters::fromQuery(['layover' => '240'])->layoverRange);
+        self::assertSame([90, 240], FlightFilters::fromQuery(['layover' => '90-240'])->layoverRange);
     }
 
     public function testLayoverRangeAcceptsEitherSeparator(): void
