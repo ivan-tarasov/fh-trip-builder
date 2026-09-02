@@ -143,8 +143,12 @@ final class FlightFiltersTest extends TestCase
         $query = [
             'stops' => '2',
             'airlines' => 'QF',
+            // A ceiling on its own going out, a floor and a ceiling coming
+            // back: both shapes have to survive the prefix.
+            'layover' => '240',
             'return_stops' => '1',
             'return_airlines' => 'BA',
+            'return_layover' => '90-240',
         ];
 
         $outbound = FlightFilters::fromQuery($query);
@@ -152,8 +156,10 @@ final class FlightFiltersTest extends TestCase
 
         self::assertSame([2], $outbound->stops);
         self::assertSame(['QF'], $outbound->airlines);
+        self::assertSame([null, 240], $outbound->layoverRange);
         self::assertSame([1], $return->stops);
         self::assertSame(['BA'], $return->airlines);
+        self::assertSame([90, 240], $return->layoverRange);
     }
 
     public function testAReturnLegWithNoFiltersOfItsOwnStartsClean(): void
