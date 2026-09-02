@@ -511,6 +511,10 @@
 
         let ticking = false;
 
+        // Read on every use, not once, so a preference changed mid-session is
+        // honoured without a reload.
+        const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
         const paint = function () {
             const past = window.scrollY > THRESHOLD;
 
@@ -525,6 +529,14 @@
                 });
             } else {
                 button.classList.remove('is-visible');
+
+                // Reduced motion means `transition: none` in the stylesheet,
+                // so `transitionend` never arrives to finish the job below.
+                // Waiting for it would leave an invisible button sitting in
+                // the tab order for exactly the readers who opted out.
+                if (still.matches) {
+                    button.hidden = true;
+                }
             }
 
             ticking = false;
@@ -545,9 +557,7 @@
         }, { passive: true });
 
         button.addEventListener('click', function () {
-            const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-            window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
+            window.scrollTo({ top: 0, behavior: still.matches ? 'auto' : 'smooth' });
 
             // Scrolling moves the page, not the keyboard. Without this a tab
             // press would carry on from the button at the bottom, which is not
