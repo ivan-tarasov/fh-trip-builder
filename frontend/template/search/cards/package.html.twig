@@ -1,76 +1,117 @@
-{# The assembled round trip: both halves, each swappable, and one price. #}
-<div class="card mb-4 shadow-sm trip-package">
-    <div class="trip-package__banner d-flex align-items-center gap-2">
-        <i class="fas fa-suitcase-rolling"></i>
-        <span class="fw-semibold text-uppercase small">Your round-trip package</span>
+{#
+    Review & book: the assembled round trip.
+
+    Nothing here is a list, so there is nothing to filter and no sort to choose
+    — the sidebar is dropped and the page runs full width. Two questions only:
+    are these the right two flights, and what does the ticket allow. Either half
+    can still be swapped, which is why this step exists at all rather than
+    going straight from the return leg to checkout.
+
+    The rail on the right carries the price and the one action, in the same
+    shape checkout uses for its order summary, so moving between the two pages
+    does not feel like arriving somewhere else.
+#}
+<div class="review">
+
+    <div class="review__halves">
+        {% for half in [
+            { 'label': 'Departing', 'icon': 'fa-plane-departure', 'direction': selected,
+              'date': depart_date_label, 'price': selected_price, 'change': change_url },
+            { 'label': 'Returning', 'icon': 'fa-plane-arrival', 'direction': selected_return,
+              'date': return_date_label, 'price': selected_return_price, 'change': change_return_url }
+        ] %}
+            {% if half.direction %}
+                <section class="review__half">
+                    <header class="review__half-head">
+                        <div>
+                            <p class="review__half-label">
+                                <i class="fas {{ half.icon }}"></i> {{ half.label }}
+                            </p>
+                            <p class="review__half-date">{{ half.date|date('D, j M Y') }}</p>
+                        </div>
+                        <div class="review__half-actions">
+                            <span class="review__half-price">${{ half.price }}</span>
+                            <a href="{{ half.change }}" class="review__change">Change</a>
+                        </div>
+                    </header>
+
+                    {% include 'search/cards/itinerary.html.twig' with { 'direction': half.direction } only %}
+
+                    <button class="btn btn-sm details-toggle collapsed" type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#review-{{ half.label|lower }}" aria-expanded="false">
+                        <i class="fas fa-circle-info pe-1"></i>
+                        <span class="if-collapsed">Flight details</span>
+                        <span class="if-expanded">Hide details</span>
+                        <i class="fas fa-chevron-down ps-1 chevron"></i>
+                    </button>
+
+                    <div class="collapse" id="review-{{ half.label|lower }}">
+                        <div class="pt-2">
+                            {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+        {% endfor %}
     </div>
 
-    <div class="card-body pt-3">
-        {# --- Outbound half --- #}
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="small fw-semibold text-uppercase text-secondary">
-                <i class="fas fa-plane-departure pe-1"></i>Departing &middot; {{ depart_date_label|date('D, j M Y') }}
-            </span>
-            <a href="{{ change_url }}" class="btn btn-sm btn-outline-secondary">Change</a>
-        </div>
-        {% include 'search/cards/itinerary.html.twig' with { 'direction': selected } %}
+    <aside class="review__rail">
+        <div class="order">
+            <h2 class="order__heading">Trip total</h2>
 
-        <hr class="my-3" />
+            <p class="review__total">
+                <span class="price price--lg">
+                    <span class="price__symbol">$</span><span class="price__whole">{{ package_price.whole }}</span><span class="price__cents">.{{ package_price.cents }}</span>
+                    <span class="price__currency">CAD</span>
+                </span>
+            </p>
 
-        {# --- Return half --- #}
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="small fw-semibold text-uppercase text-secondary">
-                <i class="fas fa-plane-arrival pe-1"></i>Returning &middot; {{ return_date_label|date('D, j M Y') }}
-            </span>
-            <a href="{{ change_return_url }}" class="btn btn-sm btn-outline-secondary">Change</a>
-        </div>
-        {% include 'search/cards/itinerary.html.twig' with { 'direction': selected_return } %}
-    </div>
-
-    {# --- Total and the one action that matters --- #}
-    <div class="card-body border-top bg-body-tertiary">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <div class="d-flex align-items-baseline gap-2">
-                    <span class="text-muted">Trip total</span>
-                    <span class="price price--lg">
-                        <span class="price__symbol">$</span><span class="price__whole">{{ package_price.whole }}</span><span class="price__cents">.{{ package_price.cents }}</span>
-                        <span class="price__currency">CAD</span>
-                    </span>
+            <dl class="order__prices">
+                <div class="order__price-row">
+                    <dt>Departing</dt>
+                    <dd>${{ selected_price }}</dd>
                 </div>
-                <div class="small text-muted">
-                    Departing ${{ selected_price }} &middot; Returning ${{ selected_return_price }}
-                    &middot; total per passenger
+                <div class="order__price-row">
+                    <dt>Returning</dt>
+                    <dd>${{ selected_return_price }}</dd>
                 </div>
-            </div>
-            <div class="col-md-6 text-md-end pt-3 pt-md-0">
-                {# A link to checkout rather than a confirm dialog: the details a
-                   booking needs do not fit in a popup, and a real URL can be
-                   refreshed and reached with Back. #}
-                <a class="btn btn-buy btn-lg px-4"
-                   href="/checkout?depart_itin={{ package_ids.outbound }}{% if package_ids.return %}&amp;return_itin={{ package_ids.return }}{% endif %}">
-                    Continue to checkout <i class="fas fa-arrow-right ps-1"></i>
-                </a>
-            </div>
-        </div>
-    </div>
+            </dl>
 
-    {# --- Full detail for both halves --- #}
-    <div class="card-body border-top pt-1">
-        <button class="btn btn-sm details-toggle collapsed" type="button"
-                data-bs-toggle="collapse" data-bs-target="#package-details" aria-expanded="false">
-            <i class="fas fa-circle-info pe-1"></i>
-            <span class="if-collapsed">Flight details</span>
-            <span class="if-expanded">Hide details</span>
-            <i class="fas fa-chevron-down ps-1 chevron"></i>
-        </button>
-        <div class="collapse" id="package-details">
-            <div class="pt-2">
-                <div class="small fw-semibold text-uppercase text-secondary mb-2">Departing</div>
-                {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': selected } %}
-                <div class="small fw-semibold text-uppercase text-secondary mb-2">Returning</div>
-                {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': selected_return } %}
-            </div>
+            <p class="order__note">1 adult, all taxes and fees included.</p>
+
+            <a class="checkout__pay"
+               href="/checkout?depart_itin={{ package_ids.outbound }}{% if package_ids.return %}&amp;return_itin={{ package_ids.return }}{% endif %}">
+                Continue to checkout <i class="fas fa-arrow-right ps-1"></i>
+            </a>
         </div>
-    </div>
+
+        {% if included %}
+            {# What the fare allows, before a form has to be filled in. Finding
+               out at payment that no bag is included is the point at which
+               people leave — and here the flights can still be changed. #}
+            <div class="rules">
+                <h2 class="rules__heading">What&rsquo;s included</h2>
+
+                {% for block in included %}
+                    <div class="rules__block">
+                        <p class="rules__route">
+                            {{ block.leg }}
+                            <span class="rules__brand">{{ block.title }}</span>
+                        </p>
+                        <ul class="rules__list">
+                            {% for line in block.lines %}
+                                <li class="rules__item{{ line.allowed ? '' : ' rules__item--restricted' }}">
+                                    <i class="fas {{ line.allowed ? 'fa-check' : 'fa-xmark' }} rules__icon"></i>
+                                    {{ line.text }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endfor %}
+
+                <p class="rules__more">Full rules and restrictions are shown at checkout.</p>
+            </div>
+        {% endif %}
+    </aside>
 </div>

@@ -1,5 +1,7 @@
 <!-- Flights cards -->
-<div class="col-xl-8 col-lg-8 col-md-12 order-md-1 search-results">
+{# Full width once the sidebar goes, so the review step reads as its own page
+   rather than a list with the list taken out. #}
+<div class="{{ step == 3 ? 'col-12' : 'col-xl-8 col-lg-8 col-md-12' }} order-md-1 search-results">
     <div class="page-wrapper">
         <div class="wrapper pb-0">
             {% include 'search/cards/step-header.html.twig' %}

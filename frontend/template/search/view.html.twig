@@ -5,7 +5,11 @@
 <div class="container py-5">
   <div class="row">
 
-    {% include 'search/sidebar/view.html.twig' %}
+    {# No list at step 3, so nothing to filter. The sidebar would be a column
+       of controls that cannot change anything on the page. #}
+    {% if step != 3 %}
+        {% include 'search/sidebar/view.html.twig' %}
+    {% endif %}
 
     {# Step 3 lists nothing — it shows the assembled package instead. #}
     {% if step == 3 or total_flights != 0 %}

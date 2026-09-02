@@ -15,6 +15,8 @@ use TripBuilder\Helper;
 use TripBuilder\Repository\AircraftRepository;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\FareBrandRepository;
+use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
@@ -235,6 +237,12 @@ class SearchController extends AbstractController
                 'package_price' => $this->data->package_price === null
                     ? null
                     : $this->presenter()->priceParts((float) $this->data->package_price),
+                // What the ticket allows, folded to the strictest leg of each
+                // direction. Baggage is the commonest reason a trip gets
+                // abandoned at payment, so it belongs on the page where the
+                // flights can still be swapped rather than only on the one
+                // where a form has to be filled in first.
+                'included' => $this->data->step === 3 ? $this->includedRules() : null,
                 'package_ids' => [
                     'outbound' => implode(',', array_map(intval(...), (array) $this->data->selected_ids)),
                     'return' => implode(',', array_map(intval(...), (array) $this->data->selected_return_ids)),
@@ -1043,6 +1051,40 @@ class SearchController extends AbstractController
         }
 
         return $ids;
+    }
+
+    /**
+     * The fare rules for each half of an assembled trip.
+     *
+     * @return list<array{leg: string, title: string, lines: list<array{text: string, allowed: bool}>}>
+     */
+    private function includedRules(): array
+    {
+        $flights = new FlightRepository($this->connection());
+        $brands = new FareBrandRepository($this->connection());
+
+        $halves = [
+            'Departing' => array_map(intval(...), (array) $this->data->selected_ids),
+            'Returning' => array_map(intval(...), (array) $this->data->selected_return_ids),
+        ];
+
+        $out = [];
+
+        foreach ($halves as $leg => $ids) {
+            if ($ids === []) {
+                continue;
+            }
+
+            $rules = $brands->rulesFor($flights->fareBrandsByIds($ids));
+
+            if ($rules === null) {
+                continue;
+            }
+
+            $out[] = ['leg' => $leg, 'title' => $rules->title, 'lines' => $rules->lines()];
+        }
+
+        return $out;
     }
 
     /**
