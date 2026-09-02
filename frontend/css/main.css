@@ -1480,11 +1480,18 @@ textarea {
   transition: background-color .12s ease, height .12s ease;
 }
 
-/* A flight is a solid bar; a layover is the thin gap between two flights. */
-.route__leg { min-width: 26px; }
+/* A flight is a solid bar; a layover is the thin gap between two flights.
+
+   The minimum is set by the label, not the bar. A code is absolutely
+   positioned and so contributes nothing to sizing, which let a 26px part carry
+   a 28px code that ran into its neighbour's — a short first leg printed as
+   "MEL SYD" with the two touching. Every part now owns a lane wide enough for
+   its own code, which costs a little proportional accuracy on the shortest
+   legs and buys labels that can always be read. */
+.route__leg { min-width: 2.25rem; }
 .route__leg::before { height: 6px; background-color: #ced4da; }
 
-.route__stop { min-width: 24px; }
+.route__stop { min-width: 2.25rem; }
 .route__stop::before { height: 2px; background-color: #dee2e6; }
 
 .route__leg:hover::before { background-color: #f5622d; }
@@ -1758,10 +1765,14 @@ textarea {
 
 /* --- Column widths -------------------------------------------------------
    The sidebar needs less than a third once sorting moved out of it; the extra
-   goes to the results, where the route bar and the card footer use it. */
+   goes to the results, where the route bar and the card footer use it.
+
+   Only while there is a sidebar to sit beside, though. This width beats the
+   grid class on the column, so on the review step — which drops the sidebar —
+   it left the results at 72% and the vacated 28% simply empty. */
 @media (min-width: 992px) {
   .search-sidebar { flex: 0 0 auto; width: 28%; }
-  .search-results { flex: 0 0 auto; width: 72%; }
+  .search-results:not(.search-results--full) { flex: 0 0 auto; width: 72%; }
 }
 
 /* --- Sort bar above the results ------------------------------------------
