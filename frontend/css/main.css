@@ -832,17 +832,6 @@ input[type=number]::-webkit-outer-spin-button {
   border-radius: .75rem;
 }
 
-.icon-link>.bi {
-  margin-top: .125rem;
-  margin-left: .125rem;
-  fill: currentcolor;
-  transition: transform .25s ease-in-out;
-}
-
-.icon-link:hover>.bi {
-  transform: translate(.25rem);
-}
-
 .icon-square {
   width: 3rem;
   height: 3rem;
@@ -1024,7 +1013,7 @@ textarea {
   display: block;
   width: 100%;
   border-radius: 3px;
-  transition: background-color .12s ease, height .12s ease;
+  transition: background-color .12s ease, transform .12s ease;
 }
 
 /* A flight is a solid bar; a layover is the thin gap between two flights.
@@ -1039,13 +1028,28 @@ textarea {
 .route__leg::before { height: 6px; background-color: #ced4da; }
 
 .route__stop { min-width: 2.25rem; }
-.route__stop::before { height: 2px; background-color: #dee2e6; }
-
-.route__leg:hover::before { background-color: #f5622d; }
-
-.route__stop:hover::before {
+/* Drawn at a leg's thickness and scaled down to a layover's, so the hover
+   animates `transform` and not `height`. This bar is the most-hovered surface
+   in the product -- several parts per card, up to 210 cards -- and `height`
+   put a layout pass on every one of them. scaleY works from the centre and
+   the parent already centres the bar, so nothing shifts; at full scale the
+   stop is geometrically identical to the leg beside it. */
+.route__stop::before {
   height: 6px;
-  background-color: #f5622d;
+  transform: scaleY(.3333);
+  background-color: #dee2e6;
+}
+
+/* Hover is a pointer affordance. On a touchscreen :hover latches on tap and
+   stays latched, leaving a segment of somebody's flight highlighted for no
+   reason they can undo. */
+@media (hover: hover) and (pointer: fine) {
+  .route__leg:hover::before { background-color: #f5622d; }
+
+  .route__stop:hover::before {
+    transform: scaleY(1);
+    background-color: #f5622d;
+  }
 }
 
 .route__code {
@@ -1067,8 +1071,11 @@ textarea {
   transform: translateX(-50%);
 }
 
-/* The connection airport lights up with its own leg of the journey. */
-.route__stop:hover .route__code { color: #f5622d; }
+/* The connection airport lights up with its own leg of the journey -- gated
+   with the bar above it, so the pair stay in step on a touchscreen. */
+@media (hover: hover) and (pointer: fine) {
+  .route__stop:hover .route__code { color: #f5622d; }
+}
 
 /* The codes sit below the bar, so they are the only thing occupying that strip
    and can safely take the pointer. Hovering a code is hovering its part: the
