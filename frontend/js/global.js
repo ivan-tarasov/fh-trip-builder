@@ -635,10 +635,33 @@
                     return response.text();
                 })
                 .then(function (html) {
+                    // Counted first, so the cards the fragment brings can be
+                    // told apart from the ones already on the page.
+                    const settled = results.querySelectorAll('.flight-card').length;
+
                     // The fragment brings its own "show more", so the old one
                     // is replaced rather than updated.
                     holder.insertAdjacentHTML('beforebegin', html);
                     holder.remove();
+
+                    // Marked in the same task as the insert, before the
+                    // browser has a chance to paint, so the new cards never
+                    // show at full opacity and then blink out. The class comes
+                    // off a frame later, which is what gives the transition
+                    // something to run from.
+                    const arrived = Array.from(
+                        results.querySelectorAll('.flight-card')
+                    ).slice(settled);
+
+                    arrived.forEach(function (card) {
+                        card.classList.add('is-arriving');
+                    });
+
+                    window.requestAnimationFrame(function () {
+                        arrived.forEach(function (card) {
+                            card.classList.remove('is-arriving');
+                        });
+                    });
 
                     // Cards that arrived have arrived. An enhancement that
                     // throws must not send us down the failure path, which

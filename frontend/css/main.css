@@ -996,7 +996,14 @@ textarea {
    `transform` for that lift -- the reservation outlived the idea.
    Hover-gated: on a touchscreen :hover latches on tap, and a single card
    left holding a raised shadow in a list of two hundred reads as chosen. */
-.flight-card { transition: box-shadow var(--dur-fast) ease; }
+.flight-card { transition: box-shadow var(--dur-fast) ease, opacity var(--dur-base) var(--ease-out); }
+
+/* Twenty cards arriving in a single frame reads as the page flinching. A fade
+   is enough to say "these are new" without holding up the read -- no stagger
+   and no movement, because this is a list being scanned for a price, not an
+   entrance worth watching. Only appended cards get it: the first ten arrive
+   with the page and should be there the instant it paints. */
+.flight-card.is-arriving { opacity: 0; }
 
 @media (hover: hover) and (pointer: fine) {
   .flight-card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1) !important; }
