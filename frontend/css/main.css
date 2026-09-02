@@ -164,10 +164,10 @@ img {
 a {
   display: inline-block;
   text-decoration: none;
-  -webkit-transition: all 0.4s ease;
-  -o-transition: all 0.4s ease;
-  -moz-transition: all 0.4s ease;
-  transition: all 0.4s ease;
+  /* Colour only: `all` also animated layout and paint properties that no
+     anchor state here changes. .12s to match the rest of the file's hover
+     feedback -- 0.4s was long enough to read as lag on a link. */
+  transition: color .12s ease;
 }
 
 a:link {
