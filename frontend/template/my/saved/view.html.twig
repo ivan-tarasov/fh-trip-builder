@@ -1,0 +1,33 @@
+{% extends 'layout.html.twig' %}
+
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container">
+        <div class="py-5 mx-auto">
+            <h1 class="display-4">Saved flights</h1>
+            <p class="lead">
+                The flights you kept for later, priced as they are today.
+                They are remembered in this browser only.
+            </p>
+        </div>
+
+        {% if has_rows %}
+            <div class="js-saved-list">
+                {% for flight in flights %}
+                    {% include 'my/saved/card.html.twig' %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Rendered either way: removing the last card reveals this without a reload. #}
+        <div class="js-saved-empty text-center py-5{% if has_rows %} d-none{% endif %}">
+            <i class="far fa-heart saved-empty__icon"></i>
+            <h2 class="h4 mt-3">Nothing saved yet</h2>
+            <p class="text-muted mb-4">
+                Tap the heart on any flight in your search results and it will be waiting here.
+            </p>
+            <a href="/" class="btn btn-primary">Search for flights</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

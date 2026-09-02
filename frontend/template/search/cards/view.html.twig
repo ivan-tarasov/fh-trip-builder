@@ -1,8 +1,14 @@
 <!-- Flights cards -->
-<div class="col-xl-9 col-md-12 order-md-1">
+<div class="col-xl-8 col-lg-8 col-md-12 order-md-1 search-results">
     <div class="page-wrapper">
         <div class="wrapper pb-0">
             {% include 'search/cards/step-header.html.twig' %}
+
+            {% if step != 3 and sort_tabs.primary %}
+                <div class="results-block results-block--sort">
+                    {% include 'search/cards/sort-tabs.html.twig' %}
+                </div>
+            {% endif %}
 
             {% if step == 3 %}
                 {# Both halves chosen: show the trip, not more options. #}
@@ -12,13 +18,15 @@
                     {% include 'search/cards/selected.html.twig' %}
                 {% endif %}
 
-                {% for flight in flights %}
-                    {% include 'search/cards/body.html.twig' %}
-                {% endfor %}
+                {# Everything the list grows into lives in one container, so a
+                   "load more" appends into the same place the first ten sit. #}
+                {# Growing the list gives a screen reader no cue, so the
+                   count is announced when new cards arrive. #}
+                <p class="visually-hidden js-results-live" role="status" aria-live="polite"></p>
 
-                {% if pagination %}
-                    {% include 'search/pagination/view.html.twig' %}
-                {% endif %}
+                <div class="js-results">
+                    {% include 'search/cards/list.html.twig' %}
+                </div>
             {% endif %}
         </div>
     </div>

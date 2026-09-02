@@ -40,6 +40,32 @@ final readonly class AirportRepository
      * Bump the search counter for the given departure/arrival airports,
      * matched by airport code or city code.
      */
+    /**
+     * Airports for a set of codes, in the same shape as enabled(). Used to
+     * label the codes a search offered, so the sidebar can show a city and
+     * country rather than three letters.
+     *
+     * @param list<string> $codes
+     * @return list<array<string, mixed>>
+     */
+    public function byCodes(array $codes): array
+    {
+        if ($codes === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($codes), '?'));
+
+        return $this->connection->fetchAll(
+            'SELECT ' . self::COLUMNS
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
+            . " WHERE a.code IN ($placeholders)"
+            . ' ORDER BY a.city ASC, a.title ASC',
+            array_values($codes),
+        );
+    }
+
     public function recordSearch(string ...$codes): void
     {
         $in = implode(', ', array_fill(0, count($codes), '?'));

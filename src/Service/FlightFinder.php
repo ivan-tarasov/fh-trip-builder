@@ -27,8 +27,6 @@ use TripBuilder\TripType;
  */
 final readonly class FlightFinder
 {
-    private const int PER_PAGE_LIMIT = 10;
-
     private const string RESPONSE_FLIGHT_ID = 'id';
     private const string RESPONSE_FLIGHTS = 'flights';
     private const string RESPONSE_ITINERARY = 'itinerary';
@@ -82,9 +80,14 @@ final readonly class FlightFinder
         new AirportRepository($this->connection)->recordSearch($query->from, $query->to);
 
         $airports = new AirportRepository($this->connection);
+        // Both forms, from the one lookup: "Melbourne (MEL)" heads the results,
+        // while the sidebar wants the bare name.
+        $departCity = (string) $airports->cityByCode($query->from);
+        $arriveCity = (string) $airports->cityByCode($query->to);
+
         $cities = [
-            self::RESPONSE_DEPART => sprintf('%s (%s)', $airports->cityByCode($query->from), $query->from),
-            self::RESPONSE_ARRIVE => sprintf('%s (%s)', $airports->cityByCode($query->to), $query->to),
+            self::RESPONSE_DEPART => sprintf('%s (%s)', $departCity, $query->from),
+            self::RESPONSE_ARRIVE => sprintf('%s (%s)', $arriveCity, $query->to),
         ];
 
         $flights = new FlightRepository($this->connection);
@@ -96,7 +99,7 @@ final readonly class FlightFinder
         $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
         $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
 
-        $result = ['rows' => [], 'total' => 0, 'cheapest' => null];
+        $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'option_prices' => [], 'bounds' => [], 'highlights' => []];
         $addBase = 0.0;
         $addTax = 0.0;
 
@@ -106,31 +109,45 @@ final readonly class FlightFinder
         } elseif ($outbound !== null) {
             // Step 2: the return leg, priced as the real total with the choice.
             $step = 2;
+            // Rows here are priced as the whole trip, so the chosen outbound is
+            // added to each one. Work that out before searching: the price
+            // filter and its slider have to speak in the same money the cards
+            // will show, or a limit of $8,000 lets a $9,700 card through.
+            $addBase = (float) $outbound['price_base'];
+            $addTax = (float) $outbound['price_tax'];
             $result = $flights->searchDirection(
                 $query->to,
                 $query->from,
                 $query->returnDate,
                 SortMethod::fromRequest($query->sort),
-                $query->currentPage,
+                $query->offset,
+                $query->limit,
+                // Step 2 lists the return leg, so it filters on the return's
+                // own set — the outbound's filters have already done their job.
+                $query->returnFilters,
+                $addBase + $addTax,
             );
-            $addBase = (float) $outbound['price_base'];
-            $addTax = (float) $outbound['price_tax'];
         } else {
             // Step 1 (round trip) or the whole search (one way): the outbound.
             $step = $isRoundtrip ? 1 : null;
+
+            // Round trips show what the whole trip would cost with the cheapest
+            // return, so step 1 prices are comparable with the totals at step 2.
+            // Resolved before the search for the same reason as step 2 above.
+            $addBase = ($step === 1
+                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate)
+                : null) ?? 0.0;
+
             $result = $flights->searchDirection(
                 $query->from,
                 $query->to,
                 $query->departDate,
                 SortMethod::fromRequest($query->sort),
-                $query->currentPage,
+                $query->offset,
+                $query->limit,
+                $query->filters,
+                $addBase + $addTax,
             );
-
-            // Round trips show what the whole trip would cost with the cheapest
-            // return, so step 1 prices are comparable with the totals at step 2.
-            $addBase = ($step === 1
-                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate)
-                : null) ?? 0.0;
         }
 
         $rows = array_map(fn(array $itinerary): array => [
@@ -149,9 +166,10 @@ final readonly class FlightFinder
         );
 
         return [
-            'current_page' => $query->currentPage,
-            'total_pages' => (int) ceil($result['total'] / self::PER_PAGE_LIMIT),
-            'per_page' => self::PER_PAGE_LIMIT,
+            // How many rows are on screen once these are appended, and whether
+            // asking again would bring back anything new.
+            'shown' => min($query->offset + $query->limit, $result['total']),
+            'has_more' => $result['total'] > $query->offset + $query->limit,
             'total_flights' => $result['total'],
             // The lowest total on offer, in the same money the rows show, so a
             // row can say how much more than the best option it costs.
@@ -172,8 +190,26 @@ final readonly class FlightFinder
             'package_price' => $packagePrice,
             self::RESPONSE_DEPART => $cities[self::RESPONSE_DEPART],
             self::RESPONSE_ARRIVE => $cities[self::RESPONSE_ARRIVE],
+            'depart_city_name' => $departCity,
+            'arrive_city_name' => $arriveCity,
             'adult_count' => $query->adultNum,
             'child_count' => $query->childNum,
+            // Which filter options would still return something, so the sidebar
+            // can grey out the ones that would empty the page.
+            'available' => $result['available'],
+            // What each filter option would cost, already in the money the
+            // cards show — the repository folds the other leg in.
+            'option_prices' => $result['option_prices'],
+            // The ends each slider should span.
+            'bounds' => $result['bounds'],
+            // What each sort would put first, in the money the cards show.
+            'highlights' => array_map(
+                static fn(array $best): array => [
+                    'price' => round($best['price'] + $addBase + $addTax, 2),
+                    'duration' => $best['duration'],
+                ],
+                $result['highlights'],
+            ),
             self::RESPONSE_FLIGHTS => $rows,
         ];
     }
@@ -205,6 +241,30 @@ final readonly class FlightFinder
             self::RESPONSE_PRICE_BASE => (float) $leg['price_base'],
             self::RESPONSE_PRICE_TAX => (float) $leg['price_tax'],
         ], $legs);
+    }
+
+    /**
+     * Rebuild one saved itinerary from its ordered leg ids, shaped like a search
+     * result so the same card renders it. Returns null when the ids no longer
+     * resolve to a connected itinerary — a saved flight can go stale, and the
+     * saved list drops those rather than rendering a broken card.
+     *
+     * @param list<int> $ids
+     * @return array<string, mixed>|null
+     */
+    public function itinerary(array $ids): ?array
+    {
+        $itinerary = new FlightRepository($this->connection)->itineraryByIds($ids);
+
+        if ($itinerary === null) {
+            return null;
+        }
+
+        return [
+            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, self::CABIN_OUTBOUND),
+            self::RESPONSE_PRICE_BASE => (float) $itinerary['price_base'],
+            self::RESPONSE_PRICE_TAX => (float) $itinerary['price_tax'],
+        ];
     }
 
     /**

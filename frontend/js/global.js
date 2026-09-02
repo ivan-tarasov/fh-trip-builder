@@ -217,77 +217,156 @@
         scrollToAnchor('top');
     });
 
+    // Cards arrive after load too, when the list grows, so this has to be
+    // callable again. getOrCreateInstance rather than new: running it twice
+    // over the same element would leave two tooltips fighting over one target.
+    function initTooltips(root) {
+        (root || document).querySelectorAll('[data-toggle="tooltip"]').forEach(function (el) {
+            bootstrap.Tooltip.getOrCreateInstance(el);
+        });
+    }
+
     $(function () {
-        document.querySelectorAll('[data-toggle="tooltip"]').forEach(function (el) {
-            new bootstrap.Tooltip(el);
-        });
+        initTooltips(document);
     });
 
-    /*[ Whole-card selection ]
+    /*[ Saved flights ]
     ===========================================================*/
-    // Clicking anywhere on a card selects it, except on the controls that do
-    // their own thing. Done here rather than with a stretched-link overlay,
-    // which would block hovering the timeline, the logos and the price note.
-    document.querySelectorAll('.flight-card').forEach(function (card) {
-        card.addEventListener('click', function (event) {
-            if (event.target.closest('a, button, input, label, [data-bs-toggle]')) {
-                return;
-            }
-
-            const select = card.querySelector('.card-select');
-
-            if (select) {
-                select.click();
-            }
-        });
-    });
-
-    /*[ Saved flights + share link ]
-    ===========================================================*/
+    // Kept in a cookie rather than localStorage so the server can render
+    // /my/saved without the page having to hand the list back over AJAX.
+    // A saved flight is its ordered leg ids, which is all that is needed to
+    // rebuild the itinerary; prices are looked up fresh, never stored.
     const SAVED_KEY = 'tb_saved_flights';
+    const SAVED_MAX = 50;
+    const SAVED_MAX_AGE = 60 * 60 * 24 * 365;
 
     function savedFlights() {
+        const match = document.cookie.match(/(?:^|;\s*)tb_saved_flights=([^;]*)/);
+
+        if (!match) {
+            return [];
+        }
+
         try {
-            return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+            const list = JSON.parse(decodeURIComponent(match[1]));
+
+            return Array.isArray(list) ? list.filter(function (key) {
+                return typeof key === 'string';
+            }) : [];
         } catch (e) {
             return [];
         }
     }
 
     function storeSavedFlights(list) {
-        try {
-            localStorage.setItem(SAVED_KEY, JSON.stringify(list));
-        } catch (e) {
-            // Private browsing or a full quota: the heart still toggles for
-            // this page view, it just will not be remembered.
-        }
+        // This cookie is sent with every request, so cap it. Oldest saves fall
+        // off the end rather than the newest silently failing to stick.
+        const value = encodeURIComponent(JSON.stringify(list.slice(0, SAVED_MAX)));
+
+        document.cookie = SAVED_KEY + '=' + value
+            + ';path=/;max-age=' + SAVED_MAX_AGE + ';samesite=lax'
+            + (window.location.protocol === 'https:' ? ';secure' : '');
     }
 
+    // Anything saved before this moved to a cookie would otherwise vanish.
+    (function migrateFromLocalStorage() {
+        try {
+            const legacy = window.localStorage.getItem(SAVED_KEY);
+
+            if (legacy === null) {
+                return;
+            }
+
+            if (savedFlights().length === 0) {
+                const list = JSON.parse(legacy);
+
+                if (Array.isArray(list) && list.length) {
+                    storeSavedFlights(list);
+                }
+            }
+
+            window.localStorage.removeItem(SAVED_KEY);
+        } catch (e) {
+            // Private browsing, or no localStorage at all: nothing to carry over.
+        }
+    })();
+
     // Saved flights live in this browser only — there is no account to sync to.
-    document.querySelectorAll('.js-like').forEach(function (button) {
-        const key = button.dataset.flightKey;
+    //
+    // The click is delegated because the list grows: a card appended by "show
+    // more" never passes through a querySelectorAll that ran at load. Only the
+    // painting of the saved state is per-element, so it is a function the
+    // append can call again.
+    function paintSavedFlights(root) {
+        const list = savedFlights();
 
-        button.classList.toggle('is-active', savedFlights().indexOf(key) !== -1);
+        (root || document).querySelectorAll('.js-like').forEach(function (button) {
+            button.classList.toggle('is-active', list.indexOf(button.dataset.flightKey) !== -1);
+        });
+    }
 
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.js-like');
+
+        if (!button) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const list = savedFlights();
+        const at = list.indexOf(button.dataset.flightKey);
+
+        if (at === -1) {
+            list.unshift(button.dataset.flightKey);
+        } else {
+            list.splice(at, 1);
+        }
+
+        button.classList.toggle('is-active', at === -1);
+        storeSavedFlights(list);
+    });
+
+    paintSavedFlights(document);
+
+    // The saved-flights page: dropping one takes its card with it, so the list
+    // does not disagree with the cookie until the next reload.
+    document.querySelectorAll('.js-unsave').forEach(function (button) {
         button.addEventListener('click', function (event) {
-            // Keep the click off the card, which would navigate away.
             event.preventDefault();
-            event.stopPropagation();
 
+            const key = button.dataset.flightKey;
             const list = savedFlights();
             const at = list.indexOf(key);
 
-            if (at === -1) {
-                list.push(key);
-            } else {
+            if (at !== -1) {
                 list.splice(at, 1);
+                storeSavedFlights(list);
             }
 
-            button.classList.toggle('is-active', at === -1);
-            storeSavedFlights(list);
+            const card = button.closest('.saved-item');
+
+            if (card) {
+                card.remove();
+            }
+
+            const remaining = document.querySelectorAll('.saved-item').length;
+            const empty = document.querySelector('.js-saved-empty');
+
+            if (remaining === 0 && empty) {
+                empty.classList.remove('d-none');
+                const list_ = document.querySelector('.js-saved-list');
+
+                if (list_) {
+                    list_.remove();
+                }
+            }
         });
     });
 
+    /*[ Share link ]
+    ===========================================================*/
     // The clipboard API rejects when the document is not focused, so keep a
     // selection-based fallback rather than dropping the user into a prompt.
     function copyToClipboard(text) {
@@ -323,33 +402,670 @@
         return copied;
     }
 
-    document.querySelectorAll('.js-share').forEach(function (button) {
-        button.addEventListener('click', function (event) {
-            // Keep the click off the card, which would navigate away.
+    // Delegated for the same reason as saving: appended cards must work too.
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.js-share');
+
+        if (!button) {
+            return;
+        }
+
+        // Keep the click off the card, which would navigate away.
+        event.preventDefault();
+        event.stopPropagation();
+
+        // The share URL is a path, so resolve it against this origin.
+        const url = new URL(button.dataset.shareUrl, window.location.origin).href;
+
+        copyToClipboard(url).then(function () {
+            button.classList.add('is-copied');
+
+            setTimeout(function () {
+                button.classList.remove('is-copied');
+            }, 1600);
+        }, function () {
+            window.prompt('Copy this link', url);
+        });
+    });
+
+    /*[ Back to top ]
+    ===========================================================*/
+    (function () {
+        const button = document.querySelector('.js-to-top');
+
+        if (!button) {
+            return;
+        }
+
+        // Roughly a screen and a half: far enough that the header is well out
+        // of reach, near enough that it is there when it is wanted.
+        const THRESHOLD = 800;
+
+        let ticking = false;
+
+        const paint = function () {
+            const past = window.scrollY > THRESHOLD;
+
+            // `hidden` keeps it out of the tab order and off a screen reader
+            // when there is nowhere to go back to; the class does the fading.
+            if (past) {
+                button.hidden = false;
+                // A frame after unhiding, or the transition has nothing to
+                // move from.
+                window.requestAnimationFrame(function () {
+                    button.classList.add('is-visible');
+                });
+            } else {
+                button.classList.remove('is-visible');
+            }
+
+            ticking = false;
+        };
+
+        // The class comes off before the element goes, so the fade can finish.
+        button.addEventListener('transitionend', function (event) {
+            if (event.propertyName === 'opacity' && !button.classList.contains('is-visible')) {
+                button.hidden = true;
+            }
+        });
+
+        window.addEventListener('scroll', function () {
+            if (!ticking) {
+                ticking = true;
+                window.requestAnimationFrame(paint);
+            }
+        }, { passive: true });
+
+        button.addEventListener('click', function () {
+            const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
+
+            // Scrolling moves the page, not the keyboard. Without this a tab
+            // press would carry on from the button at the bottom, which is not
+            // where the reader is now looking.
+            const heading = document.querySelector('h1, .header, header');
+
+            if (heading) {
+                heading.setAttribute('tabindex', '-1');
+                heading.focus({ preventScroll: true });
+            }
+        });
+
+        paint();
+    })();
+
+    /*[ A list that grows ]
+    ===========================================================*/
+    // "Show more" is a real link to a longer list, so this only upgrades it:
+    // fetch the same URL as a fragment, append the cards it returns, and leave
+    // the address bar describing what is on screen. Without scripting the link
+    // still works — it just reloads.
+    (function () {
+        const results = document.querySelector('.js-results');
+
+        if (!results || !window.fetch) {
+            return;
+        }
+
+        // The first slice is always asked for: someone who lands here and reads
+        // one card has not said they want a longer list, and fetching one on
+        // their behalf spends their data to answer a question nobody put.
+        //
+        // A click says otherwise, and buys the two loads after it for free.
+        // Scrolling for ever would take the footer out of reach, so each burst
+        // ends back at the button rather than running on.
+        const AUTO_LOADS = 2;
+
+        // Starts spent, so nothing loads until the button is used.
+        let autoLoaded = AUTO_LOADS;
+        let loading = false;
+        let observer = null;
+
+        const block = function () {
+            return results.querySelector('.js-more-block');
+        };
+
+        const load = function (link) {
+            if (loading) {
+                return;
+            }
+
+            loading = true;
+
+            const holder = link.closest('.js-more-block');
+            const label = link.querySelector('.js-more-label');
+            const spinner = link.querySelector('.show-more__spinner');
+
+            link.classList.add('is-loading');
+
+            if (label) {
+                label.textContent = 'Loading…';
+            }
+
+            if (spinner) {
+                spinner.hidden = false;
+            }
+
+            // `after` is what the page already holds; the href already carries
+            // the new total, along with the search, sort and filters.
+            const url = link.href + '&fragment=1&after=' + encodeURIComponent(link.dataset.after);
+
+            fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+
+                    return response.text();
+                })
+                .then(function (html) {
+                    // The fragment brings its own "show more", so the old one
+                    // is replaced rather than updated.
+                    holder.insertAdjacentHTML('beforebegin', html);
+                    holder.remove();
+
+                    // Cards that arrived have arrived. An enhancement that
+                    // throws must not send us down the failure path, which
+                    // would leave the list grown but the address bar and the
+                    // next control still describing the old one.
+                    try {
+                        paintSavedFlights(results);
+                        initTooltips(results);
+                        announceResults(results);
+                    } catch (error) {
+                        // Nothing to undo: the results are on the page.
+                    }
+
+                    // The URL now describes the screen, so a refresh or a Back
+                    // from a flight lands on the same list rather than the
+                    // first ten.
+                    window.history.replaceState(null, '', link.href);
+
+                    loading = false;
+                    watch();
+                })
+                .catch(function () {
+                    // Put the link back the way it was: clicking it navigates,
+                    // which is the no-JS behaviour and still gets more results.
+                    link.classList.remove('is-loading');
+
+                    if (label) {
+                        label.textContent = 'Show more results';
+                    }
+
+                    if (spinner) {
+                        spinner.hidden = true;
+                    }
+
+                    loading = false;
+                });
+        };
+
+        // Screen readers get no scroll cue, so say what arrived.
+        const announceResults = function (root) {
+            const live = document.querySelector('.js-results-live');
+
+            if (live) {
+                live.textContent = root.querySelectorAll('.flight-card').length + ' results shown';
+            }
+        };
+
+        const watch = function () {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+
+            const holder = block();
+
+            if (!holder || autoLoaded >= AUTO_LOADS || !window.IntersectionObserver) {
+                return;
+            }
+
+            // A margin so the request starts before the visitor reaches the end
+            // and has to wait at it.
+            observer = new IntersectionObserver(function (entries) {
+                if (!entries[0].isIntersecting || loading) {
+                    return;
+                }
+
+                autoLoaded += 1;
+                observer.disconnect();
+                observer = null;
+                load(holder.querySelector('.js-more'));
+            }, { rootMargin: '400px' });
+
+            observer.observe(holder);
+        };
+
+        results.addEventListener('click', function (event) {
+            const link = event.target.closest('.js-more');
+
+            if (!link) {
+                return;
+            }
+
             event.preventDefault();
-            event.stopPropagation();
 
-            // The share URL is a path, so resolve it against this origin.
-            const url = new URL(button.dataset.shareUrl, window.location.origin).href;
+            // Asking again re-arms the automatic loads behind it.
+            autoLoaded = 0;
+            load(link);
+        });
+    })();
 
-            copyToClipboard(url).then(function () {
-                button.classList.add('is-copied');
+    /*[ Search filters sidebar ]
+    ===========================================================*/
+    // Filters apply together on Apply, so everything here is local: nothing
+    // reloads the page until the form is submitted.
 
-                setTimeout(function () {
-                    button.classList.remove('is-copied');
-                }, 1600);
-            }, function () {
-                window.prompt('Copy this link', url);
+    // Type to narrow a long list. Rows are hidden with a class rather than
+    // removed, so the checked state of a filtered-out row survives.
+    document.querySelectorAll('.js-list-search').forEach(function (input) {
+        const list = document.getElementById(input.dataset.list);
+
+        if (!list) {
+            return;
+        }
+
+        input.addEventListener('input', function () {
+            const term = input.value.trim().toLowerCase();
+
+            list.classList.toggle('is-expanded', term !== '');
+
+            list.querySelectorAll('.filter-row').forEach(function (row) {
+                const hit = term === '' || row.textContent.toLowerCase().indexOf(term) !== -1;
+                row.classList.toggle('is-filtered-out', !hit);
             });
         });
     });
 
-    $("#airlinesSelectAll").click(function () {
-        $('input:checkbox[name="airlines[]"]').attr('checked', 'checked');
+    // "Show all (62)" — reveals the tail and takes itself away.
+    document.querySelectorAll('.js-show-all').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const list = document.getElementById(button.dataset.list);
+
+            if (list) {
+                list.classList.add('is-expanded');
+            }
+
+            button.remove();
+        });
     });
 
-    $("#airlinesSelectClear").click(function () {
-        $('input:checkbox[name="airlines[]"]').removeAttr('checked');
+    // "Only": keep this option and drop the rest of its list. The row is a
+    // <label>, so the click has to be stopped from reaching the checkbox it
+    // wraps — otherwise the box would toggle on top of what we just set.
+    document.querySelectorAll('.js-only').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const list = document.getElementById(button.dataset.list);
+
+            if (!list) {
+                return;
+            }
+
+            list.querySelectorAll('input[type=checkbox]:not(:disabled)').forEach(function (box) {
+                box.checked = box.value === button.dataset.value;
+                box.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        });
+    });
+
+    // Select all / Clear, one per filter group, covering whatever controls that
+    // group happens to hold — boxes, switches or a slider. The label follows
+    // the state, so the button always says what pressing it will do.
+    document.querySelectorAll('.filter-section').forEach(function (section) {
+        const button = section.querySelector('.js-section-reset');
+
+        if (!button) {
+            return;
+        }
+
+        const boxes = function () {
+            return Array.prototype.slice.call(
+                section.querySelectorAll('input[type=checkbox]:not(:disabled)')
+            );
+        };
+
+        const sliders = function () {
+            return Array.prototype.slice.call(section.querySelectorAll('.js-filter-slider'));
+        };
+
+        // A slider counts as set only when it is off its maximum; parked at the
+        // top it excludes nothing, which is the same as untouched.
+        const untouched = function (input) {
+            const min = parseInt(input.dataset.min, 10);
+            const max = parseInt(input.dataset.max, 10);
+
+            if (input.dataset.to === undefined) {
+                return parseInt(input.value, 10) >= max;
+            }
+
+            const pair = String(input.value).split(/[;-]/);
+
+            return parseInt(pair[0], 10) <= min && parseInt(pair[1], 10) >= max;
+        };
+
+        const isSet = function () {
+            return boxes().some(function (box) { return box.checked; })
+                || sliders().some(function (input) { return !untouched(input); });
+        };
+
+        const sync = function () {
+            section.classList.toggle('has-selection', isSet());
+        };
+
+        button.addEventListener('click', function () {
+            if (isSet()) {
+                boxes().forEach(function (box) {
+                    box.checked = false;
+                    box.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+
+                sliders().forEach(function (input) {
+                    const slider = $(input).data('ionRangeSlider');
+                    const min = parseInt(input.dataset.min, 10);
+                    const max = parseInt(input.dataset.max, 10);
+                    const both = input.dataset.to !== undefined;
+
+                    if (slider) {
+                        slider.update(both ? { from: min, to: max } : { from: max });
+                    }
+
+                    input.value = both ? min + '-' + max : String(max);
+                });
+            } else {
+                // Only reachable on a group that offers "Select all".
+                boxes().forEach(function (box) {
+                    box.checked = true;
+                    box.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            }
+
+            sync();
+        });
+
+        section.addEventListener('change', sync);
+        sync();
+    });
+
+    // Pills paint from a class rather than a :has() selector, so the selected
+    // state has exactly one definition.
+    document.querySelectorAll('.filter-pill').forEach(function (pill) {
+        const input = pill.querySelector('input[type=checkbox]');
+
+        if (!input) {
+            return;
+        }
+
+        const paint = function () {
+            pill.classList.toggle('is-on', input.checked);
+        };
+
+        input.addEventListener('change', paint);
+        paint();
+    });
+
+    // Price and travel-time sliders. The handle carries the value the filter
+    // reads, and the pill beside the label shows it in human terms.
+    function formatMinutes(total) {
+        const hours = Math.floor(total / 60);
+        const minutes = Math.round(total % 60);
+
+        if (hours === 0) {
+            return minutes + 'm';
+        }
+
+        return minutes === 0 ? hours + 'h' : hours + 'h ' + minutes + 'm';
+    }
+
+    function sliderLabel(kind, value) {
+        return kind === 'money'
+            ? '$' + Math.round(value).toLocaleString('en-US')
+            : formatMinutes(value);
+    }
+
+    // On two handles the end matters: a floor dragged up has to read "From" or
+    // the same number would mean two opposite things. One handle sits under a
+    // label that already says which end it is, so the pill carries the number
+    // alone. Keep in step with Helper::sliderCaption, which paints the first
+    // render.
+    function sliderCaption(kind, from, to, min, max) {
+        if (to === undefined) {
+            return sliderLabel(kind, from);
+        }
+
+        if (from > min && to < max) {
+            return 'From ' + sliderLabel(kind, from) + ' to ' + sliderLabel(kind, to);
+        }
+
+        return from > min ? 'From ' + sliderLabel(kind, from) : 'Up to ' + sliderLabel(kind, to);
+    }
+
+    $('.js-filter-slider').each(function () {
+        const input = this;
+        const kind = input.dataset.kind;
+        const output = document.getElementById(input.dataset.output);
+        const min = parseInt(input.dataset.min, 10);
+        const max = parseInt(input.dataset.max, 10);
+        // Two handles when the server supplied an upper one.
+        const isRange = input.dataset.to !== undefined;
+
+        const caption = output && output.querySelector('.filter-slider__caption');
+        const clearButton = output && output.querySelector('.js-slider-clear');
+
+        const show = function (from, to) {
+            if (!output) {
+                return;
+            }
+
+            // Parked at the ends the slider excludes nothing, so the pill stays
+            // grey and keeps its clear button out of the way — there is nothing
+            // to clear.
+            const set = isRange ? from > min || to < max : from < max;
+            const text = sliderCaption(kind, from, isRange ? to : undefined, min, max);
+
+            if (caption) {
+                caption.textContent = text;
+            } else {
+                output.textContent = text;
+            }
+
+            output.classList.toggle('is-on', set);
+
+            if (clearButton) {
+                clearButton.hidden = !set;
+            }
+        };
+
+        // ion.rangeSlider writes the value straight onto the input without
+        // firing anything, so the group's Clear button would never learn that
+        // the slider had moved. Announce it ourselves.
+        const announce = function () {
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
+        // ion.rangeSlider writes "from;to" into a double input; the filters read
+        // "from-to", so keep the value ourselves.
+        const store = function (data) {
+            input.value = isRange ? data.from + '-' + data.to : String(data.from);
+        };
+
+        $(input).ionRangeSlider({
+            skin: 'round',
+            type: isRange ? 'double' : 'single',
+            min: min,
+            max: max,
+            from: parseInt(input.dataset.from, 10),
+            to: isRange ? parseInt(input.dataset.to, 10) : undefined,
+            step: parseInt(input.dataset.step, 10) || 1,
+            // Stops on a handle, where the server has worked out that going
+            // further can only ever return nothing. The track still spans the
+            // real range, so the ends keep telling the truth about the spread.
+            from_max: input.dataset.floorMax === undefined ? undefined : parseInt(input.dataset.floorMax, 10),
+            to_min: input.dataset.ceilingMin === undefined ? undefined : parseInt(input.dataset.ceilingMin, 10),
+            hide_min_max: true,
+            hide_from_to: true,
+            onStart: function (data) { show(data.from, data.to); },
+            onChange: function (data) { show(data.from, data.to); store(data); },
+            // Once, on release, rather than on every pixel of the drag.
+            onFinish: function (data) { show(data.from, data.to); store(data); announce(); },
+            // update() does not fire onChange, so the label would go stale
+            // whenever a handle is moved by anything but a drag.
+            onUpdate: function (data) { show(data.from, data.to); store(data); announce(); },
+        });
+
+        show(parseInt(input.dataset.from, 10), isRange ? parseInt(input.dataset.to, 10) : undefined);
+
+        // Back to the full range. update() fires onUpdate, which repaints the
+        // pill and tells the group's Clear button that this slider let go.
+        if (clearButton) {
+            clearButton.addEventListener('click', function (event) {
+                event.preventDefault();
+
+                const slider = $(input).data('ionRangeSlider');
+
+                if (slider) {
+                    slider.update(isRange ? { from: min, to: max } : { from: max });
+
+                    return;
+                }
+
+                input.value = isRange ? min + '-' + max : String(max);
+                show(min, max);
+            });
+        }
+    });
+
+    // A slider built inside a collapsed section measures zero width and stays
+    // that way — the track never lays out, so the handle cannot be dragged.
+    // Bootstrap tells us when a section has finished opening; that is the first
+    // moment the widget can size itself correctly.
+    document.querySelectorAll('.filter-section .collapse').forEach(function (panel) {
+        panel.addEventListener('shown.bs.collapse', function () {
+            panel.querySelectorAll('.js-filter-slider').forEach(function (input) {
+                const slider = $(input).data('ionRangeSlider');
+
+                if (slider) {
+                    // Pass the current position back in: a bare update() puts
+                    // the handle at the minimum, which would silently disagree
+                    // with the value shown beside the label.
+                    slider.update({ from: parseInt(input.value, 10) });
+                }
+            });
+        });
+    });
+
+    // The overflow sort list navigates on choice; its options carry the URL.
+    document.querySelectorAll('.js-sort-select').forEach(function (select) {
+        select.addEventListener('change', function () {
+            if (select.value) {
+                window.location.assign(select.value);
+            }
+        });
+    });
+
+    // Submit by building the URL rather than letting the browser serialise the
+    // form: it percent-encodes commas, so `airlines=BA,AI` would reach the
+    // address bar as `airlines=BA%2CAI`. Runs last, after the handlers that
+    // fold checkbox groups into comma lists and drop untouched sliders.
+    function submitReadably(form) {
+        const parts = [];
+
+        new FormData(form).forEach(function (value, key) {
+            if (value === '') {
+                return;
+            }
+
+            parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value).replace(/%2C/g, ','));
+        });
+
+        const action = form.getAttribute('action') || window.location.pathname;
+
+        window.location.assign(parts.length ? action + '?' + parts.join('&') : action);
+    }
+
+    // A slider parked at its maximum excludes nothing, so it must not be
+    // submitted. Leaving it in would put a number in the URL that looks
+    // deliberate, and — because each slider's range is measured from the
+    // current results — a later change to another filter could shrink the set
+    // beneath that stale ceiling and start quietly cutting flights.
+    const filterForm = document.getElementById('form_filters');
+
+    if (filterForm) {
+        // Checkbox groups post one field per box (airlines[]=AF&airlines[]=AS),
+        // which makes for an unreadable URL. The filters read a comma list just
+        // as happily, so collect the boxes into one field per group and take
+        // the boxes themselves out of the submission.
+        filterForm.addEventListener('submit', function () {
+            const groups = {};
+
+            filterForm.querySelectorAll('input[type=checkbox][name$="[]"]').forEach(function (box) {
+                const key = box.name.slice(0, -2);
+
+                if (box.checked) {
+                    (groups[key] = groups[key] || []).push(box.value);
+                }
+
+                box.disabled = true;
+            });
+
+            Object.keys(groups).forEach(function (key) {
+                const field = document.createElement('input');
+                field.type = 'hidden';
+                field.name = key;
+                field.value = groups[key].join(',');
+                filterForm.appendChild(field);
+            });
+        });
+
+        filterForm.addEventListener('submit', function () {
+            filterForm.querySelectorAll('.js-filter-slider').forEach(function (input) {
+                const min = parseInt(input.dataset.min, 10);
+                const max = parseInt(input.dataset.max, 10);
+                const slider = $(input).data('ionRangeSlider');
+
+                if (input.dataset.to === undefined) {
+                    if (parseInt(input.value, 10) >= max) {
+                        input.disabled = true;
+                    }
+
+                    return;
+                }
+
+                // ion.rangeSlider writes a double as "from;to" over whatever we
+                // set, and the filters read "from-to". Take the value from the
+                // widget itself, which is the one thing that is never stale.
+                const from = slider ? slider.result.from : min;
+                const to = slider ? slider.result.to : max;
+
+                if (from <= min && to >= max) {
+                    input.disabled = true;
+
+                    return;
+                }
+
+                // A floor resting at the bottom of the track is not a floor
+                // anyone asked for, and sending it as one would rule out every
+                // direct flight — they have no layover to be that long. Send
+                // the ceiling alone instead.
+                input.value = from <= min ? String(to) : from + '-' + to;
+            });
+        });
+    }
+
+    ['form_filters', 'form_sort'].forEach(function (id) {
+        const form = document.getElementById(id);
+
+        if (form) {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                submitReadably(form);
+            });
+        }
     });
 
     $( ".auto-clear" ).on( "focus", function() {

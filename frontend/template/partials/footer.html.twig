@@ -16,6 +16,13 @@
     </div>
 </div>
 
+{# Long pages — a results list that keeps growing most of all — leave the top
+   a long way behind. Hidden until there is something to come back from, and
+   rendered here so every page has it. #}
+<button type="button" class="to-top js-to-top" aria-label="Back to top" hidden>
+    <i class="fas fa-chevron-up"></i>
+</button>
+
 <footer class="footer mt-auto py-3 bg-dark text-light-emphasis">
     <div class="container">
         <div class="container py-4 py-md-5 px-4 px-md-3">
@@ -103,7 +110,7 @@
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/js/ion.rangeSlider.min.js"></script>
 <script src="//use.fontawesome.com/releases/v6.1.1/js/all.js" type="text/javascript" defer integrity="sha384-xBXmu0dk1bEoiwd71wOonQLyH+VpgR1XcDH3rtxrLww5ajNTuMvBdL5SOiFZnNdp" crossorigin="anonymous"></script>
-<script src="{{ config('site.directory.js') }}/global.js"></script>
+<script src="{{ asset(config('site.directory.js') ~ '/global.js') }}"></script>
 
 </body>
 </html>

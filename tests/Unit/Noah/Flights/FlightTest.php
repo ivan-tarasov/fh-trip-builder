@@ -14,6 +14,7 @@ final class FlightTest extends TestCase
         $flight = new Flight(
             airline: 'AC',
             number: 101,
+            aircraft: '320',
             departureAirport: 'YUL',
             departureTime: '2026-09-15 06:00:00',
             arrivalAirport: 'YYZ',
@@ -37,5 +38,6 @@ final class FlightTest extends TestCase
         self::assertSame('YYZ', $row['arrival_airport']);
         self::assertSame(504, $row['distance']);
         self::assertSame(120.0, $row['price_base']);
+        self::assertSame('320', $row['aircraft']);
     }
 }

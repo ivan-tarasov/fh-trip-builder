@@ -54,11 +54,6 @@ parameters:
 			count: 1
 			path: src/Controllers/SearchController.php
 
-		-
-			message: '#^Method TripBuilder\\Controllers\\SearchController\:\:setPost\(\) has parameter \$post with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controllers/SearchController.php
 
 		-
 			message: '#^Property TripBuilder\\Controllers\\SearchController\:\:\$get type has no value type specified in iterable type array\.$#'
@@ -66,11 +61,6 @@ parameters:
 			count: 1
 			path: src/Controllers/SearchController.php
 
-		-
-			message: '#^Property TripBuilder\\Controllers\\SearchController\:\:\$post type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controllers/SearchController.php
 
 		-
 			message: '#^Method TripBuilder\\Helper\:\:getGitInfo\(\) return type has no value type specified in iterable type array\.$#'

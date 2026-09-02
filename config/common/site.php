@@ -62,6 +62,11 @@ return [
         '/my/bookings/' => [
             'text' => 'My bookings',
             'icon' => 'fas fa-bookmark',
+            'enabled' => true,
+        ],
+        '/my/saved/' => [
+            'text' => 'Saved flights',
+            'icon' => 'fas fa-heart',
             'spacer' => 3,
             'enabled' => true,
         ],

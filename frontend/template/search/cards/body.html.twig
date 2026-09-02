@@ -45,63 +45,77 @@
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-2 card-actions">
-                {% for notice in flight.itinerary.notices %}
-                    <span class="notice" data-toggle="tooltip" data-placement="top"
-                          title="{{ notice.label }} — {{ notice.text }}">
-                        <i class="fas fa-{{ notice.icon }}"></i>
-                    </span>
-                {% endfor %}
+            {# Two groups, not one row of look-alike circles: the red icons are
+               things to know about this itinerary, the buttons are things you
+               can do. A rule keeps them from reading as one set. #}
+            <div class="d-flex align-items-center card-actions">
+                {% if flight.itinerary.notices %}
+                    <div class="d-flex align-items-center gap-2 card-notices">
+                        {% for notice in flight.itinerary.notices %}
+                            <span class="notice" data-toggle="tooltip" data-placement="top"
+                                  title="{{ notice.label }} — {{ notice.text }}">
+                                <i class="fas fa-{{ notice.icon }}"></i>
+                            </span>
+                        {% endfor %}
+                    </div>
+                    <span class="card-actions__divider" aria-hidden="true"></span>
+                {% endif %}
 
-                <button type="button" class="icon-btn js-like" aria-label="Save this flight"
-                        data-flight-key="{{ row_id }}" data-toggle="tooltip" data-placement="top" title="Save this flight">
-                    <i class="far fa-heart icon-idle"></i>
-                    <i class="fas fa-heart icon-done"></i>
-                </button>
-                <button type="button" class="icon-btn js-share" aria-label="Copy a link to this flight"
-                        data-share-url="{{ flight.share_url }}" data-toggle="tooltip" data-placement="top" title="Copy link">
-                    <i class="fas fa-arrow-up-from-bracket icon-idle"></i>
-                    <i class="fas fa-check icon-done"></i>
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="icon-btn js-like" aria-label="Save this flight"
+                            data-flight-key="{{ row_id }}" data-toggle="tooltip" data-placement="top" title="Save this flight">
+                        <i class="far fa-heart icon-idle"></i>
+                        <i class="fas fa-heart icon-done"></i>
+                    </button>
+                    <button type="button" class="icon-btn js-share" aria-label="Copy a link to this flight"
+                            data-share-url="{{ flight.share_url }}" data-toggle="tooltip" data-placement="top" title="Copy link">
+                        <i class="fas fa-arrow-up-from-bracket icon-idle"></i>
+                        <i class="fas fa-check icon-done"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- The itinerary -->
-        <div class="d-flex align-items-center gap-2">
-            <div class="flex-grow-1">
-                {% include 'search/cards/itinerary.html.twig' with { 'direction': flight.itinerary } %}
-            </div>
-            {# The visible affordance and the accessible control. The rest of the
-               card forwards clicks here from JS — an overlay would swallow the
-               hover on the timeline, the logos and the price note. #}
+        {% include 'search/cards/itinerary.html.twig' with { 'direction': flight.itinerary } %}
+    </div>
+
+    {# Card footer: what you can do with this flight, on one line. #}
+    <div class="card-footer flight-card__footer">
+        <div class="d-flex align-items-center justify-content-between gap-3">
+            <button class="btn btn-sm details-toggle collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#details-{{ row_id }}" aria-expanded="false">
+                <i class="fas fa-circle-info pe-1"></i>
+                <span class="if-collapsed">Flight details</span>
+                <span class="if-expanded">Hide details</span>
+                <i class="fas fa-chevron-down ps-1 chevron"></i>
+            </button>
+
+            {# Name the half of the trip being chosen. On a round trip the two
+               steps show the same card twice, so a bare "Select" leaves the
+               button as the one place on the card that does not say which. #}
+            {% set select_label = step == 1 ? 'Select departing flight'
+                : (step == 2 ? 'Select return flight' : 'Select flight') %}
+
             {% if flight.select_url %}
-                <a href="{{ flight.select_url }}" class="btn btn-link text-decoration-none card-select px-1">
-                    <span class="visually-hidden">{{ step == 2 ? 'Select this return flight' : 'Select this departing flight' }}</span>
-                    <i class="fas fa-chevron-right"></i>
+                <a href="{{ flight.select_url }}" class="btn btn-primary card-select">
+                    {{ select_label }}
+                    <i class="fas fa-chevron-right ps-1"></i>
                 </a>
             {% else %}
-                <button type="button" class="btn btn-link text-decoration-none card-select px-1"
+                <button type="button" class="btn btn-primary card-select"
                         id="addTrip_{{ row_id }}"
                         data-flight-departing-ids="{{ flight.outbound_ids|join(',') }}"
                         data-flight-returning-ids="{{ flight.return_ids|join(',') }}">
-                    <span class="visually-hidden">Select this flight</span>
-                    <i class="fas fa-chevron-right"></i>
+                    {{ select_label }}
+                    <i class="fas fa-chevron-right ps-1"></i>
                 </button>
             {% endif %}
         </div>
 
-        <!-- Show flight details -->
-        <div class="border-top mt-3 pt-1 card-actions">
-            <button class="btn btn-sm btn-link text-decoration-none collapsed flight-details-toggle" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#details-{{ row_id }}" aria-expanded="false">
-                <span class="if-collapsed">Show flight details</span>
-                <span class="if-expanded">Hide flight details</span>
-                <i class="fas fa-chevron-down ps-1 chevron"></i>
-            </button>
-            <div class="collapse" id="details-{{ row_id }}">
-                <div class="pt-2">
-                    {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': flight.itinerary } %}
-                </div>
+        <div class="collapse" id="details-{{ row_id }}">
+            <div class="pt-3">
+                {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': flight.itinerary } %}
             </div>
         </div>
     </div>

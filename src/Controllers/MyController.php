@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Exception;
+use stdClass;
 use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Service\FlightFinder;
+use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\TwigRenderer;
 
 class MyController extends AbstractController
 {
+    // Written by the browser; global.js owns the other half of this contract.
+    private const string SAVED_COOKIE = 'tb_saved_flights';
+    private const int SAVED_LIMIT = 50;
+
     /**
      * @throws Exception|\Twig\Error\Error
      */
@@ -49,6 +56,104 @@ class MyController extends AbstractController
         echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
             'bookings' => $bookings,
             'has_rows' => count($rows) > 0,
+        ]);
+    }
+
+    /**
+     * Flights the visitor kept for later.
+     *
+     * The list itself is a cookie written by the browser (see global.js): each
+     * entry is an itinerary's ordered leg ids, which is everything needed to
+     * rebuild it. Nothing about the flight is stored — prices and times are
+     * read fresh here, so a saved card can never show a stale fare.
+     *
+     * @throws Exception|\Twig\Error\Error
+     */
+    public function saved(): void
+    {
+        $finder = new FlightFinder($this->connection());
+        $presenter = new ItineraryPresenter();
+        $flights = [];
+
+        foreach ($this->savedKeys() as $key) {
+            $ids = array_map(intval(...), explode('-', $key));
+            $itinerary = $finder->itinerary($ids);
+
+            // A saved flight can go stale — the search data is regenerated, or
+            // the legs no longer chain. Drop those rather than draw a broken card.
+            if ($itinerary === null) {
+                continue;
+            }
+
+            $decoded = json_decode((string) json_encode($itinerary), false);
+
+            if (! $decoded instanceof stdClass) {
+                continue;
+            }
+
+            $built = $presenter->direction($decoded->itinerary);
+            $direction = $built['direction'];
+
+            $flights[] = [
+                'key' => $key,
+                'price' => $presenter->priceParts(
+                    (float) $decoded->price_base + (float) $decoded->price_tax,
+                ),
+                'itinerary' => $direction,
+                'search_url' => $this->searchUrl($decoded->itinerary),
+            ];
+        }
+
+        echo new TwigRenderer()->renderPage('my/saved/view.html.twig', [
+            'flights' => $flights,
+            'has_rows' => $flights !== [],
+        ]);
+    }
+
+    /**
+     * The saved-flight keys from the cookie, in the order they were saved.
+     *
+     * The cookie is written by the browser, so treat it as untrusted input: only
+     * keys that are hyphen-separated integers survive, and the list is capped so
+     * a hand-edited cookie cannot turn one page render into thousands of queries.
+     *
+     * @return list<string>
+     */
+    private function savedKeys(): array
+    {
+        $raw = json_decode($_COOKIE[self::SAVED_COOKIE] ?? '', true);
+
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $keys = [];
+
+        foreach ($raw as $key) {
+            if (is_string($key) && preg_match('/^\d{1,19}(-\d{1,19})*$/', $key) === 1) {
+                $keys[$key] = $key;
+            }
+        }
+
+        return array_values(array_slice($keys, 0, self::SAVED_LIMIT));
+    }
+
+    /**
+     * A link back to a fresh search for the same route and departure date, so a
+     * saved flight is a starting point rather than a dead end.
+     */
+    private function searchUrl(object $itinerary): string
+    {
+        $segments = $itinerary->segments;
+        $first = $segments[0];
+        $last = $segments[array_key_last($segments)];
+
+        return '/search?' . http_build_query([
+            'from' => $first->depart->airport_code,
+            'to' => $last->arrive->airport_code,
+            'depart' => date('Y-m-d', strtotime($first->depart->date_time)),
+            'triptype' => 'oneway',
+            'class' => 'economy',
         ]);
     }
 

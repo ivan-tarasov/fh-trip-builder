@@ -25,7 +25,20 @@
         <div class="route__head">
             <i class="fas fa-plane-departure text-secondary"></i>
             <span class="route__summary">
-                {{ direction.duration }} in transit &middot; {{ direction.stops_label|lower }}
+                <span class="route__transit">
+                    {{ direction.duration }} in transit &middot; {{ direction.stops_label|lower }}
+                </span>
+                {# How long each wait actually is. It was only ever a tooltip on
+                   a 2px bar, which meant the difference between a 50-minute
+                   connection and a 9-hour one was invisible while scanning. #}
+                {% if direction.layovers %}
+                    <span class="route__waits">
+                        {%- for layover in direction.layovers -%}
+                            {{ layover.wait }} in {{ layover.airport_code }}
+                            {{- not loop.last ? ' &middot; ' : '' -}}
+                        {%- endfor -%}
+                    </span>
+                {% endif %}
             </span>
             <i class="fas fa-plane-arrival text-secondary"></i>
         </div>

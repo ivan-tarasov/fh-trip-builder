@@ -48,7 +48,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
 
     public function testOnewaySearchReturnsRankedItineraries(): void
     {
-        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 0, 10);
 
         self::assertGreaterThanOrEqual(2, $result['total']);
         self::assertNotEmpty($result['rows']);
@@ -67,7 +67,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
 
     public function testOnewaySearchPaginatesToPerPage(): void
     {
-        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 0, 10);
 
         self::assertLessThanOrEqual(10, count($result['rows']));
     }
@@ -99,7 +99,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
     {
         // A round trip searches each direction on its own date; the return is
         // the same query with the endpoints and date swapped.
-        $result = $this->repository()->searchDirection('YYZ', 'YUL', self::RETURN_DATE, SortMethod::Price, 1);
+        $result = $this->repository()->searchDirection('YYZ', 'YUL', self::RETURN_DATE, SortMethod::Price, 0, 10);
 
         self::assertGreaterThanOrEqual(1, $result['total']);
         self::assertNotEmpty($result['rows']);
@@ -125,7 +125,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
         // Leg stamps are local to their own airports, so a rebuilt itinerary
         // must total flying + waiting time, not subtract arrival from departure
         // (which inflates any trip crossing timezones).
-        $ranked = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $ranked = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 0, 10);
         $cheapest = $ranked['rows'][0];
         $ids = array_map(static fn(array $leg): int => (int) $leg['id'], $cheapest['legs']);
 
@@ -147,7 +147,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
 
     public function testSearchWithUnknownAirportShortCircuitsToEmpty(): void
     {
-        $result = $this->repository()->searchDirection('ZZZ', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $result = $this->repository()->searchDirection('ZZZ', 'YYZ', self::DEPART_DATE, SortMethod::Price, 0, 10);
 
         self::assertSame([], $result['rows']);
         self::assertSame(0, $result['total']);
@@ -158,7 +158,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
     {
         // `cheapest` anchors the "+$X vs cheapest" note on each card, so it must
         // be the lowest total across all results — not just the first page.
-        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 1);
+        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 0, 10);
 
         self::assertNotNull($result['cheapest']);
 
@@ -173,6 +173,80 @@ final class FlightRepositoryTest extends IntegrationTestCase
         // And nothing on the page can be cheaper than it.
         foreach ($pageTotals as $total) {
             self::assertGreaterThanOrEqual($result['cheapest'] - 0.01, $total);
+        }
+    }
+
+    public function testShortLayoverSortPutsTheLeastWaitingFirst(): void
+    {
+        $result = $this->repository()->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::LayoverShort, 0, 10);
+
+        if ($result['total'] === 0) {
+            self::markTestSkipped('No generated flights on this route.');
+        }
+
+        $waits = array_map(static function (array $itinerary): int {
+            $flying = array_sum(array_map(static fn(array $leg): int => (int) $leg['duration'], $itinerary['legs']));
+
+            return $itinerary['duration'] - $flying;
+        }, $result['rows']);
+
+        $ordered = $waits;
+        sort($ordered);
+
+        self::assertSame($ordered, $waits);
+        // A direct itinerary waits nowhere, so it belongs at the top.
+        self::assertSame(0, $waits[0]);
+    }
+
+    public function testRecommendedSortLeadsWithTheBestValueItinerary(): void
+    {
+        // The Recommended sort and the "Best value" badge score itineraries the
+        // same way, so the badge must land on the first row. If these ever
+        // disagree the app is telling the visitor two different things about
+        // which flight is the good one.
+        $result = $this->repository()->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Recommended, 0, 10);
+
+        if ($result['total'] < 3) {
+            self::markTestSkipped('Badges need at least a few options to mean anything.');
+        }
+
+        self::assertContains('value', $result['rows'][0]['badges']);
+    }
+
+    public function testEverySortTabPromisesWhatThatSortActuallyReturns(): void
+    {
+        // The tabs above the results advertise a price and a travel time for
+        // each sort. If the advertised pair is not the pair you get on choosing
+        // it, the control is lying about the trade it offers.
+        $repository = $this->repository();
+        $highlights = $repository->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Price, 0, 10)['highlights'];
+
+        if ($highlights === []) {
+            self::markTestSkipped('No generated flights on this route.');
+        }
+
+        foreach ($highlights as $sort => $promised) {
+            $first = $repository->searchDirection(
+                'PAR',
+                'NYC',
+                '2026-09-15',
+                SortMethod::fromRequest((string) $sort),
+                0,
+                10,
+            )['rows'][0] ?? null;
+
+            self::assertNotNull($first, sprintf('%s returned nothing', $sort));
+            self::assertEqualsWithDelta(
+                $promised['price'],
+                $first['price_base'] + $first['price_tax'],
+                0.01,
+                sprintf('%s advertises a price it does not deliver', $sort),
+            );
+            self::assertSame(
+                $promised['duration'],
+                $first['duration'],
+                sprintf('%s advertises a duration it does not deliver', $sort),
+            );
         }
     }
 

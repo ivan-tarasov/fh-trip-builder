@@ -10,7 +10,10 @@ namespace TripBuilder\Api\Flights;
 final readonly class FlightSearchQuery
 {
     public function __construct(
-        public int $currentPage,
+        // How much of the ranked result to render: the list grows by appending,
+        // so a "load more" asks only for the part it does not have.
+        public int $offset,
+        public int $limit,
         public string $sort,
         public string $from,
         public string $to,
@@ -18,5 +21,9 @@ final readonly class FlightSearchQuery
         public string $returnDate,
         public int $adultNum,
         public int $childNum,
+        public ?FlightFilters $filters = null,
+        // The return leg keeps its own set: which one applies depends on the
+        // step, and only the search knows that for certain.
+        public ?FlightFilters $returnFilters = null,
     ) {}
 }

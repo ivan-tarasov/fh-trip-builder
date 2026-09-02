@@ -1,0 +1,57 @@
+{# A list of checkboxes, optionally searchable and initially capped.
+   `name` is the query key; the parser reads name[] and a comma list alike. #}
+{% if search|default(false) %}
+    <div class="filter-search">
+        <i class="fas fa-magnifying-glass filter-search__icon"></i>
+        <input type="text" class="filter-search__input js-list-search" data-list="list-{{ id }}"
+               placeholder="{{ placeholder|default('Search') }}" aria-label="{{ placeholder|default('Search') }}" />
+    </div>
+{% endif %}
+
+<div class="filter-list js-list" id="list-{{ id }}" data-limit="{{ limit|default(0) }}">
+    {% for option in options %}
+        <label class="filter-row{{ option.available ? '' : ' is-unavailable' }}{% if limit|default(0) and loop.index > limit %} is-over-limit{% endif %}">
+            {# The control leads the row: it is the state you scan a list for, and
+               a column of them down the left edge is read in one pass. #}
+            <input type="checkbox" class="form-check-input filter-row__check" name="{{ name }}[]"
+                   value="{{ option.value }}"{{ option.checked ? ' checked' : '' }}{{ option.available ? '' : ' disabled' }} />
+
+            {% if option.logo_url is defined and option.logo_url %}
+                <img src="{{ option.logo_url }}" class="filter-row__logo" alt="" />
+            {% endif %}
+            <span class="filter-row__text">
+                <span class="filter-row__label">
+                    {{ option.label }}
+                    {% if option.sub %}<span class="filter-row__sub">{{ option.sub }}</span>{% endif %}
+                </span>
+                {% if option.note is defined and option.note %}
+                    <span class="filter-row__note">{{ option.note }}</span>
+                {% endif %}
+                {# A long name and a price cannot share a line in this column, so
+                   the price drops under it and the name gets the full width. #}
+                {% if price_below|default(false) and option.price is defined and option.price %}
+                    <span class="filter-row__price filter-row__price--below">from ${{ option.price.whole }}</span>
+                {% endif %}
+                {% if not option.available %}<span class="filter-row__none">no flights</span>{% endif %}
+            </span>
+
+            {% if only_action|default(false) and option.available %}
+                {# Narrows to this one option in a click, rather than unticking
+                   the other thirteen. Shown on hover, and on keyboard focus so
+                   it is not mouse-only. #}
+                <button type="button" class="filter-row__only js-only"
+                        data-list="list-{{ id }}" data-value="{{ option.value }}">Only</button>
+            {% endif %}
+
+            {% if not price_below|default(false) and option.price is defined and option.price %}
+                <span class="filter-row__price">${{ option.price.whole }}</span>
+            {% endif %}
+        </label>
+    {% endfor %}
+</div>
+
+{% if limit|default(0) and options|length > limit %}
+    <button type="button" class="filter-more js-show-all" data-list="list-{{ id }}">
+        Show all ({{ options|length }})
+    </button>
+{% endif %}

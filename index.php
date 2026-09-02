@@ -55,7 +55,12 @@ try {
 
     $controller = new $controllerClassName();
 
-    $needsLayout = !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
+    // A fragment request asks for a piece of a page — the search list's "load
+    // more" is one — so its output is appended to a document that already
+    // exists and must not be wrapped in a second header and footer.
+    $isFragment = ($_GET['fragment'] ?? null) === '1';
+
+    $needsLayout = !$isFragment && !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
 
     // API/Ajax endpoints emit their own payload with no header/footer.
     if (!$needsLayout) {

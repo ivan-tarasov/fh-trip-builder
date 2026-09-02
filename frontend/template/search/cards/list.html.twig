@@ -1,0 +1,32 @@
+{# The cards, and the control that fetches the next slice of them.
+
+   Rendered on its own for a "load more" request and included by the full page,
+   so both paths draw a card exactly the same way. #}
+{% for flight in flights %}
+    {% include 'search/cards/body.html.twig' %}
+{% endfor %}
+
+{% if show_more and show_more.url is null %}
+    {# As far as the list goes. Filtering is what reaches the rest, so say that
+       rather than just stopping. #}
+    <div class="show-more">
+        <p class="show-more__note">
+            Showing the first {{ show_more.from }} options.
+            Narrow the search to see the other {{ show_more.remaining }}.
+        </p>
+    </div>
+{% elseif show_more %}
+    {# A real link: without scripting it loads a longer list, and the JS turns
+       the same href into an append. `data-after` says what the client already
+       holds, so the fragment comes back with only the new cards. #}
+    <div class="show-more js-more-block">
+        <a class="show-more__button js-more" href="{{ show_more.url }}"
+           data-after="{{ show_more.from }}" data-next="{{ show_more.next }}">
+            <span class="js-more-label">Show more results</span>
+            <span class="show-more__spinner" hidden aria-hidden="true"></span>
+        </a>
+        <p class="show-more__note">
+            {{ show_more.remaining }} more {{ show_more.remaining == 1 ? 'option' : 'options' }}
+        </p>
+    </div>
+{% endif %}
