@@ -1387,8 +1387,17 @@ textarea {
   cursor: help;
 }
 
-/* One treatment for all of them: these are things to look twice at. */
-.notice { background-color: #ffe9e9; color: #d6336c; }
+/* This used to be one treatment for all of them, on the reasoning that they
+   are all things to look twice at. They are -- but not equally, and a reader
+   cannot weigh six identical alarm-red chips. A 29-hour journey is a fact; a
+   45-minute connection in a foreign airport is a thing that can go wrong. So
+   the colour now carries the severity the presenter assigns, and red is spent
+   only where something can actually fail.
+   Contrast against each chip's own tint, all past AA for text even though an
+   icon would only need 3:1 -- the old pairing measured 3.98 and missed. */
+.notice--risk  { background-color: #FFE9E9; color: var(--brand-danger); }   /* 5.59 */
+.notice--check { background-color: #FFF3E0; color: #8A4B00; }              /* 6.20 */
+.notice--note  { background-color: #F1F3F5; color: var(--ink-secondary); } /* 7.35 */
 
 /* Choosing a flight is a button, not the card. A whole-card target competed
    with everything else on the card that responds to a click — the timeline,

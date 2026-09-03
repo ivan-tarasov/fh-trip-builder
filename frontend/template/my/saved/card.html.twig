@@ -23,7 +23,7 @@
                 {% if flight.itinerary.notices %}
                     <div class="d-flex align-items-center gap-2 card-notices">
                         {% for notice in flight.itinerary.notices %}
-                            <span class="notice" data-toggle="tooltip" data-placement="top"
+                            <span class="notice notice--{{ notice.severity|default('note') }}" data-toggle="tooltip" data-placement="top"
                                   title="{{ notice.label }} — {{ notice.text }}">
                                 <i class="fas fa-{{ notice.icon }}"></i>
                             </span>

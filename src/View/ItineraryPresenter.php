@@ -174,6 +174,19 @@ class ItineraryPresenter
      * @param list<object> $layovers
      * @return list<array<string, string>>
      */
+    /**
+     * Three severities, because these six things are not equally serious and
+     * rendering them identically made the reader weigh them equally:
+     *
+     *   risk   something can go wrong on the day  -- a connection too tight
+     *   check  something may be needed before you fly -- a transit visa, or
+     *          bags to collect and re-check between two airlines
+     *   note   a fact about the itinerary -- how long the wait, how long the
+     *          trip, whether the wait runs overnight
+     *
+     * A 29-hour journey is not a warning; a 45-minute connection in a foreign
+     * airport is. The colour now says which is which.
+     */
     private function buildNotices(array $segments, array $layovers, int $totalDuration): array
     {
         $notices = [];
@@ -187,12 +200,14 @@ class ItineraryPresenter
 
             if ($wait < self::LAYOVER_TIGHT_MINUTES) {
                 $notices['tight'] = [
+                    'severity' => 'risk',
                     'icon' => 'person-running',
                     'label' => 'Tight connection',
                     'text' => sprintf('Only %s to change planes in %s', $waitLabel, $city),
                 ];
             } elseif ($wait > self::LAYOVER_LONG_MINUTES) {
                 $notices['long'] = [
+                    'severity' => 'note',
                     'icon' => 'hourglass-half',
                     'label' => 'Long layover',
                     'text' => sprintf('%s waiting in %s', $waitLabel, $city),
@@ -204,6 +219,7 @@ class ItineraryPresenter
                 $segments[$i + 1]->depart->date_time,
             )) {
                 $notices['night'] = [
+                    'severity' => 'note',
                     'icon' => 'moon',
                     'label' => 'Night layover',
                     'text' => sprintf('The wait in %s runs through the night', $city),
@@ -214,6 +230,7 @@ class ItineraryPresenter
 
             if ($country !== $originCountry && $country !== $destinationCountry) {
                 $notices['visa'] = [
+                    'severity' => 'check',
                     'icon' => 'passport',
                     'label' => 'Transit visa',
                     'text' => sprintf('Connects through %s — check whether a transit visa is needed', $country),
@@ -225,6 +242,7 @@ class ItineraryPresenter
 
         if (count($carriers) > 1) {
             $notices['airlines'] = [
+                'severity' => 'check',
                 'icon' => 'suitcase-rolling',
                 'label' => 'Separate airlines',
                 'text' => 'Flights are on different airlines — bags may need collecting and re-checking',
@@ -233,6 +251,7 @@ class ItineraryPresenter
 
         if ($totalDuration > self::LONG_TRIP_MINUTES) {
             $notices['duration'] = [
+                'severity' => 'note',
                 'icon' => 'clock',
                 'label' => 'Long journey',
                 'text' => sprintf('%s door to door', $this->minutesToStringTime($totalDuration)),
