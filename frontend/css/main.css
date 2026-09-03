@@ -3,33 +3,41 @@
    ==========================================================================
    This app used to ship Bootstrap's stock palette untouched -- #0d6efd and
    friends -- which is the single most recognisable "built on Bootstrap" tell
-   there is. Two colours replace it, both drawn from the product's own world
-   rather than from a swatch generator:
+   there is. Two colours replace it:
 
      --brand-ink     deep navy. Chrome, structure, headings, data labels.
-                     Airline livery and the night departure board.
-     --brand-accent  burnt orange. Reserved for the ONE action per screen and
-                     for "you are here" state. Descended from --brand-flag,
-                     which this file already used to light up the hovered
-                     segment of a route.
+     --brand-accent  deep teal. Reserved for the ONE action per screen, for
+                     "you are here" state, and for whatever the pointer is
+                     currently on.
 
    The split is the point. Sixteen elements on the results page were the same
    saturated blue, so nothing led. Ink carries the furniture; accent is spent
    sparingly and therefore still means something.
 
-   Contrast is measured, not assumed. Every pairing below clears WCAG AA:
-     white on ink 15.6:1   white on accent 5.18:1   accent on white 5.18:1
-     white on ink-700 11.46:1   white on accent-700 7.32:1
-   --brand-flag is 3.15:1 on white -- fine for a graphic, never for text,
-   which is why it stays on the route bar and out of buttons. */
+   Teal replaced a burnt orange, and not only on taste. The caution tier of
+   the notice chips is amber (#8A4B00): with an orange accent, the colour that
+   means "act here" and the colour that means "check this" were the same hue
+   family, side by side on every result card. Teal reads clear of both the
+   amber and the red, so the three notice tiers stay legible as tiers.
+
+   There used to be a third token, --brand-flag, a brighter orange for the
+   hovered route segment. It was declared and never referenced -- the route
+   rules kept their literal, one of which coloured text at 3.15:1. Hover now
+   takes the accent, which is both one rule fewer and 5.47:1.
+
+   Contrast is measured, not assumed. Every pairing clears WCAG AA:
+     white on ink 15.60   white on accent 5.47   accent on white 5.47
+     white on ink-700 11.46   white on accent-700 8.06
+     accent on #f8f9fa 5.19 (the outline buttons)   accent on tint 4.78
+   And as a graphic against its neighbours on the route bar, the accent is
+   3.66 on a leg and 4.20 on a stop -- past the 3:1 a non-text mark needs. */
 :root {
   --brand-ink:        #10243F;
   --brand-ink-700:    #1B3A63;
-  --brand-accent:     #C2410C;
-  --brand-accent-700: #9A340A;
-  --brand-flag:       #F5622D;   /* graphic only -- fails AA for text */
-  --brand-tint:       #FDF0E9;
-  --brand-tint-edge:  #F6D3C2;
+  --brand-accent:     #0F766E;
+  --brand-accent-700: #0B5A54;
+  --brand-tint:       #E6F2F1;
+  --brand-tint-edge:  #BFDDDA;
 
   /* Semantics. Bootstrap's stock success and danger both clear AA on pure
      white by a hair -- 4.53 -- and fail the moment they sit on a tinted
@@ -1295,11 +1303,11 @@ textarea {
    stays latched, leaving a segment of somebody's flight highlighted for no
    reason they can undo. */
 @media (hover: hover) and (pointer: fine) {
-  .route__leg:hover::before { background-color: #f5622d; }
+  .route__leg:hover::before { background-color: var(--brand-accent); }
 
   .route__stop:hover::before {
     transform: scaleY(1);
-    background-color: #f5622d;
+    background-color: var(--brand-accent);
   }
 }
 
@@ -1325,7 +1333,7 @@ textarea {
 /* The connection airport lights up with its own leg of the journey -- gated
    with the bar above it, so the pair stay in step on a touchscreen. */
 @media (hover: hover) and (pointer: fine) {
-  .route__stop:hover .route__code { color: #f5622d; }
+  .route__stop:hover .route__code { color: var(--brand-accent); }
 }
 
 /* The codes sit below the bar, so they are the only thing occupying that strip
