@@ -1,16 +1,19 @@
 <div class="col">
     <div class="card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg" style="background-image: url('{{ config('site.static.url') }}/{{ config('site.static.endpoint.poi') }}/{{ poi.image }}');">
         <div class="d-flex flex-column h-100 p-5 pb-3 text-white text-shadow-1">
-            <h3 class="pt-5 mt-5 mb-4 display-6 lh-1 fw-bold"><a class="text-white empty-link">{{ poi.title }}</a></h3>
-            <ul class="d-flex list-unstyled mt-auto">
-                <li class="me-auto">
-                    <img src="https://github.com/ivan-tarasov.png" alt="Post author" width="32" height="32" class="rounded-circle border border-white">
-                </li>
-                <li class="d-flex align-items-center">
-                    <i class="fa-solid fa-location-dot pe-1"></i>
-                    <small>{{ poi.city }}, {{ poi.country }}</small>
-                </li>
-            </ul>
+            {# Plain heading, not an anchor. It used to be an <a> with no href:
+               styled as a link, skipped by the keyboard, and on click it
+               apologised for doing nothing. There is nowhere for a
+               point-of-interest card to lead yet, so it does not pretend. #}
+            <h3 class="pt-5 mt-5 mb-4 display-6 lh-1 fw-bold">{{ poi.title }}</h3>
+            {# This row used to open with the developer's own GitHub avatar,
+               alt="Post author" -- inherited from the Bootstrap album example
+               the card was built from. A face has nothing to say about Tokyo,
+               so the location stands on its own. #}
+            <div class="d-flex align-items-center mt-auto">
+                <i class="fa-solid fa-location-dot pe-1" aria-hidden="true"></i>
+                <small>{{ poi.city }}, {{ poi.country }}</small>
+            </div>
         </div>
     </div>
 </div>
