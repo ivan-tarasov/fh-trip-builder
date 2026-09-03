@@ -12,6 +12,13 @@
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
 
+    {# Plus Jakarta Sans, weights 400/500/600/700 -- the four the stylesheet
+       actually uses. The stack used to name Lato, but Lato was never loaded:
+       no @font-face and no link, so every page has been rendering in Arial. #}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
     <link href="{{ cdn(config('site.static.endpoint.vendor')) }}/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all" />
     <link href="//cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" rel="stylesheet" type="text/css" />
     <link href="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/css/ion.rangeSlider.min.css" rel="stylesheet" />

@@ -257,13 +257,19 @@
 /* ==========================================================================
    #FLOATING LABELS
    ==========================================================================
-   Four equal passenger columns leave a floating label 97px. The qualifier in
-   these labels -- (12+), (2-11), in seat, on lap -- is the part that pushes
-   them over, and "Infant in seat" missed by 2px at Bootstrap's `small` size.
-   Shrinking the qualifier a shade fixes it for every field at once, which
-   beat shortening copy that had just been made clearer. All four labels had
-   the wrong `for` value before this, so none of them was reachable anyway. */
-.form-floating > label > small { font-size: .78em; }
+   Four equal passenger columns leave a floating label 97px of content box,
+   because Bootstrap pads it .75rem on both sides. "Infant in seat" wanted 98.
+
+   The first attempt shrank the qualifier to buy the difference. That was
+   tuning a font size to win pixels, and it did not survive the next change:
+   swapping Arial for Plus Jakarta Sans ate the margin again. So the fix is
+   the constraint itself -- reclaim the right-hand padding, which the label
+   does not need. Its left edge still lines up with the field's own text, and
+   the result no longer depends on which face is loaded.
+
+   All four of these labels had the wrong `for` value before this, so none of
+   them was reachable by click or by a screen reader anyway. */
+.form-floating > label { padding-right: .25rem; }
 
 /* ==========================================================================
    #GRID
@@ -390,7 +396,13 @@ a {
 }
 
 body {
-  font-family: "Lato", "Arial", "Helvetica Neue", sans-serif;
+  /* Falls back to the platform UI face rather than Arial, so a failed webfont
+     lands somewhere deliberate. */
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", system-ui, sans-serif;
+  /* Prices, times and durations sit in columns down the results list, and
+     proportional digits make those columns ragged. */
+  font-variant-numeric: tabular-nums;
   font-weight: 400;
   font-size: 14px;
 }
@@ -1453,17 +1465,21 @@ textarea {
   cursor: help;
 }
 
-/* This used to be one treatment for all of them, on the reasoning that they
-   are all things to look twice at. They are -- but not equally, and a reader
-   cannot weigh six identical alarm-red chips. A 29-hour journey is a fact; a
-   45-minute connection in a foreign airport is a thing that can go wrong. So
-   the colour now carries the severity the presenter assigns, and red is spent
-   only where something can actually fail.
-   Contrast against each chip's own tint, all past AA for text even though an
-   icon would only need 3:1 -- the old pairing measured 3.98 and missed. */
-.notice--risk  { background-color: #FFE9E9; color: var(--brand-danger); }   /* 5.59 */
-.notice--check { background-color: #FFF3E0; color: #8A4B00; }              /* 6.20 */
-.notice--note  { background-color: var(--surface-sunken); color: var(--ink-secondary); } /* 7.35 */
+/* One treatment for all of them: these are things to look twice at, and the
+   uniform red is the wanted look.
+
+   It is not the ORIGINAL red, though. That was #d6336c on #FFE9E9, which
+   measures 3.98:1 and misses AA. Same appearance, accessible pairing: 5.59.
+
+   The presenter still assigns a severity and the template still emits it as a
+   class, so the three tiers are one edit away if the flat treatment ever
+   starts hiding a tight connection among five facts. */
+.notice--risk,
+.notice--check,
+.notice--note {
+  background-color: #FFE9E9;
+  color: var(--brand-danger);
+}
 
 /* Choosing a flight is a button, not the card. A whole-card target competed
    with everything else on the card that responds to a click — the timeline,
