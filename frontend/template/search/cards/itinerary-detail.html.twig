@@ -33,8 +33,10 @@
             <div class="leg__carrier">
                 <img class="leg__logo" src="{{ segment.logo_url }}" alt="" width="28" height="28" />
                 <span class="leg__airline">{{ segment.carrier_name }}</span>
-                <span class="leg__meta">{{ segment.flight_number }}</span>
-                <span class="leg__meta">{{ segment.duration }} · {{ segment.cabin }}</span>
+                <span class="leg__meta">{{ segment.flight_number }}{% if segment.aircraft %} · {{ segment.aircraft }}{% endif %}</span>
+                {# Cabin is omitted rather than guessed when the code does not
+                   resolve -- see CABIN_NAMES in ItineraryPresenter. #}
+                <span class="leg__meta">{{ segment.duration }}{% if segment.cabin %} · {{ segment.cabin }}{% endif %}</span>
             </div>
 
             <div class="leg__stop">

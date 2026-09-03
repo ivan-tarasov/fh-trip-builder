@@ -47,6 +47,7 @@ final readonly class FlightFinder
     private const string RESPONSE_FLIGHT_CARRIER_CODE = 'carrier';
     private const string RESPONSE_FLIGHT_CARRIER_NAME = 'carrier_name';
     private const string RESPONSE_CABIN_CODE = 'cabin_code';
+    private const string RESPONSE_AIRCRAFT = 'aircraft';
     private const string RESPONSE_DISTANCE = 'distance';
     private const string RESPONSE_DURATION = 'duration';
     private const string RESPONSE_PRICE_BASE = 'price_base';
@@ -341,6 +342,8 @@ final readonly class FlightFinder
                 self::RESPONSE_DATE_TIME => $leg['arr_datetime'],
             ],
             self::RESPONSE_CABIN_CODE => $cabin,
+            // Null when the type code is unknown to the aircraft table.
+            self::RESPONSE_AIRCRAFT => $leg['aircraft_name'] ?? null,
             self::RESPONSE_DISTANCE => $leg['distance'],
             self::RESPONSE_DURATION => $leg['duration'],
             self::RESPONSE_RATING => (float) $leg['rating'],

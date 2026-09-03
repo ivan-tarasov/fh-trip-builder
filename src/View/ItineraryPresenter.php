@@ -19,6 +19,22 @@ use TripBuilder\Config;
 class ItineraryPresenter
 {
     // What counts as worth warning about on an itinerary.
+    /**
+     * Cabin codes to names. FlightFinder currently supplies these itself with
+     * a FIXME -- 'Y' outbound, 'X' return -- because the flights table has no
+     * cabin column yet. 'Y' is a real IATA economy code and resolves; 'X' is
+     * not a cabin at all and deliberately resolves to nothing, so a return leg
+     * shows no cabin rather than a made-up one. Both start reporting correctly
+     * the moment the column exists.
+     */
+    private const array CABIN_NAMES = [
+        'Y' => 'Economy',
+        'W' => 'Premium economy',
+        'C' => 'Business',
+        'J' => 'Business',
+        'F' => 'First',
+    ];
+
     private const int LAYOVER_TIGHT_MINUTES = 90;
     private const int LAYOVER_LONG_MINUTES = 300;
     private const int LONG_TRIP_MINUTES = 1440;
@@ -51,7 +67,8 @@ class ItineraryPresenter
                 'logo_url' => $this->carrierLogo($segment->carrier),
                 'flight_number' => 'Flight ' . str_replace('-', '', $segment->number),
                 'duration' => $this->minutesToStringTime($segment->duration),
-                'cabin' => 'Economy',
+                'cabin' => self::CABIN_NAMES[$segment->cabin_code ?? ''] ?? null,
+                'aircraft' => $segment->aircraft ?? null,
                 'depart_time' => date('H:i', strtotime($segment->depart->date_time)),
                 'depart_date' => date('D, d M', strtotime($segment->depart->date_time)),
                 'depart_city' => $segment->depart->airport_city,
@@ -186,6 +203,10 @@ class ItineraryPresenter
      *
      * A 29-hour journey is not a warning; a 45-minute connection in a foreign
      * airport is. The colour now says which is which.
+     *
+     * @param list<object> $segments
+     * @param list<object> $layovers
+     * @return list<array<string, string>>
      */
     private function buildNotices(array $segments, array $layovers, int $totalDuration): array
     {

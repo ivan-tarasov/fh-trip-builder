@@ -996,6 +996,9 @@ final readonly class FlightRepository
             . ' INNER JOIN ' . Table::Airlines->value . ' airline ON flight.airline = airline.code'
             . ' INNER JOIN ' . Table::Countries->value . ' depart_country ON depart_airport.country_code = depart_country.code'
             . ' INNER JOIN ' . Table::Countries->value . ' arrive_country ON arrive_airport.country_code = arrive_country.code'
+            // LEFT: a flight whose type code is missing from the aircraft
+            // table should still return, just without a name.
+            . ' LEFT JOIN ' . Table::Aircraft->value . ' aircraft_type ON flight.aircraft = aircraft_type.code'
             . ' WHERE flight.id IN (' . $this->placeholders($ids) . ')';
 
         $byId = [];
@@ -1194,6 +1197,8 @@ final readonly class FlightRepository
             'arrive_country.title AS arr_country',
             'arrive_airport.city AS arr_city',
             'flight.arrival_time AS arr_datetime',
+            'flight.aircraft AS aircraft_code',
+            'aircraft_type.title AS aircraft_name',
             'flight.distance AS distance',
             'flight.duration AS duration',
             'flight.price_base AS price_base',
