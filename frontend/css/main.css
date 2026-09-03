@@ -62,9 +62,21 @@
        --ink-faint       #8A9199   ornament only, 3:1 bar   3.19 / 3.02
      Only two things use faint: the dashed booking-reference border and the
      2.5rem icon on the expired-checkout page. */
-  --ink-secondary:    #495057;
-  --ink-muted:        #646D75;
-  --ink-faint:        #8A9199;
+  --ink-body:         #151A21;   /* 17.0 on white, 15.3 on --surface */
+  --ink-secondary:    #3F4854;   /*  9.3 on white,  8.3 on --surface */
+  --ink-muted:        #5F6875;   /*  5.6 on white,  5.0 on --surface */
+  --ink-faint:        #828C99;   /*  3.5 on white -- ornament only */
+
+  /* Surfaces and rules, named rather than scattered as Bootstrap greys. They
+     are cooled a few degrees toward blue: the whole neutral field reads
+     colder, which is most of what makes an airline search feel like one
+     rather than like a generic dashboard. Every one of these was a literal
+     repeated a dozen times before. */
+  --surface:          #EFF2F7;   /* raised panels, card footers */
+  --surface-sunken:   #E8EDF3;   /* wells, quiet chips */
+  --line:             #E1E6ED;   /* default rule */
+  --line-strong:      #D3DAE3;   /* emphasis rule, route track */
+  --line-strongest:   #C2CBD6;   /* filled route leg */
 
   /* The same scale does not run backwards. #adb5bd was removed above for
      measuring 2.07 on white; on the #212529 footer it measures 7.43 and is
@@ -74,19 +86,31 @@
   --ink-on-dark-lead: #DEE2E6;   /* 11.85 on #212529 -- figures, emphasis */
 
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
+  --bs-body-color: var(--ink-body);
   --bs-primary: var(--brand-ink);
   --bs-primary-rgb: 16, 36, 63;
   --bs-primary-bg-subtle: var(--brand-tint);
   --bs-primary-border-subtle: var(--brand-tint-edge);
   --bs-primary-text-emphasis: var(--brand-accent-700);
   --bs-link-color: var(--brand-accent);
-  --bs-link-color-rgb: 194, 65, 12;
+  --bs-link-color-rgb: 15, 118, 110;
   --bs-link-hover-color: var(--brand-accent-700);
+  /* Bootstrap defaults to 6px. 8px on controls and 12px on cards is the
+     softer geometry, and the file already reached for .75rem and 1rem by
+     hand in places, so this only makes that consistent. */
+  --bs-border-radius: .5rem;
+  --bs-border-radius-lg: .75rem;
+  --bs-card-border-radius: .75rem;   /* see the .card override below */
   --bs-success: var(--brand-success);
   --bs-success-rgb: 20, 108, 67;
   --bs-danger: var(--brand-danger);
   --bs-danger-rgb: 176, 42, 55;
 }
+
+/* Bootstrap declares --bs-card-border-radius on .card itself, so setting it in
+   :root above never reaches a card -- the same shape of trap as the button
+   colours below. */
+.card { --bs-card-border-radius: .75rem; }
 
 /* Bootstrap 5.3 writes the button colours as literal hex into each variant's
    own custom properties, so overriding --bs-primary above does not reach a
@@ -1125,7 +1149,7 @@ textarea {
 }
 
 .accordion-item .accordion-button {
-  color: #212529 !important;
+  color: var(--ink-body) !important;
 }
 
 /* "Flight details" toggle. A bordered pill rather than a text link: on a card
@@ -1133,7 +1157,7 @@ textarea {
    one control that opens the itinerary. Swaps its label and rotates the
    chevron by state. */
 .details-toggle {
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: .25rem .85rem;
   color: #495057;
@@ -1143,9 +1167,9 @@ textarea {
 }
 
 .details-toggle:hover {
-  background-color: #f1f3f5;
-  border-color: #ced4da;
-  color: #212529;
+  background-color: var(--surface-sunken);
+  border-color: var(--line-strongest);
+  color: var(--ink-body);
 }
 
 .details-toggle:not(.collapsed) {
@@ -1191,7 +1215,7 @@ textarea {
 .step-track__line {
   flex: 0 0 40px;
   height: 1px;
-  background-color: #ced4da;
+  background-color: var(--line-strongest);
 }
 
 /* Mark the option the pointer is over. This is deliberately only a shadow:
@@ -1284,7 +1308,7 @@ textarea {
    its own code, which costs a little proportional accuracy on the shortest
    legs and buys labels that can always be read. */
 .route__leg { min-width: 2.25rem; }
-.route__leg::before { height: 6px; background-color: #ced4da; }
+.route__leg::before { height: 6px; background-color: var(--line-strongest); }
 
 .route__stop { min-width: 2.25rem; }
 /* Drawn at a leg's thickness and scaled down to a layover's, so the hover
@@ -1296,7 +1320,7 @@ textarea {
 .route__stop::before {
   height: 6px;
   transform: scaleY(.3333);
-  background-color: #dee2e6;
+  background-color: var(--line-strong);
 }
 
 /* Hover is a pointer affordance. On a touchscreen :hover latches on tap and
@@ -1377,12 +1401,12 @@ textarea {
   height: 38px;
   border: 0;
   border-radius: 50%;
-  background-color: #f1f3f5;
+  background-color: var(--surface-sunken);
   color: #495057;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.icon-btn:hover { background-color: #e9ecef; }
+.icon-btn:hover { background-color: var(--line); }
 .icon-btn.is-active { color: #e03131; }
 .icon-btn.is-copied { background-color: #d3f9d8; color: #2b8a3e; }
 
@@ -1414,7 +1438,7 @@ textarea {
    pale enough not to compete with the sentence explaining what goes here. */
 .empty-state__icon {
   font-size: 3rem;
-  color: #ced4da;
+  color: var(--line-strongest);
 }
 
 /* A thing worth knowing before you choose: tight connection, night wait, … */
@@ -1439,7 +1463,7 @@ textarea {
    icon would only need 3:1 -- the old pairing measured 3.98 and missed. */
 .notice--risk  { background-color: #FFE9E9; color: var(--brand-danger); }   /* 5.59 */
 .notice--check { background-color: #FFF3E0; color: #8A4B00; }              /* 6.20 */
-.notice--note  { background-color: #F1F3F5; color: var(--ink-secondary); } /* 7.35 */
+.notice--note  { background-color: var(--surface-sunken); color: var(--ink-secondary); } /* 7.35 */
 
 /* Choosing a flight is a button, not the card. A whole-card target competed
    with everything else on the card that responds to a click — the timeline,
@@ -1456,8 +1480,8 @@ textarea {
 /* The card's action strip: what you can do with this flight, set apart from
    the flight itself. More controls will land on this row. */
 .flight-card__footer {
-  background-color: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  background-color: var(--surface);
+  border-top: 1px solid var(--line);
   padding: .75rem 1rem;
 }
 
@@ -1469,7 +1493,7 @@ textarea {
   width: 1px;
   height: 24px;
   margin: 0 .75rem;
-  background-color: #dee2e6;
+  background-color: var(--line-strong);
 }
 
 /* A flex child only shrinks below its content width once this is lifted, and
@@ -1544,7 +1568,7 @@ textarea {
   content: "";
   flex: 1;
   height: 1px;
-  background-color: #dee2e6;
+  background-color: var(--line-strong);
 }
 
 /* Price: the number is what people compare, so it carries the weight while the
@@ -1554,7 +1578,7 @@ textarea {
   align-items: baseline;
   gap: .15rem;
   line-height: 1.1;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .price__symbol {
@@ -1600,7 +1624,7 @@ textarea {
 /* --- Results column: one block per idea, ruled apart -------------------
    The step track, the heading, the sort bar and the results were four things
    in one undifferentiated stack. A rule between them says where each ends. */
-.results-block { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e9ecef; }
+.results-block { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
 .results-block--steps { padding-bottom: .875rem; margin-bottom: .875rem; }
 .results-block--title { padding-bottom: .875rem; margin-bottom: .875rem; }
 /* Ruled off from the results too, so the bar reads as a control over the
@@ -1632,7 +1656,7 @@ textarea {
   border-radius: .75rem;
   /* A light ground, so the chosen tab reads as filled rather than as the only
      thing with a border. */
-  background-color: #f8f9fa;
+  background-color: var(--surface);
   overflow: hidden;
 }
 
@@ -1640,7 +1664,7 @@ textarea {
   flex: 1 1 0;
   min-width: 0;
   padding: .75rem 1.125rem;
-  border-right: 1px solid #e9ecef;
+  border-right: 1px solid var(--line);
   color: var(--ink-secondary);
   text-decoration: none;
   cursor: pointer;
@@ -1650,7 +1674,7 @@ textarea {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.sort-bar__tab:hover { background-color: #e9ecef; }
+.sort-bar__tab:hover { background-color: var(--line); }
 
 /* Ink, not accent. This marks which sort is active -- it is state, not a step
    forward -- and leaving the accent free for the Select buttons is what stops
@@ -1674,11 +1698,11 @@ textarea {
   font-size: 1.375rem;
   font-weight: 700;
   line-height: 1.15;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .sort-bar__tab.is-current .sort-bar__price { color: #fff; }
-.sort-bar__price--none { color: #ced4da; }
+.sort-bar__price--none { color: var(--line-strongest); }
 
 .sort-bar__meta {
   display: block;
@@ -1715,7 +1739,7 @@ textarea {
   padding: .5rem 1.15rem .5rem 0;
   font-size: .9375rem;
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
   cursor: pointer;
   user-select: none;
   appearance: none;
@@ -1742,7 +1766,7 @@ textarea {
 .filters__other-leg i { margin-top: .1rem; }
 
 /* --- Section: title, optional Select all, chevron ------------------------ */
-.filter-section { border-bottom: 1px solid #f1f3f5; }
+.filter-section { border-bottom: 1px solid var(--surface-sunken); }
 .filter-section:last-of-type { border-bottom: 0; }
 
 .filter-section__head {
@@ -1770,7 +1794,7 @@ textarea {
 
 .filter-section__title {
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .filter-section__chevron {
@@ -1854,7 +1878,7 @@ textarea {
   cursor: pointer;
 }
 
-.filter-row:hover { background-color: #f8f9fa; }
+.filter-row:hover { background-color: var(--surface); }
 
 .filter-row__logo {
   width: 24px;
@@ -1883,7 +1907,7 @@ textarea {
    fourteen of them do not compete with the names for attention. */
 .filter-row__only {
   flex: 0 0 auto;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   background-color: #fff;
   padding: .1rem .55rem;
@@ -1900,7 +1924,7 @@ textarea {
 .filter-row__label {
   display: block;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 /* The code sits with the name, quieter, the way the reference prints it. */
@@ -1966,7 +1990,7 @@ textarea {
   width: 100%;
   border: 0;
   border-radius: .625rem;
-  background-color: #f1f3f5;
+  background-color: var(--surface-sunken);
   padding: .5rem .75rem .5rem 2.25rem;
   font-size: .9375rem;
 }
@@ -1990,7 +2014,7 @@ textarea {
   flex: 1;
   min-width: 0;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 /* The last word and the icon move as one, so the icon can never be the only
@@ -2032,8 +2056,8 @@ textarea {
   gap: .35rem;
   padding: .4rem .75rem;
   border-radius: 999px;
-  background-color: #f1f3f5;
-  color: #212529;
+  background-color: var(--surface-sunken);
+  color: var(--ink-body);
   font-size: .875rem;
   cursor: pointer;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
@@ -2050,7 +2074,7 @@ textarea {
   opacity: 0;
   pointer-events: none;
 }
-.filter-pill:hover { background-color: #e9ecef; }
+.filter-pill:hover { background-color: var(--line); }
 .filter-pill__icon { color: #868e96; font-size: .8125rem; }
 
 /* A selected pill. `is-on` is set by JS on load and on every change.
@@ -2066,7 +2090,7 @@ textarea {
 
 /* --- Sliders -------------------------------------------------------------- */
 .filter-slider {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
   border-radius: .75rem;
   padding: .75rem .875rem 1.25rem;
 }
@@ -2088,7 +2112,7 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .filter-slider__value {
@@ -2096,12 +2120,12 @@ textarea {
   align-items: center;
   gap: .25rem;
   flex: 0 0 auto;
-  background-color: #e9ecef;
+  background-color: var(--line);
   border-radius: 999px;
   padding: .2rem .6rem;
   font-size: .875rem;
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
   white-space: nowrap;
 }
 
@@ -2145,7 +2169,7 @@ textarea {
   margin: 0 -1rem -1rem;
   padding: 1rem;
   background-color: #fff;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--line);
   border-radius: 0 0 var(--bs-card-border-radius) var(--bs-card-border-radius);
   box-shadow: 0 -.5rem 1rem -.5rem rgba(0, 0, 0, .1);
   text-align: center;
@@ -2252,7 +2276,7 @@ textarea {
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 50%;
   background-color: #fff;
   box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15);
@@ -2295,7 +2319,7 @@ textarea {
   gap: 1rem;
   margin-bottom: 1.25rem;
 }
-.checkout__title { margin: 0; font-size: 1.75rem; font-weight: 700; color: #212529; }
+.checkout__title { margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--ink-body); }
 .checkout__change { color: var(--brand-accent); font-weight: 500; text-decoration: none; }
 .checkout__change:hover { text-decoration: underline; }
 
@@ -2327,7 +2351,7 @@ textarea {
 }
 
 .pane {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.25rem 1.5rem 1.5rem;
@@ -2340,7 +2364,7 @@ textarea {
   margin: 0 0 .25rem;
   font-size: 1.0625rem;
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
 }
 .pane__step {
   display: inline-flex;
@@ -2354,7 +2378,7 @@ textarea {
   font-size: .8125rem;
 }
 .pane__hint { margin: 0 0 1rem; color: var(--ink-secondary); font-size: .875rem; }
-.pane--accept { background-color: #f8f9fa; }
+.pane--accept { background-color: var(--surface); }
 
 /* Two per row, one per row once there is no longer space for two. */
 .field-row {
@@ -2372,11 +2396,11 @@ textarea {
 }
 .field__input {
   width: 100%;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: .5rem;
   padding: .5rem .75rem;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
   background-color: #fff;
   transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
@@ -2492,11 +2516,11 @@ textarea {
   justify-content: flex-end;
   height: 1.75rem;
   border-radius: .1875rem;
-  background-color: #f1f3f5;
+  background-color: var(--surface-sunken);
   padding: 0 .625rem;
 }
 .pay-card__cvv {
-  color: #212529;
+  color: var(--ink-body);
   font-size: .8125rem;
   letter-spacing: .12em;
 }
@@ -2541,14 +2565,14 @@ textarea {
 
 /* --- order summary ------------------------------------------------------ */
 .order {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.25rem;
 }
 .order__heading { margin: 0 0 1rem; font-size: 1.0625rem; font-weight: 600; }
-.order__leg { padding-bottom: .875rem; margin-bottom: .875rem; border-bottom: 1px solid #f1f3f5; }
+.order__leg { padding-bottom: .875rem; margin-bottom: .875rem; border-bottom: 1px solid var(--surface-sunken); }
 .order__leg-label {
   margin: 0 0 .25rem;
   font-size: .6875rem;
@@ -2558,7 +2582,7 @@ textarea {
   color: var(--ink-muted);
 }
 .order__route { display: flex; align-items: center; gap: .5rem; margin: 0 0 .25rem; }
-.order__code { font-size: 1.125rem; font-weight: 700; color: #212529; }
+.order__code { font-size: 1.125rem; font-weight: 700; color: var(--ink-body); }
 .order__arrow { color: var(--ink-muted); font-size: .8125rem; }
 .order__when { margin: 0; font-size: .875rem; color: #495057; }
 .order__detail { margin: 0; font-size: .8125rem; color: var(--ink-muted); }
@@ -2566,19 +2590,19 @@ textarea {
 .order__prices { margin: 0; }
 .order__price-row { display: flex; justify-content: space-between; gap: 1rem; padding: .3125rem 0; }
 .order__price-row dt { font-weight: 400; color: var(--ink-secondary); font-size: .9375rem; }
-.order__price-row dd { margin: 0; color: #212529; font-size: .9375rem; }
+.order__price-row dd { margin: 0; color: var(--ink-body); font-size: .9375rem; }
 .order__price-row--total {
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--line);
   margin-top: .5rem;
   padding-top: .75rem;
 }
 .order__price-row--total dt,
-.order__price-row--total dd { font-size: 1.125rem; font-weight: 700; color: #212529; }
+.order__price-row--total dd { font-size: 1.125rem; font-weight: 700; color: var(--ink-body); }
 .order__note { margin: .75rem 0 0; font-size: .8125rem; color: var(--ink-muted); }
 
 /* --- rules -------------------------------------------------------------- */
 .rules {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.25rem 1.5rem;
@@ -2598,7 +2622,7 @@ textarea {
 .rules__brand {
   flex: 0 0 auto;
   border-radius: 999px;
-  background-color: #e9ecef;
+  background-color: var(--line);
   padding: .1rem .5rem;
   font-size: .75rem;
   font-weight: 600;
@@ -2619,7 +2643,7 @@ textarea {
 .rules__notes {
   margin: 0;
   padding-left: 1.125rem;
-  border-top: 1px solid #f1f3f5;
+  border-top: 1px solid var(--surface-sunken);
   padding-top: .875rem;
   font-size: .75rem;
   color: var(--ink-secondary);
@@ -2651,7 +2675,7 @@ textarea {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: .15em;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .done__panels {
@@ -2668,7 +2692,7 @@ textarea {
   letter-spacing: .06em;
   color: var(--ink-muted);
 }
-.done__leg { padding: .625rem 0; border-bottom: 1px solid #f1f3f5; }
+.done__leg { padding: .625rem 0; border-bottom: 1px solid var(--surface-sunken); }
 .done__leg-route { display: flex; align-items: center; gap: .5rem; }
 .done__leg-when { display: flex; gap: .5rem; font-size: .875rem; color: #495057; }
 .done__leg-sep { color: var(--ink-muted); }
@@ -2702,7 +2726,7 @@ textarea {
 
 .review__halves { min-width: 0; }
 .review__half {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.125rem 1.375rem 1.25rem;
@@ -2716,7 +2740,7 @@ textarea {
   gap: 1rem;
   padding-bottom: .875rem;
   margin-bottom: .5rem;
-  border-bottom: 1px solid #f1f3f5;
+  border-bottom: 1px solid var(--surface-sunken);
 }
 .review__half-label {
   margin: 0;
@@ -2734,9 +2758,9 @@ textarea {
   gap: .875rem;
   flex: 0 0 auto;
 }
-.review__half-price { font-size: 1.0625rem; font-weight: 700; color: #212529; }
+.review__half-price { font-size: 1.0625rem; font-weight: 700; color: var(--ink-body); }
 .review__change {
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: .25rem .85rem;
   font-size: .875rem;
