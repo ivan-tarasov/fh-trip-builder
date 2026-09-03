@@ -31,6 +31,14 @@
   --brand-tint:       #FDF0E9;
   --brand-tint-edge:  #F6D3C2;
 
+  /* Semantics. Bootstrap's stock success and danger both clear AA on pure
+     white by a hair -- 4.53 -- and fail the moment they sit on a tinted
+     surface: 4.30 against the #f8f9fa card footers this app uses everywhere.
+     Both are darkened one step, which also sits better beside the navy than
+     the brighter originals did. */
+  --brand-success:    #146C43;   /* 6.45 on white, 6.12 on #f8f9fa */
+  --brand-danger:     #B02A37;   /* 6.50 on white, 6.16 on #f8f9fa */
+
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
   --bs-primary: var(--brand-ink);
   --bs-primary-rgb: 16, 36, 63;
@@ -40,6 +48,10 @@
   --bs-link-color: var(--brand-accent);
   --bs-link-color-rgb: 194, 65, 12;
   --bs-link-hover-color: var(--brand-accent-700);
+  --bs-success: var(--brand-success);
+  --bs-success-rgb: 20, 108, 67;
+  --bs-danger: var(--brand-danger);
+  --bs-danger-rgb: 176, 42, 55;
 }
 
 /* Bootstrap 5.3 writes the button colours as literal hex into each variant's
@@ -81,6 +93,15 @@
   --bs-btn-active-bg: var(--brand-ink-700);
   --bs-btn-active-border-color: var(--brand-ink-700);
   --bs-btn-focus-shadow-rgb: 16, 36, 63;
+}
+
+.btn-outline-success {
+  --bs-btn-color: var(--brand-success);
+  --bs-btn-border-color: var(--brand-success);
+  --bs-btn-hover-bg: var(--brand-success);
+  --bs-btn-hover-border-color: var(--brand-success);
+  --bs-btn-active-bg: var(--brand-success);
+  --bs-btn-active-border-color: var(--brand-success);
 }
 
 .btn-outline-ink {
@@ -1089,7 +1110,7 @@ textarea {
 }
 
 .step-track__item.is-current { color: var(--brand-accent); font-weight: 600; }
-.step-track__item.is-done { color: #198754; }
+.step-track__item.is-done { color: var(--brand-success); }
 
 .step-track__marker {
   display: inline-flex;
@@ -1104,7 +1125,7 @@ textarea {
 }
 
 .step-track__item.is-current .step-track__marker { background-color: var(--brand-accent); border-color: var(--brand-accent); color: #fff; }
-.step-track__item.is-done .step-track__marker { background-color: #198754; border-color: #198754; color: #fff; }
+.step-track__item.is-done .step-track__marker { background-color: var(--brand-success); border-color: var(--brand-success); color: #fff; }
 
 .step-track__line {
   flex: 0 0 40px;
@@ -2294,8 +2315,8 @@ textarea {
   border-color: var(--bs-primary);
   box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .15);
 }
-.field__input.is-invalid { border-color: #dc3545; }
-.field__error { margin: .3125rem 0 0; font-size: .8125rem; color: #dc3545; }
+.field__input.is-invalid { border-color: var(--brand-danger); }
+.field__error { margin: .3125rem 0 0; font-size: .8125rem; color: var(--brand-danger); }
 .field__note { margin: .3125rem 0 0; font-size: .8125rem; color: #adb5bd; }
 
 /* Fields and the card preview beside each other, the card first on a narrow
@@ -2521,7 +2542,7 @@ textarea {
   font-size: .8125rem;
   color: #495057;
 }
-.rules__icon { flex: 0 0 .875rem; margin-top: .2rem; font-size: .6875rem; color: #198754; }
+.rules__icon { flex: 0 0 .875rem; margin-top: .2rem; font-size: .6875rem; color: var(--brand-success); }
 .rules__item--restricted { color: #6c757d; }
 .rules__item--restricted .rules__icon { color: #adb5bd; }
 
@@ -2537,7 +2558,7 @@ textarea {
 
 /* --- confirmation ------------------------------------------------------- */
 .done { text-align: center; padding: 1.5rem 0 2rem; }
-.done__icon { font-size: 2.75rem; color: #198754; }
+.done__icon { font-size: 2.75rem; color: var(--brand-success); }
 .done__title { margin: .875rem 0 .5rem; font-size: 1.75rem; font-weight: 700; }
 .done__lead { margin: 0 auto; max-width: 32rem; color: #495057; }
 .done__reference {
