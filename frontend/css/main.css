@@ -58,6 +58,13 @@
   --ink-muted:        #646D75;
   --ink-faint:        #8A9199;
 
+  /* The same scale does not run backwards. #adb5bd was removed above for
+     measuring 2.07 on white; on the #212529 footer it measures 7.43 and is
+     exactly right. A colour is not accessible or inaccessible -- a pairing
+     is. These two are for dark surfaces only. */
+  --ink-on-dark:      #ADB5BD;   /* 7.43 on #212529  -- quiet prose */
+  --ink-on-dark-lead: #DEE2E6;   /* 11.85 on #212529 -- figures, emphasis */
+
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
   --bs-primary: var(--brand-ink);
   --bs-primary-rgb: 16, 36, 63;
@@ -198,6 +205,22 @@
     transition-property: color, background-color, border-color, box-shadow, opacity, filter !important;
   }
 }
+
+/* ==========================================================================
+   #FOOTER COLOUR
+   ==========================================================================
+   The footer carried Bootstrap's .text-light-emphasis on .bg-dark. That token
+   is #495057 and is meant for light surfaces; against #212529 the whole info
+   column measured 1.89:1 -- present, but not readable. The utility sets its
+   colour with !important, so it had to come off the element rather than be
+   overridden here. Figures sit one step brighter than the prose around them,
+   which is what the monospace was reaching for with a pink that failed at
+   3.43. */
+.footer { color: var(--ink-on-dark); }
+/* `code` inside `ul.small` compounded to 10.7px -- these are figures somebody
+   is meant to read, so they inherit their list's size instead. */
+.footer code { color: var(--ink-on-dark-lead); font-size: 1em; }
+.footer .font-monospace { color: var(--ink-on-dark-lead); }
 
 /* ==========================================================================
    #GRID
