@@ -223,6 +223,17 @@
 .footer .font-monospace { color: var(--ink-on-dark-lead); }
 
 /* ==========================================================================
+   #FLOATING LABELS
+   ==========================================================================
+   Four equal passenger columns leave a floating label 97px. The qualifier in
+   these labels -- (12+), (2-11), in seat, on lap -- is the part that pushes
+   them over, and "Infant in seat" missed by 2px at Bootstrap's `small` size.
+   Shrinking the qualifier a shade fixes it for every field at once, which
+   beat shortening copy that had just been made clearer. All four labels had
+   the wrong `for` value before this, so none of them was reachable anyway. */
+.form-floating > label > small { font-size: .78em; }
+
+/* ==========================================================================
    #GRID
    ========================================================================== */
 .row {
