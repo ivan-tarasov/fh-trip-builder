@@ -1493,6 +1493,146 @@ textarea {
   white-space: nowrap;
 }
 
+/* --------------------------------------------------------------------------
+   Expanded flight detail
+   --------------------------------------------------------------------------
+   A rail with a node per airport, one block per segment. Departure sits above
+   arrival so the reading order is the travelling order, and the carrier block
+   spans both rows to its right rather than competing as a fifth column.
+   Times inherit the tabular figures set on body, so the two clock readings on
+   a segment line up under each other whatever the digits. */
+.legs {
+  border: 1px solid var(--line);
+  border-radius: var(--bs-border-radius-lg);
+  padding: 1rem 1.125rem;
+  margin-bottom: .75rem;
+  background-color: #fff;
+}
+
+.leg {
+  display: grid;
+  grid-template-columns: .875rem minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "rail depart carrier"
+    "rail arrive carrier";
+  column-gap: .875rem;
+  row-gap: .625rem;
+}
+
+/* The line runs the height of the segment; the nodes are pinned to the first
+   and last text rows rather than to the rail's own ends, so they sit level
+   with the times they belong to. */
+.leg__rail {
+  grid-area: rail;
+  position: relative;
+  justify-self: center;
+  width: 2px;
+  background-color: var(--line-strongest);
+  /* Inset to the centre of the first and last time, so the line starts and
+     ends at its nodes rather than at the edges of the grid row. */
+  margin: .55rem 0;
+}
+
+.leg__rail::before,
+.leg__rail::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 2px solid var(--brand-accent);
+}
+
+.leg__rail::before { top: 0; }
+/* Hollow on arrival, filled on departure -- the same read as a route bar. */
+.leg__rail::after  { top: 100%; background-color: var(--brand-accent); }
+
+.leg__stop { display: flex; flex-direction: column; min-width: 0; }
+.leg__stop:first-of-type { grid-area: depart; }
+.leg__stop:last-of-type  { grid-area: arrive; }
+
+.leg__time {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink-body);
+}
+
+.leg__place {
+  font-size: .8125rem;
+  color: var(--ink-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leg__code { color: var(--ink-muted); }
+
+.leg__date { font-size: .75rem; color: var(--ink-muted); }
+/* Landing on another day is the one thing here worth a second look. */
+.leg__date--next { color: var(--brand-danger); font-weight: 600; }
+
+.leg__carrier {
+  grid-area: carrier;
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  column-gap: .5rem;
+  align-content: center;
+  align-self: center;
+}
+
+.leg__logo { grid-row: 1 / span 3; align-self: start; border-radius: 50%; }
+.leg__airline {
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--ink-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leg__meta { font-size: .75rem; color: var(--ink-muted); }
+
+/* Sits between two segments, indented past the rail so the gap in the
+   journey is visible as a gap. */
+/* Hugs its own text rather than stretching, so the interruption in the rail
+   reads as the gap in the journey it describes. */
+.leg__layover {
+  display: inline-flex;
+  align-items: center;
+  margin: .5rem 0 .5rem 1.625rem;
+  padding: .3125rem .625rem;
+  border-radius: 999px;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  font-size: .75rem;
+  color: var(--ink-secondary);
+}
+
+.leg__layover i { margin-right: .375rem; color: var(--ink-muted); }
+
+.legs__total {
+  margin: .875rem 0 0;
+  padding-top: .75rem;
+  border-top: 1px solid var(--line);
+  font-size: .8125rem;
+  color: var(--ink-secondary);
+}
+
+/* Narrow: the carrier drops under its segment instead of squeezing beside it. */
+@media (max-width: 575.98px) {
+  .leg {
+    grid-template-columns: .875rem minmax(0, 1fr);
+    grid-template-areas:
+      "rail depart"
+      "rail arrive"
+      "rail carrier";
+  }
+  .leg__carrier { padding-top: .25rem; }
+}
+
 /* The card's action strip: what you can do with this flight, set apart from
    the flight itself. More controls will land on this row. */
 .flight-card__footer {

@@ -1,50 +1,62 @@
-{# Expanded detail for one direction: a row per segment, layover rows between,
-   and the total trip time. #}
-<div class="border rounded-3 p-3 mb-3">
+{# Expanded detail for one direction, as a vertical timeline rather than a row
+   of columns.
+
+   The collapsed card already draws the journey as a bar; dropping to a
+   four-column table here meant the *detailed* view carried less structure
+   than the summary above it. A rail with a node per airport puts departure
+   above arrival, spaces layovers between segments, and keeps working at two
+   and three stops instead of stacking four more anonymous rows.
+
+   What is gone: the Wi-Fi / entertainment / power / meal icons. They were
+   hardcoded, so every segment of every flight claimed all four -- the page
+   asserting amenities no data anywhere in this app knows about. They come
+   back when a supplier actually sends them. #}
+<div class="legs">
+    {# A date is only worth printing when it changes. On a same-day connection
+       the old markup repeated "Thu, 03 Sep" once per node; now the first
+       departure establishes the day and nothing restates it until midnight is
+       crossed -- which is also the one date that gets emphasis. #}
+    {% set shown_date = null %}
     {% for segment in direction.segments %}
-        <div class="row align-items-center gy-2">
-            <!-- Airline + flight number + leg duration -->
-            <div class="col-md-3 d-flex align-items-center gap-2">
-                <img src="{{ segment.logo_url }}" class="rounded-circle" style="max-height: 32px;" alt="{{ segment.carrier_name }}" />
-                <div>
-                    <div class="fw-semibold">{{ segment.carrier_name }}</div>
-                    <div class="small text-muted">{{ segment.flight_number }}</div>
-                    <div class="small text-muted">{{ segment.duration }}</div>
-                </div>
+        <div class="leg">
+            <div class="leg__rail" aria-hidden="true"></div>
+
+            <div class="leg__stop">
+                <span class="leg__time">{{ segment.depart_time }}</span>
+                <span class="leg__place">{{ segment.depart_city }} <span class="leg__code">{{ segment.depart_code }}</span></span>
+                {% if segment.depart_date != shown_date %}
+                    <span class="leg__date{{ shown_date is not null ? ' leg__date--next' : '' }}">{{ segment.depart_date }}</span>
+                    {% set shown_date = segment.depart_date %}
+                {% endif %}
             </div>
-            <!-- Times -->
-            <div class="col-4 col-md-2">
-                <div class="fw-semibold">{{ segment.depart_time }}</div>
-                <div class="fw-semibold">{{ segment.arrive_time }}</div>
+
+            <div class="leg__carrier">
+                <img class="leg__logo" src="{{ segment.logo_url }}" alt="" width="28" height="28" />
+                <span class="leg__airline">{{ segment.carrier_name }}</span>
+                <span class="leg__meta">{{ segment.flight_number }}</span>
+                <span class="leg__meta">{{ segment.duration }} · {{ segment.cabin }}</span>
             </div>
-            <!-- Dates -->
-            <div class="col-4 col-md-2 small text-muted">
-                <div>{{ segment.depart_date }}</div>
-                <div>{{ segment.arrive_date }}</div>
-            </div>
-            <!-- Airports -->
-            <div class="col-4 col-md-3">
-                <div>{{ segment.depart_city }} ({{ segment.depart_code }})</div>
-                <div>{{ segment.arrive_city }} ({{ segment.arrive_code }})</div>
-            </div>
-            <!-- Cabin + amenities -->
-            <div class="col-md-2 text-md-end">
-                <div class="small"><strong>Cabin:</strong> {{ segment.cabin }}</div>
-                <div class="text-primary">
-                    <i class="fas fa-wifi px-1" data-toggle="tooltip" title="Wi-Fi"></i>
-                    <i class="fas fa-tv px-1" data-toggle="tooltip" title="In-flight entertainment"></i>
-                    <i class="fas fa-plug px-1" data-toggle="tooltip" title="Power outlet"></i>
-                    <i class="fas fa-utensils px-1" data-toggle="tooltip" title="Meal"></i>
-                </div>
+
+            <div class="leg__stop">
+                <span class="leg__time">{{ segment.arrive_time }}</span>
+                <span class="leg__place">{{ segment.arrive_city }} <span class="leg__code">{{ segment.arrive_code }}</span></span>
+                {% if segment.arrive_date != shown_date %}
+                    <span class="leg__date leg__date--next">{{ segment.arrive_date }}</span>
+                    {% set shown_date = segment.arrive_date %}
+                {% endif %}
             </div>
         </div>
+
         {% if direction.layovers[loop.index0] is defined %}
-            <div class="border-top border-bottom my-2 py-2 small text-muted">
-                <i class="far fa-clock pe-1"></i>{{ direction.layovers[loop.index0].wait }} in {{ direction.layovers[loop.index0].airport_city }}
+            <div class="leg__layover">
+                <i class="far fa-clock" aria-hidden="true"></i>
+                {{ direction.layovers[loop.index0].wait }} in {{ direction.layovers[loop.index0].airport_city }}
             </div>
         {% endif %}
     {% endfor %}
-    <div class="border-top pt-2 mt-2 small">
-        <strong>Total trip time (including layovers):</strong> {{ direction.duration }}
-    </div>
+
+    {# On a direct flight this only repeats the transit time in the row above. #}
+    {% if direction.layovers is not empty %}
+        <p class="legs__total">Total including layovers: <strong>{{ direction.duration }}</strong></p>
+    {% endif %}
 </div>
