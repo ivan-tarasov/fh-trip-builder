@@ -65,6 +65,36 @@
   --bs-btn-active-border-color: var(--brand-accent);
 }
 
+/* Two families of action, so the colour carries meaning instead of just
+   shouting. Accent moves you forward through the booking -- choose a flight,
+   continue, pay. Ink adjusts what you are looking at -- search again, apply
+   filters, change sort. Before this, every one of them was the same fill, and
+   the results page had fifteen of them competing. */
+.btn-ink {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--brand-ink);
+  --bs-btn-border-color: var(--brand-ink);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--brand-ink-700);
+  --bs-btn-hover-border-color: var(--brand-ink-700);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--brand-ink-700);
+  --bs-btn-active-border-color: var(--brand-ink-700);
+  --bs-btn-focus-shadow-rgb: 16, 36, 63;
+}
+
+.btn-outline-ink {
+  --bs-btn-color: var(--brand-ink);
+  --bs-btn-border-color: var(--brand-ink);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--brand-ink);
+  --bs-btn-hover-border-color: var(--brand-ink);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--brand-ink);
+  --bs-btn-active-border-color: var(--brand-ink);
+  --bs-btn-focus-shadow-rgb: 16, 36, 63;
+}
+
 /* Same trap as the buttons: the pill's active background is a literal, so the
    trip-type tabs above the search form kept their Bootstrap blue. */
 .nav-pills {
@@ -1531,11 +1561,12 @@ textarea {
 
 .sort-bar__tab:hover { background-color: #e9ecef; }
 
-/* Brand blue, the same as the navbar and the Select button — a neutral dark
-   read as a different design language from the rest of the page. */
+/* Ink, not accent. This marks which sort is active -- it is state, not a step
+   forward -- and leaving the accent free for the Select buttons is what stops
+   the two reading as the same kind of thing. */
 .sort-bar__tab.is-current {
-  background-color: var(--brand-accent);
-  border-right-color: var(--brand-accent);
+  background-color: var(--brand-ink);
+  border-right-color: var(--brand-ink);
   color: #fff;
 }
 

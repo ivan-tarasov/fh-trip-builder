@@ -98,14 +98,14 @@
                 : (step == 2 ? 'Select return flight' : 'Select flight') %}
 
             {% if flight.select_url %}
-                <a href="{{ flight.select_url }}" class="btn btn-primary card-select">
+                <a href="{{ flight.select_url }}" class="btn btn-outline-primary card-select">
                     {{ select_label }}
                     <i class="fas fa-chevron-right ps-1"></i>
                 </a>
             {% else %}
                 {# A one-way search books from the list, so this is the last stop
                    before checkout rather than another step. #}
-                <a class="btn btn-primary card-select"
+                <a class="btn btn-outline-primary card-select"
                    href="/checkout?depart_itin={{ flight.outbound_ids|join(',') }}{% if flight.return_ids|length %}&amp;return_itin={{ flight.return_ids|join(',') }}{% endif %}">
                     Continue to checkout
                     <i class="fas fa-chevron-right ps-1"></i>
