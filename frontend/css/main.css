@@ -1,4 +1,97 @@
 /* ==========================================================================
+   #PALETTE
+   ==========================================================================
+   This app used to ship Bootstrap's stock palette untouched -- #0d6efd and
+   friends -- which is the single most recognisable "built on Bootstrap" tell
+   there is. Two colours replace it, both drawn from the product's own world
+   rather than from a swatch generator:
+
+     --brand-ink     deep navy. Chrome, structure, headings, data labels.
+                     Airline livery and the night departure board.
+     --brand-accent  burnt orange. Reserved for the ONE action per screen and
+                     for "you are here" state. Descended from --brand-flag,
+                     which this file already used to light up the hovered
+                     segment of a route.
+
+   The split is the point. Sixteen elements on the results page were the same
+   saturated blue, so nothing led. Ink carries the furniture; accent is spent
+   sparingly and therefore still means something.
+
+   Contrast is measured, not assumed. Every pairing below clears WCAG AA:
+     white on ink 15.6:1   white on accent 5.18:1   accent on white 5.18:1
+     white on ink-700 11.46:1   white on accent-700 7.32:1
+   --brand-flag is 3.15:1 on white -- fine for a graphic, never for text,
+   which is why it stays on the route bar and out of buttons. */
+:root {
+  --brand-ink:        #10243F;
+  --brand-ink-700:    #1B3A63;
+  --brand-accent:     #C2410C;
+  --brand-accent-700: #9A340A;
+  --brand-flag:       #F5622D;   /* graphic only -- fails AA for text */
+  --brand-tint:       #FDF0E9;
+  --brand-tint-edge:  #F6D3C2;
+
+  /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
+  --bs-primary: var(--brand-ink);
+  --bs-primary-rgb: 16, 36, 63;
+  --bs-primary-bg-subtle: var(--brand-tint);
+  --bs-primary-border-subtle: var(--brand-tint-edge);
+  --bs-primary-text-emphasis: var(--brand-accent-700);
+  --bs-link-color: var(--brand-accent);
+  --bs-link-color-rgb: 194, 65, 12;
+  --bs-link-hover-color: var(--brand-accent-700);
+}
+
+/* Bootstrap 5.3 writes the button colours as literal hex into each variant's
+   own custom properties, so overriding --bs-primary above does not reach a
+   single button. These have to be restated. */
+.btn-primary {
+  --bs-btn-bg: var(--brand-accent);
+  --bs-btn-border-color: var(--brand-accent);
+  --bs-btn-hover-bg: var(--brand-accent-700);
+  --bs-btn-hover-border-color: var(--brand-accent-700);
+  --bs-btn-active-bg: var(--brand-accent-700);
+  --bs-btn-active-border-color: var(--brand-accent-700);
+  --bs-btn-disabled-bg: var(--brand-accent);
+  --bs-btn-disabled-border-color: var(--brand-accent);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--brand-accent);
+  --bs-btn-border-color: var(--brand-accent);
+  --bs-btn-hover-bg: var(--brand-accent);
+  --bs-btn-hover-border-color: var(--brand-accent);
+  --bs-btn-active-bg: var(--brand-accent);
+  --bs-btn-active-border-color: var(--brand-accent);
+}
+
+/* Same trap as the buttons: the pill's active background is a literal, so the
+   trip-type tabs above the search form kept their Bootstrap blue. */
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--brand-accent);
+}
+
+/* ion.rangeSlider arrives from a CDN with its own blue (#006cfa) baked into
+   the irs--round skin, so the layover and price sliders knew nothing about
+   any of this. main.css loads after it, which is what makes these win. */
+.irs--round .irs-bar,
+.irs--round .irs-from,
+.irs--round .irs-to,
+.irs--round .irs-single {
+  background-color: var(--brand-accent);
+}
+
+.irs--round .irs-handle {
+  border-color: var(--brand-accent);
+}
+
+.irs--round .irs-from:before,
+.irs--round .irs-to:before,
+.irs--round .irs-single:before {
+  border-top-color: var(--brand-accent);
+}
+
+/* ==========================================================================
    #MOTION
    ==========================================================================
    Every duration and curve in this file used to be a literal, repeated at
@@ -945,8 +1038,8 @@ textarea {
 
 .details-toggle:not(.collapsed) {
   background-color: #e7f1ff;
-  border-color: #b6d4fe;
-  color: #0a58ca;
+  border-color: var(--brand-tint-edge);
+  color: var(--brand-accent-700);
 }
 
 .details-toggle .if-expanded { display: none; }
@@ -965,7 +1058,7 @@ textarea {
   color: #6c757d;
 }
 
-.step-track__item.is-current { color: #0d6efd; font-weight: 600; }
+.step-track__item.is-current { color: var(--brand-accent); font-weight: 600; }
 .step-track__item.is-done { color: #198754; }
 
 .step-track__marker {
@@ -980,7 +1073,7 @@ textarea {
   line-height: 1;
 }
 
-.step-track__item.is-current .step-track__marker { background-color: #0d6efd; border-color: #0d6efd; color: #fff; }
+.step-track__item.is-current .step-track__marker { background-color: var(--brand-accent); border-color: var(--brand-accent); color: #fff; }
 .step-track__item.is-done .step-track__marker { background-color: #198754; border-color: #198754; color: #fff; }
 
 .step-track__line {
@@ -1010,10 +1103,10 @@ textarea {
 }
 
 /* The assembled round trip, set apart from the option lists. */
-.trip-package { border: 2px solid var(--bs-primary); }
+.trip-package { border: 2px solid var(--brand-accent); }
 
 .trip-package__banner {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
   padding: .5rem 1rem;
   border-radius: calc(var(--bs-border-radius) - 2px) calc(var(--bs-border-radius) - 2px) 0 0;
@@ -1441,8 +1534,8 @@ textarea {
 /* Brand blue, the same as the navbar and the Select button — a neutral dark
    read as a different design language from the rest of the page. */
 .sort-bar__tab.is-current {
-  background-color: var(--bs-primary);
-  border-right-color: var(--bs-primary);
+  background-color: var(--brand-accent);
+  border-right-color: var(--brand-accent);
   color: #fff;
 }
 
@@ -1518,8 +1611,8 @@ textarea {
   margin: .75rem 0 .25rem;
   padding: .625rem .75rem;
   border-radius: .5rem;
-  background-color: #e7f1ff;
-  color: #0a58ca;
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
   font-size: .8125rem;
   line-height: 1.35;
 }
@@ -1843,7 +1936,7 @@ textarea {
    defined in two places that can drift. The sidebar already needs JS for its
    sliders, so one mechanism it is. */
 .filter-pill.is-on {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
 }
 
@@ -1893,7 +1986,7 @@ textarea {
 /* Set, so it reads as a filter you have applied rather than a reading of the
    range on offer. */
 .filter-slider__value.is-on {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
   padding-right: .2rem;
 }
@@ -1989,7 +2082,7 @@ textarea {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .show-more__button:hover {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
 }
 /* Mid-request the label already says so; dimming it stops a second click
@@ -2055,7 +2148,7 @@ textarea {
   transform: none;
 }
 .to-top:hover {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
 }
 .to-top[hidden] { display: none; }
@@ -2081,7 +2174,7 @@ textarea {
   margin-bottom: 1.25rem;
 }
 .checkout__title { margin: 0; font-size: 1.75rem; font-weight: 700; color: #212529; }
-.checkout__change { color: var(--bs-primary); font-weight: 500; text-decoration: none; }
+.checkout__change { color: var(--brand-accent); font-weight: 500; text-decoration: none; }
 .checkout__change:hover { text-decoration: underline; }
 
 .checkout__alert {
@@ -2134,7 +2227,7 @@ textarea {
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 50%;
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
   font-size: .8125rem;
 }
@@ -2300,7 +2393,7 @@ textarea {
   width: 1.125rem;
   height: 1.125rem;
   margin-top: .1rem;
-  accent-color: var(--bs-primary);
+  accent-color: var(--brand-accent);
 }
 .accept--invalid { color: #842029; }
 
@@ -2309,7 +2402,7 @@ textarea {
   width: 100%;
   border: 0;
   border-radius: .625rem;
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   padding: .8125rem 1rem;
   margin-top: 1.25rem;
   color: #fff;
@@ -2530,7 +2623,7 @@ textarea {
   text-decoration: none;
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
-.review__change:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
+.review__change:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
 
 .review__total { margin: 0 0 .875rem; }
 .rules__more { margin: .875rem 0 0; font-size: .75rem; color: #adb5bd; }

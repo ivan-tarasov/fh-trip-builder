@@ -18,19 +18,24 @@
         border: unset;
     }
 
+    /* The emphasis used to run backwards: the unselected tab was solid black
+       -- the highest-contrast thing in the hero -- while the selected one was
+       near-white. The selected tab now carries the accent and the unselected
+       recedes into translucent ink over the photograph. */
     #nav-tab .nav-link {
-        background-color: var(--bs-black);
-        color: var(--bs-light);
+        background-color: rgba(16, 36, 63, .7);
+        color: #fff;
     }
 
     #nav-tab .nav-link:hover {
-        background-color: var(--bs-secondary-bg);
-        color: var(--bs-emphasis-color)
+        background-color: rgba(16, 36, 63, .85);
+        color: #fff;
     }
 
-    #nav-tab .active {
-        background-color: var(--bs-tertiary-bg);
-        color: var(--bs-emphasis-color);
+    #nav-tab .active,
+    #nav-tab .nav-link.active:hover {
+        background-color: var(--brand-accent);
+        color: #fff;
     }
 
     .container-between {
