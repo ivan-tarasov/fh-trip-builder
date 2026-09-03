@@ -1,5 +1,9 @@
 {% extends 'layout.html.twig' %}
 
+{# Step 3 is no longer a list of options, so naming the route there would
+   describe the wrong thing. #}
+{% block title %}{% if step == 3 %}Review your trip{% else %}{{ depart_city }} to {{ arrive_city }}{% endif %}{% endblock %}
+
 {% block content %}
 {% include 'search/search-form-up.html.twig' %}
 <div class="container py-5">
