@@ -18,6 +18,7 @@ use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\SearchRepository;
+use TripBuilder\CabinClass;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 use TripBuilder\View\ItineraryPresenter;
@@ -136,6 +137,7 @@ class SearchController extends AbstractController
                 returnDate: $this->get[self::GET_RETURN] ?? '',
                 adultNum: 1, // FIXME: now we provide only 1 adult count
                 childNum: 0, // FIXME: now we provide only 0 child count
+                cabin: CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
                 filters: FlightFilters::fromQuery($this->get),
                 returnFilters: FlightFilters::fromQuery($this->get, FlightFilters::RETURN_PREFIX),
             );
@@ -181,6 +183,9 @@ class SearchController extends AbstractController
                 'triptype' => $this->get[self::GET_TRIPTYPE],
                 'depart_code' => $this->get[self::GET_FROM],
                 'arrive_code' => $this->get[self::GET_TO],
+                // So the results page's own form comes back showing the cabin
+                // that produced these results.
+                'cabin' => CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
                 'depart_city' => $this->data->depart,
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],
@@ -287,7 +292,10 @@ class SearchController extends AbstractController
                 self::GET_DEPART => $search[self::GET_DEPART],
                 self::GET_RETURN => $search[self::GET_RETURN],
                 self::GET_TRIPTYPE => $search[self::GET_TRIPTYPE],
-                self::GET_CLASS => 'economy', // FIXME: we need real class here
+                // The search table stores no class column, so a link shared by
+                // hash resolves to the form's default rather than the cabin
+                // whoever saved it had chosen.
+                self::GET_CLASS => CabinClass::Economy->value,
             ]);
 
             echo new TwigRenderer()->render('search/redirect.html.twig', [

@@ -54,8 +54,6 @@ final readonly class FlightFinder
     private const string RESPONSE_PRICE_TAX = 'price_tax';
     private const string RESPONSE_RATING = 'rating';
 
-    private const string CABIN_OUTBOUND = 'Y'; // FIXME: we need to add the real one in DB
-    private const string CABIN_RETURN = 'X'; // FIXME: we need to add the real one in DB
 
     public function __construct(private Connection $connection) {}
 
@@ -156,7 +154,7 @@ final readonly class FlightFinder
             self::RESPONSE_PRICE_TAX => round((float) $itinerary['price_tax'] + $addTax, 2),
             self::RESPONSE_ITINERARY => $this->mapItinerary(
                 $itinerary,
-                $step === 2 ? self::CABIN_RETURN : self::CABIN_OUTBOUND,
+                $query->cabin->code(),
             ),
         ], $result['rows']);
 
@@ -182,10 +180,10 @@ final readonly class FlightFinder
             // Step 1 totals assume the cheapest return, so they are a floor;
             // everywhere else the price is exact for the trip being booked.
             'price_mode' => $step === 1 ? 'from' : 'total',
-            'selected' => $outbound === null ? null : $this->mapItinerary($outbound, self::CABIN_OUTBOUND),
+            'selected' => $outbound === null ? null : $this->mapItinerary($outbound, $query->cabin->code()),
             'selected_price' => $outbound === null ? null : round((float) $outbound['price_base'] + (float) $outbound['price_tax'], 2),
             'selected_ids' => $outbound === null ? [] : $outboundIds,
-            'selected_return' => $return === null ? null : $this->mapItinerary($return, self::CABIN_RETURN),
+            'selected_return' => $return === null ? null : $this->mapItinerary($return, $query->cabin->code()),
             'selected_return_price' => $return === null ? null : round((float) $return['price_base'] + (float) $return['price_tax'], 2),
             'selected_return_ids' => $return === null ? [] : $returnIds,
             'package_price' => $packagePrice,
@@ -238,7 +236,9 @@ final readonly class FlightFinder
 
         new AirlineRepository($this->connection)->recordBooking(...$carriers);
 
-        return array_map(fn(array $leg): array => $this->mapLeg($leg, self::CABIN_OUTBOUND) + [
+        // Rebuilt from stored leg ids: there is no search here, and no cabin
+        // stored against a booking, so this reports none rather than a guess.
+        return array_map(fn(array $leg): array => $this->mapLeg($leg, null) + [
             self::RESPONSE_PRICE_BASE => (float) $leg['price_base'],
             self::RESPONSE_PRICE_TAX => (float) $leg['price_tax'],
         ], $legs);
@@ -262,7 +262,8 @@ final readonly class FlightFinder
         }
 
         return [
-            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, self::CABIN_OUTBOUND),
+            // As above: a saved itinerary carries no cabin.
+            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, null),
             self::RESPONSE_PRICE_BASE => (float) $itinerary['price_base'],
             self::RESPONSE_PRICE_TAX => (float) $itinerary['price_tax'],
         ];
@@ -286,7 +287,7 @@ final readonly class FlightFinder
      * @param array<string, mixed> $itinerary
      * @return array<string, mixed>
      */
-    private function mapItinerary(array $itinerary, string $cabin): array
+    private function mapItinerary(array $itinerary, ?string $cabin): array
     {
         $legs = $itinerary['legs'];
 
@@ -320,7 +321,7 @@ final readonly class FlightFinder
      * @param array<string, mixed> $leg
      * @return array<string, mixed>
      */
-    private function mapLeg(array $leg, string $cabin): array
+    private function mapLeg(array $leg, ?string $cabin): array
     {
         return [
             self::RESPONSE_FLIGHT_ID => $leg['id'],
