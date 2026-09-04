@@ -10,6 +10,10 @@
            value="{{ form[name]|default('') }}"
            {% if placeholder is defined %}placeholder="{{ placeholder }}"{% endif %}
            {% if autocomplete is defined %}autocomplete="{{ autocomplete }}"{% endif %}
+           {# Mirrors the server's limit for this field, so the browser stops
+              the typing rather than the INSERT stopping the booking. The
+              server still checks: an attribute is a courtesy, not a guard. #}
+           {% if max_lengths[name] is defined %}maxlength="{{ max_lengths[name] }}"{% endif %}
            {% if attrs is defined %}{{ attrs|raw }}{% endif %}
            {{ errors[name] is defined ? 'aria-invalid="true"' : '' }} />
     {% if errors[name] is defined %}

@@ -3381,6 +3381,121 @@ textarea {
   border-top: 1px solid var(--surface-sunken);
 }
 
+/* Searchable select. The native <select> stays in the DOM because it is what
+   submits, so it is taken out of the layout rather than out of the document --
+   display:none would still submit, but this keeps it findable for scripts and
+   honest about why it is there. */
+.combo { position: relative; }
+
+.combo__native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.combo__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + .25rem);
+  left: 0;
+  right: 0;
+  /* Ten-ish rows: enough to scan, short enough that the field below is still
+     on screen while the list is open. */
+  max-height: 17rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: .25rem;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+  border-radius: .5rem;
+  background-color: #fff;
+  box-shadow: 0 .5rem 1.5rem -.5rem rgba(16, 36, 63, .25);
+}
+
+.combo__option {
+  padding: .4rem .6rem;
+  border-radius: .375rem;
+  font-size: .9375rem;
+  color: var(--ink-body);
+  cursor: pointer;
+}
+
+.combo__option:hover,
+.combo__option.is-active {
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+}
+
+/* The one already chosen, so reopening the list shows where you are. */
+.combo__option[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--brand-accent-700);
+}
+
+.combo__empty {
+  padding: .5rem .6rem;
+  font-size: .875rem;
+  color: var(--ink-muted);
+}
+
+/* The test-data bar above the checkout form. Deliberately not styled like the
+   form's own controls: it is scaffolding for trying the flow, not a step in
+   it, so it reads as an aside rather than as the first thing to fill in. */
+.checkout__autofill {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .875rem;
+  margin-bottom: 1.25rem;
+  padding: .75rem .875rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: .5rem;
+  background-color: var(--surface);
+}
+
+.checkout__autofill-button {
+  display: inline-flex;
+  align-items: center;
+  padding: .35rem .85rem;
+  border: 1px solid var(--brand-accent);
+  border-radius: 999px;
+  background-color: #fff;
+  color: var(--brand-accent-700);
+  font-size: .875rem;
+  font-weight: 600;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+
+.checkout__autofill-button:hover,
+.checkout__autofill-button:focus-visible {
+  background-color: var(--brand-accent);
+  color: #fff;
+}
+
+.checkout__autofill-button:active { transform: scale(.97); }
+
+.checkout__autofill-note {
+  flex: 1 1 16rem;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+}
+
+.checkout__autofill-note code {
+  padding: .05rem .3rem;
+  border-radius: .25rem;
+  background-color: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: .9em;
+}
+
 .review__total { margin: 0 0 .875rem; }
 .rules__more { margin: .875rem 0 0; font-size: .75rem; color: var(--ink-muted); }
 

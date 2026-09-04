@@ -10,6 +10,7 @@ use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\CabinClass;
+use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Service\FlightFinder;
@@ -38,6 +39,25 @@ class CheckoutController extends AbstractController
     // A card number that always declines, so the unhappy path can be walked
     // without a gateway. Everything else that passes a Luhn check approves.
     private const string DECLINE_CARD = '4000000000000002';
+
+    /**
+     * Longest each field may be, matching the column it is stored in.
+     *
+     * Without these the form validated a minimum and no maximum, so a name of
+     * 65 characters passed every rule and then failed the INSERT: MySQL runs
+     * strict, so over-long data is an error rather than a truncation, and the
+     * booking died with a 500 after the buyer had filled in the whole form.
+     *
+     * Keyed by form field; the comment on each names the column that sets it.
+     */
+    private const array MAX_LENGTHS = [
+        'email' => 190,            // bookings.contact_email
+        'phone' => 32,             // bookings.contact_phone
+        'first_name' => 64,        // bookings.passenger_first
+        'last_name' => 64,         // bookings.passenger_last
+        'card_name' => 64,         // not stored, but a name is a name
+        'billing_postcode' => 32,  // not stored either
+    ];
 
     private const array GENDERS = ['F' => 'Female', 'M' => 'Male', 'X' => 'Another / prefer not to say'];
 
@@ -89,6 +109,10 @@ class CheckoutController extends AbstractController
         echo new TwigRenderer()->renderPage('checkout/view.html.twig', [
             'trip' => $trip,
             'genders' => self::GENDERS,
+            'countries' => new CountryRepository($this->connection())->all(),
+            // The same limits the validator enforces, so the inputs can stop
+            // the typing rather than the form failing after it.
+            'max_lengths' => self::MAX_LENGTHS,
             'errors' => $errors,
             'form' => $submitted,
             'csrf_token' => Csrf::token(),
@@ -384,6 +408,15 @@ class CheckoutController extends AbstractController
 
         if ($form['accept_rules'] !== '1') {
             $errors['accept_rules'] = 'The fare rules have to be accepted before booking.';
+        }
+
+        // Length last, so a field that is wrong in a more interesting way says
+        // so first. Anything over its column is refused here rather than at the
+        // INSERT, where it becomes a 500 on a form the buyer has just filled in.
+        foreach (self::MAX_LENGTHS as $key => $limit) {
+            if (!isset($errors[$key]) && mb_strlen($form[$key]) > $limit) {
+                $errors[$key] = sprintf('%d characters at most.', $limit);
+            }
         }
 
         // Last, and only once the card itself is well formed: a decline is the
