@@ -1101,6 +1101,21 @@ input[type=number]::-webkit-outer-spin-button {
   background-color: var(--bs-danger-text);
 }
 
+/* The cabin a popular search was run in, shown only when it is not economy.
+   Two rows in that list can now differ by nothing else, so without it the
+   same route and dates would appear twice with no way to tell them apart. */
+.search-cabin {
+  display: inline-block;
+  padding: .05rem .4rem;
+  border: 1px solid var(--brand-tint-edge);
+  border-radius: .25rem;
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    #AIRLINES
    ========================================================================== */

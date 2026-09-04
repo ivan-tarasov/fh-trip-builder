@@ -481,15 +481,4 @@ class CheckoutController extends AbstractController
         // above splits on them either way.
         return '/checkout?' . str_replace('%2C', ',', http_build_query($query));
     }
-
-    private function bounce(string $url): void
-    {
-        if (!headers_sent()) {
-            header('Location: ' . $url, true, 302);
-
-            return;
-        }
-
-        printf('<script>window.location.replace(%s);</script>', json_encode($url));
-    }
 }

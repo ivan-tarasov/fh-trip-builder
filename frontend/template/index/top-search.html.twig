@@ -16,6 +16,7 @@
         </div>
         <div class="col-lg-3">
             {{ search.depart|date('D, F j') }}{% if search.return %} – {{ search.return|date('D, F j') }}{% endif %}
+            {% if search.class_label %}<span class="search-cabin">{{ search.class_label }}</span>{% endif %}
         </div>
         <div class="col-lg-2 text-end">
             {{ search.search_count|number_format }} searches

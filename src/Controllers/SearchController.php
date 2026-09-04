@@ -292,16 +292,25 @@ class SearchController extends AbstractController
         if ($this->get['hash']) {
             $search = new SearchRepository($this->connection())->findByHash($this->get['hash']);
 
+            // A hash nobody recorded resolves to nothing. Reading the columns
+            // off it anyway built a redirect to an empty search.
+            if ($search === null) {
+                $this->bounce('/');
+
+                return;
+            }
+
             $search_params = http_build_query([
                 self::GET_FROM => $search[self::GET_FROM . '_code'],
                 self::GET_TO => $search[self::GET_TO . '_code'],
                 self::GET_DEPART => $search[self::GET_DEPART],
                 self::GET_RETURN => $search[self::GET_RETURN],
                 self::GET_TRIPTYPE => $search[self::GET_TRIPTYPE],
-                // The search table stores no class column, so a link shared by
-                // hash resolves to the form's default rather than the cabin
-                // whoever saved it had chosen.
-                self::GET_CLASS => CabinClass::Economy->value,
+                // Rows recorded before the column existed default to economy,
+                // which is the cabin they were all searched in.
+                self::GET_CLASS => CabinClass::fromRequest(
+                    is_string($search[self::GET_CLASS] ?? null) ? $search[self::GET_CLASS] : null,
+                )->value,
             ]);
 
             echo new TwigRenderer()->render('search/redirect.html.twig', [
@@ -324,15 +333,18 @@ class SearchController extends AbstractController
             return;
         }
 
-        // Calculating search hash
-        $hash = md5(sprintf(
-            '%s:%s:%s:%s:%s',
+        $cabin = CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null);
+
+        // The cabin is part of what identifies a search, so it is part of the
+        // hash — see SearchRepository::hashFor().
+        $hash = SearchRepository::hashFor(
             $this->get[self::GET_FROM],
             $this->get[self::GET_TO],
             $this->get[self::GET_DEPART],
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
-        ));
+            $cabin,
+        );
 
         // Insert or update search
         new SearchRepository($this->connection())->record(
@@ -344,6 +356,7 @@ class SearchController extends AbstractController
             $this->get[self::GET_DEPART],
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
+            $cabin,
         );
     }
 
