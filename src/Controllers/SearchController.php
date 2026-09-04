@@ -198,12 +198,12 @@ class SearchController extends AbstractController
                 // Sidebar
                 'form_url' => sprintf(
                     '%s?%s',
-                    $this->request->path(),
+                    $this->searchPath(),
                     $this->queryString(array_merge($this->get, [self::GET_SHOWN => null])),
                 ),
                 // Filter forms submit with GET, so they post to the bare path
                 // and carry the rest of the search as hidden fields.
-                'form_path' => $this->request->path(),
+                'form_path' => $this->searchPath(),
                 'session_sort' => $this->sort(),
                 'default_sort' => self::DEFAULT_SORT,
                 // Sorting moved out of the sidebar and above the results, where
@@ -936,7 +936,7 @@ class SearchController extends AbstractController
 
         return sprintf(
             '%s?%s',
-            $this->request->path(),
+            $this->searchPath(),
             $this->queryString(array_merge($kept, [self::GET_SHOWN => null])),
         );
     }
@@ -1033,7 +1033,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            $this->request->path(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
                 self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
@@ -1051,7 +1051,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            $this->request->path(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_RETURN_ITIN => implode(',', $ids),
                 self::GET_SHOWN => null,
@@ -1152,7 +1152,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            $this->request->path(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [self::GET_SHOWN => $shown])),
         );
     }
@@ -1183,6 +1183,20 @@ class SearchController extends AbstractController
     private function isFragment(): bool
     {
         return $this->request->isFragment();
+    }
+
+    /**
+     * Where this page lives.
+     *
+     * Every link this controller builds is this same page with a different
+     * query string, so they take the canonical path rather than the one the
+     * visitor happened to arrive on. Otherwise reaching `/search` renders links
+     * to `/search` while the form above them posts to `/search/` -- the same
+     * destination spelled two ways on one screen.
+     */
+    private function searchPath(): string
+    {
+        return (string) Config::get('site.paths.search', '/search/');
     }
 
     /**
@@ -1333,7 +1347,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            $this->request->path(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_SORT => $sort === self::DEFAULT_SORT ? null : $sort,
                 self::GET_SHOWN => null,
