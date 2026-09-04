@@ -38,9 +38,6 @@
             <div class="leg__carrier">
                 <img class="leg__logo" src="{{ segment.logo_url }}" alt="" width="28" height="28" />
                 <span class="leg__airline">{{ segment.carrier_name }}</span>
-                {# The aircraft used to be appended here. It moved to the facts
-                   row below, which says the same thing and adds the body type,
-                   so keeping both printed the type twice per segment. #}
                 <span class="leg__meta">{{ segment.flight_number }}</span>
                 {# Cabin is omitted rather than guessed when the code does not
                    resolve -- see CABIN_NAMES in ItineraryPresenter. #}
