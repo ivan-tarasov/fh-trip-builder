@@ -1998,7 +1998,10 @@ textarea {
 .leg__layover {
   display: inline-flex;
   align-items: center;
-  margin: .5rem 0 .5rem 1.625rem;
+  /* The gap in the journey wants to read as a gap. At .5rem the chip sat tight
+     against the facts row above it and the next departure below, so the break
+     in the rail was the only thing separating one segment from the next. */
+  margin: 1.125rem 0 1.125rem 1.625rem;
   padding: .3125rem .625rem;
   border-radius: 999px;
   background-color: var(--surface);

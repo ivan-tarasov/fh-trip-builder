@@ -52,6 +52,8 @@ final readonly class FlightFinder
     private const string RESPONSE_AIRCRAFT_WIDEBODY = 'aircraft_widebody';
     private const string RESPONSE_SEAT_LAYOUT = 'seat_layout';
     private const string RESPONSE_SEAT_PITCH = 'seat_pitch';
+    private const string RESPONSE_SEAT_WIDTH = 'seat_width';
+    private const string RESPONSE_AIRCRAFT_SEATS = 'aircraft_seats';
     private const string RESPONSE_SEAT_FLAT_BED = 'seat_flat_bed';
     private const string RESPONSE_DISTANCE = 'distance';
     private const string RESPONSE_DURATION = 'duration';
@@ -376,6 +378,12 @@ final readonly class FlightFinder
             self::RESPONSE_SEAT_LAYOUT => $leg['seat_layout'] ?? null,
             self::RESPONSE_SEAT_PITCH => isset($leg['seat_pitch'])
                 ? (int) $leg['seat_pitch']
+                : null,
+            self::RESPONSE_SEAT_WIDTH => isset($leg['seat_width'])
+                ? (float) $leg['seat_width']
+                : null,
+            self::RESPONSE_AIRCRAFT_SEATS => isset($leg['aircraft_seats'])
+                ? (int) $leg['aircraft_seats']
                 : null,
             self::RESPONSE_SEAT_FLAT_BED => isset($leg['seat_flat_bed'])
                 ? (bool) $leg['seat_flat_bed']

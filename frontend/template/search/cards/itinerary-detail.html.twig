@@ -56,24 +56,30 @@
                 {% endif %}
             </div>
 
-            {% if segment.aircraft or segment.seat_layout or segment.seat_pitch %}
+            {% if segment.aircraft or segment.seat_layout or segment.seat_pitch or segment.seat_width %}
                 <ul class="leg__facts">
                     {% if segment.aircraft %}
                         <li class="leg__fact">
                             <i class="fas fa-plane leg__fact-icon" aria-hidden="true"></i>
-                            {{ segment.aircraft }}{% if segment.aircraft_body %} <span class="leg__fact-note">({{ segment.aircraft_body }})</span>{% endif %}
+                            <span>{{ segment.aircraft }}{% if segment.aircraft_body %} <span class="leg__fact-note">({{ segment.aircraft_body }})</span>{% endif %}{% if segment.aircraft_seats %}<span class="leg__fact-note">, {{ segment.aircraft_seats }} seats</span>{% endif %}</span>
                         </li>
                     {% endif %}
                     {% if segment.seat_layout %}
                         <li class="leg__fact">
                             <i class="fas fa-grip leg__fact-icon" aria-hidden="true"></i>
-                            {{ segment.seat_layout }} seat layout
+                            <span>{{ segment.seat_layout }} seat layout</span>
                         </li>
                     {% endif %}
                     {% if segment.seat_pitch %}
                         <li class="leg__fact">
                             <i class="fas fa-up-right-and-down-left-from-center leg__fact-icon" aria-hidden="true"></i>
-                            {{ segment.seat_pitch }} seat pitch{% if segment.seat_flat_bed %}, lies flat{% endif %}
+                            <span>{{ segment.seat_pitch }} seat pitch{% if segment.seat_flat_bed %}, lies flat{% endif %}</span>
+                        </li>
+                    {% endif %}
+                    {% if segment.seat_width %}
+                        <li class="leg__fact">
+                            <i class="fas fa-left-right leg__fact-icon" aria-hidden="true"></i>
+                            <span>{{ segment.seat_width }} seat width</span>
                         </li>
                     {% endif %}
                 </ul>

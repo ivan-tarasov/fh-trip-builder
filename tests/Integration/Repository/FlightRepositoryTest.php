@@ -26,7 +26,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
         'dep_code', 'dep_name', 'dep_country', 'dep_city', 'dep_datetime',
         'arr_code', 'arr_name', 'arr_country', 'arr_city', 'arr_datetime',
         'aircraft_code', 'aircraft_name', 'aircraft_widebody',
-        'seat_layout', 'seat_pitch', 'seat_flat_bed',
+        'seat_layout', 'seat_pitch', 'seat_width', 'seat_flat_bed', 'aircraft_seats',
         'distance', 'duration', 'price_base', 'price_tax', 'rating',
     ];
 

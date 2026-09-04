@@ -1360,7 +1360,17 @@ final readonly class FlightRepository
             // only cabin whose seat the traveller is being sold.
             'cabin_fit.layout AS seat_layout',
             'cabin_fit.pitch_inches AS seat_pitch',
+            'cabin_fit.width_inches AS seat_width',
             'cabin_fit.is_flat_bed AS seat_flat_bed',
+            // Capacity of the whole aircraft, not of the cabin being priced --
+            // it belongs with the body type as a sense of the frame's size.
+            // Correlated rather than joined: aircraft_cabins is 74 rows and a
+            // page hydrates a few dozen legs, so this costs nothing and keeps
+            // the cabin join above meaning one thing.
+            sprintf(
+                '(SELECT SUM(seats) FROM %s WHERE aircraft = flight.aircraft) AS aircraft_seats',
+                Table::AircraftCabins->value,
+            ),
             'flight.distance AS distance',
             'flight.duration AS duration',
             $this->fare('flight', 'price_base', $cabin) . ' AS price_base',

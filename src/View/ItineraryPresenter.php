@@ -86,7 +86,16 @@ class ItineraryPresenter
                 'seat_pitch' => isset($segment->seat_pitch) && $segment->seat_pitch > 0
                     ? sprintf('%d cm', (int) round($segment->seat_pitch * 2.54))
                     : null,
+                'seat_width' => isset($segment->seat_width) && $segment->seat_width > 0
+                    ? sprintf('%d cm', (int) round($segment->seat_width * 2.54))
+                    : null,
                 'seat_flat_bed' => (bool) ($segment->seat_flat_bed ?? false),
+                // How many seats the frame carries in total, across every cabin
+                // -- a different question from the layout beside it, which is
+                // about the row this ticket sits in.
+                'aircraft_seats' => isset($segment->aircraft_seats) && $segment->aircraft_seats > 0
+                    ? number_format((int) $segment->aircraft_seats)
+                    : null,
                 'depart_time' => date('H:i', strtotime($segment->depart->date_time)),
                 'depart_date' => date('D, d M', strtotime($segment->depart->date_time)),
                 'depart_city' => $segment->depart->airport_city,
