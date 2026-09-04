@@ -34,9 +34,14 @@ class Generate extends AbstractCommand
     private const int FLIGHTS_COUNT = 10000;
     private const int NUMBERS_POOL = 9999;
 
-    private const array DURATION_ADD_KM = [10, 55];
+    // Minutes of taxi, climb and descent on top of the cruise, which is what
+    // the aircraft's cruise speed alone does not account for.
+    private const array DURATION_ADD_MINUTES = [10, 55];
     private const array DATE_ADD_DAYS = [1, 90];
-    private const array FLIGHT_SPEED_KMH = [700, 900];
+
+    // Only reached when no type could be drawn, which the route filter should
+    // already have prevented -- a leg nothing can fly is not scheduled.
+    private const int FALLBACK_CRUISE_KMH = 850;
 
     private const string PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory%\n %message%";
     private const string PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>';
@@ -66,9 +71,29 @@ class Generate extends AbstractCommand
     // size would. Keeps short-haul frequent without starving long-haul.
     private const int ROUTE_DISTANCE_HALVING_KM = 2000;
 
-    // How fast an aircraft's odds fall as its range overshoots the leg: at this
-    // much spare range a type is half as likely as one sized exactly right.
-    private const int AIRCRAFT_FIT_HALVING_KM = 3000;
+    // How sharply a type is favoured for using more of its range. The draw is
+    // weighted by utilisation -- the share of the aircraft's usable range the
+    // leg actually needs -- raised to this power, so a 500 km hop strongly
+    // prefers a turboprop over a frame built to cross an ocean.
+    //
+    // Replaces a flat "spare range" falloff, which was far too shallow to hold
+    // back a long tail: with fourteen widebodies all mildly penalised on a
+    // short leg, they collectively outdrew the fourteen narrowbodies and took
+    // 30% of short-haul.
+    private const int AIRCRAFT_FIT_EXPONENT = 2;
+
+    // Share of its published range a narrowbody is actually scheduled over.
+    // The book figure assumes a light payload; a full single-aisle does not
+    // make it, and long-haul narrowbody service is rare in practice. Widebodies
+    // are flown much closer to their limit, so they keep the published figure.
+    private const float NARROWBODY_RANGE_SHARE = 0.75;
+
+    // Longest leg the network will schedule as a nonstop, roughly the longest
+    // scheduled nonstop in the world. Beyond this a traveller connects, which
+    // is what happens in reality -- and it stops the generator inventing legs
+    // no aircraft could operate, which is where ~12k unflyable flights with no
+    // aircraft assigned at all came from.
+    private const int MAX_NONSTOP_KM = 15300;
 
     private const int INSERT_BATCH_SIZE = 500;
 
@@ -136,7 +161,7 @@ class Generate extends AbstractCommand
         // Aircraft types, longest-legged last so a lookup can stop at the first
         // one that cannot reach (see pickAircraft).
         $fleet = $this->connection()->fetchAll(
-            'SELECT code, max_range_km FROM ' . Table::Aircraft->value
+            'SELECT code, max_range_km, cruise_speed_kmh, is_widebody FROM ' . Table::Aircraft->value
             . ' WHERE max_range_km > 0 ORDER BY max_range_km ASC',
         );
 
@@ -183,14 +208,23 @@ class Generate extends AbstractCommand
         // routeDistribution): each flight is then a single weighted draw that
         // yields the route, the airline flying it, and the distance already
         // measured.
+        // No route longer than the fleet can actually fly, and none longer than
+        // anyone schedules nonstop.
+        $maxLegKm = min(
+            self::MAX_NONSTOP_KM,
+            (int) max(array_map($this->usableRange(...), $fleet)),
+        );
+
         [$routes, $cumulative, $distances, $carriers, $totalWeight] =
-            $this->routeDistribution($airports, $airlines);
+            $this->routeDistribution($airports, $airlines, $maxLegKm);
 
         if ($routes === []) {
             $this->io->error('No airline serves any route in this network — check airline hubs.');
 
             return Command::INVALID;
         }
+
+        $this->formatOutput('Longest nonstop scheduled', number_format($maxLegKm) . ' km', 'comment');
 
         // Show the progress bar
         $progressBar = new ProgressBar($output, $flightsToAdd);
@@ -218,8 +252,16 @@ class Generate extends AbstractCommand
             // Already measured while building the distribution.
             $distance = $distances[$pick];
 
-            // Calculating flight duration between airports
-            $duration = $this->getDurationFromDistance($distance) + Helper::random(self::DURATION_ADD_KM);
+            // The type is settled first: it sets how fast the leg is flown and
+            // which cabins are on sale, so both follow from it rather than
+            // being drawn independently.
+            $type = $this->pickAircraft($fleet, $distance);
+            $aircraft = $type === null ? null : (string) $type['code'];
+
+            $duration = $this->getDurationFromDistance(
+                $distance,
+                $type === null ? self::FALLBACK_CRUISE_KMH : (int) $type['cruise_speed_kmh'],
+            ) + Helper::random(self::DURATION_ADD_MINUTES);
 
             // Render departure date and time (UNIX timestamps for random day)
             $departureDateTime = date(
@@ -237,10 +279,6 @@ class Generate extends AbstractCommand
             // repriced ones cannot disagree.
             $priceBase = FarePricing::base($distance);
             $priceTax = FarePricing::tax($priceBase);
-
-            // Drawn before the row is built: the cabins on sale depend on which
-            // frame flies the leg, so the type has to be settled first.
-            $aircraft = $this->pickAircraft($fleet, $distance);
 
             $flights[] = new Flight(
                 airline: $airline,
@@ -354,11 +392,17 @@ class Generate extends AbstractCommand
      * inside its home country, which is what stops Emirates flying Montreal to
      * Toronto. A route no carrier serves simply never appears.
      *
+     * A route longer than `$maxLegKm` is left out entirely: nothing in the
+     * fleet could fly it, and nobody schedules a nonstop that long. Those city
+     * pairs are still reachable, as the connecting tiers of the search build
+     * them out of legs that do exist.
+     *
      * @param list<array<string, mixed>> $airports
      * @param list<array<string, mixed>> $airlines
+     * @param int $maxLegKm longest nonstop this network will schedule
      * @return array{0: list<int>, 1: list<float>, 2: list<int>, 3: list<string>, 4: float}
      */
-    private function routeDistribution(array $airports, array $airlines): array
+    private function routeDistribution(array $airports, array $airlines, int $maxLegKm): array
     {
         $count = count($airports);
 
@@ -417,6 +461,10 @@ class Generate extends AbstractCommand
                     (float) $airports[$j]['longitude'],
                 ) / 1000);
 
+                if ($distance > $maxLegKm) {
+                    continue;
+                }
+
                 $routeWeight = (int) $airports[$i]['traffic_weight'] * (int) $airports[$j]['traffic_weight']
                     / (1 + $distance / self::ROUTE_DISTANCE_HALVING_KM);
 
@@ -462,42 +510,63 @@ class Generate extends AbstractCommand
     }
 
     /**
-     * An aircraft type that could actually fly this leg.
+     * The range a type is actually scheduled over, in km.
      *
-     * Only types whose range covers the distance are eligible, and among those
-     * the smaller ones are favoured — weight falls off as a type's range
-     * overshoots what the leg needs. Without that a 400 km hop drew an A380 as
-     * often as an A320, because both can reach.
-     *
-     * @param list<array<string, mixed>> $fleet ordered by max_range_km ascending
+     * @param array<string, mixed> $type
      */
-    private function pickAircraft(array $fleet, int $distance): ?string
+    private function usableRange(array $type): int
     {
-        $codes = [];
+        $range = (int) $type['max_range_km'];
+
+        return (bool) $type['is_widebody']
+            ? $range
+            : (int) round($range * self::NARROWBODY_RANGE_SHARE);
+    }
+
+    /**
+     * An aircraft type that could actually fly this leg, or null when none can.
+     *
+     * Only types whose usable range covers the distance are eligible, and among
+     * those the draw is weighted by utilisation: the share of that range the
+     * leg needs, raised to AIRCRAFT_FIT_EXPONENT. A type sized for the leg is
+     * near 1 and dominates, while one built to cross an ocean is near 0 on a
+     * short hop and is drawn rarely rather than merely a little less often.
+     *
+     * Utilisation is measured against usable range, not the published figure,
+     * so the two body types are compared on what each is really flown over.
+     *
+     * @param list<array<string, mixed>> $fleet
+     * @return array<string, mixed>|null the chosen type's row
+     */
+    private function pickAircraft(array $fleet, int $distance): ?array
+    {
+        $types = [];
         $cumulative = [];
         $running = 0.0;
 
         foreach ($fleet as $type) {
-            $range = (int) $type['max_range_km'];
+            $range = $this->usableRange($type);
 
-            // Ordered ascending, so everything from here on can reach as well —
-            // but keep going, they are the long-haul candidates.
+            // Cannot make the leg. Not a stopping point: the fleet is ordered by
+            // published range, which the narrowbody haircut does not preserve.
             if ($range < $distance) {
                 continue;
             }
 
-            $running += self::AIRCRAFT_FIT_HALVING_KM / (self::AIRCRAFT_FIT_HALVING_KM + ($range - $distance));
-            $codes[] = (string) $type['code'];
+            $running += ($distance / $range) ** self::AIRCRAFT_FIT_EXPONENT;
+            $types[] = $type;
             $cumulative[] = $running;
         }
 
-        // Longer than anything in the fleet can fly: leave it unassigned rather
-        // than inventing an aircraft that could not make it.
-        if ($codes === []) {
+        // Longer than anything in the fleet can fly. The route filter should
+        // have kept this leg out of the network altogether, so reaching here
+        // means the two disagree -- leave it unassigned rather than inventing
+        // an aircraft that could not make it.
+        if ($types === [] || $running <= 0.0) {
             return null;
         }
 
-        return $codes[$this->pickWeighted($cumulative, $running)];
+        return $types[$this->pickWeighted($cumulative, $running)];
     }
 
     /**
@@ -533,16 +602,20 @@ class Generate extends AbstractCommand
     /**
      * Calculate flight duration (in minutes) from flight distance.
      *
+     * The speed is the operating type's own cruise figure rather than a random
+     * draw, so a turboprop no longer crosses a leg as fast as a 787: an ATR 72
+     * cruises at 510 km/h against the 917 km/h of a 747.
+     *
      * @param float|int $distance Flight distance in kilometers
+     * @param int $speedKmh Cruise speed of the type flying it
      * @return int Duration in minutes
      */
-    private function getDurationFromDistance(float|int $distance): int
+    private function getDurationFromDistance(float|int $distance, int $speedKmh): int
     {
         if ($distance <= 0) {
             return 0;
         }
 
-        $speedKmh = Helper::random(self::FLIGHT_SPEED_KMH);
         if ($speedKmh <= 0) {
             throw new RuntimeException("Flight speed must be greater than zero.");
         }
