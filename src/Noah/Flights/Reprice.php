@@ -21,11 +21,15 @@ use TripBuilder\Noah\AbstractCommand;
  * all of them priced by whatever formula was current at the time. Changing
  * FarePricing only affects new rows; this brings the existing ones into line.
  *
- * It updates in place rather than regenerating, because bookings reference
- * flights by id -- flight_outbound and flight_return -- and dropping the table
- * would leave those pointing at nothing. Bookings snapshot the price they were
- * sold at in their own columns, so repricing the network does not rewrite
- * anybody's receipt.
+ * It updates in place rather than regenerating because leg ids are referenced
+ * from outside the table: a saved flight is a cookie of them, and a shared
+ * search link resolves to them. Regenerating would renumber everything and
+ * quietly empty both.
+ *
+ * No receipt is rewritten. A booking stores its whole itinerary as JSON, each
+ * leg's fare included, and is read back from that snapshot rather than
+ * re-fetched by id -- so repricing the network cannot change what somebody was
+ * already sold.
  *
  * Runs in id batches so the whole table is never locked at once.
  */

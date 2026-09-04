@@ -30,8 +30,8 @@ use TripBuilder\Noah\AbstractCommand;
  * the fleet's cabins, the same way `flights:reprice` follows a fare change.
  *
  * Updates in place rather than rebuilding the table, for the reason Reprice
- * gives: bookings reference flights by id through flight_outbound and
- * flight_return, so a drop-and-recreate would orphan them.
+ * gives: leg ids are referenced from outside it, by saved-flight cookies and
+ * shared search links, and regenerating would renumber every one of them.
  *
  * Runs in id batches so the whole table is never locked at once.
  */

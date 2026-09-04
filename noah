@@ -16,6 +16,7 @@ use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Flights\Cabins as CabinsFlights;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
+use TripBuilder\Noah\Flights\Realign as RealignFlights;
 use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
 use TripBuilder\Noah\Grab\Suppliers as GrabSuppliers;
 
@@ -101,6 +102,19 @@ try {
     */
 
     $application->add(new CabinsFlights());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Realign Flights
+    |--------------------------------------------------------------------------
+    |
+    | Reassigning the aircraft on flights already in the network with the
+    | current rule in `LegBuilder`, and dropping legs longer than anything can
+    | fly. Duration, arrival time and cabins all follow from the type.
+    |
+    */
+
+    $application->add(new RealignFlights());
 
     // FIXME: for image grabbing
     // $application->add(new GrabSuppliers());
