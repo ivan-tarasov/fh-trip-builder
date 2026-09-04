@@ -25,8 +25,14 @@ class AjaxController extends AbstractController
 
         // Each direction is a comma-separated list of flight-leg ids (an
         // itinerary can have more than one leg when it connects).
-        $outboundIds = $this->parseIds($_POST['depart_ids'] ?? '');
-        $returnIds = $this->parseIds($_POST['return_ids'] ?? '');
+        $body = $this->request->body;
+
+        // Input::ids() rejects a list outright when any part will not parse,
+        // where the parser here used to drop the bad part and carry on. A list
+        // one leg short is a different itinerary, and the count check below
+        // cannot tell the difference once the leg is gone.
+        $outboundIds = $body->ids('depart_ids');
+        $returnIds = $body->ids('return_ids');
 
         if ($outboundIds === []) {
             echo json_encode(['status' => 'error', 'message' => 'Wrong format']);
@@ -38,9 +44,7 @@ class AjaxController extends AbstractController
 
         // Same contract as /checkout: the cabin travels with the ids, because
         // they name the legs but not what was being bought.
-        $cabin = CabinClass::fromRequest(
-            is_string($_POST['class'] ?? null) ? $_POST['class'] : null,
-        );
+        $cabin = CabinClass::fromRequest($body->nullableStr('class'));
 
         $outbound = $finder->findSegments($outboundIds, $cabin);
         $return = $returnIds === [] ? [] : $finder->findSegments($returnIds, $cabin);
@@ -73,25 +77,6 @@ class AjaxController extends AbstractController
         ]);
     }
 
-    /**
-     * Parse a comma-separated list of positive integer ids.
-     *
-     * @return list<int>
-     */
-    private function parseIds(string $csv): array
-    {
-        $ids = [];
-
-        foreach (explode(',', $csv) as $part) {
-            $id = filter_var(trim($part), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-            if ($id !== false) {
-                $ids[] = $id;
-            }
-        }
-
-        return $ids;
-    }
 
     public function deleteBooking(): void
     {
@@ -102,7 +87,10 @@ class AjaxController extends AbstractController
         }
 
         $this->setGet([
-            'booking_id' => filter_var($_POST['booking_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null,
+            // 0 for anything that is not a real id, which the guard below
+            // reads as "wrong format". The lower bound matters: a bare int()
+            // would accept -5 and pass it to the delete.
+            'booking_id' => $this->request->body->intWithin('booking_id', 0, 1, PHP_INT_MAX),
         ]);
 
         if (!$this->get['booking_id']) {
@@ -147,14 +135,15 @@ class AjaxController extends AbstractController
      */
     private function guardRequest(): bool
     {
-        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+        if (!$this->request->isPost()) {
             http_response_code(405);
             echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
 
             return false;
         }
 
-        $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
+        $token = $this->request->body->nullableStr('csrf_token')
+            ?? $this->request->header('X-CSRF-Token');
 
         if (!Csrf::isValid($token)) {
             http_response_code(403);

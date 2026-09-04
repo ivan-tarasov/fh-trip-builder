@@ -30,7 +30,7 @@ class Response extends AbstractApi
      */
     public function getAutofill(): void
     {
-        $query = $_GET['query'] ?? '';
+        $query = $this->request->query->str('query');
 
         if (empty($query) || strlen($query) < 3) {
             $this->sendResponse(HttpStatus::Ok);

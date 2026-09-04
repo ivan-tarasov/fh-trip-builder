@@ -46,11 +46,11 @@ class CheckoutController extends AbstractController
      */
     public function index(): void
     {
-        $outboundIds = $this->ids($_GET[self::GET_DEPART_ITIN] ?? null);
-        $returnIds = $this->ids($_GET[self::GET_RETURN_ITIN] ?? null);
-        $cabin = CabinClass::fromRequest(
-            is_string($_GET[self::GET_CLASS] ?? null) ? $_GET[self::GET_CLASS] : null,
-        );
+        $query = $this->request->query;
+
+        $outboundIds = $query->ids(self::GET_DEPART_ITIN);
+        $returnIds = $query->ids(self::GET_RETURN_ITIN);
+        $cabin = CabinClass::fromRequest($query->nullableStr(self::GET_CLASS));
 
         if ($outboundIds === []) {
             $this->bounce('/');
@@ -73,7 +73,7 @@ class CheckoutController extends AbstractController
         $errors = [];
         $submitted = [];
 
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        if ($this->request->isPost()) {
             $submitted = $this->submitted();
             $errors = $this->validate($submitted);
 
@@ -103,7 +103,7 @@ class CheckoutController extends AbstractController
      */
     public function confirmation(): void
     {
-        $reference = strtoupper(trim((string) ($_GET[self::GET_REFERENCE] ?? '')));
+        $reference = strtoupper($this->request->query->str(self::GET_REFERENCE));
 
         $booking = preg_match('/^[A-Z0-9]{6}$/', $reference) === 1
             ? new BookingRepository($this->connection())->findByReference($reference, session_id())
@@ -292,7 +292,8 @@ class CheckoutController extends AbstractController
      */
     private function submitted(): array
     {
-        $field = static fn(string $key): string => trim((string) ($_POST[$key] ?? ''));
+        $body = $this->request->body;
+        $field = static fn(string $key): string => $body->str($key);
 
         return [
             'email' => $field('email'),
@@ -324,7 +325,7 @@ class CheckoutController extends AbstractController
     {
         $errors = [];
 
-        if (!Csrf::isValid($_POST[Csrf::FIELD] ?? null)) {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
             $errors['form'] = 'That form went stale. Please try again.';
         }
 
@@ -434,29 +435,6 @@ class CheckoutController extends AbstractController
         return $lines;
     }
 
-    /**
-     * @return list<int>
-     */
-    private function ids(mixed $raw): array
-    {
-        if (!is_string($raw) || trim($raw) === '') {
-            return [];
-        }
-
-        $ids = [];
-
-        foreach (explode(',', $raw) as $part) {
-            $id = filter_var(trim($part), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-            if ($id === false) {
-                return [];
-            }
-
-            $ids[] = $id;
-        }
-
-        return $ids;
-    }
 
     /**
      * @param list<int> $outboundIds

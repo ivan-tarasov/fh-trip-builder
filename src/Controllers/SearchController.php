@@ -77,34 +77,33 @@ class SearchController extends AbstractController
     public function index(): void
     {
         try {
+            $query = $this->request->query;
+
             // Handle GET data
             $this->setGet([
-                self::GET_HASH => $_GET[Config::get('search.form.input.hash')] ?? null,
-                self::GET_FROM => strtoupper($_GET[Config::get('search.form.input.depart_place')] ?? ''),
-                self::GET_TO => strtoupper($_GET[Config::get('search.form.input.arrive_place')] ?? ''),
-                self::GET_DEPART => $_GET[Config::get('search.form.input.depart_date')] ?? null,
-                self::GET_RETURN => $_GET[Config::get('search.form.input.return_date')] ?? null,
-                self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')] ?? null,
-                self::GET_CLASS => $_GET[Config::get('search.form.input.class')] ?? null,
+                self::GET_HASH => $query->nullableStr((string) Config::get('search.form.input.hash')),
+                self::GET_FROM => strtoupper($query->str((string) Config::get('search.form.input.depart_place'))),
+                self::GET_TO => strtoupper($query->str((string) Config::get('search.form.input.arrive_place'))),
+                self::GET_DEPART => $query->nullableStr((string) Config::get('search.form.input.depart_date')),
+                self::GET_RETURN => $query->nullableStr((string) Config::get('search.form.input.return_date')),
+                self::GET_TRIPTYPE => $query->nullableStr((string) Config::get('search.form.input.triptype')),
+                self::GET_CLASS => $query->nullableStr((string) Config::get('search.form.input.class')),
                 // How many results to render, not which page: the list grows
                 // by appending, so the URL describes the screen and a refresh
                 // or a Back lands on exactly what was there.
-                self::GET_SHOWN => filter_var(
-                    $_GET[Config::get('search.form.input.shown')] ?? self::FIRST_SLICE,
-                    FILTER_VALIDATE_INT,
-                    ['options' => [
-                        'default' => self::FIRST_SLICE,
-                        'min_range' => self::FIRST_SLICE,
-                        'max_range' => self::MAX_SHOWN,
-                    ]],
+                self::GET_SHOWN => $query->intWithin(
+                    (string) Config::get('search.form.input.shown'),
+                    self::FIRST_SLICE,
+                    self::FIRST_SLICE,
+                    self::MAX_SHOWN,
                 ),
-                self::GET_DEPART_ITIN => $_GET[self::GET_DEPART_ITIN] ?? null,
-                self::GET_RETURN_ITIN => $_GET[self::GET_RETURN_ITIN] ?? null,
+                self::GET_DEPART_ITIN => $query->nullableStr(self::GET_DEPART_ITIN),
+                self::GET_RETURN_ITIN => $query->nullableStr(self::GET_RETURN_ITIN),
                 // Sort and filters ride in the query string, so stepUrl() and
                 // moreUrl() — which rebuild from $this->get — carry them across
                 // a longer list, the step transitions and a shared link for
                 // free.
-                self::GET_SORT => $_GET[self::GET_SORT] ?? null,
+                self::GET_SORT => $query->nullableStr(self::GET_SORT),
                 ...$this->filterQuery(),
             ]);
 
@@ -199,12 +198,12 @@ class SearchController extends AbstractController
                 // Sidebar
                 'form_url' => sprintf(
                     '%s?%s',
-                    Helper::getUrlPath(),
+                    $this->request->path(),
                     $this->queryString(array_merge($this->get, [self::GET_SHOWN => null])),
                 ),
                 // Filter forms submit with GET, so they post to the bare path
                 // and carry the rest of the search as hidden fields.
-                'form_path' => Helper::getUrlPath(),
+                'form_path' => $this->request->path(),
                 'session_sort' => $this->sort(),
                 'default_sort' => self::DEFAULT_SORT,
                 // Sorting moved out of the sidebar and above the results, where
@@ -937,7 +936,7 @@ class SearchController extends AbstractController
 
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->request->path(),
             $this->queryString(array_merge($kept, [self::GET_SHOWN => null])),
         );
     }
@@ -1034,7 +1033,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->request->path(),
             $this->queryString(array_merge($this->get, [
                 self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
                 self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
@@ -1052,7 +1051,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->request->path(),
             $this->queryString(array_merge($this->get, [
                 self::GET_RETURN_ITIN => implode(',', $ids),
                 self::GET_SHOWN => null,
@@ -1153,7 +1152,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->request->path(),
             $this->queryString(array_merge($this->get, [self::GET_SHOWN => $shown])),
         );
     }
@@ -1176,18 +1175,14 @@ class SearchController extends AbstractController
             return 0;
         }
 
-        $after = filter_var(
-            $_GET['after'] ?? 0,
-            FILTER_VALIDATE_INT,
-            ['options' => ['default' => 0, 'min_range' => 0, 'max_range' => self::MAX_SHOWN]],
-        );
+        $after = $this->request->query->intWithin('after', 0, 0, self::MAX_SHOWN);
 
-        return min((int) $after, $shown);
+        return min($after, $shown);
     }
 
     private function isFragment(): bool
     {
-        return ($_GET['fragment'] ?? null) === '1';
+        return $this->request->isFragment();
     }
 
     /**
@@ -1338,7 +1333,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->request->path(),
             $this->queryString(array_merge($this->get, [
                 self::GET_SORT => $sort === self::DEFAULT_SORT ? null : $sort,
                 self::GET_SHOWN => null,
@@ -1386,7 +1381,7 @@ class SearchController extends AbstractController
         $carried = [];
 
         foreach ($this->allFilterKeys() as $key) {
-            $value = $_GET[$key] ?? null;
+            $value = $this->request->query->raw($key);
 
             // A checkbox group arrives as an array, a shared link as a string.
             $carried[$key] = (is_string($value) && $value !== '') || (is_array($value) && $value !== [])

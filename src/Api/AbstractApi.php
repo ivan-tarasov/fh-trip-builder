@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Api;
 
 use TripBuilder\Database\Connection;
-use TripBuilder\Helper;
+use TripBuilder\Http\Request;
 use TripBuilder\Routes;
 
 abstract class AbstractApi
@@ -27,8 +27,10 @@ abstract class AbstractApi
 
     private ?Connection $connection = null;
 
-    public function __construct(?HttpMethod $method = null)
-    {
+    public function __construct(
+        protected readonly Request $request,
+        ?HttpMethod $method = null,
+    ) {
         // By default, we accept only the POST request method if not provided another one
         $this->setAllowedMethod($method ?? HttpMethod::Post);
 
@@ -88,7 +90,7 @@ abstract class AbstractApi
             // Building response array
             $response = [
                 'status' => $status->value,
-                'endpoint' => Helper::getUrlPath(),
+                'endpoint' => $this->request->path(),
                 'method' => $this->getRequestMethod(),
                 'timestamp' => date('Y-m-d H:i:s'),
                 'data' => $data,
@@ -118,7 +120,7 @@ abstract class AbstractApi
 
     private function getRequestMethod(): string
     {
-        return $_SERVER['REQUEST_METHOD'] ?? '';
+        return $this->request->method();
     }
 
     private function getAuthToken(): string
@@ -133,9 +135,11 @@ abstract class AbstractApi
 
     private function setRequestData(): void
     {
-        $data = file_get_contents('php://input');
+        // The body comes from the request object like everything else; what to
+        // make of a malformed one is this class's business, not its.
+        $data = $this->request->rawBody();
 
-        if (empty($data)) {
+        if ($data === '') {
             return;
         }
 

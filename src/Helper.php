@@ -18,13 +18,6 @@ class Helper
         return dirname(__FILE__, 2);
     }
 
-    public static function getUrlPath(): string
-    {
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-
-        return is_string($path) ? $path : '/';
-    }
-
     public static function getUTCTime(int|float $offset): string
     {
         $hours = floor(abs($offset));
