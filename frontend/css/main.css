@@ -1,4 +1,66 @@
 /* ==========================================================================
+   #FONTS
+   ==========================================================================
+   Plus Jakarta Sans, self-hosted. One variable file per subset covers every
+   weight the stylesheet asks for (400/500/600/700) in a single request, where
+   the four static instances would have been four.
+
+   Self-hosted rather than loaded from Google: a stylesheet from another origin
+   is a render-blocking request that has to resolve DNS, open a TLS connection
+   and be parsed before the browser even learns which font files it needs. From
+   here the @font-face is in a stylesheet the page is already fetching, and the
+   file itself is preloaded in the head.
+
+   Licensed under the SIL Open Font License 1.1, which permits this -- see
+   fonts/OFL.txt, shipped alongside as the licence requires.
+
+   Paths are relative to this file, so they follow the stylesheet if it is ever
+   served from the CDN rather than the app. They must also match the preload in
+   the page head exactly, cache-buster included, or the file is fetched twice.
+
+   Subsets are split on unicode-range: a page renders only latin unless it puts
+   a character on screen from one of the others, so the cyrillic and vietnamese
+   files cost nothing until something needs them. The data needs latin and one
+   latin-ext character today (the S-caron in Ljubljana's airport name); the rest
+   is there so a name added later never falls back mid-word. */
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-vietnamese.woff2") format("woff2");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* ==========================================================================
    #PALETTE
    ==========================================================================
    This app used to ship Bootstrap's stock palette untouched -- #0d6efd and

@@ -14,6 +14,7 @@ return [
     'directory' => [
         'js' => '/frontend/js',
         'css' => '/frontend/css',
+        'fonts' => '/frontend/fonts',
     ],
 
     'static' => [

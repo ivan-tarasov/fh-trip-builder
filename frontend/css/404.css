@@ -1,4 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300&display=swap");
+/* Comic Neue, self-hosted -- see the #FONTS section of main.css for why, and
+   fonts/OFL-comic-neue.txt for the licence.
+
+   This was an @import, which is the slowest way to load a font: the browser
+   has to fetch this stylesheet, parse it, fetch Google's stylesheet, parse
+   that, and only then start on the font file. Four serial round trips before a
+   glyph is drawn. Declared here, there is one.
+
+   Latin only: this face is used for two decorative lines on the 404 page. */
+@font-face {
+  font-family: "Comic Neue";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../fonts/comic-neue-300-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 .wrapper {
     min-width: 100vw;
     min-height: 75vh;
