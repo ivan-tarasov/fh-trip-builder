@@ -26,6 +26,7 @@ class Install extends AbstractCommand
 {
     private const string MESSAGE_CREATING_TABLE = 'Creating `%s` table';
     private const string MESSAGE_SEEDING_TABLE = 'Seeding `%s` table';
+    private const string MESSAGE_ADDING_COLUMN = 'Adding `%s`.`%s` column';
 
     /**
      * @throws Exception
@@ -53,36 +54,21 @@ class Install extends AbstractCommand
 
             if ($this->tableExists($table)) {
                 $this->formatOutput($action, 'exist', 'info');
+                // The config is the declared shape of the table, so a column
+                // added to it should reach a database that predates it -- there
+                // is no migration runner here, and seeding would otherwise fail
+                // on a column the CSV names but the table has never had.
+                $this->addMissingColumns($table, $data['columns']);
                 continue;
             }
 
             $query = sprintf(
                 'CREATE TABLE %s (%s, PRIMARY KEY (%s)%s) ENGINE=%s DEFAULT CHARSET=%s%s;',
                 $table,
-                implode(', ', array_map(function ($column) {
-                    return sprintf(
-                        '`%s` %s%s%s%s%s%s',
-                        $column['name'],
-                        strtoupper($column['type']),
-                        $column['length']
-                            ? sprintf('(%s)', $column['length'])
-                            : null,
-                        $column['default']
-                            ? sprintf(' DEFAULT %s', is_array($column['default'])
-                                ? $column['default'][0]
-                                : sprintf('"%s"', $column['default']))
-                            : null,
-                        $column['nullable']
-                            ? null
-                            : ' NOT NULL',
-                        $column['comment']
-                            ? sprintf(' COMMENT "%s"', $column['comment'])
-                            : null,
-                        $column['auto_inc']
-                            ? ' AUTO_INCREMENT'
-                            : null,
-                    );
-                }, $data['columns'])),
+                implode(', ', array_map(
+                    fn(array $column): string => $this->columnDefinition($column),
+                    $data['columns'],
+                )),
                 $data['primary'],
                 $this->indexClause($data['indexes'] ?? []),
                 $data['engine'],
@@ -101,6 +87,99 @@ class Install extends AbstractCommand
         }
 
         $this->io->newLine();
+    }
+
+    /**
+     * One column's DDL, shared by CREATE TABLE and ADD COLUMN.
+     *
+     * @param array<string, mixed> $column
+     */
+    private function columnDefinition(array $column): string
+    {
+        return sprintf(
+            '`%s` %s%s%s%s%s%s',
+            $column['name'],
+            strtoupper($column['type']),
+            $column['length']
+                ? sprintf('(%s)', $column['length'])
+                : null,
+            $column['default']
+                // An array wraps a raw value -- [0] emits DEFAULT 0, where a
+                // bare 0 would be falsy and emit no default at all.
+                ? sprintf(' DEFAULT %s', is_array($column['default'])
+                    ? $column['default'][0]
+                    : sprintf('"%s"', $column['default']))
+                : null,
+            $column['nullable']
+                ? null
+                : ' NOT NULL',
+            $column['comment']
+                ? sprintf(' COMMENT "%s"', $column['comment'])
+                : null,
+            $column['auto_inc']
+                ? ' AUTO_INCREMENT'
+                : null,
+        );
+    }
+
+    /**
+     * Add any column the config declares that the table does not have yet.
+     *
+     * Additive only: it never drops, reorders or retypes a column, so running
+     * it against a table that has drifted for any other reason is a no-op. Each
+     * one lands in its declared position, so a table built by this path column
+     * by column ends up shaped like one created in a single statement.
+     *
+     * @param list<array<string, mixed>> $columns
+     */
+    private function addMissingColumns(string $table, array $columns): void
+    {
+        $existing = array_column(
+            $this->connection()->fetchAll(
+                'SELECT column_name AS name FROM information_schema.columns'
+                . ' WHERE table_schema = DATABASE() AND table_name = ?',
+                [$table],
+            ),
+            'name',
+        );
+
+        // Nothing to compare against: leave the table alone rather than trying
+        // to add every column it already has.
+        if ($existing === []) {
+            return;
+        }
+
+        $previous = null;
+
+        foreach ($columns as $column) {
+            $name = (string) $column['name'];
+
+            if (in_array($name, $existing, true)) {
+                $previous = $name;
+                continue;
+            }
+
+            $action = sprintf(self::MESSAGE_ADDING_COLUMN, $table, $name);
+
+            try {
+                $this->connection()->pdo()->exec(sprintf(
+                    'ALTER TABLE `%s` ADD COLUMN %s%s',
+                    $table,
+                    $this->columnDefinition($column),
+                    // Keeps the declared order: the first column goes to the
+                    // front, the rest follow whichever column precedes them.
+                    $previous === null ? ' FIRST' : sprintf(' AFTER `%s`', $previous),
+                ));
+            } catch (Throwable $e) {
+                $this->formatOutput($action, 'failed', 'danger');
+                $this->io->error(sprintf('Adding `%s`.`%s` failed: %s', $table, $name, $e->getMessage()));
+
+                return;
+            }
+
+            $this->formatOutput($action, 'added', 'success');
+            $previous = $name;
+        }
     }
 
     private function tableExists(string $table): bool

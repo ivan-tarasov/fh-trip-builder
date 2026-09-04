@@ -18,6 +18,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
         'id', 'carrier', 'carrier_name', 'number',
         'dep_code', 'dep_name', 'dep_country', 'dep_city', 'dep_datetime',
         'arr_code', 'arr_name', 'arr_country', 'arr_city', 'arr_datetime',
+        'aircraft_code', 'aircraft_name',
         'distance', 'duration', 'price_base', 'price_tax', 'rating',
     ];
 

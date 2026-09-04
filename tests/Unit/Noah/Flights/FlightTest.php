@@ -22,6 +22,7 @@ final class FlightTest extends TestCase
             arrivalTime: '2026-09-15 07:15:00',
             distance: 504,
             duration: 75,
+            cabins: 5,
             priceBase: 120.0,
             priceTax: 18.0,
             rating: 4.1,
@@ -38,6 +39,7 @@ final class FlightTest extends TestCase
         self::assertSame('YUL', $row['departure_airport']);
         self::assertSame('YYZ', $row['arrival_airport']);
         self::assertSame(504, $row['distance']);
+        self::assertSame(5, $row['cabins']);
         self::assertSame(120.0, $row['price_base']);
         self::assertSame('320', $row['aircraft']);
         self::assertSame('LT', $row['fare_brand']);

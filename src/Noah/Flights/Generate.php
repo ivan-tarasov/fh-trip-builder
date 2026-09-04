@@ -17,6 +17,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
+use TripBuilder\CabinClass;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
@@ -145,6 +146,17 @@ class Generate extends AbstractCommand
             return Command::INVALID;
         }
 
+        // What each type has fitted, folded to one mask per type: 28 masks built
+        // once, rather than the same fold repeated for every flight drawn.
+        $typeCabins = [];
+        foreach ($this->connection()->fetchAll(
+            'SELECT aircraft, cabin FROM ' . Table::AircraftCabins->value,
+        ) as $fitted) {
+            $typeCabins[(string) $fitted['aircraft']][] = (string) $fitted['cabin'];
+        }
+
+        $cabinMask = array_map(CabinAvailability::bits(...), $typeCabins);
+
         // The fare each leg is sold under. Cumulative weights so a brand is one
         // binary search rather than a scan, the same shape as the fleet draw.
         $brands = $this->connection()->fetchAll(
@@ -226,10 +238,14 @@ class Generate extends AbstractCommand
             $priceBase = FarePricing::base($distance);
             $priceTax = FarePricing::tax($priceBase);
 
+            // Drawn before the row is built: the cabins on sale depend on which
+            // frame flies the leg, so the type has to be settled first.
+            $aircraft = $this->pickAircraft($fleet, $distance);
+
             $flights[] = new Flight(
                 airline: $airline,
                 number: rand(1, self::NUMBERS_POOL),
-                aircraft: $this->pickAircraft($fleet, $distance),
+                aircraft: $aircraft,
                 fareBrand: $brandCodes[$this->pickWeighted($brandCumulative, $brandTotal)],
                 departureAirport: $departAirport['code'],
                 departureTime: $departureDateTime,
@@ -242,6 +258,9 @@ class Generate extends AbstractCommand
                 ),
                 distance: $distance,
                 duration: $duration,
+                // No type means no cabin rows to read: a leg nothing in the
+                // fleet can fly still sells economy.
+                cabins: $cabinMask[$aircraft] ?? CabinClass::Economy->bit(),
                 priceBase: $priceBase,
                 priceTax: $priceTax,
                 rating: rand(1, 4) + rand(0, 100) / 100,
