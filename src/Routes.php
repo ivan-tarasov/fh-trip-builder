@@ -79,6 +79,19 @@ class Routes
         'Ajax',
     ];
 
+    /**
+     * Routes that emit their own payload from a controller that otherwise
+     * renders pages.
+     *
+     * The list above is per controller, which works while "emits a document"
+     * and "emits something else" split cleanly by controller. A file download
+     * does not: it is one action on a page controller, and wrapping its bytes
+     * in a header and footer corrupts the file.
+     */
+    public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
+        '/my/booking/calendar',
+    ];
+
     private static string $currentPage;
 
     public static function setCurrentPage(string $page): void

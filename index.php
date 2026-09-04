@@ -66,7 +66,9 @@ try {
     // exists and must not be wrapped in a second header and footer.
     $isFragment = $request->isFragment();
 
-    $needsLayout = !$isFragment && !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
+    $needsLayout = !$isFragment
+        && !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER)
+        && !in_array($url, Routes::EXCLUDE_HEADER_FOOTER_ROUTES);
 
     // API/Ajax endpoints emit their own payload with no header/footer.
     if (!$needsLayout) {
