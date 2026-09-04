@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Repository;
 
 use RuntimeException;
+use TripBuilder\BookingStatus;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
@@ -39,6 +40,26 @@ final readonly class BookingRepository
             . ' VALUES (' . implode(', ', array_fill(0, count($columns), '?')) . ')';
 
         return $this->connection->insert($sql, array_values($data));
+    }
+
+    /**
+     * One booking by id, scoped to the session that made it -- an id from
+     * somebody else's browser resolves to nothing.
+     *
+     * Keyed on the id rather than the reference because the rows written before
+     * checkout issued references have none, and those bookings still belong to
+     * whoever made them.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findForSession(int $bookingId, string $sessionId): ?array
+    {
+        $row = $this->connection->fetchAll(
+            'SELECT * FROM ' . Table::Bookings->value . ' WHERE id = ? AND session_id = ? LIMIT 1',
+            [$bookingId, $sessionId],
+        );
+
+        return $row[0] ?? null;
     }
 
     /**
@@ -91,13 +112,24 @@ final readonly class BookingRepository
     }
 
     /**
-     * Delete a booking scoped to its session; returns affected row count.
+     * Cancel a booking scoped to its session; returns affected row count.
+     *
+     * The row stays. What used to sit here deleted it outright, which left a
+     * traveller no way to tell a cancelled trip from one that had never been
+     * booked. Cancelling twice affects nothing, so the caller can tell "not
+     * yours" and "already cancelled" apart from a real cancellation.
      */
-    public function deleteForSession(int $bookingId, string $sessionId): int
+    public function cancelForSession(int $bookingId, string $sessionId): int
     {
         return $this->connection->execute(
-            'DELETE FROM ' . Table::Bookings->value . ' WHERE id = ? AND session_id = ?',
-            [$bookingId, $sessionId],
+            'UPDATE ' . Table::Bookings->value
+            . ' SET status = ? WHERE id = ? AND session_id = ? AND status <> ?',
+            [
+                BookingStatus::Cancelled->value,
+                $bookingId,
+                $sessionId,
+                BookingStatus::Cancelled->value,
+            ],
         );
     }
 }

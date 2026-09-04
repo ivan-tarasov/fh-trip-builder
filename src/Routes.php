@@ -64,16 +64,77 @@ class Routes
         */
 
         '/ajax/add-trip' => 'Ajax@addTrip',
-        '/ajax/delete-booking' => 'Ajax@deleteBooking',
+        '/ajax/cancel-booking' => 'Ajax@cancelBooking',
 
     ];
 
     public const string ROUTES_CONTROLLERS_PATH = 'TripBuilder\Controllers';
 
+    /**
+     * Routes that name a record in the path.
+     *
+     * The table above is an exact-match map, which is all this app needed while
+     * every page was a fixed address. A booking is not: it is one of many, and
+     * /my/bookings/100001 is the address a person expects to be able to keep.
+     *
+     * Kept deliberately small -- two patterns, both anchored, both matching
+     * digits only -- rather than growing a general router for one resource.
+     */
+    public const array DYNAMIC_ROUTES = [
+        '#^/my/bookings/(\d+)$#' => 'My@booking',
+        '#^/my/bookings/(\d+)/calendar$#' => 'My@calendar',
+    ];
+
     public const array EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
     ];
+
+    /**
+     * Routes that emit their own payload from a controller that otherwise
+     * renders pages.
+     *
+     * The list above is per controller, which works while "emits a document"
+     * and "emits something else" split cleanly by controller. A file download
+     * does not: it is one action on a page controller, and wrapping its bytes
+     * in a header and footer corrupts the file.
+     */
+    public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
+        '#^/my/bookings/\d+/calendar$#',
+    ];
+
+    /**
+     * The 'Controller@action' for a path, or null when nothing serves it.
+     */
+    public static function resolve(string $url): ?string
+    {
+        if (isset(self::ENABLED_ROUTES[$url])) {
+            return self::ENABLED_ROUTES[$url];
+        }
+
+        foreach (self::DYNAMIC_ROUTES as $pattern => $route) {
+            if (preg_match($pattern, $url) === 1) {
+                return $route;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether this path writes its own bytes and must not be wrapped in a
+     * header and footer.
+     */
+    public static function emitsOwnPayload(string $url): bool
+    {
+        foreach (self::EXCLUDE_HEADER_FOOTER_ROUTES as $pattern) {
+            if (preg_match($pattern, $url) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static string $currentPage;
 

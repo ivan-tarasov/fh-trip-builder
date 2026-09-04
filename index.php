@@ -45,10 +45,11 @@ try {
     Routes::setCurrentPage($url);
 
     // Find the corresponding controller and action
-    [$controllerName, $actionName] = explode('@', Routes::ENABLED_ROUTES[$url] ?? 'NotFound@index');
+    $route = Routes::resolve($url);
+    [$controllerName, $actionName] = explode('@', $route ?? 'NotFound@index');
 
     // Unknown route: set the status now, before any layout output locks the headers
-    if (!isset(Routes::ENABLED_ROUTES[$url])) {
+    if ($route === null) {
         http_response_code(404);
     }
 
@@ -66,7 +67,9 @@ try {
     // exists and must not be wrapped in a second header and footer.
     $isFragment = $request->isFragment();
 
-    $needsLayout = !$isFragment && !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
+    $needsLayout = !$isFragment
+        && !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER)
+        && !Routes::emitsOwnPayload($url);
 
     // API/Ajax endpoints emit their own payload with no header/footer.
     if (!$needsLayout) {

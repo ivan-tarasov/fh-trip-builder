@@ -4,29 +4,37 @@
 
 {% block content %}
 <main role="main" class="flex-shrink-0 mb-5">
-    <div class="container">
+    <div class="container bookings">
         <div class="py-5 mx-auto">
             <h1 class="display-4">My bookings</h1>
-            <p class="lead">Here you can see your booking flights.</p>
+            <p class="lead">Every trip booked in this browser, with its reference and the full itinerary.</p>
         </div>
-        <!--h4 class="d-flex justify-content-between align-items-center mb-3">
-          <span class="text-muted lead">%BOOKINGS_TITLE%</span>
-          <span class="badge badge-secondary badge-pill">%TRIPS_COUNT%</span>
-        </h4-->
-        <!-- <ul class="list-group mb-3"> -->
-        <div class="list-group w-auto">
-            {% if has_rows %}
-                {% for booking in bookings %}
-                    {% include 'my/bookings/flight-outbound.html.twig' %}
-                    {% if booking.return_flight %}
-                        {% include 'my/bookings/flight-return.html.twig' with {'flight': booking.return_flight} %}
-                    {% endif %}
-                {% endfor %}
-            {% else %}
-                {% include 'my/bookings/empty.html.twig' %}
+
+        {# Cancelling changes a card in place rather than moving it, which gives
+           a screen reader no cue on its own. #}
+        <p class="visually-hidden js-bookings-live" role="status" aria-live="polite"></p>
+
+        {% for group in [
+            { 'key': 'upcoming', 'title': 'Upcoming', 'bookings': upcoming },
+            { 'key': 'past', 'title': 'Past', 'bookings': past }
+        ] %}
+            {% if group.bookings %}
+                <section aria-labelledby="bookings-{{ group.key }}">
+                    <div class="d-flex align-items-baseline gap-2 mb-3">
+                        <h2 class="h4 mb-0" id="bookings-{{ group.key }}">{{ group.title }}</h2>
+                        <span class="badge text-bg-light border text-secondary fw-normal">{{ group.bookings|length }}</span>
+                    </div>
+
+                    {% for booking in group.bookings %}
+                        {% include 'my/bookings/card.html.twig' with { 'booking': booking } only %}
+                    {% endfor %}
+                </section>
             {% endif %}
-        </div>
-        <!-- </ul> -->
+        {% endfor %}
+
+        {% if not has_rows %}
+            {% include 'my/bookings/empty.html.twig' %}
+        {% endif %}
     </div>
 </main>
 {% endblock %}

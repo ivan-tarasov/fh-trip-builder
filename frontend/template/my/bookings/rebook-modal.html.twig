@@ -1,0 +1,105 @@
+{# "Fly this route again", as a dialog rather than a form sitting open at the
+   bottom of the page.
+
+   The route and trip type come from the booking and are not editable here --
+   changing those is a new search, which the header already links to. What is
+   editable is everything a person changes when they repeat a trip: when, how
+   many, and in what cabin. #}
+{% set roundtrip = booking.rebook.triptype == 'roundtrip' %}
+
+<div class="modal fade" id="rebook-{{ booking.id }}" tabindex="-1"
+     aria-labelledby="rebook-title-{{ booking.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="get" action="{{ config('site.paths.search') }}" class="modal-content js-rebook">
+            <input type="hidden" name="{{ config('search.form.input.depart_place') }}" value="{{ booking.rebook.from }}" />
+            <input type="hidden" name="{{ config('search.form.input.arrive_place') }}" value="{{ booking.rebook.to }}" />
+            <input type="hidden" name="{{ config('search.form.input.triptype') }}" value="{{ booking.rebook.triptype }}" />
+            <input type="hidden" name="{{ config('search.form.input.depart_date') }}" class="js-rebook-depart" value="" />
+            {% if roundtrip %}
+                <input type="hidden" name="{{ config('search.form.input.return_date') }}" class="js-rebook-return" value="" />
+            {% endif %}
+
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="rebook-title-{{ booking.id }}">Fly this route again</h2>
+                    <p class="small text-muted mb-0">
+                        {{ booking.outbound.depart_city }} ({{ booking.rebook.from }})
+                        <i class="fas fa-arrow-right px-1" aria-hidden="true"></i>
+                        {{ booking.outbound.arrive_city }} ({{ booking.rebook.to }})
+                        &middot; {{ roundtrip ? 'round trip' : 'one way' }}
+                    </p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control js-rebook-date"
+                           id="rebook-date-{{ booking.id }}"
+                           data-triptype="{{ booking.rebook.triptype }}"
+                           placeholder="Pick a date" autocomplete="off" readonly required />
+                    <label for="rebook-date-{{ booking.id }}">{{ roundtrip ? 'Depart and return dates' : 'Departure date' }}</label>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <select class="form-select" id="rebook-adults-{{ booking.id }}"
+                                    name="{{ config('search.form.input.adults') }}">
+                                {% for n in 1..9 %}
+                                    <option value="{{ n }}"{{ n == 1 ? ' selected' : '' }}>{{ n }}{{ n == 9 ? ' (maximum)' : '' }}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="rebook-adults-{{ booking.id }}">Adult</label>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-floating">
+                            <select class="form-select" id="rebook-children-{{ booking.id }}"
+                                    name="{{ config('search.form.input.children') }}">
+                                <option value="" selected>&ndash;</option>
+                                {% for n in 1..9 %}
+                                    <option value="{{ n }}">{{ n }}{{ n == 9 ? ' (maximum)' : '' }}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="rebook-children-{{ booking.id }}">Child</label>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-floating">
+                            <select class="form-select" id="rebook-infants-{{ booking.id }}"
+                                    name="{{ config('search.form.input.infants') }}">
+                                <option value="" selected>&ndash;</option>
+                                {% for n in 1..4 %}
+                                    <option value="{{ n }}">{{ n }}{{ n == 4 ? ' &ndash; maximum' : '' }}</option>
+                                {% endfor %}
+                            </select>
+                            <label for="rebook-infants-{{ booking.id }}">Infant</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-floating">
+                    {# Defaults to the cabin that was bought, which is the answer
+                       most of the time and the whole point of repeating a trip. #}
+                    <select class="form-select" id="rebook-class-{{ booking.id }}"
+                            name="{{ config('search.form.input.class') }}">
+                        <option value="economy"{{ booking.rebook.class == 'economy' ? ' selected' : '' }}>Economy</option>
+                        <option value="premium"{{ booking.rebook.class == 'premium' ? ' selected' : '' }}>Premium Economy</option>
+                        <option value="business"{{ booking.rebook.class == 'business' ? ' selected' : '' }}>Business</option>
+                        <option value="first"{{ booking.rebook.class == 'first' ? ' selected' : '' }}>First</option>
+                    </select>
+                    <label for="rebook-class-{{ booking.id }}">Cabin class</label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    Search flights
+                    <i class="fas fa-chevron-right ps-1"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

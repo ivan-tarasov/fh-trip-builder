@@ -504,68 +504,202 @@
 
     /*[ Booking actions + sweetalert2 ]
     ===========================================================*/
-    try {
-        $("button[id^=deleteBooking_]").click(function () {
-            let bookingID = $(this).data('booking-id');
+    // Delegated, like saving and sharing: this drops the per-button DOM id the
+    // old handler needed and keeps working for any card rendered later.
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.js-booking-cancel');
 
-            Swal.fire({
-                title: "You're about to delete this booking. Are you sure?",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Delete booking',
-                showLoaderOnConfirm: true,
-                preConfirm: () => {
-                    return fetch('/ajax/delete-booking', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-CSRF-Token': csrfToken()
-                        },
-                        body: new URLSearchParams({booking_id: bookingID ?? ''})
-                    })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(response.statusText)
-                            }
-                            return response.json()
-                        })
-                        .catch(error => {
-                            Swal.showValidationMessage(
-                                `Request failed: ${error}`
-                            )
-                        });
-                },
-                allowOutsideClick: () => !Swal.isLoading()
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    if (result.value.status == 'success') {
-                        $(this).prop('disabled', true);
+        if (!button) {
+            return;
+        }
 
-                        // Reload when the confirmation closes, not on a
-                        // second timer of its own. The two used to be set
-                        // separately -- 3s for the message, 1s for the
-                        // reload -- so the page tore the message down two
-                        // seconds into reading it. One timing, one owner.
-                        Swal.fire({
-                            title: `${result.value.message}`,
-                            icon: 'success',
-                            showConfirmButton: false,
-                            timer: 3000
-                        }).then(function () {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            title: `${result.value.status} => ${result.value.message}`,
-                            icon: 'error',
-                        })
+        const card = button.closest('[data-booking-card]');
+        const reference = button.dataset.bookingReference || '';
+        const named = reference ? 'Booking ' + reference : 'This booking';
+
+        Swal.fire({
+            title: 'Cancel this booking?',
+            // text, not html: a reference is data and Swal escapes this one.
+            text: named + ' will be marked cancelled. It stays in your list.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Cancel booking',
+            cancelButtonText: 'Keep it',
+            focusCancel: true,
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: 'btn btn-danger me-2',
+                cancelButton: 'btn btn-outline-secondary'
+            },
+            showLoaderOnConfirm: true,
+            preConfirm: function () {
+                return fetch('/ajax/cancel-booking', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRF-Token': csrfToken()
+                    },
+                    body: new URLSearchParams({booking_id: button.dataset.bookingId || ''})
+                }).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error(response.statusText);
                     }
-                }
-            })
+                    return response.json();
+                }).catch(function (error) {
+                    Swal.showValidationMessage('Request failed: ' + error);
+                });
+            },
+            allowOutsideClick: function () {
+                return !Swal.isLoading();
+            }
+        }).then(function (result) {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            if (result.value.status !== 'success') {
+                Swal.fire({title: result.value.message, icon: 'error'});
+                return;
+            }
+
+            markCancelled(card, button, reference);
         });
-    } catch (err) {
-        console.log(err);
+    });
+
+    // The row survives a cancel, so the card is restyled where it stands
+    // rather than removed and the page reloaded. No success dialog: the card
+    // changing in front of you is the confirmation, and the live region
+    // carries it for anyone who cannot see that.
+    function markCancelled(card, button, reference) {
+        // The tooltip outlives its trigger otherwise, and hangs over the card.
+        const tip = bootstrap.Tooltip.getInstance(button);
+
+        if (tip) {
+            tip.dispose();
+        }
+
+        button.remove();
+
+        if (!card) {
+            return;
+        }
+
+        card.classList.add('booking-card--cancelled');
+        card.classList.remove('shadow-sm');
+
+        const status = card.querySelector('.js-booking-status');
+
+        if (status) {
+            status.className = 'booking-status js-booking-status booking-status--cancelled';
+            status.textContent = 'Cancelled';
+        }
+
+        // How near the departure is stops being the point once it is cancelled.
+        const when = card.querySelector('.booking-when');
+
+        if (when) {
+            when.remove();
+        }
+
+        const live = document.querySelector('.js-bookings-live');
+
+        if (live) {
+            live.textContent = (reference ? 'Booking ' + reference : 'Booking') + ' cancelled.';
+        }
     }
+
+    /*[ Copy to clipboard ]
+    ===========================================================*/
+    // Generic on purpose: the next thing worth copying needs markup, not a
+    // second handler.
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.js-copy');
+
+        if (!button) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const label = button.getAttribute('aria-label');
+
+        copyToClipboard(button.dataset.copyText).then(function () {
+            button.classList.add('is-copied');
+            button.setAttribute('aria-label', 'Copied');
+
+            setTimeout(function () {
+                button.classList.remove('is-copied');
+                button.setAttribute('aria-label', label);
+            }, 1600);
+        }, function () {
+            window.prompt('Copy this reference', button.dataset.copyText);
+        });
+    });
+
+    /*[ Fly this route again ]
+    ===========================================================*/
+    // A picker per booking, inside its dialog. The search form's own init
+    // cannot be reused: it is wired to four page-specific element ids and
+    // writes the chosen date into those globals, so a second copy on the page
+    // would fight it. This one only ever touches its own form.
+    //
+    // Built on first open rather than on load, because daterangepicker measures
+    // the field to place its calendar and a field inside a hidden modal has no
+    // position to measure. parentEl keeps the calendar inside the dialog, where
+    // it stacks above the backdrop instead of behind it.
+    document.addEventListener('show.bs.modal', function (event) {
+        const modal = event.target;
+        const input = modal.querySelector('.js-rebook-date');
+
+        if (!input || input.dataset.pickerReady) {
+            return;
+        }
+
+        input.dataset.pickerReady = '1';
+
+        const $input = $(input);
+        const $form = $input.closest('.js-rebook');
+        const roundtrip = $input.data('triptype') === 'roundtrip';
+        const display = 'MMMM D, YYYY';
+
+        $input.daterangepicker({
+            autoApply: true,
+            showCustomRangeLabel: false,
+            autoUpdateInput: false,
+            singleDatePicker: !roundtrip,
+            minDate: moment().format(display),
+            parentEl: '#' + modal.id + ' .modal-content',
+            opens: 'center',
+            drops: 'auto',
+            locale: {format: display, separator: ' – ', firstDay: 1}
+        });
+
+        $input.on('apply.daterangepicker', function (ev, picker) {
+            $form.find('.js-rebook-depart').val(picker.startDate.format('YYYY-MM-DD'));
+
+            if (roundtrip) {
+                $form.find('.js-rebook-return').val(picker.endDate.format('YYYY-MM-DD'));
+                $input.val(picker.startDate.format(display) + ' – ' + picker.endDate.format(display));
+            } else {
+                $input.val(picker.startDate.format(display));
+            }
+        });
+    });
+
+    // "No children" is the absence of a number, not an empty one. A disabled
+    // control is not submitted, which keeps `children=&infants=` out of a
+    // search URL people share.
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('.js-rebook');
+
+        if (!form) {
+            return;
+        }
+
+        form.querySelectorAll('select').forEach(function (select) {
+            select.disabled = select.value === '';
+        });
+    });
 
     // Cards arrive after load too, when the list grows, so this has to be
     // callable again. getOrCreateInstance rather than new: running it twice

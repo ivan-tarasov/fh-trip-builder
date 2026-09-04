@@ -1,0 +1,43 @@
+{# Everything about a booking that does not fit on one line: the full timeline
+   per direction, then the receipt. Shared by the card's collapse and the
+   booking's own page, which shows it open. #}
+{% for half in halves %}
+    {% if half.direction %}
+        <p class="booking-card__label">{{ half.label }}</p>
+        {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}
+    {% endif %}
+{% endfor %}
+
+<p class="booking-card__label">Receipt</p>
+<dl class="order__prices">
+    <div class="order__price-row">
+        <dt>Passenger</dt>
+        <dd>{{ booking.passenger }}</dd>
+    </div>
+    {% if booking.contact_email %}
+        <div class="order__price-row">
+            <dt>Contact</dt>
+            <dd>{{ booking.contact_email }}{% if booking.contact_phone %} &middot; {{ booking.contact_phone }}{% endif %}</dd>
+        </div>
+    {% endif %}
+    {% if booking.fare_brand %}
+        <div class="order__price-row">
+            <dt>Fare</dt>
+            <dd>{{ booking.fare_brand }}</dd>
+        </div>
+    {% endif %}
+    {% if booking.price_total %}
+        <div class="order__price-row">
+            <dt>Base</dt>
+            <dd>${{ booking.price_base.whole }}.{{ booking.price_base.cents }}</dd>
+        </div>
+        <div class="order__price-row">
+            <dt>Taxes &amp; fees</dt>
+            <dd>${{ booking.price_tax.whole }}.{{ booking.price_tax.cents }}</dd>
+        </div>
+        <div class="order__price-row order__price-row--total">
+            <dt>Total paid</dt>
+            <dd>${{ booking.price_total.whole }}.{{ booking.price_total.cents }}</dd>
+        </div>
+    {% endif %}
+</dl>

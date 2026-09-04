@@ -1,0 +1,103 @@
+{# One booking, as it appears in the list.
+
+   The same shell as a search result, because it is the same object. What
+   changes is what leads: a result leads with a price, since a price is what is
+   being compared; a booking leads with its reference, since nothing is being
+   compared any more and the reference is what somebody reads down a phone.
+
+   The full itinerary used to open inside this card. It lives on the booking's
+   own page now -- a booking is a thing with an address worth keeping, not a
+   drawer in a list, and the card is easier to scan without a panel that pushes
+   every sibling down the page when it opens. #}
+{% set halves = [
+    { 'label': 'Departing', 'icon': 'fa-plane-departure', 'direction': booking.outbound },
+    { 'label': 'Returning', 'icon': 'fa-plane-arrival', 'direction': booking.return }
+] %}
+
+<div class="card mb-3{{ booking.is_past or booking.is_cancelled ? '' : ' shadow-sm' }} flight-card booking-card{{ booking.is_past ? ' booking-card--past' : '' }}{{ booking.is_cancelled ? ' booking-card--cancelled' : '' }}"
+     data-booking-card="{{ booking.id }}">
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+            <div class="min-w-0">
+                {# Absent on bookings written before checkout issued references.
+                   Nothing is shown rather than an empty box or a made-up code. #}
+                {% if booking.reference %}
+                    <p class="booking-card__ref-label">Booking reference</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <h3 class="booking-card__ref-code">{{ booking.reference }}</h3>
+                        <button type="button" class="icon-btn icon-btn--sm js-copy"
+                                data-copy-text="{{ booking.reference }}"
+                                aria-label="Copy booking reference {{ booking.reference }}"
+                                data-toggle="tooltip" data-placement="top" title="Copy reference">
+                            <i class="fa-regular fa-copy icon-idle"></i>
+                            <i class="fa-solid fa-check icon-done"></i>
+                        </button>
+                    </div>
+                {% endif %}
+                <p class="small text-muted mb-0">
+                    {{ booking.passenger }}{% if booking.created %} &middot; booked {{ booking.created|date('j M Y') }}{% endif %}
+                </p>
+            </div>
+
+            <div class="d-flex align-items-center card-actions">
+                {% if booking.departs_in and not booking.is_cancelled %}
+                    <span class="booking-when">
+                        <i class="fas fa-clock" aria-hidden="true"></i> {{ booking.departs_in }}
+                    </span>
+                {% endif %}
+
+                <span class="booking-status js-booking-status booking-status--{{ booking.is_cancelled ? 'cancelled' : (booking.is_past ? 'flown' : 'confirmed') }}">
+                    {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
+                </span>
+
+                {% if not booking.is_cancelled and not booking.is_past %}
+                    <span class="card-actions__divider" aria-hidden="true"></span>
+                    <button type="button" class="icon-btn icon-btn--danger js-booking-cancel"
+                            data-booking-id="{{ booking.id }}"
+                            data-booking-reference="{{ booking.reference|default('') }}"
+                            aria-label="Cancel booking {{ booking.reference|default(booking.id) }}"
+                            data-toggle="tooltip" data-placement="top" title="Cancel this booking">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {% for half in halves %}
+            {% if half.direction %}
+                <p class="booking-card__label">
+                    <i class="fas {{ half.icon }}" aria-hidden="true"></i> {{ half.label }}
+                </p>
+                {% include 'search/cards/itinerary.html.twig' with { 'direction': half.direction } only %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="card-footer flight-card__footer">
+        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <a href="/my/bookings/{{ booking.id }}" class="btn btn-sm details-toggle">
+                <i class="fas fa-circle-info pe-1"></i>
+                View booking
+                <i class="fas fa-chevron-right ps-1"></i>
+            </a>
+
+            <div class="text-end">
+                {% if booking.price_total %}
+                    <span class="price price--sm">
+                        <span class="price__symbol">$</span><span class="price__whole">{{ booking.price_total.whole }}</span><span class="price__cents">.{{ booking.price_total.cents }}</span>
+                        <span class="price__currency">CAD</span>
+                    </span>
+                    <span class="small price-note text-muted d-block">
+                        paid with {{ booking.card_brand }} ending {{ booking.card_last4 }}
+                    </span>
+                {% else %}
+                    {# Booked before the price columns existed. The per-leg
+                       prices in the stored JSON are a search price nobody was
+                       charged, so no total is shown rather than a wrong one. #}
+                    <span class="small text-muted">Price not recorded</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

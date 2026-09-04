@@ -23,7 +23,7 @@
 
             <div class="done__reference">
                 <span class="done__reference-label">Booking reference</span>
-                <span class="done__reference-code">{{ reference }}</span>
+                <span class="done__reference-code">{{ booking.reference }}</span>
             </div>
         </div>
 
@@ -31,24 +31,17 @@
             <section class="pane" aria-labelledby="itinerary-heading">
                 <h2 class="pane__heading" id="itinerary-heading">Your flights</h2>
 
-                {% for legs in [outbound, return] %}
-                    {% if legs|length %}
-                        <p class="done__direction">{{ loop.first ? 'Departing' : 'Returning' }}</p>
-                        {% for leg in legs %}
-                            <div class="done__leg">
-                                <div class="done__leg-route">
-                                    <span class="order__code">{{ leg.from }}</span>
-                                    <i class="fas fa-arrow-right order__arrow"></i>
-                                    <span class="order__code">{{ leg.to }}</span>
-                                </div>
-                                <div class="done__leg-when">
-                                    <span>{{ leg.depart }}</span>
-                                    <span class="done__leg-sep">&rarr;</span>
-                                    <span>{{ leg.arrive }}</span>
-                                </div>
-                                <div class="done__leg-carrier">{{ leg.carrier }} · {{ leg.flight }}</div>
-                            </div>
-                        {% endfor %}
+                {# The same view-model and the same partials the bookings list
+                   uses, so the trip just paid for and the one come back to
+                   later are drawn from one shape. What this replaced flattened
+                   each leg to six strings and threw the rest away. #}
+                {% for half in [
+                    { 'label': 'Departing', 'direction': booking.outbound },
+                    { 'label': 'Returning', 'direction': booking.return }
+                ] %}
+                    {% if half.direction %}
+                        <p class="done__direction">{{ half.label }}</p>
+                        {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}
                     {% endif %}
                 {% endfor %}
             </section>
@@ -59,15 +52,15 @@
                 <dl class="order__prices">
                     <div class="order__price-row">
                         <dt>Passenger</dt>
-                        <dd>{{ passenger }}</dd>
+                        <dd>{{ booking.passenger }}</dd>
                     </div>
                     <div class="order__price-row">
                         <dt>Paid with</dt>
-                        <dd>{{ card_brand }} ending {{ card_last4 }}</dd>
+                        <dd>{{ booking.card_brand }} ending {{ booking.card_last4 }}</dd>
                     </div>
                     <div class="order__price-row order__price-row--total">
                         <dt>Charged</dt>
-                        <dd>${{ price.whole }}.{{ price.cents }}</dd>
+                        <dd>${{ booking.price_total.whole }}.{{ booking.price_total.cents }}</dd>
                     </div>
                 </dl>
 

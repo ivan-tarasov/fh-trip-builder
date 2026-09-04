@@ -27,6 +27,7 @@ class Install extends AbstractCommand
     private const string MESSAGE_CREATING_TABLE = 'Creating `%s` table';
     private const string MESSAGE_SEEDING_TABLE = 'Seeding `%s` table';
     private const string MESSAGE_ADDING_COLUMN = 'Adding `%s`.`%s` column';
+    private const string MESSAGE_ADDING_INDEX = 'Adding `%s`.`%s` index';
 
     /**
      * @throws Exception
@@ -59,6 +60,10 @@ class Install extends AbstractCommand
                 // is no migration runner here, and seeding would otherwise fail
                 // on a column the CSV names but the table has never had.
                 $this->addMissingColumns($table, $data['columns']);
+                // Same reasoning for indexes: indexClause() only runs inside
+                // CREATE TABLE, so a declared index has never reached a
+                // database that already had the table.
+                $this->addMissingIndexes($table, $data['indexes'] ?? []);
                 continue;
             }
 
@@ -179,6 +184,60 @@ class Install extends AbstractCommand
 
             $this->formatOutput($action, 'added', 'success');
             $previous = $name;
+        }
+    }
+
+    /**
+     * Add declared indexes a table is missing.
+     *
+     * Additive only: an index the config no longer names is left alone rather
+     * than dropped, because a running database may have picked one up for a
+     * reason this file does not know about.
+     *
+     * @param list<array<string, mixed>> $indexes
+     */
+    private function addMissingIndexes(string $table, array $indexes): void
+    {
+        if ($indexes === []) {
+            return;
+        }
+
+        $existing = array_column(
+            $this->connection()->fetchAll(
+                'SELECT DISTINCT index_name AS name FROM information_schema.statistics'
+                . ' WHERE table_schema = DATABASE() AND table_name = ?',
+                [$table],
+            ),
+            'name',
+        );
+
+        foreach ($indexes as $index) {
+            $name = (string) $index['name'];
+
+            if (in_array($name, $existing, true)) {
+                continue;
+            }
+
+            $action = sprintf(self::MESSAGE_ADDING_INDEX, $table, $name);
+
+            try {
+                $this->connection()->pdo()->exec(sprintf(
+                    'ALTER TABLE `%s` ADD KEY `%s` (%s)',
+                    $table,
+                    $name,
+                    implode(', ', array_map(
+                        static fn(string $column): string => sprintf('`%s`', $column),
+                        $index['columns'],
+                    )),
+                ));
+            } catch (Throwable $e) {
+                $this->formatOutput($action, 'failed', 'danger');
+                $this->io->error(sprintf('Adding `%s`.`%s` failed: %s', $table, $name, $e->getMessage()));
+
+                return;
+            }
+
+            $this->formatOutput($action, 'added', 'success');
         }
     }
 

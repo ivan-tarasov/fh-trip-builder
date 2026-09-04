@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration\Repository;
 
+use TripBuilder\BookingStatus;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
@@ -52,21 +53,52 @@ final class BookingRepositoryTest extends IntegrationTestCase
         self::assertSame([], $bookings);
     }
 
-    public function testCreateReturnsIdAndDeleteForSessionRemovesScoped(): void
+    public function testCreateReturnsIdAndCancelForSessionIsScoped(): void
     {
         $repo = new BookingRepository($this->connection());
         $session = 'test-' . uniqid();
 
         $id = $repo->create(self::booking($session));
 
-        self::assertGreaterThan(0, $id);
-        self::assertCount(1, $repo->forSession($session));
+        try {
+            self::assertGreaterThan(0, $id);
+            self::assertCount(1, $repo->forSession($session));
 
-        // Wrong session must not delete.
-        self::assertSame(0, $repo->deleteForSession($id, 'someone-else'));
-        // Correct session deletes exactly one.
-        self::assertSame(1, $repo->deleteForSession($id, $session));
-        self::assertSame([], $repo->forSession($session));
+            // Wrong session must not cancel.
+            self::assertSame(0, $repo->cancelForSession($id, 'someone-else'));
+            self::assertSame(
+                BookingStatus::Confirmed->value,
+                $repo->findForSession($id, $session)['status'],
+            );
+
+            self::assertSame(1, $repo->cancelForSession($id, $session));
+
+            // The row survives -- that is the whole point of cancelling rather
+            // than deleting -- and a second cancel changes nothing.
+            $cancelled = $repo->findForSession($id, $session);
+            self::assertNotNull($cancelled);
+            self::assertSame(BookingStatus::Cancelled->value, $cancelled['status']);
+            self::assertCount(1, $repo->forSession($session));
+            self::assertSame(0, $repo->cancelForSession($id, $session));
+        } finally {
+            $this->connection()->execute('DELETE FROM bookings WHERE session_id = ?', [$session]);
+        }
+    }
+
+    public function testFindForSessionIsScopedToTheSessionThatBooked(): void
+    {
+        $repo = new BookingRepository($this->connection());
+        $session = 'test-' . uniqid();
+
+        $id = $repo->create(self::booking($session));
+
+        try {
+            self::assertNotNull($repo->findForSession($id, $session));
+            // An id guessed from another browser resolves to nothing.
+            self::assertNull($repo->findForSession($id, 'someone-else'));
+        } finally {
+            $this->connection()->execute('DELETE FROM bookings WHERE session_id = ?', [$session]);
+        }
     }
 
     public function testForSessionRoundTripsAnInsertedBooking(): void

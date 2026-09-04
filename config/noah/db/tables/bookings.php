@@ -26,6 +26,22 @@ return [
     'charset' => 'utf8',
     'auto_increment' => 100001,
 
+    /*
+    | Secondary indexes. Every read of this table is one session's bookings in
+    | departure order, so the composite serves the lookup and the sort together
+    | and its leading column covers any session_id-only filter — a lone
+    | departure_time index would serve no query here, as nothing asks about
+    | dates across sessions.
+    |
+    | `reference` is a lookup on the confirmation page and is also counted up to
+    | twenty times while allocating a new one. It cannot be UNIQUE: the rows
+    | written before checkout issued references all hold the empty string.
+    */
+    'indexes' => [
+        ['name' => 'session_departure', 'columns' => ['session_id', 'departure_time']],
+        ['name' => 'reference', 'columns' => ['reference']],
+    ],
+
     'columns' => [
         [
             'name' => 'id',
