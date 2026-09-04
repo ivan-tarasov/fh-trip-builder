@@ -15,6 +15,7 @@ use TripBuilder\Noah\Db\Clear as DatabaseClear;
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
+use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
 use TripBuilder\Noah\Grab\Suppliers as GrabSuppliers;
 
 try {
@@ -74,6 +75,18 @@ try {
     */
 
     $application->add(new CleaningFlights());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reprice Flights
+    |--------------------------------------------------------------------------
+    |
+    | Recalculating fares on flights already in the network with the current
+    | formula in `FarePricing`, in place so bookings keep their flight ids.
+    |
+    */
+
+    $application->add(new RepriceFlights());
 
     // FIXME: for image grabbing
     // $application->add(new GrabSuppliers());

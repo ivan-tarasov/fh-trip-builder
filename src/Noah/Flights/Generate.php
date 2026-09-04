@@ -32,17 +32,7 @@ class Generate extends AbstractCommand
 {
     private const int FLIGHTS_COUNT = 10000;
     private const int NUMBERS_POOL = 9999;
-    private const int PRICE_MULTIPLIER = 8;
-    private const array PRICE_ADD_DOLLARS = [5, 800];
 
-    // Nonstop convenience premium: a convex (distance^2) surcharge so a single
-    // long leg is priced above two shorter legs covering the same route —
-    // mirroring real fares where nonstops carry a premium, which makes the
-    // cheapest itinerary often a connection. Bounded (max ~4000 at the
-    // reference distance) so price_base stays within decimal(6,2).
-    private const int PRICE_NONSTOP_PREMIUM_MAX = 4000;
-    private const int PRICE_PREMIUM_REF_KM = 20000;
-    private const array PRICE_TAX_PERCENT = [5, 90];
     private const array DURATION_ADD_KM = [10, 55];
     private const array DATE_ADD_DAYS = [1, 90];
     private const array FLIGHT_SPEED_KMH = [700, 900];
@@ -231,12 +221,10 @@ class Generate extends AbstractCommand
                 ),
             );
 
-            // Base price: distance-linear fare + a convex nonstop premium (so a
-            // direct leg is dearer than two shorter connecting legs), then tax
-            // as a percentage of that same base.
-            $nonstopPremium = self::PRICE_NONSTOP_PREMIUM_MAX * ($distance / self::PRICE_PREMIUM_REF_KM) ** 2;
-            $priceBase = ($distance * self::PRICE_MULTIPLIER / 100) + $nonstopPremium + Helper::random(self::PRICE_ADD_DOLLARS);
-            $priceTax = $priceBase * (Helper::random(self::PRICE_TAX_PERCENT) / 100);
+            // Both the fare and its tax live in FarePricing, so generated rows and
+            // repriced ones cannot disagree.
+            $priceBase = FarePricing::base($distance);
+            $priceTax = FarePricing::tax($priceBase);
 
             $flights[] = new Flight(
                 airline: $airline,

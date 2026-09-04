@@ -825,11 +825,17 @@ final readonly class FlightRepository
                     WHERE f1.departure_airport IN ({$fromPh})
                       AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
                       AND f2.arrival_airport = ?
-                      AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY";
-                // No `f1.arrival NOT IN (endpoints)` here: for a single connection it
-                // is redundant (a hop through the origin/destination yields no valid
-                // second leg) and it would stop f1 from seeking on departure_airport_time.
-                $partParams[] = [...$fromCodes, $date, $date, $toCode, $date, $date];
+                      AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
+                      AND f1.arrival_airport NOT IN ({$endPh})";
+                // This exclusion was skipped here on the reasoning that a hop through
+                // the origin or destination yields no valid second leg. That holds for
+                // a single airport code -- nothing connects at the airport it just left
+                // -- but resolveAirportCodes() returns every airport in the searched
+                // city, so sibling airports were never excluded: ORY -> CDG -> LHR and
+                // CDG -> LGW -> LHR both scored as one-stop itineraries whose layover
+                // was in the city the traveller had just left, or the one they were
+                // flying to. The two-stop branch below has always excluded them.
+                $partParams[] = [...$fromCodes, $date, $date, $toCode, $date, $date, ...$endpoints];
             }
         }
 
