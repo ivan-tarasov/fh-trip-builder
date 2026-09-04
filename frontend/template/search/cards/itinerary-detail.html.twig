@@ -84,9 +84,16 @@
         </div>
 
         {% if direction.layovers[loop.index0] is defined %}
+            {% set layover = direction.layovers[loop.index0] %}
             <div class="leg__layover">
                 <i class="far fa-clock" aria-hidden="true"></i>
-                {{ direction.layovers[loop.index0].wait }} in {{ direction.layovers[loop.index0].airport_city }}
+                <span>{{ layover.wait }} in {{ layover.airport_city }}</span>
+                {# What is worth knowing about this wait: how it sits against
+                   the connection thresholds, and whether it runs through the
+                   night. Never more than one of each. #}
+                {% for note in layover.notes %}
+                    <span class="leg__layover-note leg__layover-note--{{ note.tone }}">{{ note.text }}</span>
+                {% endfor %}
             </div>
         {% endif %}
     {% endfor %}

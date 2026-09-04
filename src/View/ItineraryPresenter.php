@@ -123,7 +123,7 @@ class ItineraryPresenter
                 'notices' => $this->buildNotices($segments, $itinerary->layovers, (int) $itinerary->total_duration),
                 'badges' => array_map($this->badgeMeta(...), $itinerary->badges),
                 'route' => $this->routeParts($itinerary),
-                'layovers' => $this->layovers($itinerary),
+                'layovers' => $this->layovers($itinerary, $segments),
                 'segments' => $detail,
             ],
             'ids' => $ids,
@@ -181,17 +181,56 @@ class ItineraryPresenter
     }
 
     /**
-     * @return list<array<string, string>>
+     * The gaps between segments, each with the one note worth putting on it.
+     *
+     * @param list<object> $segments in flight order, so layover i sits between
+     *                               segment i and segment i + 1
+     * @return list<array{airport_code: string, airport_city: string, wait: string, notes: list<array{text: string, tone: string}>}>
      */
-    private function layovers(object $itinerary): array
+    private function layovers(object $itinerary, array $segments): array
     {
         $layovers = [];
 
-        foreach ($itinerary->layovers as $layover) {
+        foreach ($itinerary->layovers as $i => $layover) {
+            $wait = (int) $layover->wait_minutes;
+
+            // Layover i is the gap between segment i and the one after it.
+            $overnight = isset($segments[$i], $segments[$i + 1]) && $this->spansNight(
+                $segments[$i]->arrive->date_time,
+                $segments[$i + 1]->depart->date_time,
+            );
+
+            // At most two notes, and they never say the same thing twice.
+            //
+            // The duration note is one or the other, because the chip already
+            // prints the wait: "5h 34m in London" says it is long on its own,
+            // so the label is only adding where the threshold sits.
+            //
+            // "Overnight" is separate because it is the one thing the duration
+            // cannot tell you -- 5h 10m could be an afternoon or 23:30 to
+            // 04:40 -- and it stacks with either. A tight connection in the
+            // middle of the night is two problems, not one: the plane may be
+            // missed, and it is being caught at 3am with the airport shut.
+            $notes = [];
+
+            if ($wait < self::LAYOVER_TIGHT_MINUTES) {
+                $notes[] = ['text' => 'Tight connection', 'tone' => 'risk'];
+            } elseif ($wait > self::LAYOVER_LONG_MINUTES) {
+                $notes[] = ['text' => 'Long layover', 'tone' => 'note'];
+            }
+
+            if ($overnight) {
+                // "Overnight" rather than the notices' "Night layover": beside
+                // "Long layover" the word would land twice in three words, and
+                // the chip has already said which layover it is talking about.
+                $notes[] = ['text' => 'Overnight', 'tone' => 'note'];
+            }
+
             $layovers[] = [
                 'airport_code' => $layover->airport_code,
                 'airport_city' => $layover->airport_city,
-                'wait' => $this->minutesToStringTime($layover->wait_minutes),
+                'wait' => $this->minutesToStringTime($wait),
+                'notes' => $notes,
             ];
         }
 

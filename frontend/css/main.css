@@ -1998,6 +1998,7 @@ textarea {
 .leg__layover {
   display: inline-flex;
   align-items: center;
+  gap: .375rem;
   /* The gap in the journey wants to read as a gap. At .5rem the chip sat tight
      against the facts row above it and the next departure below, so the break
      in the rail was the only thing separating one segment from the next. */
@@ -2010,7 +2011,23 @@ textarea {
   color: var(--ink-secondary);
 }
 
-.leg__layover i { margin-right: .375rem; color: var(--ink-muted); }
+/* Font Awesome's JS bundle rewrites every <i> into an <svg>, so a margin hung
+   on `i` stops applying the moment that runs -- which is why the clock sat
+   against the time. The container's own gap does not care what the icon
+   element ends up being. */
+.leg__layover i,
+.leg__layover svg { color: var(--ink-muted); }
+
+.leg__layover-note {
+  padding-left: .5rem;
+  margin-left: .125rem;
+  border-left: 1px solid var(--line-strong);
+  font-weight: 600;
+}
+
+.leg__layover-note--note { color: var(--ink-secondary); }
+/* A wait too short to make comfortably is the one that changes a decision. */
+.leg__layover-note--risk { color: var(--brand-danger); }
 
 .legs__total {
   margin: .875rem 0 0;
