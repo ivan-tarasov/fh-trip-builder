@@ -82,17 +82,9 @@
         console.log(er);
     }
 
-    /*[ Buy tickets AJAX + sweetalert2 ]
+    /*[ Booking actions + sweetalert2 ]
     ===========================================================*/
     try {
-        $(".empty-link").click(function () {
-            Swal.fire({
-                icon: 'info',
-                title: 'Oops...',
-                text: 'This is a placeholder link, and clicking on it does not lead to any effect.'
-            });
-        });
-
         $("button[id^=deleteBooking_]").click(function () {
             let bookingID = $(this).data('booking-id');
 

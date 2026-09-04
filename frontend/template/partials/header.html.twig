@@ -54,16 +54,14 @@
                         </li>
                         {% endfor %}
                     </ul>
-                    <div class="d-flex">
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                            <li class="nav-item">
-                                <a class="nav-link empty-link" aria-current="page">
-                                    <img src="{{ config('site.avatar') }}" width="32" class="rounded-circle me-2" alt="User profile avatar"/>
-                                    User profile
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                    {# There was a "User profile" item here, an avatar and a
+                       label with no href, wired to a dialog apologising that it
+                       does nothing. There is no account system -- a booking
+                       belongs to a session -- and everything personal the app
+                       does have, bookings and saved flights, is already in the
+                       nav above. An avatar in the account slot of a booking app
+                       promises somewhere to sign in. Authorship, which is what
+                       the avatar actually showed, is credited in the footer. #}
                 </div>
             </div>
         </nav>

@@ -49,9 +49,10 @@
         <!-- Action buttons -->
         <div class="col-xl-2 border-start ps-4">
             <div class="ps-0 pt-1">
-                <button type="button" class="btn btn-sm btn-link empty-link d-block" id="exchangeTicket">
-                    <i class="fas fa-exchange-alt pe-2"></i>Exchange Ticket
-                </button>
+                {# "Exchange Ticket" sat above Delete Booking and apologised
+                   when pressed. Exchanging one needs a rebooking flow -- repricing
+                   against a new date, collecting the difference -- so it stayed a
+                   promise next to a button that works. #}
                 <button type="button" class="btn btn-sm btn-link text-danger d-block" id="deleteBooking_{{ booking.id_raw }}" data-booking-id="{{ booking.id_raw }}">
                     <i class="fas fa-lg fa-times pe-2"></i>Delete Booking
                 </button>
