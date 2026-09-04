@@ -769,6 +769,9 @@ final readonly class FlightRepository
      * each leg for it. Both are no-ops for economy, so the default cabin runs
      * the query this method has always built.
      *
+     * The connecting branches are additionally bounded by how far the whole
+     * itinerary flies -- see detourCapKm().
+     *
      * @param list<string> $fromCodes
      * @param list<string> $toCodes
      * @return array{0: string, 1: list<string>, 2: list<string>, 3: list<list<string>>}
@@ -791,6 +794,18 @@ final readonly class FlightRepository
         // the same reason — an unnamed one cannot be used as a derived table.
         $parts = [];
         $partParams = [];
+
+        // How far an itinerary may wander. Only the connecting tiers can: a
+        // direct leg's distance *is* the direct distance, measured from the
+        // same coordinates, so there is nothing for a cap to catch there.
+        //
+        // Applied progressively rather than only to the finished total, so the
+        // join sheds a first leg that has already overshot instead of pairing
+        // it with everything that connects.
+        $cap = $this->detourCapKm($fromCodes, $toCodes);
+        $within1 = $cap === null ? '' : sprintf(' AND f1.distance <= %d', $cap);
+        $within2 = $cap === null ? '' : sprintf(' AND f1.distance + f2.distance <= %d', $cap);
+        $within3 = $cap === null ? '' : sprintf(' AND f1.distance + f2.distance + f3.distance <= %d', $cap);
 
         // Resolved once per branch alias: the cabin is fixed for the whole
         // search, only the leg it applies to changes.
@@ -850,7 +865,7 @@ final readonly class FlightRepository
                       AND f2.arrival_airport = ?
                       AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
                       AND f1.arrival_airport NOT IN ({$endPh})
-                      {$sells1}{$sells2}";
+                      {$sells1}{$sells2}{$within1}{$within2}";
                 // This exclusion was skipped here on the reasoning that a hop through
                 // the origin or destination yields no valid second leg. That holds for
                 // a single airport code -- nothing connects at the airport it just left
@@ -899,7 +914,7 @@ final readonly class FlightRepository
                       AND f1.arrival_airport NOT IN ({$endPh})
                       AND f2.arrival_airport NOT IN ({$endPh})
                       AND f2.arrival_airport <> f1.arrival_airport
-                      {$sells1}{$sells2}{$sells3}";
+                      {$sells1}{$sells2}{$sells3}{$within1}{$within2}{$within3}";
                 $partParams[] = [
                     ...$fromCodes, $date, $date, $date, $date, $date, $date,
                     $toCode, ...$endpoints, ...$endpoints,
@@ -1204,6 +1219,64 @@ final readonly class FlightRepository
         );
 
         return array_map(static fn(array $row): string => (string) $row['code'], $rows);
+    }
+
+    /**
+     * Furthest an itinerary between these endpoints may fly, in km.
+     *
+     * The larger of a multiple of the direct distance and an absolute floor --
+     * see the config block for why a ratio alone does not hold across scales.
+     *
+     * Returns null when the direct distance cannot be measured, in which case
+     * the caller leaves connecting itineraries unbounded rather than capping
+     * them against a number it does not have.
+     *
+     * @param list<string> $fromCodes
+     * @param list<string> $toCodes
+     */
+    private function detourCapKm(array $fromCodes, array $toCodes): ?int
+    {
+        $span = $this->routeSpanKm($fromCodes, $toCodes);
+
+        if ($span === null) {
+            return null;
+        }
+
+        $ratio = (float) Config::get('search.connections.max_detour_ratio', 1.6);
+        $floor = (int) Config::get('search.connections.min_detour_km', 2000);
+
+        return max($floor, (int) ceil($span * $ratio));
+    }
+
+    /**
+     * Direct distance between the searched cities, in km, or null.
+     *
+     * A city can resolve to several airports, so this takes the furthest pair:
+     * the cap has to clear the longest legitimate version of the journey, not
+     * the shortest. Measured by the database from the airports' own
+     * coordinates, which is where every leg distance came from too.
+     *
+     * @param list<string> $fromCodes
+     * @param list<string> $toCodes
+     */
+    private function routeSpanKm(array $fromCodes, array $toCodes): ?int
+    {
+        $airports = Table::Airports->value;
+
+        $span = $this->connection->fetchValue(
+            sprintf(
+                'SELECT MAX(ST_Distance_Sphere(POINT(a.longitude, a.latitude),'
+                . ' POINT(b.longitude, b.latitude))) / 1000'
+                . ' FROM %s a, %s b WHERE a.code IN (%s) AND b.code IN (%s)',
+                $airports,
+                $airports,
+                $this->placeholders($fromCodes),
+                $this->placeholders($toCodes),
+            ),
+            [...$fromCodes, ...$toCodes],
+        );
+
+        return $span === null ? null : (int) round((float) $span);
     }
 
     /**

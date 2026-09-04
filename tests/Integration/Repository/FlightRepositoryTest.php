@@ -197,6 +197,57 @@ final class FlightRepositoryTest extends IntegrationTestCase
         self::assertNull($this->repository()->itineraryByIds([$id], CabinClass::First));
     }
 
+    public function testConnectionsCannotWanderFurtherThanTheDetourCap(): void
+    {
+        // YUL to YYZ is 504 km apart, so the cap falls back to its floor of
+        // 2,000 km. Two connections are planted between the same pair of
+        // cities: one that stays local and one that crosses the Atlantic twice.
+        $nearOut = $this->insertFlight('AC', 'YUL', self::DEPART_DATE . ' 07:00:00', 'EWR', self::DEPART_DATE . ' 08:30:00', 1, 531);
+        $nearIn = $this->insertFlight('AC', 'EWR', self::DEPART_DATE . ' 10:00:00', 'YYZ', self::DEPART_DATE . ' 11:15:00', 1, 558);
+        $farOut = $this->insertFlight('AC', 'YUL', self::DEPART_DATE . ' 06:00:00', 'LHR', self::DEPART_DATE . ' 18:00:00', 1, 5216);
+        $farIn = $this->insertFlight('AC', 'LHR', self::DEPART_DATE . ' 20:00:00', 'YYZ', self::DEPART_DATE . ' 23:00:00', 1, 5700);
+
+        $this->extraIds = [...$this->extraIds, $nearOut, $nearIn, $farOut, $farIn];
+
+        $result = $this->repository()->searchDirection(
+            'YUL',
+            'YYZ',
+            self::DEPART_DATE,
+            SortMethod::Duration,
+            0,
+            210,
+            CabinClass::Economy,
+            new FlightFilters(stops: [1]),
+        );
+
+        $routings = [];
+
+        foreach ($result['rows'] as $row) {
+            $flown = 0;
+
+            foreach ($row['legs'] as $leg) {
+                $flown += (int) $leg['distance'];
+            }
+
+            $routings[] = ['stop' => $row['legs'][0]['arr_code'], 'flown' => $flown];
+        }
+
+        $stops = array_column($routings, 'stop');
+
+        // Both connect in time, and before the cap existed both were offered.
+        self::assertContains('EWR', $stops, 'A local connection should still be offered');
+        self::assertNotContains('LHR', $stops, 'A connection via London is 10,916 km for a 504 km trip');
+
+        // Nothing else slipped past either.
+        foreach ($routings as $routing) {
+            self::assertLessThanOrEqual(
+                2000,
+                $routing['flown'],
+                sprintf('Itinerary via %s flies %d km', $routing['stop'], $routing['flown']),
+            );
+        }
+    }
+
     public function testItineraryByIdsRejectsBrokenSelections(): void
     {
         // A leg that no longer exists.
@@ -366,12 +417,13 @@ final class FlightRepositoryTest extends IntegrationTestCase
         string $to,
         string $arrival,
         int $cabins = 1,
+        int $distance = self::FIXTURE_KM,
     ): int {
         return $this->connection()->insert(
             'INSERT INTO flights (airline, number, departure_airport, departure_time,'
             . ' arrival_airport, arrival_time, distance, duration, cabins, price_base, price_tax, rating)'
             . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [$airline, 100, $from, $departure, $to, $arrival, self::FIXTURE_KM, 75, $cabins, self::FIXTURE_BASE, self::FIXTURE_TAX, 4.10],
+            [$airline, 100, $from, $departure, $to, $arrival, $distance, 75, $cabins, self::FIXTURE_BASE, self::FIXTURE_TAX, 4.10],
         );
     }
 }
