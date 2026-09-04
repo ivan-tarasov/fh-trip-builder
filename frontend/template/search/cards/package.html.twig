@@ -81,7 +81,7 @@
             <p class="order__note">1 adult, all taxes and fees included.</p>
 
             <a class="checkout__pay"
-               href="/checkout?depart_itin={{ package_ids.outbound }}{% if package_ids.return %}&amp;return_itin={{ package_ids.return }}{% endif %}">
+               href="/checkout?depart_itin={{ package_ids.outbound }}{% if package_ids.return %}&amp;return_itin={{ package_ids.return }}{% endif %}{% if cabin is defined and cabin.value != 'economy' %}&amp;class={{ cabin.value }}{% endif %}">
                 Continue to checkout <i class="fas fa-arrow-right ps-1"></i>
             </a>
         </div>

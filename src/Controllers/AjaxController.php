@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Throwable;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
+use TripBuilder\CabinClass;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Service\FlightFinder;
 
@@ -35,8 +36,14 @@ class AjaxController extends AbstractController
 
         $finder = new FlightFinder($this->connection());
 
-        $outbound = $finder->findSegments($outboundIds);
-        $return = $returnIds === [] ? [] : $finder->findSegments($returnIds);
+        // Same contract as /checkout: the cabin travels with the ids, because
+        // they name the legs but not what was being bought.
+        $cabin = CabinClass::fromRequest(
+            is_string($_POST['class'] ?? null) ? $_POST['class'] : null,
+        );
+
+        $outbound = $finder->findSegments($outboundIds, $cabin);
+        $return = $returnIds === [] ? [] : $finder->findSegments($returnIds, $cabin);
 
         // Every requested leg must still resolve, or the itinerary is stale.
         if (count($outbound) !== count($outboundIds) || count($return) !== count($returnIds)) {

@@ -6,6 +6,7 @@ namespace TripBuilder\Service;
 
 use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\Api\Flights\SortMethod;
+use TripBuilder\CabinClass;
 use TripBuilder\Database\Connection;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
@@ -95,8 +96,12 @@ final readonly class FlightFinder
 
         // A stale or tampered selection resolves to null and simply drops the
         // traveller back to the step that still needs a choice.
-        $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
-        $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
+        $outbound = $isRoundtrip && $outboundIds !== []
+            ? $flights->itineraryByIds($outboundIds, $query->cabin)
+            : null;
+        $return = $outbound !== null && $returnIds !== []
+            ? $flights->itineraryByIds($returnIds, $query->cabin)
+            : null;
 
         $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'option_prices' => [], 'bounds' => [], 'highlights' => []];
         $addBase = 0.0;
@@ -121,6 +126,7 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->offset,
                 $query->limit,
+                $query->cabin,
                 // Step 2 lists the return leg, so it filters on the return's
                 // own set — the outbound's filters have already done their job.
                 $query->returnFilters,
@@ -134,7 +140,7 @@ final readonly class FlightFinder
             // return, so step 1 prices are comparable with the totals at step 2.
             // Resolved before the search for the same reason as step 2 above.
             $addBase = ($step === 1
-                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate)
+                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate, $query->cabin)
                 : null) ?? 0.0;
 
             $result = $flights->searchDirection(
@@ -144,6 +150,7 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->offset,
                 $query->limit,
+                $query->cabin,
                 $query->filters,
                 $addBase + $addTax,
             );
@@ -218,12 +225,18 @@ final readonly class FlightFinder
      * own price so a booking total can be summed. Records the booking stat for
      * the carriers involved. Returns [] when no ids resolve.
      *
+     * The cabin is what the buyer is paying for, so it has to be carried here
+     * rather than assumed: these are the prices that become the booking, and a
+     * business selection totalled at the economy fare would charge the wrong
+     * money. It also lands in the stored itinerary, so a receipt records which
+     * cabin was sold.
+     *
      * @param list<int> $ids
      * @return list<array<string, mixed>>
      */
-    public function findSegments(array $ids): array
+    public function findSegments(array $ids, CabinClass $cabin): array
     {
-        $legs = new FlightRepository($this->connection)->legsByIds($ids);
+        $legs = new FlightRepository($this->connection)->legsByIds($ids, $cabin);
 
         if ($legs === []) {
             return [];
@@ -236,9 +249,7 @@ final readonly class FlightFinder
 
         new AirlineRepository($this->connection)->recordBooking(...$carriers);
 
-        // Rebuilt from stored leg ids: there is no search here, and no cabin
-        // stored against a booking, so this reports none rather than a guess.
-        return array_map(fn(array $leg): array => $this->mapLeg($leg, null) + [
+        return array_map(fn(array $leg): array => $this->mapLeg($leg, $cabin->code()) + [
             self::RESPONSE_PRICE_BASE => (float) $leg['price_base'],
             self::RESPONSE_PRICE_TAX => (float) $leg['price_tax'],
         ], $legs);
@@ -250,20 +261,24 @@ final readonly class FlightFinder
      * resolve to a connected itinerary — a saved flight can go stale, and the
      * saved list drops those rather than rendering a broken card.
      *
+     * The cabin defaults to economy because a saved flight is a cookie of leg
+     * ids and nothing else: the cabin it was found in was never recorded, so
+     * the card shows the cheapest cabin every one of those legs sells. A caller
+     * that does know the cabin — checkout does — passes it.
+     *
      * @param list<int> $ids
      * @return array<string, mixed>|null
      */
-    public function itinerary(array $ids): ?array
+    public function itinerary(array $ids, CabinClass $cabin = CabinClass::Economy): ?array
     {
-        $itinerary = new FlightRepository($this->connection)->itineraryByIds($ids);
+        $itinerary = new FlightRepository($this->connection)->itineraryByIds($ids, $cabin);
 
         if ($itinerary === null) {
             return null;
         }
 
         return [
-            // As above: a saved itinerary carries no cabin.
-            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, null),
+            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, $cabin->code()),
             self::RESPONSE_PRICE_BASE => (float) $itinerary['price_base'],
             self::RESPONSE_PRICE_TAX => (float) $itinerary['price_tax'],
         ];
@@ -272,11 +287,15 @@ final readonly class FlightFinder
     /**
      * A single shaped flight leg by id (for the add-trip flow), or null.
      *
+     * Defaults to economy for the same reason itinerary() does: an id on its
+     * own says nothing about the cabin, so the leg is priced in the one every
+     * flight sells.
+     *
      * @return array<string, mixed>|null
      */
-    public function findOne(int $id): ?array
+    public function findOne(int $id, CabinClass $cabin = CabinClass::Economy): ?array
     {
-        return $this->findSegments([$id])[0] ?? null;
+        return $this->findSegments([$id], $cabin)[0] ?? null;
     }
 
     /**

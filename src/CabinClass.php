@@ -134,6 +134,23 @@ enum CabinClass: string
     }
 
     /**
+     * SQL predicate for "this flight sells this cabin", over a flight alias.
+     *
+     * Returns null for economy. Every flight sells an economy cabin, so the
+     * test would exclude nothing while denying the optimiser an index -- and a
+     * bitwise AND is not indexable, which matters here because search applies
+     * this once per leg of a three-leg join.
+     */
+    public function sqlOffers(string $alias): ?string
+    {
+        if ($this === self::Economy) {
+            return null;
+        }
+
+        return sprintf('(%s.cabins & %d)', $alias, $this->bit());
+    }
+
+    /**
      * The same multiplier as SQL, over a flight alias's distance column.
      *
      * Search prices whole itineraries in one statement -- sorting and the price

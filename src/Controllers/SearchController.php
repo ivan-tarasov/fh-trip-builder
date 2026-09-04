@@ -167,12 +167,18 @@ class SearchController extends AbstractController
             // "Load more" asks for cards, not a page: same query, same filters,
             // same sort — only the window differs. Rendering the one partial
             // the full page uses keeps the two from drifting apart.
+            $cabin = CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null);
+
             if ($this->isFragment()) {
                 echo new TwigRenderer()->render('search/cards/list.html.twig', [
                     'flights' => $total_flights != 0 ? $this->buildFlights() : [],
                     'step' => $this->data->step,
                     'price_mode' => $this->data->price_mode,
                     'show_more' => $total_flights != 0 ? $this->buildShowMore() : null,
+                    // The cards link to checkout, and that link carries the
+                    // cabin — so an appended card needs it as much as a
+                    // first-paint one.
+                    'cabin' => $cabin,
                 ]);
 
                 return;
@@ -185,7 +191,7 @@ class SearchController extends AbstractController
                 'arrive_code' => $this->get[self::GET_TO],
                 // So the results page's own form comes back showing the cabin
                 // that produced these results.
-                'cabin' => CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
+                'cabin' => $cabin,
                 'depart_city' => $this->data->depart,
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],

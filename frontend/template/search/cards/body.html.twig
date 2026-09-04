@@ -106,7 +106,7 @@
                 {# A one-way search books from the list, so this is the last stop
                    before checkout rather than another step. #}
                 <a class="btn btn-outline-primary card-select"
-                   href="/checkout?depart_itin={{ flight.outbound_ids|join(',') }}{% if flight.return_ids|length %}&amp;return_itin={{ flight.return_ids|join(',') }}{% endif %}">
+                   href="/checkout?depart_itin={{ flight.outbound_ids|join(',') }}{% if flight.return_ids|length %}&amp;return_itin={{ flight.return_ids|join(',') }}{% endif %}{% if cabin is defined and cabin.value != 'economy' %}&amp;class={{ cabin.value }}{% endif %}">
                     Continue to checkout
                     <i class="fas fa-chevron-right ps-1"></i>
                 </a>
