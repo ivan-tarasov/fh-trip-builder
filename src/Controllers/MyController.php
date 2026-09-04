@@ -6,9 +6,10 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use stdClass;
-use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Service\Calendar;
 use TripBuilder\Service\FlightFinder;
+use TripBuilder\View\BookingPresenter;
 use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\TwigRenderer;
 
@@ -19,44 +20,117 @@ class MyController extends AbstractController
     private const int SAVED_LIMIT = 50;
 
     /**
+     * Every booking made in this browser, split by whether the trip is over.
+     *
      * @throws Exception|\Twig\Error\Error
      */
     public function bookings(): void
     {
-        $rows = new BookingRepository($this->connection())->forSession(session_id());
+        $presenter = new BookingPresenter();
+        $upcoming = [];
+        $past = [];
 
-        $bookings = [];
+        foreach (new BookingRepository($this->connection())->forSession(session_id()) as $row) {
+            $booking = $presenter->booking($row);
 
-        foreach ($rows as $row) {
-            $outbound = json_decode($row['flight_outbound'] ?? '', true);
-            $return = json_decode($row['flight_return'] ?? '', true);
-
-            // Skip rows whose stored flight JSON is corrupt or empty.
-            if (!is_array($outbound) || $outbound === []) {
+            // Stored flight JSON that will not rebuild. Skip the row rather
+            // than draw a booking with no flights in it.
+            if ($booking === null) {
                 continue;
             }
 
-            $returnSegments = is_array($return) ? $return : [];
-
-            $priceBase = $this->sumSegments($outbound, 'price_base') + $this->sumSegments($returnSegments, 'price_base');
-            $priceTax = $this->sumSegments($outbound, 'price_tax') + $this->sumSegments($returnSegments, 'price_tax');
-
-            $bookings[] = [
-                'id_raw' => $row['id'],
-                'id_pretty' => Helper::bookingIdToString($row['id']),
-                'created' => $row['created'],
-                'price_base' => $priceBase,
-                'price_tax' => $priceTax,
-                'price_total' => $priceBase + $priceTax,
-                'outbound' => $this->bookingDirection($outbound),
-                'return_flight' => $returnSegments === [] ? null : $this->bookingDirection($returnSegments),
-            ];
+            if ($booking['is_past']) {
+                $past[] = $booking;
+            } else {
+                $upcoming[] = $booking;
+            }
         }
 
+        // Soonest first while a trip is still ahead; most recent first once it
+        // is behind. A booking with no readable dates sorts last rather than
+        // disappearing into the archive.
+        usort($upcoming, static fn(array $a, array $b): int => ($a['starts_at']?->getTimestamp() ?? PHP_INT_MAX)
+            <=> ($b['starts_at']?->getTimestamp() ?? PHP_INT_MAX));
+        usort($past, static fn(array $a, array $b): int => ($b['ends_at']?->getTimestamp() ?? 0)
+            <=> ($a['ends_at']?->getTimestamp() ?? 0));
+
         echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
-            'bookings' => $bookings,
-            'has_rows' => count($rows) > 0,
+            'upcoming' => $upcoming,
+            'past' => $past,
+            // From what was built, not from what was read: a page whose every
+            // row was skipped has nothing to show and needs the empty state.
+            'has_rows' => $upcoming !== [] || $past !== [],
         ]);
+    }
+
+    /**
+     * One booking on its own page, with every itinerary already open.
+     *
+     * @throws Exception|\Twig\Error\Error
+     */
+    public function booking(): void
+    {
+        $row = $this->findRow();
+        $booking = $row === null ? null : new BookingPresenter()->booking($row);
+
+        if ($booking === null) {
+            $this->bounce('/my/bookings');
+
+            return;
+        }
+
+        echo new TwigRenderer()->renderPage('my/bookings/detail.html.twig', [
+            'booking' => $booking,
+        ]);
+    }
+
+    /**
+     * The booking as a calendar file, one event per flight.
+     *
+     * @throws Exception
+     */
+    public function calendar(): void
+    {
+        $row = $this->findRow();
+
+        if ($row === null) {
+            $this->bounce('/my/bookings');
+
+            return;
+        }
+
+        // The stored stamps are local wall-clock with no zone, so the calendar
+        // is built from the raw row and the airports table rather than from the
+        // presenter, whose times are already formatted for display.
+        $calendar = new Calendar($this->connection())->forBooking($row);
+
+        if ($calendar === null) {
+            $this->bounce('/my/bookings');
+
+            return;
+        }
+
+        $name = trim((string) $row['reference']) ?: (string) $row['id'];
+
+        header('Content-Type: text/calendar; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $name . '.ics"');
+
+        echo $calendar;
+    }
+
+    /**
+     * The booking row named by ?id=, scoped to this session so an id from
+     * somebody else's browser resolves to nothing.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function findRow(): ?array
+    {
+        $id = $this->request->query->intWithin('id', 0, 1, PHP_INT_MAX);
+
+        return $id === 0
+            ? null
+            : new BookingRepository($this->connection())->findForSession($id, session_id());
     }
 
     /**
@@ -157,44 +231,4 @@ class MyController extends AbstractController
         ]);
     }
 
-    /**
-     * Collapse a stored itinerary (list of leg segments) into the view-model the
-     * bookings templates render: the first leg's departure, the last leg's
-     * arrival, the leading carrier, and a stops label.
-     *
-     * @param list<array<string, mixed>> $segments
-     * @return array<string, mixed>
-     */
-    private function bookingDirection(array $segments): array
-    {
-        $first = $segments[0];
-        $last = $segments[count($segments) - 1];
-
-        return [
-            'depart' => $first['depart'],
-            'arrive' => $last['arrive'],
-            'carrier' => $first['carrier'],
-            'carrier_name' => $first['carrier_name'],
-            'number' => $first['number'],
-            'stops_label' => $this->stopsLabel(count($segments) - 1),
-            'segments' => $segments,
-        ];
-    }
-
-    private function stopsLabel(int $stops): string
-    {
-        return match (true) {
-            $stops === 0 => 'Direct',
-            $stops === 1 => '1 stop',
-            default => $stops . ' stops',
-        };
-    }
-
-    /**
-     * @param list<array<string, mixed>> $segments
-     */
-    private function sumSegments(array $segments, string $key): float
-    {
-        return array_sum(array_map(static fn(array $segment): float => (float) $segment[$key], $segments));
-    }
 }

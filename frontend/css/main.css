@@ -177,6 +177,18 @@
 /* Bootstrap 5.3 writes the button colours as literal hex into each variant's
    own custom properties, so overriding --bs-primary above does not reach a
    single button. These have to be restated. */
+/* Same trap as .btn-primary above: the variant writes its own literal hex, so
+   the --bs-danger remap in :root never reaches a button. Needed because the
+   cancel dialog dresses SweetAlert's buttons in this app's own. */
+.btn-danger {
+  --bs-btn-bg: var(--brand-danger);
+  --bs-btn-border-color: var(--brand-danger);
+  --bs-btn-hover-bg: #96232e;
+  --bs-btn-hover-border-color: #96232e;
+  --bs-btn-active-bg: #96232e;
+  --bs-btn-active-border-color: #96232e;
+}
+
 .btn-primary {
   --bs-btn-bg: var(--brand-accent);
   --bs-btn-border-color: var(--brand-accent);
@@ -3236,7 +3248,9 @@ textarea {
   padding: .75rem 1.75rem;
   margin-top: 1.25rem;
 }
-.done__reference-label {
+.done__reference-label,
+.booking-card__ref-label {
+  margin: 0;
   font-size: .6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -3256,7 +3270,8 @@ textarea {
   gap: 1.25rem;
   align-items: start;
 }
-.done__direction {
+.done__direction,
+.booking-card__label {
   margin: .75rem 0 .5rem;
   font-size: .6875rem;
   font-weight: 600;
@@ -3534,3 +3549,49 @@ textarea {
   transform: scale(.97);
   transition: transform var(--dur-fast) var(--ease-out);
 }
+
+/* ==========================================================================
+   #BOOKING CARD
+   ==========================================================================
+   A booking is the same object as a search result and wears the same shell.
+   Only the few things that differ live here; everything else is .flight-card,
+   .route__*, .leg__*, .price and .icon-btn, unchanged. */
+
+/* Echoes .done__reference-code one size down: on the confirmation page the
+   reference is the whole screen, here it titles one card among several. The
+   letter-spacing is the typographic half of an alphabet that already excludes
+   O/0 and I/1 -- a reference has to survive being read aloud. */
+.booking-card__ref-code {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--ink-body);
+}
+
+/* "in 4 days". Quiet: the departure is what matters, this only says how near. */
+.booking-card__soon {
+  margin-left: .5rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-muted);
+}
+
+/* A 38px circle beside an 18px code reads as the louder of the two. */
+.icon-btn--sm { width: 30px; height: 30px; font-size: .8125rem; }
+
+/* Mirrors .price--lg. A booking's total is a record, not an offer, and should
+   not out-shout the reference above it. */
+.price--sm .price__whole { font-size: 1.5rem; }
+
+/* A flown or cancelled booking keeps every bit of its text contrast -- it is
+   still a receipt somebody may need -- and loses only the lift. .shadow-sm is
+   a Bootstrap utility and carries !important, so the honest place to drop it is
+   the template, which simply does not emit it. */
+.booking-card--past,
+.booking-card--cancelled { background-color: var(--surface); }
+.booking-card--past .flight-card__footer,
+.booking-card--cancelled .flight-card__footer { background-color: var(--surface-sunken); }
+
+.booking-rebook { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }

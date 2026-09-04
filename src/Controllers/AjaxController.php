@@ -7,7 +7,6 @@ namespace TripBuilder\Controllers;
 use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
-use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Service\FlightFinder;
 
@@ -78,7 +77,10 @@ class AjaxController extends AbstractController
     }
 
 
-    public function deleteBooking(): void
+    /**
+     * Cancel a booking. The row survives -- see BookingRepository::cancelForSession().
+     */
+    public function cancelBooking(): void
     {
         header('Content-type: application/json; charset=utf-8');
 
@@ -89,7 +91,7 @@ class AjaxController extends AbstractController
         $this->setGet([
             // 0 for anything that is not a real id, which the guard below
             // reads as "wrong format". The lower bound matters: a bare int()
-            // would accept -5 and pass it to the delete.
+            // would accept -5 and pass it to the update.
             'booking_id' => $this->request->body->intWithin('booking_id', 0, 1, PHP_INT_MAX),
         ]);
 
@@ -103,22 +105,22 @@ class AjaxController extends AbstractController
         }
 
         try {
-            $deleted = new BookingRepository($this->connection())
-                ->deleteForSession($this->get['booking_id'], session_id());
+            $cancelled = new BookingRepository($this->connection())
+                ->cancelForSession($this->get['booking_id'], session_id());
         } catch (Throwable $e) {
-            error_log('Booking delete failed: ' . $e->getMessage());
-            $deleted = 0;
+            error_log('Booking cancel failed: ' . $e->getMessage());
+            $cancelled = 0;
         }
 
-        if ($deleted > 0) {
+        if ($cancelled > 0) {
             $json = [
                 'status' => 'success',
-                'message' => sprintf('Booking %s was deleted', Helper::bookingIdToString($this->get['booking_id'])),
+                'message' => 'Booking cancelled',
             ];
         } else {
             $json = [
                 'status' => 'error',
-                'message' => 'Booking not found or already deleted.',
+                'message' => 'Booking not found or already cancelled.',
             ];
         }
 

@@ -1,0 +1,74 @@
+{# Everything about a booking that does not fit on one line: the full timeline
+   per direction, then the receipt. Shared by the card's collapse and the
+   booking's own page, which shows it open. #}
+{% for half in halves %}
+    {% if half.direction %}
+        <p class="booking-card__label">{{ half.label }}</p>
+        {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}
+    {% endif %}
+{% endfor %}
+
+<p class="booking-card__label">Receipt</p>
+<dl class="order__prices">
+    <div class="order__price-row">
+        <dt>Passenger</dt>
+        <dd>{{ booking.passenger }}</dd>
+    </div>
+    {% if booking.contact_email %}
+        <div class="order__price-row">
+            <dt>Contact</dt>
+            <dd>{{ booking.contact_email }}{% if booking.contact_phone %} &middot; {{ booking.contact_phone }}{% endif %}</dd>
+        </div>
+    {% endif %}
+    {% if booking.fare_brand %}
+        <div class="order__price-row">
+            <dt>Fare</dt>
+            <dd>{{ booking.fare_brand }}</dd>
+        </div>
+    {% endif %}
+    {% if booking.price_total %}
+        <div class="order__price-row">
+            <dt>Base</dt>
+            <dd>${{ booking.price_base.whole }}.{{ booking.price_base.cents }}</dd>
+        </div>
+        <div class="order__price-row">
+            <dt>Taxes &amp; fees</dt>
+            <dd>${{ booking.price_tax.whole }}.{{ booking.price_tax.cents }}</dd>
+        </div>
+        <div class="order__price-row order__price-row--total">
+            <dt>Total paid</dt>
+            <dd>${{ booking.price_total.whole }}.{{ booking.price_total.cents }}</dd>
+        </div>
+    {% endif %}
+</dl>
+
+{# Pick the same route back up on a new date. A plain GET form, so the search
+   page receives exactly the parameters its own form sends -- no URL assembled
+   by hand in two places. #}
+<div class="booking-rebook">
+    <p class="booking-card__label">Fly this route again</p>
+    <form method="get" action="{{ config('site.paths.search') }}" class="row g-2 align-items-center js-rebook">
+        <input type="hidden" name="{{ config('search.form.input.depart_place') }}" value="{{ booking.rebook.from }}" />
+        <input type="hidden" name="{{ config('search.form.input.arrive_place') }}" value="{{ booking.rebook.to }}" />
+        <input type="hidden" name="{{ config('search.form.input.triptype') }}" value="{{ booking.rebook.triptype }}" />
+        <input type="hidden" name="{{ config('search.form.input.class') }}" value="{{ booking.rebook.class }}" />
+        <input type="hidden" name="{{ config('search.form.input.depart_date') }}" class="js-rebook-depart" value="" />
+        <input type="hidden" name="{{ config('search.form.input.return_date') }}" class="js-rebook-return" value="" />
+
+        <div class="col-auto">
+            <label class="visually-hidden" for="rebook-date-{{ booking.id }}">
+                New date for {{ booking.rebook.from }} to {{ booking.rebook.to }}
+            </label>
+            <input type="text" class="form-control form-control-sm js-rebook-date"
+                   id="rebook-date-{{ booking.id }}"
+                   data-triptype="{{ booking.rebook.triptype }}"
+                   placeholder="Pick a date" autocomplete="off" readonly required />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-primary">
+                Search {{ booking.rebook.from }} &rarr; {{ booking.rebook.to }}
+                <i class="fas fa-chevron-right ps-1"></i>
+            </button>
+        </div>
+    </form>
+</div>

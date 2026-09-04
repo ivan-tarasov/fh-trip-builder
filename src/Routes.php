@@ -26,6 +26,10 @@ class Routes
         */
 
         '/my/bookings' => 'My@bookings',
+        // Exact-match routing, so the booking is named by query string rather
+        // than a path segment -- the same arrangement as /checkout/confirmation.
+        '/my/booking' => 'My@booking',
+        '/my/booking/calendar' => 'My@calendar',
         '/my/saved' => 'My@saved',
 
         /*
@@ -64,7 +68,7 @@ class Routes
         */
 
         '/ajax/add-trip' => 'Ajax@addTrip',
-        '/ajax/delete-booking' => 'Ajax@deleteBooking',
+        '/ajax/cancel-booking' => 'Ajax@cancelBooking',
 
     ];
 

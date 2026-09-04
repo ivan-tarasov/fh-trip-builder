@@ -1,0 +1,72 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Booking {{ booking.reference|default(booking.id) }}{% endblock %}
+
+{# One booking on its own page. The card on the list has to stay scannable
+   beside its siblings; here there is only one, so the itinerary is already
+   open and the calendar file is worth offering. #}
+{% set halves = [
+    { 'label': 'Departing', 'icon': 'fa-plane-departure', 'direction': booking.outbound },
+    { 'label': 'Returning', 'icon': 'fa-plane-arrival', 'direction': booking.return }
+] %}
+
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container bookings">
+        <div class="py-4">
+            <a href="/my/bookings" class="btn btn-sm btn-link ps-0">
+                <i class="fas fa-chevron-left pe-1"></i> All bookings
+            </a>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
+            <div class="min-w-0">
+                {% if booking.reference %}
+                    <p class="booking-card__ref-label">Booking reference</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <h1 class="done__reference-code mb-0">{{ booking.reference }}</h1>
+                        <button type="button" class="icon-btn js-copy"
+                                data-copy-text="{{ booking.reference }}"
+                                aria-label="Copy booking reference {{ booking.reference }}"
+                                data-toggle="tooltip" data-placement="top" title="Copy reference">
+                            <i class="fa-regular fa-copy icon-idle"></i>
+                            <i class="fa-solid fa-check icon-done"></i>
+                        </button>
+                    </div>
+                {% else %}
+                    <h1 class="h3 mb-0">Your booking</h1>
+                {% endif %}
+                <p class="small text-muted mb-0 mt-2">
+                    {{ booking.passenger }}{% if booking.created %} &middot; booked {{ booking.created|date('j M Y') }}{% endif %}
+                </p>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge {{ booking.is_cancelled or booking.is_past ? 'text-bg-light border text-secondary fw-normal' : 'text-bg-success' }}">
+                    {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
+                </span>
+                <a class="btn btn-sm btn-outline-secondary" href="/my/booking/calendar?id={{ booking.id }}">
+                    <i class="fas fa-calendar-plus pe-1"></i> Add to calendar
+                </a>
+            </div>
+        </div>
+
+        <div class="card mb-3 shadow-sm flight-card booking-card">
+            <div class="card-body">
+                {% for half in halves %}
+                    {% if half.direction %}
+                        <p class="booking-card__label">
+                            <i class="fas {{ half.icon }}" aria-hidden="true"></i> {{ half.label }}
+                        </p>
+                        {% include 'search/cards/itinerary.html.twig' with { 'direction': half.direction } only %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="card-footer flight-card__footer">
+                {% include 'my/bookings/detail-panel.html.twig' with { 'booking': booking, 'halves': halves } only %}
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use stdClass;
+use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
@@ -14,6 +15,7 @@ use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Service\FlightFinder;
+use TripBuilder\View\BookingPresenter;
 use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\TwigRenderer;
 
@@ -139,21 +141,20 @@ class CheckoutController extends AbstractController
             return;
         }
 
-        $presenter = new ItineraryPresenter();
-        $outbound = json_decode((string) $booking['flight_outbound'], true);
-        $return = json_decode((string) $booking['flight_return'], true);
+        // The same view-model the bookings list renders, so the trip a
+        // traveller has just paid for and the one they come back to later are
+        // drawn from one shape rather than two that drift.
+        $presented = new BookingPresenter()->booking($booking);
+
+        if ($presented === null) {
+            $this->bounce('/my/bookings');
+
+            return;
+        }
 
         echo new TwigRenderer()->renderPage('checkout/confirmation.html.twig', [
-            'reference' => $booking['reference'],
+            'booking' => $presented,
             'email' => $booking['contact_email'],
-            'passenger' => trim($booking['passenger_first'] . ' ' . $booking['passenger_last']),
-            'card_brand' => $booking['card_brand'],
-            'card_last4' => $booking['card_last4'],
-            'price' => $presenter->priceParts(
-                (float) $booking['price_base'] + (float) $booking['price_tax'],
-            ),
-            'outbound' => is_array($outbound) ? $this->legLines($outbound) : [],
-            'return' => is_array($return) ? $this->legLines($return) : [],
             'bookings_url' => '/my/bookings',
         ]);
     }
@@ -289,7 +290,7 @@ class CheckoutController extends AbstractController
         $bookings->create([
             'session_id' => session_id(),
             'reference' => $reference,
-            'status' => 'confirmed',
+            'status' => BookingStatus::Confirmed->value,
             'departure_time' => $outbound[0]['depart']['date_time'] ?? null,
             'flight_outbound' => json_encode($outbound),
             'flight_return' => $return === [] ? null : json_encode($return),
@@ -440,34 +441,6 @@ class CheckoutController extends AbstractController
 
         return $end !== false && $end->modify('+1 month') > date_create_immutable('now');
     }
-
-    /**
-     * A stored itinerary as one line per leg, for the confirmation.
-     *
-     * @param list<array<string, mixed>> $segments
-     * @return list<array<string, string>>
-     */
-    private function legLines(array $segments): array
-    {
-        $lines = [];
-
-        foreach ($segments as $segment) {
-            $depart = $segment['depart'] ?? [];
-            $arrive = $segment['arrive'] ?? [];
-
-            $lines[] = [
-                'flight' => (string) ($segment['number'] ?? ''),
-                'carrier' => (string) ($segment['carrier_name'] ?? ''),
-                'from' => (string) ($depart['airport_code'] ?? ''),
-                'to' => (string) ($arrive['airport_code'] ?? ''),
-                'depart' => date('D, j M H:i', strtotime((string) ($depart['date_time'] ?? 'now'))),
-                'arrive' => date('D, j M H:i', strtotime((string) ($arrive['date_time'] ?? 'now'))),
-            ];
-        }
-
-        return $lines;
-    }
-
 
     /**
      * @param list<int> $outboundIds
