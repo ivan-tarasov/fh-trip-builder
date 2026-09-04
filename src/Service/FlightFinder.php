@@ -6,6 +6,7 @@ namespace TripBuilder\Service;
 
 use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\Api\Flights\SortMethod;
+use TripBuilder\CabinClass;
 use TripBuilder\Database\Connection;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
@@ -47,14 +48,19 @@ final readonly class FlightFinder
     private const string RESPONSE_FLIGHT_CARRIER_CODE = 'carrier';
     private const string RESPONSE_FLIGHT_CARRIER_NAME = 'carrier_name';
     private const string RESPONSE_CABIN_CODE = 'cabin_code';
+    private const string RESPONSE_AIRCRAFT = 'aircraft';
+    private const string RESPONSE_AIRCRAFT_WIDEBODY = 'aircraft_widebody';
+    private const string RESPONSE_SEAT_LAYOUT = 'seat_layout';
+    private const string RESPONSE_SEAT_PITCH = 'seat_pitch';
+    private const string RESPONSE_SEAT_WIDTH = 'seat_width';
+    private const string RESPONSE_AIRCRAFT_SEATS = 'aircraft_seats';
+    private const string RESPONSE_SEAT_FLAT_BED = 'seat_flat_bed';
     private const string RESPONSE_DISTANCE = 'distance';
     private const string RESPONSE_DURATION = 'duration';
     private const string RESPONSE_PRICE_BASE = 'price_base';
     private const string RESPONSE_PRICE_TAX = 'price_tax';
     private const string RESPONSE_RATING = 'rating';
 
-    private const string CABIN_OUTBOUND = 'Y'; // FIXME: we need to add the real one in DB
-    private const string CABIN_RETURN = 'X'; // FIXME: we need to add the real one in DB
 
     public function __construct(private Connection $connection) {}
 
@@ -96,8 +102,12 @@ final readonly class FlightFinder
 
         // A stale or tampered selection resolves to null and simply drops the
         // traveller back to the step that still needs a choice.
-        $outbound = $isRoundtrip && $outboundIds !== [] ? $flights->itineraryByIds($outboundIds) : null;
-        $return = $outbound !== null && $returnIds !== [] ? $flights->itineraryByIds($returnIds) : null;
+        $outbound = $isRoundtrip && $outboundIds !== []
+            ? $flights->itineraryByIds($outboundIds, $query->cabin)
+            : null;
+        $return = $outbound !== null && $returnIds !== []
+            ? $flights->itineraryByIds($returnIds, $query->cabin)
+            : null;
 
         $result = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'option_prices' => [], 'bounds' => [], 'highlights' => []];
         $addBase = 0.0;
@@ -122,6 +132,7 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->offset,
                 $query->limit,
+                $query->cabin,
                 // Step 2 lists the return leg, so it filters on the return's
                 // own set — the outbound's filters have already done their job.
                 $query->returnFilters,
@@ -135,7 +146,7 @@ final readonly class FlightFinder
             // return, so step 1 prices are comparable with the totals at step 2.
             // Resolved before the search for the same reason as step 2 above.
             $addBase = ($step === 1
-                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate)
+                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate, $query->cabin)
                 : null) ?? 0.0;
 
             $result = $flights->searchDirection(
@@ -145,6 +156,7 @@ final readonly class FlightFinder
                 SortMethod::fromRequest($query->sort),
                 $query->offset,
                 $query->limit,
+                $query->cabin,
                 $query->filters,
                 $addBase + $addTax,
             );
@@ -155,7 +167,7 @@ final readonly class FlightFinder
             self::RESPONSE_PRICE_TAX => round((float) $itinerary['price_tax'] + $addTax, 2),
             self::RESPONSE_ITINERARY => $this->mapItinerary(
                 $itinerary,
-                $step === 2 ? self::CABIN_RETURN : self::CABIN_OUTBOUND,
+                $query->cabin->code(),
             ),
         ], $result['rows']);
 
@@ -181,10 +193,10 @@ final readonly class FlightFinder
             // Step 1 totals assume the cheapest return, so they are a floor;
             // everywhere else the price is exact for the trip being booked.
             'price_mode' => $step === 1 ? 'from' : 'total',
-            'selected' => $outbound === null ? null : $this->mapItinerary($outbound, self::CABIN_OUTBOUND),
+            'selected' => $outbound === null ? null : $this->mapItinerary($outbound, $query->cabin->code()),
             'selected_price' => $outbound === null ? null : round((float) $outbound['price_base'] + (float) $outbound['price_tax'], 2),
             'selected_ids' => $outbound === null ? [] : $outboundIds,
-            'selected_return' => $return === null ? null : $this->mapItinerary($return, self::CABIN_RETURN),
+            'selected_return' => $return === null ? null : $this->mapItinerary($return, $query->cabin->code()),
             'selected_return_price' => $return === null ? null : round((float) $return['price_base'] + (float) $return['price_tax'], 2),
             'selected_return_ids' => $return === null ? [] : $returnIds,
             'package_price' => $packagePrice,
@@ -219,12 +231,18 @@ final readonly class FlightFinder
      * own price so a booking total can be summed. Records the booking stat for
      * the carriers involved. Returns [] when no ids resolve.
      *
+     * The cabin is what the buyer is paying for, so it has to be carried here
+     * rather than assumed: these are the prices that become the booking, and a
+     * business selection totalled at the economy fare would charge the wrong
+     * money. It also lands in the stored itinerary, so a receipt records which
+     * cabin was sold.
+     *
      * @param list<int> $ids
      * @return list<array<string, mixed>>
      */
-    public function findSegments(array $ids): array
+    public function findSegments(array $ids, CabinClass $cabin): array
     {
-        $legs = new FlightRepository($this->connection)->legsByIds($ids);
+        $legs = new FlightRepository($this->connection)->legsByIds($ids, $cabin);
 
         if ($legs === []) {
             return [];
@@ -237,7 +255,7 @@ final readonly class FlightFinder
 
         new AirlineRepository($this->connection)->recordBooking(...$carriers);
 
-        return array_map(fn(array $leg): array => $this->mapLeg($leg, self::CABIN_OUTBOUND) + [
+        return array_map(fn(array $leg): array => $this->mapLeg($leg, $cabin->code()) + [
             self::RESPONSE_PRICE_BASE => (float) $leg['price_base'],
             self::RESPONSE_PRICE_TAX => (float) $leg['price_tax'],
         ], $legs);
@@ -249,19 +267,24 @@ final readonly class FlightFinder
      * resolve to a connected itinerary — a saved flight can go stale, and the
      * saved list drops those rather than rendering a broken card.
      *
+     * The cabin defaults to economy because a saved flight is a cookie of leg
+     * ids and nothing else: the cabin it was found in was never recorded, so
+     * the card shows the cheapest cabin every one of those legs sells. A caller
+     * that does know the cabin — checkout does — passes it.
+     *
      * @param list<int> $ids
      * @return array<string, mixed>|null
      */
-    public function itinerary(array $ids): ?array
+    public function itinerary(array $ids, CabinClass $cabin = CabinClass::Economy): ?array
     {
-        $itinerary = new FlightRepository($this->connection)->itineraryByIds($ids);
+        $itinerary = new FlightRepository($this->connection)->itineraryByIds($ids, $cabin);
 
         if ($itinerary === null) {
             return null;
         }
 
         return [
-            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, self::CABIN_OUTBOUND),
+            self::RESPONSE_ITINERARY => $this->mapItinerary($itinerary, $cabin->code()),
             self::RESPONSE_PRICE_BASE => (float) $itinerary['price_base'],
             self::RESPONSE_PRICE_TAX => (float) $itinerary['price_tax'],
         ];
@@ -270,11 +293,15 @@ final readonly class FlightFinder
     /**
      * A single shaped flight leg by id (for the add-trip flow), or null.
      *
+     * Defaults to economy for the same reason itinerary() does: an id on its
+     * own says nothing about the cabin, so the leg is priced in the one every
+     * flight sells.
+     *
      * @return array<string, mixed>|null
      */
-    public function findOne(int $id): ?array
+    public function findOne(int $id, CabinClass $cabin = CabinClass::Economy): ?array
     {
-        return $this->findSegments([$id])[0] ?? null;
+        return $this->findSegments([$id], $cabin)[0] ?? null;
     }
 
     /**
@@ -285,7 +312,7 @@ final readonly class FlightFinder
      * @param array<string, mixed> $itinerary
      * @return array<string, mixed>
      */
-    private function mapItinerary(array $itinerary, string $cabin): array
+    private function mapItinerary(array $itinerary, ?string $cabin): array
     {
         $legs = $itinerary['legs'];
 
@@ -319,7 +346,7 @@ final readonly class FlightFinder
      * @param array<string, mixed> $leg
      * @return array<string, mixed>
      */
-    private function mapLeg(array $leg, string $cabin): array
+    private function mapLeg(array $leg, ?string $cabin): array
     {
         return [
             self::RESPONSE_FLIGHT_ID => $leg['id'],
@@ -341,6 +368,26 @@ final readonly class FlightFinder
                 self::RESPONSE_DATE_TIME => $leg['arr_datetime'],
             ],
             self::RESPONSE_CABIN_CODE => $cabin,
+            // Null when the type code is unknown to the aircraft table.
+            self::RESPONSE_AIRCRAFT => $leg['aircraft_name'] ?? null,
+            self::RESPONSE_AIRCRAFT_WIDEBODY => isset($leg['aircraft_widebody'])
+                ? (bool) $leg['aircraft_widebody']
+                : null,
+            // The seat in the cabin being sold. Null when the type is unknown,
+            // or known but has no such cabin fitted.
+            self::RESPONSE_SEAT_LAYOUT => $leg['seat_layout'] ?? null,
+            self::RESPONSE_SEAT_PITCH => isset($leg['seat_pitch'])
+                ? (int) $leg['seat_pitch']
+                : null,
+            self::RESPONSE_SEAT_WIDTH => isset($leg['seat_width'])
+                ? (float) $leg['seat_width']
+                : null,
+            self::RESPONSE_AIRCRAFT_SEATS => isset($leg['aircraft_seats'])
+                ? (int) $leg['aircraft_seats']
+                : null,
+            self::RESPONSE_SEAT_FLAT_BED => isset($leg['seat_flat_bed'])
+                ? (bool) $leg['seat_flat_bed']
+                : null,
             self::RESPONSE_DISTANCE => $leg['distance'],
             self::RESPONSE_DURATION => $leg['duration'],
             self::RESPONSE_RATING => (float) $leg['rating'],

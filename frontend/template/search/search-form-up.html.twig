@@ -17,7 +17,7 @@
                 </div>
             </nav>
 
-            <form method="get" action="/search/" id="searchForm" class="py-1">
+            <form method="get" action="{{ config('site.paths.search') }}" id="searchForm" class="py-1">
                 <div class="row">
                     <div class="col">
                         <div class="form-floating">
@@ -111,18 +111,20 @@
 
                     <div class="col">
                         <div class="form-floating mb-3">
-                            <select class="form-select" id="floatingSelectGrid">
-                                <option selected>Economy</option>
-                                <option value="1">Premium Economy</option>
-                                <option value="2">Business</option>
-                                <option value="3">First</option>
+                            {# The select had no name attribute, so the cabin was never submitted:
+                               the value below is what finally reaches the search. #}
+                            <select class="form-select" id="floatingSelectGrid" name="{{ config('search.form.input.class') }}">
+                                <option value="economy"{{ cabin.value|default('economy') == 'economy' ? ' selected' : '' }}>Economy</option>
+                                <option value="premium"{{ cabin.value|default('economy') == 'premium' ? ' selected' : '' }}>Premium Economy</option>
+                                <option value="business"{{ cabin.value|default('economy') == 'business' ? ' selected' : '' }}>Business</option>
+                                <option value="first"{{ cabin.value|default('economy') == 'first' ? ' selected' : '' }}>First</option>
                             </select>
                             <label for="floatingSelectGrid">Cabin class</label>
                         </div>
                     </div>
 
                     <div class="col">
-                        <button class="w-100 btn btn-lg btn-primary" type="submit">
+                        <button class="w-100 btn btn-lg btn-outline-light" type="submit">
                             Search flights
                             <i class="fa-solid fa-plane ps-2"></i>
                         </button>

@@ -17,7 +17,7 @@ class ApiController extends AbstractController
      */
     public function airports(): void
     {
-        $airports = new Airports\Response();
+        $airports = new Airports\Response($this->request);
 
         $airports->get();
     }
@@ -27,7 +27,7 @@ class ApiController extends AbstractController
      */
     public function airportsAutofill(): void
     {
-        $airports = new Airports\Response(HttpMethod::Get);
+        $airports = new Airports\Response($this->request, HttpMethod::Get);
 
         $airports->getAutofill();
     }
@@ -37,7 +37,7 @@ class ApiController extends AbstractController
      */
     public function airlines(): void
     {
-        $airlines = new Airlines\Response();
+        $airlines = new Airlines\Response($this->request);
 
         $airlines->get();
     }
@@ -47,7 +47,7 @@ class ApiController extends AbstractController
      */
     public function flights(): void
     {
-        $flights = new Flights\Response();
+        $flights = new Flights\Response($this->request);
 
         $flights->get();
     }
@@ -57,7 +57,7 @@ class ApiController extends AbstractController
      */
     public function flightsOne(): void
     {
-        $flights = new Flights\Response();
+        $flights = new Flights\Response($this->request);
 
         $flights->getOne();
     }

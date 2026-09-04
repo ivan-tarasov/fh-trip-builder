@@ -1,0 +1,31 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}About{% endblock %}
+
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container">
+        <div class="pt-5 pb-4 mx-auto">
+            <h1 class="display-4">About this project</h1>
+            <p class="lead">
+                Straight from the repository's README, so this page says exactly
+                what the project says about itself.
+            </p>
+        </div>
+
+        {# Already-safe HTML: View\Readme escapes raw HTML in the source and
+           drops unsafe link schemes, so escaping again here would print tags. #}
+        <article class="readme">
+            {{ readme_html|raw }}
+        </article>
+
+        <p class="readme__source">
+            {% if updated_at %}Last updated {{ updated_at|date('j F Y') }}. {% endif %}
+            <a href="{{ repo_url }}#readme" target="_blank" rel="noopener">
+                Read it on GitHub<i class="fas fa-arrow-up-right-from-square ms-2"></i>
+            </a>
+            alongside the source.
+        </p>
+    </div>
+</main>
+{% endblock %}

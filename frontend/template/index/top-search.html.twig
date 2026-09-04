@@ -16,13 +16,14 @@
         </div>
         <div class="col-lg-3">
             {{ search.depart|date('D, F j') }}{% if search.return %} – {{ search.return|date('D, F j') }}{% endif %}
+            {% if search.class_label %}<span class="search-cabin">{{ search.class_label }}</span>{% endif %}
         </div>
         <div class="col-lg-2 text-end">
             {{ search.search_count|number_format }} searches
         </div>
 
         <div class="col-lg-2 mx-auto d-grid gap-2">
-            <a href="/search/?hash={{ search.hash|url_encode }}" type="button" class="btn btn-primary btn-sm">Search flights</a>
+            <a href="{{ config('site.paths.search') }}?hash={{ search.hash|url_encode }}" type="button" class="btn btn-outline-ink btn-sm">Search flights</a>
         </div>
 
     </div>

@@ -6,9 +6,11 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use stdClass;
+use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Service\FlightFinder;
@@ -26,6 +28,10 @@ use TripBuilder\View\TwigRenderer;
  */
 class CheckoutController extends AbstractController
 {
+    // The cabin the itinerary was chosen in. It has to travel with the ids:
+    // they name the legs but not what was being bought, and the fare depends on
+    // it. Absent or unrecognised falls back to economy, as the search form does.
+    private const string GET_CLASS = 'class';
     private const string GET_DEPART_ITIN = 'depart_itin';
     private const string GET_RETURN_ITIN = 'return_itin';
     private const string GET_REFERENCE = 'ref';
@@ -34,6 +40,25 @@ class CheckoutController extends AbstractController
     // without a gateway. Everything else that passes a Luhn check approves.
     private const string DECLINE_CARD = '4000000000000002';
 
+    /**
+     * Longest each field may be, matching the column it is stored in.
+     *
+     * Without these the form validated a minimum and no maximum, so a name of
+     * 65 characters passed every rule and then failed the INSERT: MySQL runs
+     * strict, so over-long data is an error rather than a truncation, and the
+     * booking died with a 500 after the buyer had filled in the whole form.
+     *
+     * Keyed by form field; the comment on each names the column that sets it.
+     */
+    private const array MAX_LENGTHS = [
+        'email' => 190,            // bookings.contact_email
+        'phone' => 32,             // bookings.contact_phone
+        'first_name' => 64,        // bookings.passenger_first
+        'last_name' => 64,         // bookings.passenger_last
+        'card_name' => 64,         // not stored, but a name is a name
+        'billing_postcode' => 32,  // not stored either
+    ];
+
     private const array GENDERS = ['F' => 'Female', 'M' => 'Male', 'X' => 'Another / prefer not to say'];
 
     /**
@@ -41,8 +66,11 @@ class CheckoutController extends AbstractController
      */
     public function index(): void
     {
-        $outboundIds = $this->ids($_GET[self::GET_DEPART_ITIN] ?? null);
-        $returnIds = $this->ids($_GET[self::GET_RETURN_ITIN] ?? null);
+        $query = $this->request->query;
+
+        $outboundIds = $query->ids(self::GET_DEPART_ITIN);
+        $returnIds = $query->ids(self::GET_RETURN_ITIN);
+        $cabin = CabinClass::fromRequest($query->nullableStr(self::GET_CLASS));
 
         if ($outboundIds === []) {
             $this->bounce('/');
@@ -50,7 +78,7 @@ class CheckoutController extends AbstractController
             return;
         }
 
-        $trip = $this->resolveTrip($outboundIds, $returnIds);
+        $trip = $this->resolveTrip($outboundIds, $returnIds, $cabin);
 
         // Nothing to sell: the legs have been regenerated away since the
         // search, or the ids never named a real itinerary.
@@ -65,12 +93,12 @@ class CheckoutController extends AbstractController
         $errors = [];
         $submitted = [];
 
-        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        if ($this->request->isPost()) {
             $submitted = $this->submitted();
             $errors = $this->validate($submitted);
 
             if ($errors === []) {
-                $reference = $this->book($trip, $submitted, $outboundIds, $returnIds);
+                $reference = $this->book($trip, $submitted, $outboundIds, $returnIds, $cabin);
 
                 $this->bounce(sprintf('/checkout/confirmation?%s=%s', self::GET_REFERENCE, $reference));
 
@@ -81,10 +109,14 @@ class CheckoutController extends AbstractController
         echo new TwigRenderer()->renderPage('checkout/view.html.twig', [
             'trip' => $trip,
             'genders' => self::GENDERS,
+            'countries' => new CountryRepository($this->connection())->all(),
+            // The same limits the validator enforces, so the inputs can stop
+            // the typing rather than the form failing after it.
+            'max_lengths' => self::MAX_LENGTHS,
             'errors' => $errors,
             'form' => $submitted,
             'csrf_token' => Csrf::token(),
-            'form_action' => $this->selfUrl($outboundIds, $returnIds),
+            'form_action' => $this->selfUrl($outboundIds, $returnIds, $cabin),
             'change_url' => '/',
             'decline_card' => self::DECLINE_CARD,
         ]);
@@ -95,7 +127,7 @@ class CheckoutController extends AbstractController
      */
     public function confirmation(): void
     {
-        $reference = strtoupper(trim((string) ($_GET[self::GET_REFERENCE] ?? '')));
+        $reference = strtoupper($this->request->query->str(self::GET_REFERENCE));
 
         $booking = preg_match('/^[A-Z0-9]{6}$/', $reference) === 1
             ? new BookingRepository($this->connection())->findByReference($reference, session_id())
@@ -130,21 +162,24 @@ class CheckoutController extends AbstractController
      * The trip on offer: both directions shaped for the page, the price as the
      * database has it, and the rules the whole journey is sold under.
      *
+     * Priced in `$cabin`: the same cabin the search quoted, so the total here
+     * is the total the buyer was shown.
+     *
      * @param list<int> $outboundIds
      * @param list<int> $returnIds
      * @return array<string, mixed>|null
      */
-    private function resolveTrip(array $outboundIds, array $returnIds): ?array
+    private function resolveTrip(array $outboundIds, array $returnIds, CabinClass $cabin): ?array
     {
         $finder = new FlightFinder($this->connection());
 
-        $outbound = $finder->itinerary($outboundIds);
+        $outbound = $finder->itinerary($outboundIds, $cabin);
 
         if ($outbound === null) {
             return null;
         }
 
-        $return = $returnIds === [] ? null : $finder->itinerary($returnIds);
+        $return = $returnIds === [] ? null : $finder->itinerary($returnIds, $cabin);
 
         if ($returnIds !== [] && $return === null) {
             return null;
@@ -162,7 +197,7 @@ class CheckoutController extends AbstractController
             'price_total' => $presenter->priceParts($priceBase + $priceTax),
             'raw_base' => $priceBase,
             'raw_tax' => $priceTax,
-            'rules' => $this->rules($outboundIds, $returnIds),
+            'rules' => $this->rules($outboundIds, $returnIds, $cabin),
         ];
     }
 
@@ -194,14 +229,14 @@ class CheckoutController extends AbstractController
      * @param list<int> $returnIds
      * @return list<array{route: string, title: string, lines: list<array{text: string, allowed: bool}>}>
      */
-    private function rules(array $outboundIds, array $returnIds): array
+    private function rules(array $outboundIds, array $returnIds, CabinClass $cabin): array
     {
         $flights = new FlightRepository($this->connection());
         $brands = new FareBrandRepository($this->connection());
-        $legs = $flights->legsByIds($outboundIds);
+        $legs = $flights->legsByIds($outboundIds, $cabin);
         $out = [];
 
-        foreach ([[$outboundIds, $legs], [$returnIds, $flights->legsByIds($returnIds)]] as [$ids, $hydrated]) {
+        foreach ([[$outboundIds, $legs], [$returnIds, $flights->legsByIds($returnIds, $cabin)]] as [$ids, $hydrated]) {
             if ($ids === [] || $hydrated === []) {
                 continue;
             }
@@ -238,11 +273,11 @@ class CheckoutController extends AbstractController
      * @param list<int> $returnIds
      * @throws Exception
      */
-    private function book(array $trip, array $form, array $outboundIds, array $returnIds): string
+    private function book(array $trip, array $form, array $outboundIds, array $returnIds, CabinClass $cabin): string
     {
         $finder = new FlightFinder($this->connection());
-        $outbound = $finder->findSegments($outboundIds);
-        $return = $returnIds === [] ? [] : $finder->findSegments($returnIds);
+        $outbound = $finder->findSegments($outboundIds, $cabin);
+        $return = $returnIds === [] ? [] : $finder->findSegments($returnIds, $cabin);
 
         $bookings = new BookingRepository($this->connection());
         $reference = $bookings->unusedReference();
@@ -281,7 +316,8 @@ class CheckoutController extends AbstractController
      */
     private function submitted(): array
     {
-        $field = static fn(string $key): string => trim((string) ($_POST[$key] ?? ''));
+        $body = $this->request->body;
+        $field = static fn(string $key): string => $body->str($key);
 
         return [
             'email' => $field('email'),
@@ -313,7 +349,7 @@ class CheckoutController extends AbstractController
     {
         $errors = [];
 
-        if (!Csrf::isValid($_POST[Csrf::FIELD] ?? null)) {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
             $errors['form'] = 'That form went stale. Please try again.';
         }
 
@@ -374,6 +410,15 @@ class CheckoutController extends AbstractController
             $errors['accept_rules'] = 'The fare rules have to be accepted before booking.';
         }
 
+        // Length last, so a field that is wrong in a more interesting way says
+        // so first. Anything over its column is refused here rather than at the
+        // INSERT, where it becomes a 500 on a form the buyer has just filled in.
+        foreach (self::MAX_LENGTHS as $key => $limit) {
+            if (!isset($errors[$key]) && mb_strlen($form[$key]) > $limit) {
+                $errors[$key] = sprintf('%d characters at most.', $limit);
+            }
+        }
+
         // Last, and only once the card itself is well formed: a decline is the
         // gateway's answer, not a mistake in the form.
         if (!isset($errors['card_number']) && $digits === self::DECLINE_CARD) {
@@ -423,35 +468,12 @@ class CheckoutController extends AbstractController
         return $lines;
     }
 
-    /**
-     * @return list<int>
-     */
-    private function ids(mixed $raw): array
-    {
-        if (!is_string($raw) || trim($raw) === '') {
-            return [];
-        }
-
-        $ids = [];
-
-        foreach (explode(',', $raw) as $part) {
-            $id = filter_var(trim($part), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-            if ($id === false) {
-                return [];
-            }
-
-            $ids[] = $id;
-        }
-
-        return $ids;
-    }
 
     /**
      * @param list<int> $outboundIds
      * @param list<int> $returnIds
      */
-    private function selfUrl(array $outboundIds, array $returnIds): string
+    private function selfUrl(array $outboundIds, array $returnIds, CabinClass $cabin): string
     {
         $query = [self::GET_DEPART_ITIN => implode(',', $outboundIds)];
 
@@ -459,19 +481,15 @@ class CheckoutController extends AbstractController
             $query[self::GET_RETURN_ITIN] = implode(',', $returnIds);
         }
 
+        // The form posts back here, and the POST re-reads the cabin from the
+        // query. Drop it and the trip would be repriced as economy on submit --
+        // and that is the price that would be charged.
+        if ($cabin !== CabinClass::Economy) {
+            $query[self::GET_CLASS] = $cabin->value;
+        }
+
         // Commas survive: they read better in an address bar and the parser
         // above splits on them either way.
         return '/checkout?' . str_replace('%2C', ',', http_build_query($query));
-    }
-
-    private function bounce(string $url): void
-    {
-        if (!headers_sent()) {
-            header('Location: ' . $url, true, 302);
-
-            return;
-        }
-
-        printf('<script>window.location.replace(%s);</script>', json_encode($url));
     }
 }

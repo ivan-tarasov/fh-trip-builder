@@ -6,6 +6,7 @@ namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\SortMethod;
+use TripBuilder\CabinClass;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
@@ -47,7 +48,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     private function searchRoute(string $from, string $to, string $date, ?FlightFilters $filters = null): array
     {
         return new FlightRepository($this->connection())
-            ->searchDirection($from, $to, $date, SortMethod::Price, 0, 10, $filters);
+            ->searchDirection($from, $to, $date, SortMethod::Price, 0, 10, CabinClass::Economy, $filters);
     }
 
     /**

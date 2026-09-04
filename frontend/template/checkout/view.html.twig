@@ -1,5 +1,7 @@
 {% extends 'layout.html.twig' %}
 
+{% block title %}Checkout{% endblock %}
+
 {#
     One page, three questions: where to send the ticket, who is flying, and how
     it is paid for. Twelve fields, which is what an airline needs to issue a
@@ -37,6 +39,20 @@
             <form class="checkout__form" method="post" action="{{ form_action }}" novalidate>
                 <input type="hidden" name="_csrf" value="{{ csrf_token }}" />
 
+                {# Nothing here is charged and no card is real, so filling the
+                   form by hand to reach the confirmation page is busywork. The
+                   button is inert without JavaScript, hence type="button" and
+                   the hidden-by-default class it is given back in script. #}
+                <div class="checkout__autofill" data-autofill hidden>
+                    <button type="button" class="checkout__autofill-button" data-autofill-button>
+                        <i class="fas fa-wand-magic-sparkles pe-2" aria-hidden="true"></i>Fill with test data
+                    </button>
+                    <span class="checkout__autofill-note">
+                        Made-up details for trying the flow. The card is
+                        <code>{{ decline_card }}</code>-safe: it is never that number.
+                    </span>
+                </div>
+
                 {# --- Contact --- #}
                 <section class="pane" aria-labelledby="contact-heading">
                     <h2 class="pane__heading" id="contact-heading">
@@ -48,11 +64,11 @@
                     <div class="field-row">
                         {% include 'checkout/field.html.twig' with {
                             'name': 'email', 'label': 'Email', 'type': 'email',
-                            'autocomplete': 'email', 'errors': errors, 'form': form
+                            'autocomplete': 'email', 'errors': errors, 'form': form, 'max_lengths': max_lengths
                         } only %}
                         {% include 'checkout/field.html.twig' with {
                             'name': 'phone', 'label': 'Phone', 'type': 'tel',
-                            'autocomplete': 'tel', 'errors': errors, 'form': form
+                            'autocomplete': 'tel', 'errors': errors, 'form': form, 'max_lengths': max_lengths
                         } only %}
                     </div>
                 </section>
@@ -68,18 +84,18 @@
                     <div class="field-row">
                         {% include 'checkout/field.html.twig' with {
                             'name': 'first_name', 'label': 'First name',
-                            'autocomplete': 'given-name', 'errors': errors, 'form': form
+                            'autocomplete': 'given-name', 'errors': errors, 'form': form, 'max_lengths': max_lengths
                         } only %}
                         {% include 'checkout/field.html.twig' with {
                             'name': 'last_name', 'label': 'Last name',
-                            'autocomplete': 'family-name', 'errors': errors, 'form': form
+                            'autocomplete': 'family-name', 'errors': errors, 'form': form, 'max_lengths': max_lengths
                         } only %}
                     </div>
 
                     <div class="field-row">
                         {% include 'checkout/field.html.twig' with {
                             'name': 'dob', 'label': 'Date of birth', 'type': 'date',
-                            'autocomplete': 'bday', 'errors': errors, 'form': form
+                            'autocomplete': 'bday', 'errors': errors, 'form': form, 'max_lengths': max_lengths
                         } only %}
 
                         <div class="field">
@@ -112,25 +128,25 @@
                         <div class="pay__fields">
                             {% include 'checkout/field.html.twig' with {
                                 'name': 'card_name', 'label': 'Name on card',
-                                'autocomplete': 'cc-name', 'errors': errors, 'form': form,
+                                'autocomplete': 'cc-name', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
                                 'attrs': 'data-card="name"'
                             } only %}
 
                             {% include 'checkout/field.html.twig' with {
                                 'name': 'card_number', 'label': 'Card number',
-                                'autocomplete': 'cc-number', 'errors': errors, 'form': form,
+                                'autocomplete': 'cc-number', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
                                 'attrs': 'data-card="number" inputmode="numeric" maxlength="23"'
                             } only %}
 
                             <div class="field-row">
                                 {% include 'checkout/field.html.twig' with {
                                     'name': 'card_expiry', 'label': 'Expiry', 'placeholder': 'MM / YY',
-                                    'autocomplete': 'cc-exp', 'errors': errors, 'form': form,
+                                    'autocomplete': 'cc-exp', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
                                     'attrs': 'data-card="expiry" inputmode="numeric" maxlength="7"'
                                 } only %}
                                 {% include 'checkout/field.html.twig' with {
                                     'name': 'card_cvv', 'label': 'Security code',
-                                    'autocomplete': 'cc-csc', 'errors': errors, 'form': form,
+                                    'autocomplete': 'cc-csc', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
                                     'attrs': 'data-card="cvv" inputmode="numeric" maxlength="4"'
                                 } only %}
                             </div>
@@ -138,18 +154,25 @@
                             <div class="field-row">
                                 {% include 'checkout/field.html.twig' with {
                                     'name': 'billing_postcode', 'label': 'Billing postcode',
-                                    'autocomplete': 'postal-code', 'errors': errors, 'form': form
+                                    'autocomplete': 'postal-code', 'errors': errors, 'form': form, 'max_lengths': max_lengths
                                 } only %}
 
                                 <div class="field">
                                     <label class="field__label" for="billing_country">Billing country</label>
+                                    {# Enhanced into a searchable combobox by
+                                       global.js. It stays a real select: that
+                                       is what submits, and what the page falls
+                                       back to with no JavaScript -- 255 options
+                                       is a lot to scroll, but a working lot. #}
                                     <select class="field__input{{ errors.billing_country is defined ? ' is-invalid' : '' }}"
-                                            id="billing_country" name="billing_country" autocomplete="country">
+                                            id="billing_country" name="billing_country" autocomplete="country"
+                                            data-searchable>
                                         <option value="">Choose…</option>
-                                        {% for code, name in {
-                                            'CA': 'Canada', 'US': 'United States', 'GB': 'United Kingdom',
-                                            'FR': 'France', 'DE': 'Germany', 'AU': 'Australia'
-                                        } %}
+                                        {# Every country the app knows, from the
+                                           countries table -- the same list the
+                                           airports join against. It used to be
+                                           six of them written into this file. #}
+                                        {% for code, name in countries %}
                                             <option value="{{ code }}"{{ form.billing_country|default('') == code ? ' selected' : '' }}>
                                                 {{ name }}
                                             </option>

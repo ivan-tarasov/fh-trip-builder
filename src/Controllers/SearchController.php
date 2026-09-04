@@ -9,9 +9,11 @@ use stdClass;
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\Api\Flights\SortMethod;
+use TripBuilder\CabinClass;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Http\Input;
 use TripBuilder\Repository\AircraftRepository;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
@@ -38,6 +40,11 @@ class SearchController extends AbstractController
         // the return moves it to step 3, the assembled package.
         GET_DEPART_ITIN = 'depart_itin',
         GET_RETURN_ITIN = 'return_itin',
+        // The half being re-picked, carried by a "Change" link so the list can
+        // point out the flight that is being replaced. Otherwise the traveller
+        // arrives at a page of near-identical rows with no idea which one they
+        // already have.
+        GET_CURRENT = 'current',
         GET_SORT = 'sort';
 
     // The balanced sort, as the market leads with. It is the one sort ranked
@@ -76,34 +83,34 @@ class SearchController extends AbstractController
     public function index(): void
     {
         try {
+            $query = $this->request->query;
+
             // Handle GET data
             $this->setGet([
-                self::GET_HASH => $_GET[Config::get('search.form.input.hash')] ?? null,
-                self::GET_FROM => strtoupper($_GET[Config::get('search.form.input.depart_place')] ?? ''),
-                self::GET_TO => strtoupper($_GET[Config::get('search.form.input.arrive_place')] ?? ''),
-                self::GET_DEPART => $_GET[Config::get('search.form.input.depart_date')] ?? null,
-                self::GET_RETURN => $_GET[Config::get('search.form.input.return_date')] ?? null,
-                self::GET_TRIPTYPE => $_GET[Config::get('search.form.input.triptype')] ?? null,
-                self::GET_CLASS => $_GET[Config::get('search.form.input.class')] ?? null,
+                self::GET_HASH => $query->nullableStr((string) Config::get('search.form.input.hash')),
+                self::GET_FROM => strtoupper($query->str((string) Config::get('search.form.input.depart_place'))),
+                self::GET_TO => strtoupper($query->str((string) Config::get('search.form.input.arrive_place'))),
+                self::GET_DEPART => $query->nullableStr((string) Config::get('search.form.input.depart_date')),
+                self::GET_RETURN => $query->nullableStr((string) Config::get('search.form.input.return_date')),
+                self::GET_TRIPTYPE => $query->nullableStr((string) Config::get('search.form.input.triptype')),
+                self::GET_CLASS => $query->nullableStr((string) Config::get('search.form.input.class')),
                 // How many results to render, not which page: the list grows
                 // by appending, so the URL describes the screen and a refresh
                 // or a Back lands on exactly what was there.
-                self::GET_SHOWN => filter_var(
-                    $_GET[Config::get('search.form.input.shown')] ?? self::FIRST_SLICE,
-                    FILTER_VALIDATE_INT,
-                    ['options' => [
-                        'default' => self::FIRST_SLICE,
-                        'min_range' => self::FIRST_SLICE,
-                        'max_range' => self::MAX_SHOWN,
-                    ]],
+                self::GET_SHOWN => $query->intWithin(
+                    (string) Config::get('search.form.input.shown'),
+                    self::FIRST_SLICE,
+                    self::FIRST_SLICE,
+                    self::MAX_SHOWN,
                 ),
-                self::GET_DEPART_ITIN => $_GET[self::GET_DEPART_ITIN] ?? null,
-                self::GET_RETURN_ITIN => $_GET[self::GET_RETURN_ITIN] ?? null,
+                self::GET_DEPART_ITIN => $query->nullableStr(self::GET_DEPART_ITIN),
+                self::GET_RETURN_ITIN => $query->nullableStr(self::GET_RETURN_ITIN),
                 // Sort and filters ride in the query string, so stepUrl() and
                 // moreUrl() — which rebuild from $this->get — carry them across
                 // a longer list, the step transitions and a shared link for
                 // free.
-                self::GET_SORT => $_GET[self::GET_SORT] ?? null,
+                self::GET_CURRENT => $query->nullableStr(self::GET_CURRENT),
+                self::GET_SORT => $query->nullableStr(self::GET_SORT),
                 ...$this->filterQuery(),
             ]);
 
@@ -136,6 +143,7 @@ class SearchController extends AbstractController
                 returnDate: $this->get[self::GET_RETURN] ?? '',
                 adultNum: 1, // FIXME: now we provide only 1 adult count
                 childNum: 0, // FIXME: now we provide only 0 child count
+                cabin: CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
                 filters: FlightFilters::fromQuery($this->get),
                 returnFilters: FlightFilters::fromQuery($this->get, FlightFilters::RETURN_PREFIX),
             );
@@ -165,12 +173,18 @@ class SearchController extends AbstractController
             // "Load more" asks for cards, not a page: same query, same filters,
             // same sort — only the window differs. Rendering the one partial
             // the full page uses keeps the two from drifting apart.
+            $cabin = CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null);
+
             if ($this->isFragment()) {
                 echo new TwigRenderer()->render('search/cards/list.html.twig', [
                     'flights' => $total_flights != 0 ? $this->buildFlights() : [],
                     'step' => $this->data->step,
                     'price_mode' => $this->data->price_mode,
                     'show_more' => $total_flights != 0 ? $this->buildShowMore() : null,
+                    // The cards link to checkout, and that link carries the
+                    // cabin — so an appended card needs it as much as a
+                    // first-paint one.
+                    'cabin' => $cabin,
                 ]);
 
                 return;
@@ -181,6 +195,9 @@ class SearchController extends AbstractController
                 'triptype' => $this->get[self::GET_TRIPTYPE],
                 'depart_code' => $this->get[self::GET_FROM],
                 'arrive_code' => $this->get[self::GET_TO],
+                // So the results page's own form comes back showing the cabin
+                // that produced these results.
+                'cabin' => $cabin,
                 'depart_city' => $this->data->depart,
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],
@@ -188,12 +205,12 @@ class SearchController extends AbstractController
                 // Sidebar
                 'form_url' => sprintf(
                     '%s?%s',
-                    Helper::getUrlPath(),
+                    $this->searchPath(),
                     $this->queryString(array_merge($this->get, [self::GET_SHOWN => null])),
                 ),
                 // Filter forms submit with GET, so they post to the bare path
                 // and carry the rest of the search as hidden fields.
-                'form_path' => Helper::getUrlPath(),
+                'form_path' => $this->searchPath(),
                 'session_sort' => $this->sort(),
                 'default_sort' => self::DEFAULT_SORT,
                 // Sorting moved out of the sidebar and above the results, where
@@ -251,10 +268,15 @@ class SearchController extends AbstractController
                 'return_date_label' => $this->get[self::GET_RETURN],
                 // Changing one half keeps the other, so the traveller returns
                 // straight to the package once they have re-picked.
-                'change_url' => $this->stepUrl(null, keepReturn: true),
+                'change_url' => $this->stepUrl(
+                    null,
+                    keepReturn: true,
+                    current: array_map(intval(...), (array) $this->data->selected_ids),
+                ),
                 'change_return_url' => $this->stepUrl(
                     array_map(intval(...), (array) $this->data->selected_ids),
                     keepReturn: false,
+                    current: array_map(intval(...), (array) $this->data->selected_return_ids),
                 ),
                 // Flights / no-result
                 'total_flights' => $total_flights,
@@ -281,13 +303,25 @@ class SearchController extends AbstractController
         if ($this->get['hash']) {
             $search = new SearchRepository($this->connection())->findByHash($this->get['hash']);
 
+            // A hash nobody recorded resolves to nothing. Reading the columns
+            // off it anyway built a redirect to an empty search.
+            if ($search === null) {
+                $this->bounce('/');
+
+                return;
+            }
+
             $search_params = http_build_query([
                 self::GET_FROM => $search[self::GET_FROM . '_code'],
                 self::GET_TO => $search[self::GET_TO . '_code'],
                 self::GET_DEPART => $search[self::GET_DEPART],
                 self::GET_RETURN => $search[self::GET_RETURN],
                 self::GET_TRIPTYPE => $search[self::GET_TRIPTYPE],
-                self::GET_CLASS => 'economy', // FIXME: we need real class here
+                // Rows recorded before the column existed default to economy,
+                // which is the cabin they were all searched in.
+                self::GET_CLASS => CabinClass::fromRequest(
+                    is_string($search[self::GET_CLASS] ?? null) ? $search[self::GET_CLASS] : null,
+                )->value,
             ]);
 
             echo new TwigRenderer()->render('search/redirect.html.twig', [
@@ -310,15 +344,18 @@ class SearchController extends AbstractController
             return;
         }
 
-        // Calculating search hash
-        $hash = md5(sprintf(
-            '%s:%s:%s:%s:%s',
+        $cabin = CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null);
+
+        // The cabin is part of what identifies a search, so it is part of the
+        // hash — see SearchRepository::hashFor().
+        $hash = SearchRepository::hashFor(
             $this->get[self::GET_FROM],
             $this->get[self::GET_TO],
             $this->get[self::GET_DEPART],
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
-        ));
+            $cabin,
+        );
 
         // Insert or update search
         new SearchRepository($this->connection())->record(
@@ -330,6 +367,7 @@ class SearchController extends AbstractController
             $this->get[self::GET_DEPART],
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
+            $cabin,
         );
     }
 
@@ -910,7 +948,7 @@ class SearchController extends AbstractController
 
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->searchPath(),
             $this->queryString(array_merge($kept, [self::GET_SHOWN => null])),
         );
     }
@@ -947,6 +985,8 @@ class SearchController extends AbstractController
                 },
                 'outbound_ids' => $built['ids'],
                 'return_ids' => [],
+                // The one already chosen, when a Change link sent us back here.
+                'is_current' => $built['ids'] === $this->currentIds(),
                 'price' => $this->presenter()->priceParts($total),
                 // Whole pounds/dollars: the cents of a difference are noise.
                 'is_cheapest' => $difference !== null && $difference < 0.5,
@@ -1002,15 +1042,19 @@ class SearchController extends AbstractController
      * lands back on the package, while changing the return clears it.
      *
      * @param list<int>|null $ids
+     * @param list<int>|null $current leg ids this link is replacing, if any
      */
-    private function stepUrl(?array $ids, bool $keepReturn = false): string
+    private function stepUrl(?array $ids, bool $keepReturn = false, ?array $current = null): string
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
                 self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
+                // Only a Change link carries this; choosing from the list does
+                // not, or the marker would follow the traveller forward.
+                self::GET_CURRENT => $current === null || $current === [] ? null : implode(',', $current),
                 self::GET_SHOWN => null,
             ])),
         );
@@ -1025,7 +1069,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_RETURN_ITIN => implode(',', $ids),
                 self::GET_SHOWN => null,
@@ -1126,7 +1170,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [self::GET_SHOWN => $shown])),
         );
     }
@@ -1149,18 +1193,38 @@ class SearchController extends AbstractController
             return 0;
         }
 
-        $after = filter_var(
-            $_GET['after'] ?? 0,
-            FILTER_VALIDATE_INT,
-            ['options' => ['default' => 0, 'min_range' => 0, 'max_range' => self::MAX_SHOWN]],
-        );
+        $after = $this->request->query->intWithin('after', 0, 0, self::MAX_SHOWN);
 
-        return min((int) $after, $shown);
+        return min($after, $shown);
     }
 
     private function isFragment(): bool
     {
-        return ($_GET['fragment'] ?? null) === '1';
+        return $this->request->isFragment();
+    }
+
+    /**
+     * Where this page lives.
+     *
+     * Every link this controller builds is this same page with a different
+     * query string, so they take the canonical path rather than the one the
+     * visitor happened to arrive on. Otherwise reaching `/search` renders links
+     * to `/search` while the form above them posts to `/search/` -- the same
+     * destination spelled two ways on one screen.
+     */
+    /**
+     * Leg ids of the flight a Change link is replacing, if any.
+     *
+     * @return list<int>
+     */
+    private function currentIds(): array
+    {
+        return new Input($this->get)->ids(self::GET_CURRENT);
+    }
+
+    private function searchPath(): string
+    {
+        return (string) Config::get('site.paths.search', '/search/');
     }
 
     /**
@@ -1311,7 +1375,7 @@ class SearchController extends AbstractController
     {
         return sprintf(
             '%s?%s',
-            Helper::getUrlPath(),
+            $this->searchPath(),
             $this->queryString(array_merge($this->get, [
                 self::GET_SORT => $sort === self::DEFAULT_SORT ? null : $sort,
                 self::GET_SHOWN => null,
@@ -1359,7 +1423,7 @@ class SearchController extends AbstractController
         $carried = [];
 
         foreach ($this->allFilterKeys() as $key) {
-            $value = $_GET[$key] ?? null;
+            $value = $this->request->query->raw($key);
 
             // A checkbox group arrives as an array, a shared link as a string.
             $carried[$key] = (is_string($value) && $value !== '') || (is_array($value) && $value !== [])

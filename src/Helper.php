@@ -18,13 +18,6 @@ class Helper
         return dirname(__FILE__, 2);
     }
 
-    public static function getUrlPath(): string
-    {
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-
-        return is_string($path) ? $path : '/';
-    }
-
     public static function getUTCTime(int|float $offset): string
     {
         $hours = floor(abs($offset));
@@ -120,6 +113,37 @@ class Helper
     public static function random(array $range): int
     {
         return rand($range[0], $range[1]);
+    }
+
+    /**
+     * Sample an index from a cumulative weight table (binary search).
+     *
+     * `$cumulative[$i]` is the running total up to and including entry `$i`, so
+     * the table is ascending and the last value is `$total`. An entry's chance
+     * is its own share of that total, which is what lets a caller weight a draw
+     * by anything it can express as a number -- route traffic, fare brand mix,
+     * how well an aircraft fits a leg.
+     *
+     * @param list<float> $cumulative ascending running totals
+     */
+    public static function pickWeighted(array $cumulative, float $total): int
+    {
+        $target = mt_rand() / mt_getrandmax() * $total;
+
+        $low = 0;
+        $high = count($cumulative) - 1;
+
+        while ($low < $high) {
+            $mid = intdiv($low + $high, 2);
+
+            if ($cumulative[$mid] < $target) {
+                $low = $mid + 1;
+            } else {
+                $high = $mid;
+            }
+        }
+
+        return $low;
     }
 
     public static function plural(

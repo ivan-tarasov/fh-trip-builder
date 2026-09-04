@@ -20,6 +20,7 @@ final readonly class Flight
         public string $arrivalTime,
         public int $distance,
         public int $duration,
+        public int $cabins,
         public float $priceBase,
         public float $priceTax,
         public float $rating,
@@ -35,7 +36,7 @@ final readonly class Flight
         return [
             'airline', 'number', 'aircraft', 'fare_brand', 'departure_airport',
             'departure_time', 'arrival_airport', 'arrival_time', 'distance',
-            'duration', 'price_base', 'price_tax', 'rating',
+            'duration', 'cabins', 'price_base', 'price_tax', 'rating',
         ];
     }
 
@@ -57,6 +58,7 @@ final readonly class Flight
             $this->arrivalTime,
             $this->distance,
             $this->duration,
+            $this->cabins,
             $this->priceBase,
             $this->priceTax,
             $this->rating,

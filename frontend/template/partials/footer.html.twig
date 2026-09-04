@@ -1,20 +1,14 @@
 {% set git = git_info() %}
-<hr />
 
-<div class="bg-primary-subtle">
-    <div class="container my-5 wrapper--w768 rounded-4 bg-light">
-        <div class="row align-items-center p-3">
-            <div class="hstack gap-3">
-                <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" data-test-id="icon" style="display:inline-block" height="64" width="128"><path d="M23.25 5.25H.75v13.5h22.5V5.25z" fill="url(#EmojiLoveLetter__a)"></path><path d="M12 7.5.75 18.75h22.5L12 7.5Z" fill="#99A8AE"></path><path d="M12 7.95.75 18.75h22.5L12 7.95Z" fill="url(#EmojiLoveLetter__b)"></path><path d="M11.505 14.686.75 5.25h22.5l-10.756 9.436a.75.75 0 0 1-.99 0z" fill="#99A8AE"></path><path d="M11.517 14.295.75 5.25h22.5l-10.768 9.045a.75.75 0 0 1-.965 0z" fill="url(#EmojiLoveLetter__c)"></path><path d="M11.517 14.295.75 5.25h22.5l-10.768 9.045a.75.75 0 0 1-.965 0z" fill="url(#EmojiLoveLetter__d)"></path><path d="M12 9.085c-1.294-2.136-4.875-1.302-4.875 1.38 0 1.8 1.651 3.003 4.875 5.66 3.223-2.657 4.875-3.86 4.875-5.66 0-2.682-3.582-3.516-4.875-1.38z" fill="url(#EmojiLoveLetter__e)"></path><defs><linearGradient id="EmojiLoveLetter__a" x1="12" x2="12" y1="18.75" y2="5.25" gradientUnits="userSpaceOnUse"><stop stop-color="#E6EBED" offset="0"></stop><stop stop-color="#DBE2E5" offset="0.512"></stop><stop stop-color="#CCD5D9" offset="1"></stop></linearGradient><linearGradient id="EmojiLoveLetter__b" x1="12" x2="12" y1="18.75" y2="7.95" gradientUnits="userSpaceOnUse"><stop stop-color="#E6EBED" offset="0"></stop><stop stop-color="#E3E9EB" offset="0.26"></stop><stop stop-color="#DAE1E4" offset="0.454"></stop><stop stop-color="#CFD8DD" offset="0.576"></stop></linearGradient><linearGradient id="EmojiLoveLetter__c" x1="12" x2="12" y1="14.153" y2="-19.352" gradientUnits="userSpaceOnUse"><stop stop-color="#B9C2C7" offset="0"></stop><stop stop-color="#C2CACF" offset="0.046"></stop><stop stop-color="#DCE2E5" offset="0.203"></stop><stop stop-color="#E6EBED" offset="0.297"></stop></linearGradient><linearGradient id="EmojiLoveLetter__d" x1="12" x2="12" y1="14.47" y2="5.25" gradientUnits="userSpaceOnUse"><stop stop-color="#E6EBED" offset="0"></stop><stop stop-color="#E3E9EC" offset="0.582"></stop><stop stop-color="#DAE3E8" offset="1"></stop></linearGradient><linearGradient id="EmojiLoveLetter__e" x1="12" x2="12" y1="16.124" y2="7.875" gradientUnits="userSpaceOnUse"><stop stop-color="#DB0100" offset="0"></stop><stop stop-color="#F31317" offset="0.584"></stop><stop stop-color="#FF1C23" offset="1"></stop></linearGradient></defs></svg>
-                Leave the mail, or you will be left without cool letters about travel
-                <input type="text" aria-label="Last name" class="form-control me-auto" placeholder="Add your e-mail here...">
-                <button type="button" class="btn btn-outline-success">
-                    <i class="fa-solid fa-check"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{# A newsletter sign-up sat here: an e-mail field and a tick button with no
+   handler anywhere in the JS. It did not even apologise the way the placeholder
+   links did -- it took what somebody typed and silently dropped it. Sending
+   mail needs a list to store an address on and something to send from, and the
+   app has neither. The field was also type="text" labelled "Last name", and the
+   button had no accessible name, which is the tell that it was never wired.
+
+   The <hr> above it went too: it separated the page from that band, and with
+   the band gone it was a dark hairline drawn straight onto the dark footer. #}
 
 {# Long pages — a results list that keeps growing most of all — leave the top
    a long way behind. Hidden until there is something to come back from, and
@@ -23,7 +17,7 @@
     <i class="fas fa-chevron-up"></i>
 </button>
 
-<footer class="footer mt-auto py-3 bg-dark text-light-emphasis">
+<footer class="footer mt-auto py-3 bg-dark">
     <div class="container">
         <div class="container py-4 py-md-5 px-4 px-md-3">
             <div class="row">
@@ -38,7 +32,7 @@
                         <li>
                             Software made by <a href="{{ config('meta.author.website') }}" target="_blank" class="link-light">{{ config('meta.author.name') }}</a>
                             as <a href="https://www.flighthub.com/" target="_blank" class="link-light">FlightHub</a>
-                            PHP Coding <a href="Trip_Builder_1.pdf" target="_blank" class="link-light">Assessment</a>.
+                            PHP Coding <a href="/Trip_Builder_1.pdf" target="_blank" class="link-light">Assessment</a>.
                         </li>
                         <li>
                             Code licensed <a href="{{ config('app.license.url') }}" target="_blank" class="link-light" rel="license noopener">{{ config('app.license.type') }}</a>,
@@ -59,7 +53,12 @@
                 <div class="col-6 col-lg-2 offset-lg-2 mb-4 text-white">
                     <h5>Navigation</h5>
                     <ul class="list-unstyled pt-3">
-                        {% for url, item in config('site.main-menu') %}
+                        {# Same filter the header applies. Without it the footer
+                           listed every item regardless, so a disabled route --
+                           /about/ and /software-tests/, neither of which is in
+                           Routes::ENABLED_ROUTES -- shipped as a 404 link on
+                           every page of the site. #}
+                        {% for url, item in config('site.main-menu')|filter(item => item.enabled) %}
                         <li class="mb-2"><a href="{{ url }}" class="link-light">{{ item.text }}</a></li>
                         {% endfor %}
                     </ul>

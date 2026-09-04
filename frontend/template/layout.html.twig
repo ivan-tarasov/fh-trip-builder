@@ -1,3 +1,10 @@
-{% include 'partials/header.html.twig' %}
+{# The <head> lives in an included partial, and a Twig block inside an include
+   cannot be overridden by a template that extends this one -- which is why
+   every page used to be titled "Main Page". Declaring the block here puts it
+   in the inheritance chain where pages can reach it; capturing it into a
+   variable keeps its text out of the document body and means a page that
+   declares no title still renders. #}
+{% set page_title %}{% block title %}{% endblock %}{% endset %}
+{% include 'partials/header.html.twig' with { 'page_title': page_title|trim } %}
 {% block content %}{{ page_content|default('')|raw }}{% endblock %}
 {% include 'partials/footer.html.twig' %}

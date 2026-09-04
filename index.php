@@ -12,6 +12,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 use TripBuilder\Config;
+use TripBuilder\Http\Request;
 use TripBuilder\Routes;
 use TripBuilder\Timer;
 use TripBuilder\View\TwigRenderer;
@@ -19,11 +20,16 @@ use TripBuilder\View\TwigRenderer;
 try {
     Timer::start();
 
+    // The one place the superglobals are read. Everything downstream takes
+    // this object, so what a class reads from the request is visible in its
+    // signature. Captured before the session so both can see the same scheme.
+    $request = Request::capture();
+
     // We using sessions here...
     session_set_cookie_params([
         'httponly' => true,
         'samesite' => 'Lax',
-        'secure' => !empty($_SERVER['HTTPS']),
+        'secure' => $request->isSecure(),
     ]);
     session_start();
 
@@ -35,7 +41,7 @@ try {
     new Config();
 
     // Get the current URL and put it to Routes class
-    $url = rtrim(strtok($_SERVER['REQUEST_URI'], '?'), '/') ?: '/';
+    $url = $request->path();
     Routes::setCurrentPage($url);
 
     // Find the corresponding controller and action
@@ -53,12 +59,12 @@ try {
         ucfirst($controllerName),
     );
 
-    $controller = new $controllerClassName();
+    $controller = new $controllerClassName($request);
 
     // A fragment request asks for a piece of a page — the search list's "load
     // more" is one — so its output is appended to a document that already
     // exists and must not be wrapped in a second header and footer.
-    $isFragment = ($_GET['fragment'] ?? null) === '1';
+    $isFragment = $request->isFragment();
 
     $needsLayout = !$isFragment && !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER);
 

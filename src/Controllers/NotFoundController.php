@@ -9,7 +9,7 @@ use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\View\TwigRenderer;
 
-class NotFoundController
+class NotFoundController extends AbstractController
 {
     /**
      * @throws Exception|\Twig\Error\Error

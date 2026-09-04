@@ -6,6 +6,7 @@ namespace TripBuilder\Repository;
 
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\SortMethod;
+use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
@@ -86,6 +87,7 @@ final readonly class FlightRepository
         SortMethod $sort,
         int $offset,
         int $limit,
+        CabinClass $cabin,
         ?FlightFilters $filters = null,
         float $priceOffset = 0.0,
     ): array {
@@ -99,7 +101,7 @@ final readonly class FlightRepository
             return $empty;
         }
 
-        [$candidateSql, $params] = $this->candidateSql($fromCodes, $toCodes, $departDate);
+        [$candidateSql, $params] = $this->candidateSql($fromCodes, $toCodes, $departDate, $cabin);
 
         // One ranked pass over the candidates (lightweight rows), capped so a very
         // connective route can't sort an unbounded set. The page and total both
@@ -150,7 +152,7 @@ final readonly class FlightRepository
         // request as cheap as the first.
         $window = array_slice($matching, max(0, $offset), max(0, $limit));
 
-        $legs = $this->hydrateLegs($this->collectLegIds($window));
+        $legs = $this->hydrateLegs($this->collectLegIds($window), $cabin);
 
         $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs, $badges), $window);
 
@@ -629,12 +631,16 @@ final readonly class FlightRepository
      * the display needs. Returns null unless every id resolves and the legs form
      * a connected chain — so a stale or tampered selection is rejected.
      *
+     * The cabin has to be supplied: leg ids alone do not say which cabin they
+     * were priced in, and rebuilding a business selection at the economy fare
+     * would quote a total nobody was shown.
+     *
      * @param list<int> $ids
      * @return array<string, mixed>|null
      */
-    public function itineraryByIds(array $ids): ?array
+    public function itineraryByIds(array $ids, CabinClass $cabin): ?array
     {
-        $legs = $this->legsByIds($ids);
+        $legs = $this->legsByIds($ids, $cabin);
 
         if ($legs === [] || count($legs) !== count($ids)) {
             return null;
@@ -688,9 +694,9 @@ final readonly class FlightRepository
      *
      * @return array<string, mixed>|null
      */
-    public function findById(int $flightId): ?array
+    public function findById(int $flightId, CabinClass $cabin): ?array
     {
-        return $this->hydrateLegs([$flightId])[$flightId] ?? null;
+        return $this->hydrateLegs([$flightId], $cabin)[$flightId] ?? null;
     }
 
     /**
@@ -738,9 +744,9 @@ final readonly class FlightRepository
      * @param list<int> $ids
      * @return list<array<string, mixed>>
      */
-    public function legsByIds(array $ids): array
+    public function legsByIds(array $ids, CabinClass $cabin): array
     {
-        $byId = $this->hydrateLegs($ids);
+        $byId = $this->hydrateLegs($ids, $cabin);
 
         $ordered = [];
 
@@ -759,11 +765,18 @@ final readonly class FlightRepository
      * ranked as a whole. Layover window (minutes) is inlined from config (a
      * trusted int); airport codes and dates are bound.
      *
+     * Every branch keeps only flights that sell the searched cabin, and prices
+     * each leg for it. Both are no-ops for economy, so the default cabin runs
+     * the query this method has always built.
+     *
+     * The connecting branches are additionally bounded by how far the whole
+     * itinerary flies -- see detourCapKm().
+     *
      * @param list<string> $fromCodes
      * @param list<string> $toCodes
      * @return array{0: string, 1: list<string>, 2: list<string>, 3: list<list<string>>}
      */
-    private function candidateSql(array $fromCodes, array $toCodes, string $date): array
+    private function candidateSql(array $fromCodes, array $toCodes, string $date, CabinClass $cabin): array
     {
         $flights = Table::Flights->value;
         $minc = (int) Config::get('search.connections.min_connect_minutes', 45);
@@ -782,9 +795,33 @@ final readonly class FlightRepository
         $parts = [];
         $partParams = [];
 
+        // How far an itinerary may wander. Only the connecting tiers can: a
+        // direct leg's distance *is* the direct distance, measured from the
+        // same coordinates, so there is nothing for a cap to catch there.
+        //
+        // Applied progressively rather than only to the finished total, so the
+        // join sheds a first leg that has already overshot instead of pairing
+        // it with everything that connects.
+        $cap = $this->detourCapKm($fromCodes, $toCodes);
+        $within1 = $cap === null ? '' : sprintf(' AND f1.distance <= %d', $cap);
+        $within2 = $cap === null ? '' : sprintf(' AND f1.distance + f2.distance <= %d', $cap);
+        $within3 = $cap === null ? '' : sprintf(' AND f1.distance + f2.distance + f3.distance <= %d', $cap);
+
+        // Resolved once per branch alias: the cabin is fixed for the whole
+        // search, only the leg it applies to changes.
+        $base1 = $this->fare('f1', 'price_base', $cabin);
+        $base2 = $this->fare('f2', 'price_base', $cabin);
+        $base3 = $this->fare('f3', 'price_base', $cabin);
+        $tax1 = $this->fare('f1', 'price_tax', $cabin);
+        $tax2 = $this->fare('f2', 'price_tax', $cabin);
+        $tax3 = $this->fare('f3', 'price_tax', $cabin);
+        $sells1 = $this->offersCabin('f1', $cabin);
+        $sells2 = $this->offersCabin('f2', $cabin);
+        $sells3 = $this->offersCabin('f3', $cabin);
+
         // Direct.
         $parts[] = "SELECT f1.id AS seg1, NULL AS seg2, NULL AS seg3, 0 AS stops,
-            f1.price_base AS price_base, f1.price_tax AS price_tax,
+            {$base1} AS price_base, {$tax1} AS price_tax,
             f1.duration AS duration,
             f1.departure_time AS depart_time, f1.arrival_time AS arrive_time,
             f1.rating AS rating,
@@ -794,7 +831,8 @@ final readonly class FlightRepository
             NULL AS stop1_in, NULL AS stop1_out, NULL AS stop2_in, NULL AS stop2_out
             FROM {$flights} f1
             WHERE f1.departure_airport IN ({$fromPh}) AND f1.arrival_airport IN ({$toPh})
-              AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY";
+              AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
+              {$sells1}";
         $partParams[] = [...$fromCodes, ...$toCodes, $date, $date];
 
         // 1-stop: f1 -> f2, connecting at f1.arrival within the layover window.
@@ -805,8 +843,8 @@ final readonly class FlightRepository
         if ($maxStops >= 1) {
             foreach ($toCodes as $toCode) {
                 $parts[] = "SELECT f1.id AS seg1, f2.id AS seg2, NULL AS seg3, 1 AS stops,
-                    f1.price_base + f2.price_base AS price_base,
-                    f1.price_tax + f2.price_tax AS price_tax,
+                    {$base1} + {$base2} AS price_base,
+                    {$tax1} + {$tax2} AS price_tax,
                     f1.duration + f2.duration
                         + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time) AS duration,
                     f1.departure_time AS depart_time, f2.arrival_time AS arrive_time,
@@ -825,11 +863,18 @@ final readonly class FlightRepository
                     WHERE f1.departure_airport IN ({$fromPh})
                       AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
                       AND f2.arrival_airport = ?
-                      AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY";
-                // No `f1.arrival NOT IN (endpoints)` here: for a single connection it
-                // is redundant (a hop through the origin/destination yields no valid
-                // second leg) and it would stop f1 from seeking on departure_airport_time.
-                $partParams[] = [...$fromCodes, $date, $date, $toCode, $date, $date];
+                      AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
+                      AND f1.arrival_airport NOT IN ({$endPh})
+                      {$sells1}{$sells2}{$within1}{$within2}";
+                // This exclusion was skipped here on the reasoning that a hop through
+                // the origin or destination yields no valid second leg. That holds for
+                // a single airport code -- nothing connects at the airport it just left
+                // -- but resolveAirportCodes() returns every airport in the searched
+                // city, so sibling airports were never excluded: ORY -> CDG -> LHR and
+                // CDG -> LGW -> LHR both scored as one-stop itineraries whose layover
+                // was in the city the traveller had just left, or the one they were
+                // flying to. The two-stop branch below has always excluded them.
+                $partParams[] = [...$fromCodes, $date, $date, $toCode, $date, $date, ...$endpoints];
             }
         }
 
@@ -839,8 +884,8 @@ final readonly class FlightRepository
         if ($maxStops >= 2) {
             foreach ($toCodes as $toCode) {
                 $parts[] = "SELECT f1.id AS seg1, f2.id AS seg2, f3.id AS seg3, 2 AS stops,
-                    f1.price_base + f2.price_base + f3.price_base AS price_base,
-                    f1.price_tax + f2.price_tax + f3.price_tax AS price_tax,
+                    {$base1} + {$base2} + {$base3} AS price_base,
+                    {$tax1} + {$tax2} + {$tax3} AS price_tax,
                     f1.duration + f2.duration + f3.duration
                         + TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time)
                         + TIMESTAMPDIFF(MINUTE, f2.arrival_time, f3.departure_time) AS duration,
@@ -868,7 +913,8 @@ final readonly class FlightRepository
                       AND f3.arrival_airport = ?
                       AND f1.arrival_airport NOT IN ({$endPh})
                       AND f2.arrival_airport NOT IN ({$endPh})
-                      AND f2.arrival_airport <> f1.arrival_airport";
+                      AND f2.arrival_airport <> f1.arrival_airport
+                      {$sells1}{$sells2}{$sells3}{$within1}{$within2}{$within3}";
                 $partParams[] = [
                     ...$fromCodes, $date, $date, $date, $date, $date, $date,
                     $toCode, ...$endpoints, ...$endpoints,
@@ -893,7 +939,7 @@ final readonly class FlightRepository
      * bound, and so must each running total, which prunes the join early. The
      * answer is exactly the same; it is only reached with far less work.
      */
-    public function cheapestTotal(string $from, string $to, string $date): ?float
+    public function cheapestTotal(string $from, string $to, string $date, CabinClass $cabin): ?float
     {
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
@@ -902,7 +948,7 @@ final readonly class FlightRepository
             return null;
         }
 
-        [, , $parts, $partParams] = $this->candidateSql($fromCodes, $toCodes, $date);
+        [, , $parts, $partParams] = $this->candidateSql($fromCodes, $toCodes, $date, $cabin);
 
         $cheap = [];
         $cheapParams = [];
@@ -924,7 +970,7 @@ final readonly class FlightRepository
         foreach ($deep as [$part, $params]) {
             if ($best !== null) {
                 // Prune to itineraries that could still beat the bound.
-                $part = $this->boundedByPrice($part, $best);
+                $part = $this->boundedByPrice($part, $best, $cabin);
             }
 
             $found = $this->minTotal('(' . $part . ')', $params);
@@ -957,12 +1003,17 @@ final readonly class FlightRepository
      * bound. The running totals are what prune the join: a partial itinerary
      * already at or above the bound cannot be completed into a cheaper one.
      * The bound is a float we computed, never user input.
+     *
+     * The running totals are priced for the searched cabin, because the bound
+     * they are compared against was. Mixing the two would not admit a wrong
+     * itinerary -- understated partials only prune less -- but it would quietly
+     * stop the pruning from doing anything on a premium search.
      */
-    private function boundedByPrice(string $part, float $bound): string
+    private function boundedByPrice(string $part, float $bound, CabinClass $cabin): string
     {
-        $leg1 = 'f1.price_base + f1.price_tax';
-        $leg2 = $leg1 . ' + f2.price_base + f2.price_tax';
-        $leg3 = $leg2 . ' + f3.price_base + f3.price_tax';
+        $leg1 = $this->fare('f1', 'price_base', $cabin) . ' + ' . $this->fare('f1', 'price_tax', $cabin);
+        $leg2 = $leg1 . ' + ' . $this->fare('f2', 'price_base', $cabin) . ' + ' . $this->fare('f2', 'price_tax', $cabin);
+        $leg3 = $leg2 . ' + ' . $this->fare('f3', 'price_base', $cabin) . ' + ' . $this->fare('f3', 'price_tax', $cabin);
 
         return $part . sprintf(
             ' AND %s < %F AND %s < %F AND %s < %F',
@@ -981,7 +1032,7 @@ final readonly class FlightRepository
      * @param list<int> $ids
      * @return array<int, array<string, mixed>>
      */
-    private function hydrateLegs(array $ids): array
+    private function hydrateLegs(array $ids, CabinClass $cabin): array
     {
         $ids = array_values(array_unique($ids));
 
@@ -989,14 +1040,33 @@ final readonly class FlightRepository
             return [];
         }
 
-        $sql = 'SELECT ' . implode(', ', $this->legColumns())
+        $sql = 'SELECT ' . implode(', ', $this->legColumns($cabin))
             . ' FROM ' . Table::Flights->value . ' flight'
             . ' INNER JOIN ' . Table::Airports->value . ' depart_airport ON flight.departure_airport = depart_airport.code'
             . ' INNER JOIN ' . Table::Airports->value . ' arrive_airport ON flight.arrival_airport = arrive_airport.code'
             . ' INNER JOIN ' . Table::Airlines->value . ' airline ON flight.airline = airline.code'
             . ' INNER JOIN ' . Table::Countries->value . ' depart_country ON depart_airport.country_code = depart_country.code'
             . ' INNER JOIN ' . Table::Countries->value . ' arrive_country ON arrive_airport.country_code = arrive_country.code'
-            . ' WHERE flight.id IN (' . $this->placeholders($ids) . ')';
+            // LEFT: a flight whose type code is missing from the aircraft
+            // table should still return, just without a name.
+            . ' LEFT JOIN ' . Table::Aircraft->value . ' aircraft_type ON flight.aircraft = aircraft_type.code'
+            // The fitted cabin, for the cabin being searched. Also LEFT, and
+            // for a second reason: a type may simply not have this cabin on
+            // board, in which case there is no seat to describe. The code is
+            // the enum's own, never user input.
+            . sprintf(
+                ' LEFT JOIN %s cabin_fit ON cabin_fit.aircraft = flight.aircraft'
+                . " AND cabin_fit.cabin = '%s'",
+                Table::AircraftCabins->value,
+                $cabin->code(),
+            )
+            // The cabin has to be tested here as well as in the candidate
+            // query. These are ids arriving from outside -- a checkout link, a
+            // saved cookie -- and without it a leg would be priced for a cabin
+            // its aircraft has never had fitted. Dropping the row is what makes
+            // itineraryByIds() reject the selection.
+            . ' WHERE flight.id IN (' . $this->placeholders($ids) . ')'
+            . $this->offersCabin('flight', $cabin);
 
         $byId = [];
 
@@ -1161,6 +1231,95 @@ final readonly class FlightRepository
         return array_map(static fn(array $row): string => (string) $row['code'], $rows);
     }
 
+    /**
+     * Furthest an itinerary between these endpoints may fly, in km.
+     *
+     * The larger of a multiple of the direct distance and an absolute floor --
+     * see the config block for why a ratio alone does not hold across scales.
+     *
+     * Returns null when the direct distance cannot be measured, in which case
+     * the caller leaves connecting itineraries unbounded rather than capping
+     * them against a number it does not have.
+     *
+     * @param list<string> $fromCodes
+     * @param list<string> $toCodes
+     */
+    private function detourCapKm(array $fromCodes, array $toCodes): ?int
+    {
+        $span = $this->routeSpanKm($fromCodes, $toCodes);
+
+        if ($span === null) {
+            return null;
+        }
+
+        $ratio = (float) Config::get('search.connections.max_detour_ratio', 1.6);
+        $floor = (int) Config::get('search.connections.min_detour_km', 2000);
+
+        return max($floor, (int) ceil($span * $ratio));
+    }
+
+    /**
+     * Direct distance between the searched cities, in km, or null.
+     *
+     * A city can resolve to several airports, so this takes the furthest pair:
+     * the cap has to clear the longest legitimate version of the journey, not
+     * the shortest. Measured by the database from the airports' own
+     * coordinates, which is where every leg distance came from too.
+     *
+     * @param list<string> $fromCodes
+     * @param list<string> $toCodes
+     */
+    private function routeSpanKm(array $fromCodes, array $toCodes): ?int
+    {
+        $airports = Table::Airports->value;
+
+        $span = $this->connection->fetchValue(
+            sprintf(
+                'SELECT MAX(ST_Distance_Sphere(POINT(a.longitude, a.latitude),'
+                . ' POINT(b.longitude, b.latitude))) / 1000'
+                . ' FROM %s a, %s b WHERE a.code IN (%s) AND b.code IN (%s)',
+                $airports,
+                $airports,
+                $this->placeholders($fromCodes),
+                $this->placeholders($toCodes),
+            ),
+            [...$fromCodes, ...$toCodes],
+        );
+
+        return $span === null ? null : (int) round((float) $span);
+    }
+
+    /**
+     * A flight's fare column priced for the searched cabin.
+     *
+     * Rounded per leg rather than once at the end, so a leg's own price and the
+     * itinerary total it belongs to are summed from the same figures -- a total
+     * computed in SQL and the same total summed from hydrated legs in PHP have
+     * to agree to the cent.
+     *
+     * Economy returns the column untouched: its multiplier is 1.0 at every
+     * distance, so the default cabin's SQL is exactly what it was before cabins
+     * were priced at all.
+     */
+    private function fare(string $alias, string $column, CabinClass $cabin): string
+    {
+        $multiplier = $cabin->sqlPriceMultiplier($alias);
+
+        return $multiplier === null
+            ? sprintf('%s.%s', $alias, $column)
+            : sprintf('ROUND(%s.%s * %s, 2)', $alias, $column, $multiplier);
+    }
+
+    /**
+     * ` AND (alias.cabins & bit)` for a cabin that has to be on sale, or an
+     * empty string for economy, which every flight sells.
+     */
+    private function offersCabin(string $alias, CabinClass $cabin): string
+    {
+        $offers = $cabin->sqlOffers($alias);
+
+        return $offers === null ? '' : ' AND ' . $offers;
+    }
 
     /**
      * Comma-separated `?` placeholders for an IN (…) list.
@@ -1177,7 +1336,7 @@ final readonly class FlightRepository
      *
      * @return list<string>
      */
-    private function legColumns(): array
+    private function legColumns(CabinClass $cabin): array
     {
         return [
             'flight.id AS id',
@@ -1194,10 +1353,28 @@ final readonly class FlightRepository
             'arrive_country.title AS arr_country',
             'arrive_airport.city AS arr_city',
             'flight.arrival_time AS arr_datetime',
+            'flight.aircraft AS aircraft_code',
+            'aircraft_type.title AS aircraft_name',
+            'aircraft_type.is_widebody AS aircraft_widebody',
+            // What the seat is like in the cabin being priced, which is the
+            // only cabin whose seat the traveller is being sold.
+            'cabin_fit.layout AS seat_layout',
+            'cabin_fit.pitch_inches AS seat_pitch',
+            'cabin_fit.width_inches AS seat_width',
+            'cabin_fit.is_flat_bed AS seat_flat_bed',
+            // Capacity of the whole aircraft, not of the cabin being priced --
+            // it belongs with the body type as a sense of the frame's size.
+            // Correlated rather than joined: aircraft_cabins is 74 rows and a
+            // page hydrates a few dozen legs, so this costs nothing and keeps
+            // the cabin join above meaning one thing.
+            sprintf(
+                '(SELECT SUM(seats) FROM %s WHERE aircraft = flight.aircraft) AS aircraft_seats',
+                Table::AircraftCabins->value,
+            ),
             'flight.distance AS distance',
             'flight.duration AS duration',
-            'flight.price_base AS price_base',
-            'flight.price_tax AS price_tax',
+            $this->fare('flight', 'price_base', $cabin) . ' AS price_base',
+            $this->fare('flight', 'price_tax', $cabin) . ' AS price_tax',
             'flight.rating AS rating',
         ];
     }

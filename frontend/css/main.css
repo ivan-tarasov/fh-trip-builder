@@ -1,4 +1,268 @@
 /* ==========================================================================
+   #FONTS
+   ==========================================================================
+   Plus Jakarta Sans, self-hosted. One variable file per subset covers every
+   weight the stylesheet asks for (400/500/600/700) in a single request, where
+   the four static instances would have been four.
+
+   Self-hosted rather than loaded from Google: a stylesheet from another origin
+   is a render-blocking request that has to resolve DNS, open a TLS connection
+   and be parsed before the browser even learns which font files it needs. From
+   here the @font-face is in a stylesheet the page is already fetching, and the
+   file itself is preloaded in the head.
+
+   Licensed under the SIL Open Font License 1.1, which permits this -- see
+   fonts/OFL.txt, shipped alongside as the licence requires.
+
+   Paths are relative to this file, so they follow the stylesheet if it is ever
+   served from the CDN rather than the app. They must also match the preload in
+   the page head exactly, cache-buster included, or the file is fetched twice.
+
+   Subsets are split on unicode-range: a page renders only latin unless it puts
+   a character on screen from one of the others, so the cyrillic and vietnamese
+   files cost nothing until something needs them. The data needs latin and one
+   latin-ext character today (the S-caron in Ljubljana's airport name); the rest
+   is there so a name added later never falls back mid-word. */
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-vietnamese.woff2") format("woff2");
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-cyrillic-ext.woff2") format("woff2");
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+/* ==========================================================================
+   #PALETTE
+   ==========================================================================
+   This app used to ship Bootstrap's stock palette untouched -- #0d6efd and
+   friends -- which is the single most recognisable "built on Bootstrap" tell
+   there is. Two colours replace it:
+
+     --brand-ink     deep navy. Chrome, structure, headings, data labels.
+     --brand-accent  deep teal. Reserved for the ONE action per screen, for
+                     "you are here" state, and for whatever the pointer is
+                     currently on.
+
+   The split is the point. Sixteen elements on the results page were the same
+   saturated blue, so nothing led. Ink carries the furniture; accent is spent
+   sparingly and therefore still means something.
+
+   Teal replaced a burnt orange, and not only on taste. The caution tier of
+   the notice chips is amber (#8A4B00): with an orange accent, the colour that
+   means "act here" and the colour that means "check this" were the same hue
+   family, side by side on every result card. Teal reads clear of both the
+   amber and the red, so the three notice tiers stay legible as tiers.
+
+   There used to be a third token, --brand-flag, a brighter orange for the
+   hovered route segment. It was declared and never referenced -- the route
+   rules kept their literal, one of which coloured text at 3.15:1. Hover now
+   takes the accent, which is both one rule fewer and 5.47:1.
+
+   Contrast is measured, not assumed. Every pairing clears WCAG AA:
+     white on ink 15.60   white on accent 5.47   accent on white 5.47
+     white on ink-700 11.46   white on accent-700 8.06
+     accent on #f8f9fa 5.19 (the outline buttons)   accent on tint 4.78
+   And as a graphic against its neighbours on the route bar, the accent is
+   3.66 on a leg and 4.20 on a stop -- past the 3:1 a non-text mark needs. */
+:root {
+  --brand-ink:        #10243F;
+  --brand-ink-700:    #1B3A63;
+  --brand-accent:     #0F766E;
+  --brand-accent-700: #0B5A54;
+  --brand-tint:       #E6F2F1;
+  --brand-tint-edge:  #BFDDDA;
+
+  /* Semantics. Bootstrap's stock success and danger both clear AA on pure
+     white by a hair -- 4.53 -- and fail the moment they sit on a tinted
+     surface: 4.30 against the #f8f9fa card footers this app uses everywhere.
+     Both are darkened one step, which also sits better beside the navy than
+     the brighter originals did. */
+  --brand-success:    #146C43;   /* 6.45 on white, 6.12 on #f8f9fa */
+  --brand-danger:     #B02A37;   /* 6.50 on white, 6.16 on #f8f9fa */
+
+  /* Muted text. This file used Bootstrap's gray-500 in 25 places -- 2.07:1 on
+     white, which is not only past AA but past the 3:1 floor for a graphic, and
+     it was carrying real content: layover breakdowns, the CAD suffix on every
+     price, field notes. Gray-600 is not the fix either; it measures 4.45 on
+     the #f8f9fa card footers and misses by 0.05.
+     Fixing the faint tier inverted the scale: what had been the lightest text
+     ended up darker than the "secondary" tier above it, so gray-600 had to
+     move down as well. Four steps now, each perceptibly apart and every one
+     of them compliant (white / #f8f9fa):
+       --bs-body-color   #212529   body                    15.43 / 14.68
+       --ink-secondary   #495057   secondary text           8.18 / 7.76
+       --ink-muted       #646D75   quiet detail             5.27 / 5.00
+       --ink-faint       #8A9199   ornament only, 3:1 bar   3.19 / 3.02
+     Only two things use faint: the dashed booking-reference border and the
+     2.5rem icon on the expired-checkout page. */
+  --ink-body:         #151A21;   /* 17.0 on white, 15.3 on --surface */
+  --ink-secondary:    #3F4854;   /*  9.3 on white,  8.3 on --surface */
+  --ink-muted:        #5F6875;   /*  5.6 on white,  5.0 on --surface */
+  --ink-faint:        #828C99;   /*  3.5 on white -- ornament only */
+
+  /* Surfaces and rules, named rather than scattered as Bootstrap greys. They
+     are cooled a few degrees toward blue: the whole neutral field reads
+     colder, which is most of what makes an airline search feel like one
+     rather than like a generic dashboard. Every one of these was a literal
+     repeated a dozen times before. */
+  --surface:          #EFF2F7;   /* raised panels, card footers */
+  --surface-sunken:   #E8EDF3;   /* wells, quiet chips */
+  --line:             #E1E6ED;   /* default rule */
+  --line-strong:      #D3DAE3;   /* emphasis rule, route track */
+  --line-strongest:   #C2CBD6;   /* filled route leg */
+
+  /* The same scale does not run backwards. #adb5bd was removed above for
+     measuring 2.07 on white; on the #212529 footer it measures 7.43 and is
+     exactly right. A colour is not accessible or inaccessible -- a pairing
+     is. These two are for dark surfaces only. */
+  --ink-on-dark:      #ADB5BD;   /* 7.43 on #212529  -- quiet prose */
+  --ink-on-dark-lead: #DEE2E6;   /* 11.85 on #212529 -- figures, emphasis */
+
+  /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
+  --bs-body-color: var(--ink-body);
+  --bs-primary: var(--brand-ink);
+  --bs-primary-rgb: 16, 36, 63;
+  --bs-primary-bg-subtle: var(--brand-tint);
+  --bs-primary-border-subtle: var(--brand-tint-edge);
+  --bs-primary-text-emphasis: var(--brand-accent-700);
+  --bs-link-color: var(--brand-accent);
+  --bs-link-color-rgb: 15, 118, 110;
+  --bs-link-hover-color: var(--brand-accent-700);
+  /* Bootstrap defaults to 6px. 8px on controls and 12px on cards is the
+     softer geometry, and the file already reached for .75rem and 1rem by
+     hand in places, so this only makes that consistent. */
+  --bs-border-radius: .5rem;
+  --bs-border-radius-lg: .75rem;
+  --bs-card-border-radius: .75rem;   /* see the .card override below */
+  --bs-success: var(--brand-success);
+  --bs-success-rgb: 20, 108, 67;
+  --bs-danger: var(--brand-danger);
+  --bs-danger-rgb: 176, 42, 55;
+}
+
+/* Bootstrap declares --bs-card-border-radius on .card itself, so setting it in
+   :root above never reaches a card -- the same shape of trap as the button
+   colours below. */
+.card { --bs-card-border-radius: .75rem; }
+
+/* Bootstrap 5.3 writes the button colours as literal hex into each variant's
+   own custom properties, so overriding --bs-primary above does not reach a
+   single button. These have to be restated. */
+.btn-primary {
+  --bs-btn-bg: var(--brand-accent);
+  --bs-btn-border-color: var(--brand-accent);
+  --bs-btn-hover-bg: var(--brand-accent-700);
+  --bs-btn-hover-border-color: var(--brand-accent-700);
+  --bs-btn-active-bg: var(--brand-accent-700);
+  --bs-btn-active-border-color: var(--brand-accent-700);
+  --bs-btn-disabled-bg: var(--brand-accent);
+  --bs-btn-disabled-border-color: var(--brand-accent);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--brand-accent);
+  --bs-btn-border-color: var(--brand-accent);
+  --bs-btn-hover-bg: var(--brand-accent);
+  --bs-btn-hover-border-color: var(--brand-accent);
+  --bs-btn-active-bg: var(--brand-accent);
+  --bs-btn-active-border-color: var(--brand-accent);
+}
+
+/* Two families of action, so the colour carries meaning instead of just
+   shouting. Accent moves you forward through the booking -- choose a flight,
+   continue, pay. Ink adjusts what you are looking at -- search again, apply
+   filters, change sort. Before this, every one of them was the same fill, and
+   the results page had fifteen of them competing. */
+.btn-ink {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--brand-ink);
+  --bs-btn-border-color: var(--brand-ink);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--brand-ink-700);
+  --bs-btn-hover-border-color: var(--brand-ink-700);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--brand-ink-700);
+  --bs-btn-active-border-color: var(--brand-ink-700);
+  --bs-btn-focus-shadow-rgb: 16, 36, 63;
+}
+
+.btn-outline-success {
+  --bs-btn-color: var(--brand-success);
+  --bs-btn-border-color: var(--brand-success);
+  --bs-btn-hover-bg: var(--brand-success);
+  --bs-btn-hover-border-color: var(--brand-success);
+  --bs-btn-active-bg: var(--brand-success);
+  --bs-btn-active-border-color: var(--brand-success);
+}
+
+.btn-outline-ink {
+  --bs-btn-color: var(--brand-ink);
+  --bs-btn-border-color: var(--brand-ink);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--brand-ink);
+  --bs-btn-hover-border-color: var(--brand-ink);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--brand-ink);
+  --bs-btn-active-border-color: var(--brand-ink);
+  --bs-btn-focus-shadow-rgb: 16, 36, 63;
+}
+
+/* Same trap as the buttons: the pill's active background is a literal, so the
+   trip-type tabs above the search form kept their Bootstrap blue. */
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--brand-accent);
+}
+
+/* ion.rangeSlider arrives from a CDN with its own blue (#006cfa) baked into
+   the irs--round skin, so the layover and price sliders knew nothing about
+   any of this. main.css loads after it, which is what makes these win. */
+.irs--round .irs-bar,
+.irs--round .irs-from,
+.irs--round .irs-to,
+.irs--round .irs-single {
+  background-color: var(--brand-accent);
+}
+
+.irs--round .irs-handle {
+  border-color: var(--brand-accent);
+}
+
+.irs--round .irs-from:before,
+.irs--round .irs-to:before,
+.irs--round .irs-single:before {
+  border-top-color: var(--brand-accent);
+}
+
+/* ==========================================================================
    #MOTION
    ==========================================================================
    Every duration and curve in this file used to be a literal, repeated at
@@ -35,6 +299,39 @@
     transition-property: color, background-color, border-color, box-shadow, opacity, filter !important;
   }
 }
+
+/* ==========================================================================
+   #FOOTER COLOUR
+   ==========================================================================
+   The footer carried Bootstrap's .text-light-emphasis on .bg-dark. That token
+   is #495057 and is meant for light surfaces; against #212529 the whole info
+   column measured 1.89:1 -- present, but not readable. The utility sets its
+   colour with !important, so it had to come off the element rather than be
+   overridden here. Figures sit one step brighter than the prose around them,
+   which is what the monospace was reaching for with a pink that failed at
+   3.43. */
+.footer { color: var(--ink-on-dark); }
+/* `code` inside `ul.small` compounded to 10.7px -- these are figures somebody
+   is meant to read, so they inherit their list's size instead. */
+.footer code { color: var(--ink-on-dark-lead); font-size: 1em; }
+.footer .font-monospace { color: var(--ink-on-dark-lead); }
+
+/* ==========================================================================
+   #FLOATING LABELS
+   ==========================================================================
+   Four equal passenger columns leave a floating label 97px of content box,
+   because Bootstrap pads it .75rem on both sides. "Infant in seat" wanted 98.
+
+   The first attempt shrank the qualifier to buy the difference. That was
+   tuning a font size to win pixels, and it did not survive the next change:
+   swapping Arial for Plus Jakarta Sans ate the margin again. So the fix is
+   the constraint itself -- reclaim the right-hand padding, which the label
+   does not need. Its left edge still lines up with the field's own text, and
+   the result no longer depends on which face is loaded.
+
+   All four of these labels had the wrong `for` value before this, so none of
+   them was reachable by click or by a screen reader anyway. */
+.form-floating > label { padding-right: .25rem; }
 
 /* ==========================================================================
    #GRID
@@ -161,7 +458,13 @@ a {
 }
 
 body {
-  font-family: "Lato", "Arial", "Helvetica Neue", sans-serif;
+  /* Falls back to the platform UI face rather than Arial, so a failed webfont
+     lands somewhere deliberate. */
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", system-ui, sans-serif;
+  /* Prices, times and durations sit in columns down the results list, and
+     proportional digits make those columns ragged. */
+  font-variant-numeric: tabular-nums;
   font-weight: 400;
   font-size: 14px;
 }
@@ -860,6 +1163,21 @@ input[type=number]::-webkit-outer-spin-button {
   background-color: var(--bs-danger-text);
 }
 
+/* The cabin a popular search was run in, shown only when it is not economy.
+   Two rows in that list can now differ by nothing else, so without it the
+   same route and dates would appear twice with no way to tell them apart. */
+.search-cabin {
+  display: inline-block;
+  padding: .05rem .4rem;
+  border: 1px solid var(--brand-tint-edge);
+  border-radius: .25rem;
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    #AIRLINES
    ========================================================================== */
@@ -900,6 +1218,300 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 /* ==========================================================================
+   #README
+   ========================================================================== */
+
+/* The /about page is the README, so this is the one place in the app styling
+   generic markdown -- headings, paragraphs, lists and links straight out of
+   CommonMark, with no classes to hook. Everything is scoped under .readme so
+   these bare element selectors cannot reach the rest of the app.
+
+   Measure is capped rather than left to the container: the README is prose, and
+   a 1,300px line of it is unreadable. */
+.readme {
+  max-width: 64ch;
+  color: var(--ink-body);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.readme > :first-child {
+  margin-top: 0;
+}
+
+/* The ladder never drops below the 1rem body text: a heading smaller than the
+   paragraph it introduces reads as a caption. Below h3 there is no room left to
+   shrink, so the deeper levels separate on weight, colour and letter-spacing
+   instead of size. */
+.readme h1 {
+  margin-bottom: .75rem;
+  color: var(--brand-ink);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+/* The section headings carry the page's structure, so they get a rule above to
+   separate one section from the last. */
+.readme h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--brand-ink);
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.readme h3 {
+  margin-top: 1.75rem;
+  margin-bottom: .35rem;
+  color: var(--brand-ink);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* Every level the file can reach, not only the levels it uses today. Bootstrap
+   sizes h4 at 1.5rem, which is larger than the h2 above -- so an unstyled h4
+   read as the biggest heading on the page and inverted the whole hierarchy.
+   The README drives this page, so a level it grows into later must not be able
+   to break it either. */
+.readme h4 {
+  margin-top: 1.5rem;
+  margin-bottom: .35rem;
+  color: var(--brand-ink-700);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Neither level appears in the README today. They hold body size and take an
+   uppercase label treatment, so a level added later is still unmistakably a
+   heading without being smaller than the text under it. */
+.readme h5,
+.readme h6 {
+  margin-top: 1.25rem;
+  margin-bottom: .35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.readme h5 {
+  color: var(--ink-secondary);
+}
+
+.readme h6 {
+  color: var(--ink-muted);
+}
+
+/* A feature is a heading and one line about it, so the line sits tight under
+   its heading rather than floating between two. */
+.readme h3 + p,
+.readme h4 + p,
+.readme h5 + p,
+.readme h6 + p {
+  margin-top: 0;
+  color: var(--ink-secondary);
+}
+
+/* A heading whose section opens with a list, which is how the command
+   reference is written. */
+.readme h4 + ol,
+.readme h4 + ul {
+  margin-top: .5rem;
+}
+
+/* One rhythm for every block the file can produce, not only the text ones.
+   Missing pre and table here left a code block with no bottom margin at all,
+   so the paragraph after it sat flush against the block and read as part of
+   it -- while the gap going in was a full 1rem, which made the asymmetry look
+   deliberate. Anything block-level a README can grow belongs in this list. */
+.readme p,
+.readme ul,
+.readme ol,
+.readme pre,
+.readme table,
+.readme blockquote {
+  margin-bottom: 1rem;
+}
+
+/* Bootstrap's reboot zeroes list padding, and the markers are drawn outside the
+   box, so an unpadded list hung its numbers to the left of the text column.
+   Enough room for a two-digit marker to stay inside the measure. */
+.readme ul,
+.readme ol {
+  padding-left: 1.75rem;
+}
+
+.readme li > ul,
+.readme li > ol {
+  margin-top: .35rem;
+  margin-bottom: .35rem;
+}
+
+/* A step whose command sits in a block under it: the block lines up with the
+   step's text rather than starting a new indent. */
+.readme li > pre {
+  margin-top: .5rem;
+}
+
+.readme li + li {
+  margin-top: .35rem;
+}
+
+.readme a {
+  color: var(--brand-accent-700);
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
+.readme a:hover {
+  color: var(--brand-accent);
+}
+
+/* The "Built With" badges are inline images inside links; without this they sit
+   on the text baseline and drag the line height around. */
+.readme p > a > img {
+  vertical-align: middle;
+  margin: 0 .15rem .35rem 0;
+}
+
+.readme code {
+  padding: .1rem .3rem;
+  border-radius: .25rem;
+  background-color: var(--surface-sunken);
+  color: var(--brand-ink);
+  font-size: .875em;
+}
+
+.readme pre {
+  position: relative;
+  overflow-x: auto;
+  /* Room on the right for the copy button, so a long line scrolls under empty
+     space rather than under the control. */
+  padding: 1rem 3.25rem 1rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background-color: var(--surface-sunken);
+}
+
+/* Copy button on a code block.
+   Anchored to the block rather than the scrolling content, so it stays put
+   while a long command scrolls beneath it. Dimmed rather than hidden until
+   hover: a hover-only control does not exist on a touch screen, and one that
+   appears from nothing is easy to miss. */
+.readme__copy {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: .375rem;
+  background-color: var(--surface);
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+  line-height: 1;
+  opacity: .55;
+  transition: opacity var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+
+.readme pre:hover .readme__copy,
+.readme__copy:hover,
+.readme__copy:focus-visible {
+  opacity: 1;
+  border-color: var(--brand-accent);
+  color: var(--brand-accent-700);
+}
+
+/* Press feedback, the same 0.97 the rest of the app's controls use. */
+.readme__copy:active {
+  transform: scale(.94);
+}
+
+/* Held for a moment after a successful copy, so the tick is not gone before it
+   is noticed. */
+.readme__copy[data-state="done"] {
+  opacity: 1;
+  border-color: var(--brand-success);
+  color: var(--brand-success);
+}
+
+.readme__copy[data-state="failed"] {
+  opacity: 1;
+  border-color: var(--brand-danger);
+  color: var(--brand-danger);
+}
+
+.readme pre code {
+  padding: 0;
+  background: none;
+}
+
+/* A README written on GitHub can carry a table; it has to be able to scroll on
+   a narrow screen rather than widen the page. */
+.readme table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+.readme th,
+.readme td {
+  padding: .4rem .75rem;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.readme th {
+  background-color: var(--surface-sunken);
+  font-weight: 600;
+}
+
+/* Neither appears in the README today. Bootstrap gives a blockquote nothing
+   but margin, so an unstyled one is indistinguishable from a paragraph -- the
+   same trap the unstyled h4 fell into. */
+.readme blockquote {
+  padding: .25rem 0 .25rem 1rem;
+  border-left: 3px solid var(--brand-tint-edge);
+  color: var(--ink-secondary);
+}
+
+.readme blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.readme hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  opacity: 1;
+}
+
+.readme img {
+  max-width: 100%;
+  height: auto;
+}
+
+.readme__source {
+  max-width: 64ch;
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: .875rem;
+}
+
+/* ==========================================================================
    #FOOTER
    ========================================================================== */
 
@@ -920,7 +1532,7 @@ textarea {
 }
 
 .accordion-item .accordion-button {
-  color: #212529 !important;
+  color: var(--ink-body) !important;
 }
 
 /* "Flight details" toggle. A bordered pill rather than a text link: on a card
@@ -928,7 +1540,7 @@ textarea {
    one control that opens the itinerary. Swaps its label and rotates the
    chevron by state. */
 .details-toggle {
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: .25rem .85rem;
   color: #495057;
@@ -938,15 +1550,15 @@ textarea {
 }
 
 .details-toggle:hover {
-  background-color: #f1f3f5;
-  border-color: #ced4da;
-  color: #212529;
+  background-color: var(--surface-sunken);
+  border-color: var(--line-strongest);
+  color: var(--ink-body);
 }
 
 .details-toggle:not(.collapsed) {
   background-color: #e7f1ff;
-  border-color: #b6d4fe;
-  color: #0a58ca;
+  border-color: var(--brand-tint-edge);
+  color: var(--brand-accent-700);
 }
 
 .details-toggle .if-expanded { display: none; }
@@ -962,11 +1574,11 @@ textarea {
   display: flex;
   align-items: center;
   gap: .4rem;
-  color: #6c757d;
+  color: var(--ink-secondary);
 }
 
-.step-track__item.is-current { color: #0d6efd; font-weight: 600; }
-.step-track__item.is-done { color: #198754; }
+.step-track__item.is-current { color: var(--brand-accent); font-weight: 600; }
+.step-track__item.is-done { color: var(--brand-success); }
 
 .step-track__marker {
   display: inline-flex;
@@ -980,13 +1592,18 @@ textarea {
   line-height: 1;
 }
 
-.step-track__item.is-current .step-track__marker { background-color: #0d6efd; border-color: #0d6efd; color: #fff; }
-.step-track__item.is-done .step-track__marker { background-color: #198754; border-color: #198754; color: #fff; }
+.step-track__item.is-current .step-track__marker { background-color: var(--brand-accent); border-color: var(--brand-accent); color: #fff; }
+.step-track__item.is-done .step-track__marker { background-color: var(--brand-success); border-color: var(--brand-success); color: #fff; }
 
+/* The connector between two steps. It shrinks: at 40px fixed, three labels and
+   two rules came to more than a 375px screen and pushed "Review & book" off the
+   edge, taking the whole page's horizontal scroll with it. The rule is the only
+   part here that can lose width without losing meaning. */
 .step-track__line {
-  flex: 0 0 40px;
+  flex: 0 1 40px;
+  min-width: .5rem;
   height: 1px;
-  background-color: #ced4da;
+  background-color: var(--line-strongest);
 }
 
 /* Mark the option the pointer is over. This is deliberately only a shadow:
@@ -1010,10 +1627,10 @@ textarea {
 }
 
 /* The assembled round trip, set apart from the option lists. */
-.trip-package { border: 2px solid var(--bs-primary); }
+.trip-package { border: 2px solid var(--brand-accent); }
 
 .trip-package__banner {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
   padding: .5rem 1rem;
   border-radius: calc(var(--bs-border-radius) - 2px) calc(var(--bs-border-radius) - 2px) 0 0;
@@ -1028,7 +1645,7 @@ textarea {
   align-items: center;
   gap: .5rem;
   margin-bottom: .3rem;
-  color: #6c757d;
+  color: var(--ink-secondary);
   font-size: .8125rem;
 }
 
@@ -1040,7 +1657,7 @@ textarea {
    you have decided the total time is acceptable. */
 .route__waits {
   display: block;
-  color: #adb5bd;
+  color: var(--ink-muted);
   font-size: .75rem;
 }
 
@@ -1079,7 +1696,7 @@ textarea {
    its own code, which costs a little proportional accuracy on the shortest
    legs and buys labels that can always be read. */
 .route__leg { min-width: 2.25rem; }
-.route__leg::before { height: 6px; background-color: #ced4da; }
+.route__leg::before { height: 6px; background-color: var(--line-strongest); }
 
 .route__stop { min-width: 2.25rem; }
 /* Drawn at a leg's thickness and scaled down to a layover's, so the hover
@@ -1091,18 +1708,18 @@ textarea {
 .route__stop::before {
   height: 6px;
   transform: scaleY(.3333);
-  background-color: #dee2e6;
+  background-color: var(--line-strong);
 }
 
 /* Hover is a pointer affordance. On a touchscreen :hover latches on tap and
    stays latched, leaving a segment of somebody's flight highlighted for no
    reason they can undo. */
 @media (hover: hover) and (pointer: fine) {
-  .route__leg:hover::before { background-color: #f5622d; }
+  .route__leg:hover::before { background-color: var(--brand-accent); }
 
   .route__stop:hover::before {
     transform: scaleY(1);
-    background-color: #f5622d;
+    background-color: var(--brand-accent);
   }
 }
 
@@ -1128,7 +1745,7 @@ textarea {
 /* The connection airport lights up with its own leg of the journey -- gated
    with the bar above it, so the pair stay in step on a touchscreen. */
 @media (hover: hover) and (pointer: fine) {
-  .route__stop:hover .route__code { color: #f5622d; }
+  .route__stop:hover .route__code { color: var(--brand-accent); }
 }
 
 /* The codes sit below the bar, so they are the only thing occupying that strip
@@ -1162,9 +1779,28 @@ textarea {
 .badge--primary { background-color: #2f6fed; }
 .badge--purple  { background-color: #7048e8; }
 .badge--teal    { background-color: #0f9b8e; }
-.badge--secondary { background-color: #6c757d; }
+.badge--secondary { background-color: var(--ink-secondary); }
+
+/* The flight a Change link came back to replace. Deliberately the brand accent
+   rather than one of the sort badges' colours: those describe how a row scored,
+   this one says the traveller already has it. */
+.badge--current { background-color: var(--brand-accent-700); }
 
 .flight-card--badged { border-top-left-radius: .5rem; }
+
+/* Ringed rather than filled: the row still has to be readable against its
+   neighbours and comparable with them, so the marker sits on the edge instead
+   of tinting the content.
+
+   The ring is the border alone. A box-shadow here is dead on arrival -- the
+   card also carries Bootstrap's .shadow-sm, and Bootstrap writes its utilities
+   with !important, so the shadow cannot be overridden from a class. Widening
+   the border is the honest way to make it read, rather than answering an
+   !important with another one. */
+.flight-card--current {
+  border-color: var(--brand-accent);
+  border-width: 2px;
+}
 
 /* Round icon buttons: save and share. */
 .icon-btn {
@@ -1172,12 +1808,12 @@ textarea {
   height: 38px;
   border: 0;
   border-radius: 50%;
-  background-color: #f1f3f5;
+  background-color: var(--surface-sunken);
   color: #495057;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.icon-btn:hover { background-color: #e9ecef; }
+.icon-btn:hover { background-color: var(--line); }
 .icon-btn.is-active { color: #e03131; }
 .icon-btn.is-copied { background-color: #d3f9d8; color: #2b8a3e; }
 
@@ -1209,7 +1845,7 @@ textarea {
    pale enough not to compete with the sentence explaining what goes here. */
 .empty-state__icon {
   font-size: 3rem;
-  color: #ced4da;
+  color: var(--line-strongest);
 }
 
 /* A thing worth knowing before you choose: tight connection, night wait, … */
@@ -1224,8 +1860,21 @@ textarea {
   cursor: help;
 }
 
-/* One treatment for all of them: these are things to look twice at. */
-.notice { background-color: #ffe9e9; color: #d6336c; }
+/* One treatment for all of them: these are things to look twice at, and the
+   uniform red is the wanted look.
+
+   It is not the ORIGINAL red, though. That was #d6336c on #FFE9E9, which
+   measures 3.98:1 and misses AA. Same appearance, accessible pairing: 5.59.
+
+   The presenter still assigns a severity and the template still emits it as a
+   class, so the three tiers are one edit away if the flat treatment ever
+   starts hiding a tight connection among five facts. */
+.notice--risk,
+.notice--check,
+.notice--note {
+  background-color: #FFE9E9;
+  color: var(--brand-danger);
+}
 
 /* Choosing a flight is a button, not the card. A whole-card target competed
    with everything else on the card that responds to a click — the timeline,
@@ -1239,11 +1888,172 @@ textarea {
   white-space: nowrap;
 }
 
+/* --------------------------------------------------------------------------
+   Expanded flight detail
+   --------------------------------------------------------------------------
+   A rail with a node per airport, one block per segment. Departure sits above
+   arrival so the reading order is the travelling order, and the carrier block
+   spans both rows to its right rather than competing as a fifth column.
+   Times inherit the tabular figures set on body, so the two clock readings on
+   a segment line up under each other whatever the digits. */
+.legs {
+  border: 1px solid var(--line);
+  border-radius: var(--bs-border-radius-lg);
+  padding: 1rem 1.125rem;
+  margin-bottom: .75rem;
+  background-color: #fff;
+}
+
+.leg {
+  display: grid;
+  grid-template-columns: .875rem minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "rail depart carrier"
+    "rail arrive carrier"
+    "rail facts  facts";
+  column-gap: .875rem;
+  row-gap: .625rem;
+}
+
+/* The line runs the height of the segment; the nodes are pinned to the first
+   and last text rows rather than to the rail's own ends, so they sit level
+   with the times they belong to. */
+.leg__rail {
+  grid-area: rail;
+  position: relative;
+  justify-self: center;
+  width: 2px;
+  background-color: var(--line-strongest);
+  /* Inset to the centre of the first and last time, so the line starts and
+     ends at its nodes rather than at the edges of the grid row. */
+  margin: .55rem 0;
+}
+
+.leg__rail::before,
+.leg__rail::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 2px solid var(--brand-accent);
+}
+
+.leg__rail::before { top: 0; }
+/* Hollow on arrival, filled on departure -- the same read as a route bar. */
+.leg__rail::after  { top: 100%; background-color: var(--brand-accent); }
+
+.leg__stop { display: flex; flex-direction: column; min-width: 0; }
+.leg__stop:first-of-type { grid-area: depart; }
+.leg__stop:last-of-type  { grid-area: arrive; }
+
+.leg__time {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink-body);
+}
+
+.leg__place {
+  font-size: .8125rem;
+  color: var(--ink-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leg__code { color: var(--ink-muted); }
+
+.leg__date { font-size: .75rem; color: var(--ink-muted); }
+/* Landing on another day is the one thing here worth a second look. */
+.leg__date--next { color: var(--brand-danger); font-weight: 600; }
+
+.leg__carrier {
+  grid-area: carrier;
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  column-gap: .5rem;
+  align-content: center;
+  align-self: center;
+}
+
+.leg__logo { grid-row: 1 / span 3; align-self: start; border-radius: 50%; }
+.leg__airline {
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--ink-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leg__meta { font-size: .75rem; color: var(--ink-muted); }
+
+/* Sits between two segments, indented past the rail so the gap in the
+   journey is visible as a gap. */
+/* Hugs its own text rather than stretching, so the interruption in the rail
+   reads as the gap in the journey it describes. */
+.leg__layover {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  /* The gap in the journey wants to read as a gap. At .5rem the chip sat tight
+     against the facts row above it and the next departure below, so the break
+     in the rail was the only thing separating one segment from the next. */
+  margin: 1.125rem 0 1.125rem 1.625rem;
+  padding: .3125rem .625rem;
+  border-radius: 999px;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  font-size: .75rem;
+  color: var(--ink-secondary);
+}
+
+/* Font Awesome's JS bundle rewrites every <i> into an <svg>, so a margin hung
+   on `i` stops applying the moment that runs -- which is why the clock sat
+   against the time. The container's own gap does not care what the icon
+   element ends up being. */
+.leg__layover i,
+.leg__layover svg { color: var(--ink-muted); }
+
+.leg__layover-note {
+  padding-left: .5rem;
+  margin-left: .125rem;
+  border-left: 1px solid var(--line-strong);
+  font-weight: 600;
+}
+
+.leg__layover-note--note { color: var(--ink-secondary); }
+/* A wait too short to make comfortably is the one that changes a decision. */
+.leg__layover-note--risk { color: var(--brand-danger); }
+
+.legs__total {
+  margin: .875rem 0 0;
+  padding-top: .75rem;
+  border-top: 1px solid var(--line);
+  font-size: .8125rem;
+  color: var(--ink-secondary);
+}
+
+/* Narrow: the carrier drops under its segment instead of squeezing beside it. */
+@media (max-width: 575.98px) {
+  .leg {
+    grid-template-columns: .875rem minmax(0, 1fr);
+    grid-template-areas:
+      "rail depart"
+      "rail arrive"
+      "rail carrier";
+  }
+  .leg__carrier { padding-top: .25rem; }
+}
+
 /* The card's action strip: what you can do with this flight, set apart from
    the flight itself. More controls will land on this row. */
 .flight-card__footer {
-  background-color: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  background-color: var(--surface);
+  border-top: 1px solid var(--line);
   padding: .75rem 1rem;
 }
 
@@ -1255,7 +2065,7 @@ textarea {
   width: 1px;
   height: 24px;
   margin: 0 .75rem;
-  background-color: #dee2e6;
+  background-color: var(--line-strong);
 }
 
 /* A flex child only shrinks below its content width once this is lifted, and
@@ -1321,7 +2131,7 @@ textarea {
   align-items: center;
   gap: .75rem;
   margin: 1.5rem 0 1rem;
-  color: #6c757d;
+  color: var(--ink-secondary);
   font-size: .875rem;
 }
 
@@ -1330,7 +2140,7 @@ textarea {
   content: "";
   flex: 1;
   height: 1px;
-  background-color: #dee2e6;
+  background-color: var(--line-strong);
 }
 
 /* Price: the number is what people compare, so it carries the weight while the
@@ -1340,7 +2150,7 @@ textarea {
   align-items: baseline;
   gap: .15rem;
   line-height: 1.1;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .price__symbol {
@@ -1365,7 +2175,7 @@ textarea {
 .price__currency {
   font-size: .75rem;
   font-weight: 500;
-  color: #adb5bd;
+  color: var(--ink-muted);
   text-transform: uppercase;
   letter-spacing: .04em;
   margin-left: .2rem;
@@ -1386,7 +2196,7 @@ textarea {
 /* --- Results column: one block per idea, ruled apart -------------------
    The step track, the heading, the sort bar and the results were four things
    in one undifferentiated stack. A rule between them says where each ends. */
-.results-block { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid #e9ecef; }
+.results-block { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
 .results-block--steps { padding-bottom: .875rem; margin-bottom: .875rem; }
 .results-block--title { padding-bottom: .875rem; margin-bottom: .875rem; }
 /* Ruled off from the results too, so the bar reads as a control over the
@@ -1418,7 +2228,7 @@ textarea {
   border-radius: .75rem;
   /* A light ground, so the chosen tab reads as filled rather than as the only
      thing with a border. */
-  background-color: #f8f9fa;
+  background-color: var(--surface);
   overflow: hidden;
 }
 
@@ -1426,8 +2236,8 @@ textarea {
   flex: 1 1 0;
   min-width: 0;
   padding: .75rem 1.125rem;
-  border-right: 1px solid #e9ecef;
-  color: #6c757d;
+  border-right: 1px solid var(--line);
+  color: var(--ink-secondary);
   text-decoration: none;
   cursor: pointer;
   /* The tab is a target, not a passage of text: without this the pointer
@@ -1436,13 +2246,14 @@ textarea {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.sort-bar__tab:hover { background-color: #e9ecef; }
+.sort-bar__tab:hover { background-color: var(--line); }
 
-/* Brand blue, the same as the navbar and the Select button — a neutral dark
-   read as a different design language from the rest of the page. */
+/* Ink, not accent. This marks which sort is active -- it is state, not a step
+   forward -- and leaving the accent free for the Select buttons is what stops
+   the two reading as the same kind of thing. */
 .sort-bar__tab.is-current {
-  background-color: var(--bs-primary);
-  border-right-color: var(--bs-primary);
+  background-color: var(--brand-ink);
+  border-right-color: var(--brand-ink);
   color: #fff;
 }
 
@@ -1459,17 +2270,17 @@ textarea {
   font-size: 1.375rem;
   font-weight: 700;
   line-height: 1.15;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .sort-bar__tab.is-current .sort-bar__price { color: #fff; }
-.sort-bar__price--none { color: #ced4da; }
+.sort-bar__price--none { color: var(--line-strongest); }
 
 .sort-bar__meta {
   display: block;
   font-size: .75rem;
   line-height: 1.3;
-  color: #adb5bd;
+  color: var(--ink-muted);
 }
 
 .sort-bar__tab.is-current .sort-bar__meta { color: rgba(255, 255, 255, .7); }
@@ -1500,7 +2311,7 @@ textarea {
   padding: .5rem 1.15rem .5rem 0;
   font-size: .9375rem;
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
   cursor: pointer;
   user-select: none;
   appearance: none;
@@ -1518,8 +2329,8 @@ textarea {
   margin: .75rem 0 .25rem;
   padding: .625rem .75rem;
   border-radius: .5rem;
-  background-color: #e7f1ff;
-  color: #0a58ca;
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
   font-size: .8125rem;
   line-height: 1.35;
 }
@@ -1527,7 +2338,7 @@ textarea {
 .filters__other-leg i { margin-top: .1rem; }
 
 /* --- Section: title, optional Select all, chevron ------------------------ */
-.filter-section { border-bottom: 1px solid #f1f3f5; }
+.filter-section { border-bottom: 1px solid var(--surface-sunken); }
 .filter-section:last-of-type { border-bottom: 0; }
 
 .filter-section__head {
@@ -1555,11 +2366,11 @@ textarea {
 
 .filter-section__title {
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .filter-section__chevron {
-  color: #adb5bd;
+  color: var(--ink-muted);
   font-size: .8125rem;
   transition: transform var(--dur-base) var(--ease-out);
 }
@@ -1595,7 +2406,7 @@ textarea {
 
 .filter-subhead {
   font-size: .875rem;
-  color: #6c757d;
+  color: var(--ink-secondary);
   margin-bottom: .5rem;
 }
 
@@ -1618,7 +2429,7 @@ textarea {
      rather than a bullet next to the title. */
   font-size: 1.75rem;
   line-height: 1;
-  color: #adb5bd;
+  color: var(--ink-muted);
 }
 
 .sort-option__text { flex: 1; min-width: 0; }
@@ -1639,7 +2450,7 @@ textarea {
   cursor: pointer;
 }
 
-.filter-row:hover { background-color: #f8f9fa; }
+.filter-row:hover { background-color: var(--surface); }
 
 .filter-row__logo {
   width: 24px;
@@ -1668,7 +2479,7 @@ textarea {
    fourteen of them do not compete with the names for attention. */
 .filter-row__only {
   flex: 0 0 auto;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   background-color: #fff;
   padding: .1rem .55rem;
@@ -1685,19 +2496,19 @@ textarea {
 .filter-row__label {
   display: block;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 /* The code sits with the name, quieter, the way the reference prints it. */
 .filter-row__sub {
-  color: #adb5bd;
+  color: var(--ink-muted);
   padding-left: .35rem;
 }
 
 .filter-row__note {
   display: block;
   font-size: .8125rem;
-  color: #adb5bd;
+  color: var(--ink-muted);
 }
 
 .filter-row__check { flex: 0 0 auto; margin: 0; }
@@ -1707,7 +2518,7 @@ textarea {
 .filter-row__price {
   flex: 0 0 auto;
   font-size: .8125rem;
-  color: #6c757d;
+  color: var(--ink-secondary);
   white-space: nowrap;
 }
 
@@ -1743,7 +2554,7 @@ textarea {
   left: .75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #adb5bd;
+  color: var(--ink-muted);
   font-size: .875rem;
 }
 
@@ -1751,12 +2562,12 @@ textarea {
   width: 100%;
   border: 0;
   border-radius: .625rem;
-  background-color: #f1f3f5;
+  background-color: var(--surface-sunken);
   padding: .5rem .75rem .5rem 2.25rem;
   font-size: .9375rem;
 }
 
-.filter-search__input::placeholder { color: #adb5bd; }
+.filter-search__input::placeholder { color: var(--ink-muted); }
 
 /* --- Toggles ------------------------------------------------------------- */
 .filter-toggle {
@@ -1775,7 +2586,7 @@ textarea {
   flex: 1;
   min-width: 0;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 /* The last word and the icon move as one, so the icon can never be the only
@@ -1784,7 +2595,7 @@ textarea {
 
 .filter-toggle__info {
   display: inline-block;
-  color: #adb5bd;
+  color: var(--ink-muted);
   font-size: .8125rem;
   padding-left: .3rem;
   cursor: help;
@@ -1817,8 +2628,8 @@ textarea {
   gap: .35rem;
   padding: .4rem .75rem;
   border-radius: 999px;
-  background-color: #f1f3f5;
-  color: #212529;
+  background-color: var(--surface-sunken);
+  color: var(--ink-body);
   font-size: .875rem;
   cursor: pointer;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
@@ -1835,7 +2646,7 @@ textarea {
   opacity: 0;
   pointer-events: none;
 }
-.filter-pill:hover { background-color: #e9ecef; }
+.filter-pill:hover { background-color: var(--line); }
 .filter-pill__icon { color: #868e96; font-size: .8125rem; }
 
 /* A selected pill. `is-on` is set by JS on load and on every change.
@@ -1843,7 +2654,7 @@ textarea {
    defined in two places that can drift. The sidebar already needs JS for its
    sliders, so one mechanism it is. */
 .filter-pill.is-on {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
 }
 
@@ -1851,7 +2662,7 @@ textarea {
 
 /* --- Sliders -------------------------------------------------------------- */
 .filter-slider {
-  background-color: #f8f9fa;
+  background-color: var(--surface);
   border-radius: .75rem;
   padding: .75rem .875rem 1.25rem;
 }
@@ -1873,7 +2684,7 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .filter-slider__value {
@@ -1881,19 +2692,19 @@ textarea {
   align-items: center;
   gap: .25rem;
   flex: 0 0 auto;
-  background-color: #e9ecef;
+  background-color: var(--line);
   border-radius: 999px;
   padding: .2rem .6rem;
   font-size: .875rem;
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
   white-space: nowrap;
 }
 
 /* Set, so it reads as a filter you have applied rather than a reading of the
    range on offer. */
 .filter-slider__value.is-on {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
   padding-right: .2rem;
 }
@@ -1930,7 +2741,7 @@ textarea {
   margin: 0 -1rem -1rem;
   padding: 1rem;
   background-color: #fff;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--line);
   border-radius: 0 0 var(--bs-card-border-radius) var(--bs-card-border-radius);
   box-shadow: 0 -.5rem 1rem -.5rem rgba(0, 0, 0, .1);
   text-align: center;
@@ -1956,7 +2767,7 @@ textarea {
 .filter-row__none {
   display: block;
   font-size: .8125rem;
-  color: #adb5bd;
+  color: var(--ink-muted);
   /* Never split across lines: "no" above "flights" reads as two thoughts. */
   white-space: nowrap;
 }
@@ -1989,7 +2800,7 @@ textarea {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .show-more__button:hover {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
 }
 /* Mid-request the label already says so; dimming it stops a second click
@@ -2020,7 +2831,7 @@ textarea {
 
 .show-more__note {
   margin: .6rem 0 0;
-  color: #6c757d;
+  color: var(--ink-secondary);
   font-size: .875rem;
 }
 
@@ -2037,7 +2848,7 @@ textarea {
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 50%;
   background-color: #fff;
   box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15);
@@ -2055,7 +2866,7 @@ textarea {
   transform: none;
 }
 .to-top:hover {
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
 }
 .to-top[hidden] { display: none; }
@@ -2080,8 +2891,8 @@ textarea {
   gap: 1rem;
   margin-bottom: 1.25rem;
 }
-.checkout__title { margin: 0; font-size: 1.75rem; font-weight: 700; color: #212529; }
-.checkout__change { color: var(--bs-primary); font-weight: 500; text-decoration: none; }
+.checkout__title { margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--ink-body); }
+.checkout__change { color: var(--brand-accent); font-weight: 500; text-decoration: none; }
 .checkout__change:hover { text-decoration: underline; }
 
 .checkout__alert {
@@ -2112,7 +2923,7 @@ textarea {
 }
 
 .pane {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.25rem 1.5rem 1.5rem;
@@ -2125,7 +2936,7 @@ textarea {
   margin: 0 0 .25rem;
   font-size: 1.0625rem;
   font-weight: 600;
-  color: #212529;
+  color: var(--ink-body);
 }
 .pane__step {
   display: inline-flex;
@@ -2134,12 +2945,12 @@ textarea {
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 50%;
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   color: #fff;
   font-size: .8125rem;
 }
-.pane__hint { margin: 0 0 1rem; color: #6c757d; font-size: .875rem; }
-.pane--accept { background-color: #f8f9fa; }
+.pane__hint { margin: 0 0 1rem; color: var(--ink-secondary); font-size: .875rem; }
+.pane--accept { background-color: var(--surface); }
 
 /* Two per row, one per row once there is no longer space for two. */
 .field-row {
@@ -2157,11 +2968,11 @@ textarea {
 }
 .field__input {
   width: 100%;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: .5rem;
   padding: .5rem .75rem;
   font-size: .9375rem;
-  color: #212529;
+  color: var(--ink-body);
   background-color: #fff;
   transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
@@ -2170,9 +2981,9 @@ textarea {
   border-color: var(--bs-primary);
   box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .15);
 }
-.field__input.is-invalid { border-color: #dc3545; }
-.field__error { margin: .3125rem 0 0; font-size: .8125rem; color: #dc3545; }
-.field__note { margin: .3125rem 0 0; font-size: .8125rem; color: #adb5bd; }
+.field__input.is-invalid { border-color: var(--brand-danger); }
+.field__error { margin: .3125rem 0 0; font-size: .8125rem; color: var(--brand-danger); }
+.field__note { margin: .3125rem 0 0; font-size: .8125rem; color: var(--ink-muted); }
 
 /* Fields and the card preview beside each other, the card first on a narrow
    screen so what is being filled in is visible while typing. */
@@ -2185,7 +2996,7 @@ textarea {
 .pay__fields { min-width: 0; }
 .pay__secure {
   margin: 1rem 0 0;
-  color: #6c757d;
+  color: var(--ink-secondary);
   font-size: .8125rem;
   line-height: 1.5;
 }
@@ -2277,11 +3088,11 @@ textarea {
   justify-content: flex-end;
   height: 1.75rem;
   border-radius: .1875rem;
-  background-color: #f1f3f5;
+  background-color: var(--surface-sunken);
   padding: 0 .625rem;
 }
 .pay-card__cvv {
-  color: #212529;
+  color: var(--ink-body);
   font-size: .8125rem;
   letter-spacing: .12em;
 }
@@ -2300,7 +3111,7 @@ textarea {
   width: 1.125rem;
   height: 1.125rem;
   margin-top: .1rem;
-  accent-color: var(--bs-primary);
+  accent-color: var(--brand-accent);
 }
 .accept--invalid { color: #842029; }
 
@@ -2309,7 +3120,7 @@ textarea {
   width: 100%;
   border: 0;
   border-radius: .625rem;
-  background-color: var(--bs-primary);
+  background-color: var(--brand-accent);
   padding: .8125rem 1rem;
   margin-top: 1.25rem;
   color: #fff;
@@ -2321,49 +3132,49 @@ textarea {
 }
 .checkout__pay:hover { filter: brightness(.92); color: #fff; }
 .checkout__pay--link { max-width: 18rem; }
-.checkout__test { margin: .75rem 0 0; color: #6c757d; font-size: .8125rem; }
+.checkout__test { margin: .75rem 0 0; color: var(--ink-secondary); font-size: .8125rem; }
 .checkout__test code { color: #495057; }
 
 /* --- order summary ------------------------------------------------------ */
 .order {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.25rem;
 }
 .order__heading { margin: 0 0 1rem; font-size: 1.0625rem; font-weight: 600; }
-.order__leg { padding-bottom: .875rem; margin-bottom: .875rem; border-bottom: 1px solid #f1f3f5; }
+.order__leg { padding-bottom: .875rem; margin-bottom: .875rem; border-bottom: 1px solid var(--surface-sunken); }
 .order__leg-label {
   margin: 0 0 .25rem;
   font-size: .6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: #adb5bd;
+  color: var(--ink-muted);
 }
 .order__route { display: flex; align-items: center; gap: .5rem; margin: 0 0 .25rem; }
-.order__code { font-size: 1.125rem; font-weight: 700; color: #212529; }
-.order__arrow { color: #adb5bd; font-size: .8125rem; }
+.order__code { font-size: 1.125rem; font-weight: 700; color: var(--ink-body); }
+.order__arrow { color: var(--ink-muted); font-size: .8125rem; }
 .order__when { margin: 0; font-size: .875rem; color: #495057; }
-.order__detail { margin: 0; font-size: .8125rem; color: #adb5bd; }
+.order__detail { margin: 0; font-size: .8125rem; color: var(--ink-muted); }
 
 .order__prices { margin: 0; }
 .order__price-row { display: flex; justify-content: space-between; gap: 1rem; padding: .3125rem 0; }
-.order__price-row dt { font-weight: 400; color: #6c757d; font-size: .9375rem; }
-.order__price-row dd { margin: 0; color: #212529; font-size: .9375rem; }
+.order__price-row dt { font-weight: 400; color: var(--ink-secondary); font-size: .9375rem; }
+.order__price-row dd { margin: 0; color: var(--ink-body); font-size: .9375rem; }
 .order__price-row--total {
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid var(--line);
   margin-top: .5rem;
   padding-top: .75rem;
 }
 .order__price-row--total dt,
-.order__price-row--total dd { font-size: 1.125rem; font-weight: 700; color: #212529; }
-.order__note { margin: .75rem 0 0; font-size: .8125rem; color: #adb5bd; }
+.order__price-row--total dd { font-size: 1.125rem; font-weight: 700; color: var(--ink-body); }
+.order__note { margin: .75rem 0 0; font-size: .8125rem; color: var(--ink-muted); }
 
 /* --- rules -------------------------------------------------------------- */
 .rules {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.25rem 1.5rem;
@@ -2383,7 +3194,7 @@ textarea {
 .rules__brand {
   flex: 0 0 auto;
   border-radius: 999px;
-  background-color: #e9ecef;
+  background-color: var(--line);
   padding: .1rem .5rem;
   font-size: .75rem;
   font-weight: 600;
@@ -2397,30 +3208,30 @@ textarea {
   font-size: .8125rem;
   color: #495057;
 }
-.rules__icon { flex: 0 0 .875rem; margin-top: .2rem; font-size: .6875rem; color: #198754; }
-.rules__item--restricted { color: #6c757d; }
-.rules__item--restricted .rules__icon { color: #adb5bd; }
+.rules__icon { flex: 0 0 .875rem; margin-top: .2rem; font-size: .6875rem; color: var(--brand-success); }
+.rules__item--restricted { color: var(--ink-secondary); }
+.rules__item--restricted .rules__icon { color: var(--ink-muted); }
 
 .rules__notes {
   margin: 0;
   padding-left: 1.125rem;
-  border-top: 1px solid #f1f3f5;
+  border-top: 1px solid var(--surface-sunken);
   padding-top: .875rem;
   font-size: .75rem;
-  color: #6c757d;
+  color: var(--ink-secondary);
 }
 .rules__notes li + li { margin-top: .5rem; }
 
 /* --- confirmation ------------------------------------------------------- */
 .done { text-align: center; padding: 1.5rem 0 2rem; }
-.done__icon { font-size: 2.75rem; color: #198754; }
+.done__icon { font-size: 2.75rem; color: var(--brand-success); }
 .done__title { margin: .875rem 0 .5rem; font-size: 1.75rem; font-weight: 700; }
 .done__lead { margin: 0 auto; max-width: 32rem; color: #495057; }
 .done__reference {
   display: inline-flex;
   flex-direction: column;
   gap: .25rem;
-  border: 1px dashed #adb5bd;
+  border: 1px dashed var(--ink-faint);
   border-radius: .75rem;
   padding: .75rem 1.75rem;
   margin-top: 1.25rem;
@@ -2430,13 +3241,13 @@ textarea {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .08em;
-  color: #adb5bd;
+  color: var(--ink-muted);
 }
 .done__reference-code {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: .15em;
-  color: #212529;
+  color: var(--ink-body);
 }
 
 .done__panels {
@@ -2451,18 +3262,18 @@ textarea {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: #adb5bd;
+  color: var(--ink-muted);
 }
-.done__leg { padding: .625rem 0; border-bottom: 1px solid #f1f3f5; }
+.done__leg { padding: .625rem 0; border-bottom: 1px solid var(--surface-sunken); }
 .done__leg-route { display: flex; align-items: center; gap: .5rem; }
 .done__leg-when { display: flex; gap: .5rem; font-size: .875rem; color: #495057; }
-.done__leg-sep { color: #adb5bd; }
-.done__leg-carrier { font-size: .8125rem; color: #adb5bd; }
-.done__demo { margin: .75rem 0 0; font-size: .8125rem; color: #adb5bd; }
+.done__leg-sep { color: var(--ink-muted); }
+.done__leg-carrier { font-size: .8125rem; color: var(--ink-muted); }
+.done__demo { margin: .75rem 0 0; font-size: .8125rem; color: var(--ink-muted); }
 
 .checkout__gone { text-align: center; padding: 3rem 0; }
-.checkout__gone-icon { font-size: 2.5rem; color: #adb5bd; }
-.checkout__gone-note { margin: .75rem auto 1.5rem; max-width: 30rem; color: #6c757d; }
+.checkout__gone-icon { font-size: 2.5rem; color: var(--ink-faint); }
+.checkout__gone-note { margin: .75rem auto 1.5rem; max-width: 30rem; color: var(--ink-secondary); }
 .checkout__gone .checkout__pay--link { margin-inline: auto; }
 
 /* --------------------------------------------------------------------------
@@ -2487,7 +3298,7 @@ textarea {
 
 .review__halves { min-width: 0; }
 .review__half {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--line);
   border-radius: 1rem;
   background-color: #fff;
   padding: 1.125rem 1.375rem 1.25rem;
@@ -2501,7 +3312,7 @@ textarea {
   gap: 1rem;
   padding-bottom: .875rem;
   margin-bottom: .5rem;
-  border-bottom: 1px solid #f1f3f5;
+  border-bottom: 1px solid var(--surface-sunken);
 }
 .review__half-label {
   margin: 0;
@@ -2513,15 +3324,8 @@ textarea {
 }
 .review__half-date { margin: .125rem 0 0; font-size: .9375rem; color: #495057; }
 
-.review__half-actions {
-  display: flex;
-  align-items: center;
-  gap: .875rem;
-  flex: 0 0 auto;
-}
-.review__half-price { font-size: 1.0625rem; font-weight: 700; color: #212529; }
 .review__change {
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: .25rem .85rem;
   font-size: .875rem;
@@ -2530,10 +3334,170 @@ textarea {
   text-decoration: none;
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
-.review__change:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
+.review__change:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+
+/* Aircraft and seat, under the carrier on a timeline leg.
+   Quiet by construction: these are facts somebody checks when they care, not
+   claims the card is making, so they sit at the size of the meta line above
+   them and in the same muted ink. */
+.leg__facts {
+  /* Its own row across the width of the segment rather than inside the carrier
+     column: that column is half of a 1fr, which broke "A330-900neo" over three
+     lines. These read as a short list, so they need the measure. */
+  grid-area: facts;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem 1.25rem;
+  margin: .125rem 0 0;
+  padding: .625rem 0 0;
+  border-top: 1px dashed var(--line);
+  list-style: none;
+}
+
+.leg__fact {
+  display: flex;
+  align-items: baseline;
+  gap: .45rem;
+  font-size: .8125rem;
+  line-height: 1.5;
+  color: var(--ink-secondary);
+}
+
+.leg__fact-icon {
+  flex: none;
+  width: .9rem;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: .75rem;
+}
+
+.leg__fact-note { color: var(--ink-muted); }
+
+/* The package's flight detail is always open, so it is separated by space
+   rather than by the button that used to reveal it. */
+.review__detail {
+  margin-top: .875rem;
+  padding-top: .875rem;
+  border-top: 1px solid var(--surface-sunken);
+}
+
+/* Searchable select. The native <select> stays in the DOM because it is what
+   submits, so it is taken out of the layout rather than out of the document --
+   display:none would still submit, but this keeps it findable for scripts and
+   honest about why it is there. */
+.combo { position: relative; }
+
+.combo__native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.combo__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + .25rem);
+  left: 0;
+  right: 0;
+  /* Ten-ish rows: enough to scan, short enough that the field below is still
+     on screen while the list is open. */
+  max-height: 17rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: .25rem;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+  border-radius: .5rem;
+  background-color: #fff;
+  box-shadow: 0 .5rem 1.5rem -.5rem rgba(16, 36, 63, .25);
+}
+
+.combo__option {
+  padding: .4rem .6rem;
+  border-radius: .375rem;
+  font-size: .9375rem;
+  color: var(--ink-body);
+  cursor: pointer;
+}
+
+.combo__option:hover,
+.combo__option.is-active {
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+}
+
+/* The one already chosen, so reopening the list shows where you are. */
+.combo__option[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--brand-accent-700);
+}
+
+.combo__empty {
+  padding: .5rem .6rem;
+  font-size: .875rem;
+  color: var(--ink-muted);
+}
+
+/* The test-data bar above the checkout form. Deliberately not styled like the
+   form's own controls: it is scaffolding for trying the flow, not a step in
+   it, so it reads as an aside rather than as the first thing to fill in. */
+.checkout__autofill {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .875rem;
+  margin-bottom: 1.25rem;
+  padding: .75rem .875rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: .5rem;
+  background-color: var(--surface);
+}
+
+.checkout__autofill-button {
+  display: inline-flex;
+  align-items: center;
+  padding: .35rem .85rem;
+  border: 1px solid var(--brand-accent);
+  border-radius: 999px;
+  background-color: #fff;
+  color: var(--brand-accent-700);
+  font-size: .875rem;
+  font-weight: 600;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+
+.checkout__autofill-button:hover,
+.checkout__autofill-button:focus-visible {
+  background-color: var(--brand-accent);
+  color: #fff;
+}
+
+.checkout__autofill-button:active { transform: scale(.97); }
+
+.checkout__autofill-note {
+  flex: 1 1 16rem;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+}
+
+.checkout__autofill-note code {
+  padding: .05rem .3rem;
+  border-radius: .25rem;
+  background-color: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: .9em;
+}
 
 .review__total { margin: 0 0 .875rem; }
-.rules__more { margin: .875rem 0 0; font-size: .75rem; color: #adb5bd; }
+.rules__more { margin: .875rem 0 0; font-size: .75rem; color: var(--ink-muted); }
 
 /* --------------------------------------------------------------------------
    Press feedback

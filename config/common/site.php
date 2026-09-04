@@ -14,6 +14,7 @@ return [
     'directory' => [
         'js' => '/frontend/js',
         'css' => '/frontend/css',
+        'fonts' => '/frontend/fonts',
     ],
 
     'static' => [
@@ -33,7 +34,6 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'avatar' => '//github.com/ivan-tarasov.png?size=32',
 
     /*
     |--------------------------------------------------------------------------
@@ -57,6 +57,23 @@ return [
     | Main menu settings
     |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Canonical paths
+    |--------------------------------------------------------------------------
+    |
+    | Where a page lives, spelled once. The router normalises a trailing slash
+    | either way, so the only thing at stake is which form the app emits -- and
+    | it has to be one form, or the same page renders two different actions for
+    | the same destination. Trailing slash, because that is what every link the
+    | app already publishes uses, and what is in anybody's bookmarks.
+    |
+    */
+
+    'paths' => [
+        'search' => '/search/',
+    ],
 
     'main-menu' => [
         '/my/bookings/' => [

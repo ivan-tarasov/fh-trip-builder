@@ -19,6 +19,22 @@ use TripBuilder\Config;
 class ItineraryPresenter
 {
     // What counts as worth warning about on an itinerary.
+    /**
+     * Cabin codes to names. FlightFinder currently supplies these itself with
+     * a FIXME -- 'Y' outbound, 'X' return -- because the flights table has no
+     * cabin column yet. 'Y' is a real IATA economy code and resolves; 'X' is
+     * not a cabin at all and deliberately resolves to nothing, so a return leg
+     * shows no cabin rather than a made-up one. Both start reporting correctly
+     * the moment the column exists.
+     */
+    private const array CABIN_NAMES = [
+        'Y' => 'Economy',
+        'W' => 'Premium economy',
+        'C' => 'Business',
+        'J' => 'Business',
+        'F' => 'First',
+    ];
+
     private const int LAYOVER_TIGHT_MINUTES = 90;
     private const int LAYOVER_LONG_MINUTES = 300;
     private const int LONG_TRIP_MINUTES = 1440;
@@ -51,7 +67,35 @@ class ItineraryPresenter
                 'logo_url' => $this->carrierLogo($segment->carrier),
                 'flight_number' => 'Flight ' . str_replace('-', '', $segment->number),
                 'duration' => $this->minutesToStringTime($segment->duration),
-                'cabin' => 'Economy',
+                'cabin' => self::CABIN_NAMES[$segment->cabin_code ?? ''] ?? null,
+                'aircraft' => $segment->aircraft ?? null,
+                // What the cabin is like on this frame. Each is null when the
+                // data does not reach that far -- an unknown type, or a type
+                // with no such cabin on board -- and the template prints only
+                // what it has rather than inventing a placeholder. This is the
+                // same restraint that removed the hardcoded amenity icons; the
+                // difference is that these are real, seeded per aircraft.
+                'aircraft_body' => match ($segment->aircraft_widebody ?? null) {
+                    true => 'widebody',
+                    false => 'narrowbody',
+                    default => null,
+                },
+                'seat_layout' => $segment->seat_layout ?? null,
+                // Pitch is held in inches, the trade's unit, and shown in
+                // centimetres to sit with the kilometres used everywhere else.
+                'seat_pitch' => isset($segment->seat_pitch) && $segment->seat_pitch > 0
+                    ? sprintf('%d cm', (int) round($segment->seat_pitch * 2.54))
+                    : null,
+                'seat_width' => isset($segment->seat_width) && $segment->seat_width > 0
+                    ? sprintf('%d cm', (int) round($segment->seat_width * 2.54))
+                    : null,
+                'seat_flat_bed' => (bool) ($segment->seat_flat_bed ?? false),
+                // How many seats the frame carries in total, across every cabin
+                // -- a different question from the layout beside it, which is
+                // about the row this ticket sits in.
+                'aircraft_seats' => isset($segment->aircraft_seats) && $segment->aircraft_seats > 0
+                    ? number_format((int) $segment->aircraft_seats)
+                    : null,
                 'depart_time' => date('H:i', strtotime($segment->depart->date_time)),
                 'depart_date' => date('D, d M', strtotime($segment->depart->date_time)),
                 'depart_city' => $segment->depart->airport_city,
@@ -79,7 +123,7 @@ class ItineraryPresenter
                 'notices' => $this->buildNotices($segments, $itinerary->layovers, (int) $itinerary->total_duration),
                 'badges' => array_map($this->badgeMeta(...), $itinerary->badges),
                 'route' => $this->routeParts($itinerary),
-                'layovers' => $this->layovers($itinerary),
+                'layovers' => $this->layovers($itinerary, $segments),
                 'segments' => $detail,
             ],
             'ids' => $ids,
@@ -137,17 +181,56 @@ class ItineraryPresenter
     }
 
     /**
-     * @return list<array<string, string>>
+     * The gaps between segments, each with the one note worth putting on it.
+     *
+     * @param list<object> $segments in flight order, so layover i sits between
+     *                               segment i and segment i + 1
+     * @return list<array{airport_code: string, airport_city: string, wait: string, notes: list<array{text: string, tone: string}>}>
      */
-    private function layovers(object $itinerary): array
+    private function layovers(object $itinerary, array $segments): array
     {
         $layovers = [];
 
-        foreach ($itinerary->layovers as $layover) {
+        foreach ($itinerary->layovers as $i => $layover) {
+            $wait = (int) $layover->wait_minutes;
+
+            // Layover i is the gap between segment i and the one after it.
+            $overnight = isset($segments[$i], $segments[$i + 1]) && $this->spansNight(
+                $segments[$i]->arrive->date_time,
+                $segments[$i + 1]->depart->date_time,
+            );
+
+            // At most two notes, and they never say the same thing twice.
+            //
+            // The duration note is one or the other, because the chip already
+            // prints the wait: "5h 34m in London" says it is long on its own,
+            // so the label is only adding where the threshold sits.
+            //
+            // "Overnight" is separate because it is the one thing the duration
+            // cannot tell you -- 5h 10m could be an afternoon or 23:30 to
+            // 04:40 -- and it stacks with either. A tight connection in the
+            // middle of the night is two problems, not one: the plane may be
+            // missed, and it is being caught at 3am with the airport shut.
+            $notes = [];
+
+            if ($wait < self::LAYOVER_TIGHT_MINUTES) {
+                $notes[] = ['text' => 'Tight connection', 'tone' => 'risk'];
+            } elseif ($wait > self::LAYOVER_LONG_MINUTES) {
+                $notes[] = ['text' => 'Long layover', 'tone' => 'note'];
+            }
+
+            if ($overnight) {
+                // "Overnight" rather than the notices' "Night layover": beside
+                // "Long layover" the word would land twice in three words, and
+                // the chip has already said which layover it is talking about.
+                $notes[] = ['text' => 'Overnight', 'tone' => 'note'];
+            }
+
             $layovers[] = [
                 'airport_code' => $layover->airport_code,
                 'airport_city' => $layover->airport_city,
-                'wait' => $this->minutesToStringTime($layover->wait_minutes),
+                'wait' => $this->minutesToStringTime($wait),
+                'notes' => $notes,
             ];
         }
 
@@ -174,6 +257,23 @@ class ItineraryPresenter
      * @param list<object> $layovers
      * @return list<array<string, string>>
      */
+    /**
+     * Three severities, because these six things are not equally serious and
+     * rendering them identically made the reader weigh them equally:
+     *
+     *   risk   something can go wrong on the day  -- a connection too tight
+     *   check  something may be needed before you fly -- a transit visa, or
+     *          bags to collect and re-check between two airlines
+     *   note   a fact about the itinerary -- how long the wait, how long the
+     *          trip, whether the wait runs overnight
+     *
+     * A 29-hour journey is not a warning; a 45-minute connection in a foreign
+     * airport is. The colour now says which is which.
+     *
+     * @param list<object> $segments
+     * @param list<object> $layovers
+     * @return list<array<string, string>>
+     */
     private function buildNotices(array $segments, array $layovers, int $totalDuration): array
     {
         $notices = [];
@@ -187,12 +287,14 @@ class ItineraryPresenter
 
             if ($wait < self::LAYOVER_TIGHT_MINUTES) {
                 $notices['tight'] = [
+                    'severity' => 'risk',
                     'icon' => 'person-running',
                     'label' => 'Tight connection',
                     'text' => sprintf('Only %s to change planes in %s', $waitLabel, $city),
                 ];
             } elseif ($wait > self::LAYOVER_LONG_MINUTES) {
                 $notices['long'] = [
+                    'severity' => 'note',
                     'icon' => 'hourglass-half',
                     'label' => 'Long layover',
                     'text' => sprintf('%s waiting in %s', $waitLabel, $city),
@@ -204,6 +306,7 @@ class ItineraryPresenter
                 $segments[$i + 1]->depart->date_time,
             )) {
                 $notices['night'] = [
+                    'severity' => 'note',
                     'icon' => 'moon',
                     'label' => 'Night layover',
                     'text' => sprintf('The wait in %s runs through the night', $city),
@@ -214,6 +317,7 @@ class ItineraryPresenter
 
             if ($country !== $originCountry && $country !== $destinationCountry) {
                 $notices['visa'] = [
+                    'severity' => 'check',
                     'icon' => 'passport',
                     'label' => 'Transit visa',
                     'text' => sprintf('Connects through %s — check whether a transit visa is needed', $country),
@@ -225,6 +329,7 @@ class ItineraryPresenter
 
         if (count($carriers) > 1) {
             $notices['airlines'] = [
+                'severity' => 'check',
                 'icon' => 'suitcase-rolling',
                 'label' => 'Separate airlines',
                 'text' => 'Flights are on different airlines — bags may need collecting and re-checking',
@@ -233,6 +338,7 @@ class ItineraryPresenter
 
         if ($totalDuration > self::LONG_TRIP_MINUTES) {
             $notices['duration'] = [
+                'severity' => 'note',
                 'icon' => 'clock',
                 'label' => 'Long journey',
                 'text' => sprintf('%s door to door', $this->minutesToStringTime($totalDuration)),

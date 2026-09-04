@@ -82,17 +82,429 @@
         console.log(er);
     }
 
-    /*[ Buy tickets AJAX + sweetalert2 ]
+    /*[ Checkout: fill the form with plausible test data ]
     ===========================================================*/
     try {
-        $(".empty-link").click(function () {
-            Swal.fire({
-                icon: 'info',
-                title: 'Oops...',
-                text: 'This is a placeholder link, and clicking on it does not lead to any effect.'
-            });
-        });
+        const autofillBar = document.querySelector('[data-autofill]');
 
+        if (autofillBar) {
+            // Revealed from script: without JavaScript the button could not do
+            // anything, and a control that does nothing is worse than no
+            // control. Same reasoning that removed the placeholder links.
+            autofillBar.hidden = false;
+
+            // Pools, not fixed rows. Nothing below is a complete identity -- a
+            // name is drawn independently of a country, a card of a person --
+            // so the combinations multiply out well past anything anyone will
+            // exhaust by clicking.
+            const FIRST = [
+                'Ivan', 'Chloe', 'Mateo', 'Aisha', 'Lukas', 'Priya', 'Noah', 'Marta',
+                'Tomas', 'Yuki', 'Amara', 'Felix', 'Sofia', 'Omar', 'Elena', 'Hugo',
+                'Nadia', 'Sean', 'Ingrid', 'Rafael',
+            ];
+            const LAST = [
+                'Tarasov', 'Beaulieu', 'Okafor', 'Nguyen', 'Kowalski', 'Ferreira',
+                'Lindqvist', 'Hassan', 'Moreau', 'Bianchi', 'Novak', 'Andersen',
+                'Costa', 'Volkov', 'Muller', 'Sharma', 'Fontaine', 'Larsen',
+                'Rossi', 'Devries',
+            ];
+            const DOMAINS = [
+                'example.com', 'mail.example', 'example.net', 'inbox.example',
+                'example.org', 'post.example', 'mailbox.example', 'example.co',
+                'letters.example', 'example.email',
+            ];
+
+            // Country, dialling code, a number shape, and a postcode shape that
+            // belongs to that country -- a Canadian card with a British
+            // postcode reads as fake at a glance, which defeats the point.
+            // `#` is a digit, `@` an uppercase letter.
+            const PLACES = [
+                { country: 'CA', phone: '+1 514 ### ####', postcode: '@#@ #@#' },
+                { country: 'US', phone: '+1 212 ### ####', postcode: '#####' },
+                { country: 'GB', phone: '+44 20 #### ####', postcode: '@@# #@@' },
+                { country: 'FR', phone: '+33 1 ## ## ## ##', postcode: '#####' },
+                { country: 'DE', phone: '+49 30 ########', postcode: '#####' },
+                { country: 'NL', phone: '+31 20 ### ####', postcode: '#### @@' },
+                { country: 'ES', phone: '+34 91 ### ####', postcode: '#####' },
+                { country: 'IT', phone: '+39 06 #### ####', postcode: '#####' },
+                { country: 'AU', phone: '+61 2 #### ####', postcode: '####' },
+                { country: 'JP', phone: '+81 3 #### ####', postcode: '###-####' },
+                { country: 'SE', phone: '+46 8 ### ## ##', postcode: '### ##' },
+                { country: 'PT', phone: '+351 21 ### ####', postcode: '####-###' },
+                { country: 'IE', phone: '+353 1 ### ####', postcode: '@## @@##' },
+                { country: 'PL', phone: '+48 22 ### ## ##', postcode: '##-###' },
+                { country: 'BR', phone: '+55 11 #### ####', postcode: '#####-###' },
+            ];
+
+            // Issuer prefixes and lengths. The check digit is computed, so the
+            // numbers really are valid -- the form runs Luhn on them and a
+            // number that failed would send us round the error path instead of
+            // to the confirmation page.
+            const SCHEMES = [
+                { prefix: '4', length: 16, cvv: 3 },        // Visa
+                { prefix: '4539', length: 16, cvv: 3 },     // Visa
+                { prefix: '51', length: 16, cvv: 3 },       // Mastercard
+                { prefix: '55', length: 16, cvv: 3 },       // Mastercard
+                { prefix: '2221', length: 16, cvv: 3 },     // Mastercard (2-series)
+                { prefix: '34', length: 15, cvv: 4 },       // Amex
+                { prefix: '37', length: 15, cvv: 4 },       // Amex
+                { prefix: '6011', length: 16, cvv: 3 },     // Discover
+            ];
+
+            const DECLINE = (autofillBar.querySelector('code') || {}).textContent || '';
+
+            const pick = list => list[Math.floor(Math.random() * list.length)];
+            const digits = n => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join('');
+
+            const shape = pattern => pattern.replace(/[#@]/g, ch => ch === '#'
+                ? String(Math.floor(Math.random() * 10))
+                : 'ABCDEFGHJKLMNPRSTVWXYZ'[Math.floor(Math.random() * 22)]);
+
+            // Luhn: sum with every second digit from the right doubled, then the
+            // digit that takes the total to a multiple of ten.
+            const luhnCheckDigit = function (partial) {
+                let sum = 0;
+                let double = true;
+
+                for (let i = partial.length - 1; i >= 0; i--) {
+                    let d = Number(partial[i]);
+                    if (double) { d *= 2; if (d > 9) { d -= 9; } }
+                    sum += d;
+                    double = !double;
+                }
+
+                return (10 - (sum % 10)) % 10;
+            };
+
+            const cardNumber = function (scheme) {
+                let number;
+
+                do {
+                    const body = scheme.prefix + digits(scheme.length - scheme.prefix.length - 1);
+                    number = body + luhnCheckDigit(body);
+                    // The one number the checkout declines on purpose. Redrawing
+                    // is simpler than explaining why autofill sometimes fails.
+                } while (number === DECLINE);
+
+                return number;
+            };
+
+            // Grouped the way the card is printed, so it reads like a card.
+            const groupCard = n => n.length === 15
+                ? n.replace(/^(\d{4})(\d{6})(\d{5})$/, '$1 $2 $3')
+                : n.replace(/(\d{4})(?=\d)/g, '$1 ');
+
+            const pad = n => String(n).padStart(2, '0');
+
+            const born = function () {
+                // Somewhere between 18 and 75, which is who buys a ticket.
+                const now = new Date();
+                const year = now.getFullYear() - (18 + Math.floor(Math.random() * 58));
+                const month = 1 + Math.floor(Math.random() * 12);
+                // 28 keeps every month valid without caring which one it is.
+                const day = 1 + Math.floor(Math.random() * 28);
+
+                return year + '-' + pad(month) + '-' + pad(day);
+            };
+
+            const expiry = function () {
+                // One to five years out, so it is always in the future.
+                const now = new Date();
+                const year = now.getFullYear() + 1 + Math.floor(Math.random() * 5);
+
+                return pad(1 + Math.floor(Math.random() * 12)) + '/' + String(year).slice(-2);
+            };
+
+            // Strip the accents a name might carry before it becomes an address.
+            const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+            autofillBar.querySelector('[data-autofill-button]').addEventListener('click', function () {
+                const form = autofillBar.closest('form');
+                const first = pick(FIRST);
+                const last = pick(LAST);
+                const place = pick(PLACES);
+                const scheme = pick(SCHEMES);
+
+                const values = {
+                    email: slug(first) + '.' + slug(last) + Math.floor(Math.random() * 90 + 10) + '@' + pick(DOMAINS),
+                    phone: shape(place.phone),
+                    first_name: first,
+                    last_name: last,
+                    dob: born(),
+                    gender: pick(['F', 'M', 'X']),
+                    card_name: first + ' ' + last,
+                    card_number: groupCard(cardNumber(scheme)),
+                    card_expiry: expiry(),
+                    card_cvv: digits(scheme.cvv),
+                    billing_postcode: shape(place.postcode),
+                    billing_country: place.country,
+                };
+
+                Object.keys(values).forEach(function (name) {
+                    // By name attribute, not form.elements[name]: that lookup
+                    // matches on id as well, and the searchable country field
+                    // puts its input's id alongside the select's name -- so it
+                    // returned a collection and the country silently stopped
+                    // being filled.
+                    const field = form.querySelector('[name="' + name + '"]');
+                    if (!field) { return; }
+                    field.value = values[name];
+                    // So anything listening -- validation, a mask -- sees it as
+                    // typed rather than as a value that appeared.
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+
+                const accept = form.querySelector('[name="accept_rules"]');
+                if (accept) {
+                    accept.checked = true;
+                    accept.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
+    } catch (er) {
+        console.log(er);
+    }
+
+    /*[ Searchable select (billing country) ]
+    ===========================================================*/
+    try {
+        document.querySelectorAll('select[data-searchable]').forEach(function (select) {
+            // The select stays: it is what the form submits, what autofill
+            // writes to, and what the page is left with if this never runs.
+            // Everything below is a layer on top of it.
+            const options = [...select.options].filter(o => o.value !== '');
+            const placeholder = (select.options[0] || {}).textContent || 'Search…';
+            const listId = select.id + '-listbox';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'combo';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = select.className + ' combo__input';
+            input.setAttribute('role', 'combobox');
+            input.setAttribute('aria-expanded', 'false');
+            input.setAttribute('aria-controls', listId);
+            input.setAttribute('aria-autocomplete', 'list');
+            // Off, or the browser's own suggestions cover the list below.
+            input.autocomplete = 'off';
+            input.placeholder = placeholder.trim();
+
+            const list = document.createElement('ul');
+            list.className = 'combo__list';
+            list.id = listId;
+            list.setAttribute('role', 'listbox');
+            list.hidden = true;
+
+            // The label points at the select's id, so the id moves to the thing
+            // that now takes the focus and the select keeps only its name.
+            input.id = select.id;
+            select.id = select.id + '-native';
+            select.setAttribute('tabindex', '-1');
+            select.setAttribute('aria-hidden', 'true');
+            select.classList.add('combo__native');
+
+            select.parentNode.insertBefore(wrap, select);
+            wrap.appendChild(input);
+            wrap.appendChild(list);
+            wrap.appendChild(select);
+
+            let active = -1;
+            let matches = [];
+
+            const render = function (query) {
+                const needle = query.trim().toLowerCase();
+                // Rank, do not just filter. Alphabetical order alone answered
+                // "ire" with Bonaire, Cote d'Ivoire and Zaire before Ireland,
+                // which is every country containing the letters except the one
+                // being typed. A name that starts with the query comes first,
+                // then the country code, then anything containing it.
+                const rank = function (option) {
+                    const name = option.textContent.trim().toLowerCase();
+
+                    if (needle === '') { return 0; }
+                    if (name.startsWith(needle)) { return 0; }
+                    if (option.value.toLowerCase().startsWith(needle)) { return 1; }
+                    if (name.includes(needle)) { return 2; }
+
+                    return -1;
+                };
+
+                matches = options
+                    .map(o => ({ option: o, rank: rank(o) }))
+                    .filter(m => m.rank >= 0)
+                    // Stable within a rank, so each band stays alphabetical.
+                    .sort((a, b) => a.rank - b.rank)
+                    .map(m => m.option);
+
+                list.innerHTML = '';
+
+                if (matches.length === 0) {
+                    const empty = document.createElement('li');
+                    empty.className = 'combo__empty';
+                    empty.textContent = 'No country matches that.';
+                    list.appendChild(empty);
+                    return;
+                }
+
+                matches.forEach(function (option, i) {
+                    const li = document.createElement('li');
+                    li.className = 'combo__option';
+                    li.setAttribute('role', 'option');
+                    li.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
+                    li.dataset.value = option.value;
+                    li.textContent = option.textContent.trim();
+                    if (i === active) { li.classList.add('is-active'); }
+                    list.appendChild(li);
+                });
+            };
+
+            const open = function () {
+                render(input.value === select.selectedOptions[0]?.textContent.trim() ? '' : input.value);
+                list.hidden = false;
+                input.setAttribute('aria-expanded', 'true');
+            };
+
+            const close = function () {
+                list.hidden = true;
+                input.setAttribute('aria-expanded', 'false');
+                active = -1;
+            };
+
+            const choose = function (option) {
+                select.value = option.value;
+                input.value = option.textContent.trim();
+                // So validation, autofill and anything else see a real change.
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                close();
+            };
+
+            const moveActive = function (step) {
+                if (list.hidden) { open(); }
+                if (matches.length === 0) { return; }
+                active = (active + step + matches.length) % matches.length;
+                render(input.value);
+                const el = list.children[active];
+                if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'nearest' }); }
+            };
+
+            input.addEventListener('focus', open);
+            input.addEventListener('input', function () { active = -1; open(); });
+
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+                else if (e.key === 'Enter') {
+                    if (!list.hidden && matches[active]) { e.preventDefault(); choose(matches[active]); }
+                } else if (e.key === 'Escape') {
+                    close();
+                    input.value = select.selectedOptions[0] ? select.selectedOptions[0].textContent.trim() : '';
+                }
+            });
+
+            list.addEventListener('mousedown', function (e) {
+                // mousedown, not click: blur would close the list first.
+                const li = e.target.closest('.combo__option');
+                if (!li) { return; }
+                e.preventDefault();
+                choose(options.find(o => o.value === li.dataset.value));
+            });
+
+            input.addEventListener('blur', function () {
+                close();
+                // Whatever half-typed text is left is not a country; show what
+                // is actually selected rather than leaving a lie in the box.
+                input.value = select.value && select.selectedOptions[0]
+                    ? select.selectedOptions[0].textContent.trim()
+                    : '';
+            });
+
+            // Autofill and the server-rendered value both arrive this way.
+            select.addEventListener('change', function () {
+                if (document.activeElement !== input) {
+                    input.value = select.selectedOptions[0] && select.value
+                        ? select.selectedOptions[0].textContent.trim()
+                        : '';
+                }
+            });
+
+            if (select.value) {
+                input.value = select.selectedOptions[0].textContent.trim();
+            }
+        });
+    } catch (er) {
+        console.log(er);
+    }
+
+    /*[ Copy button on README code blocks ]
+    ===========================================================*/
+    try {
+        // The clipboard API needs a secure context, so it is absent over plain
+        // http. Adding a button that could not copy would be worse than not
+        // offering one, hence the feature test rather than a fallback.
+        if (navigator.clipboard && window.isSecureContext) {
+            const RESET_MS = 1600;
+            const LABEL = 'Copy code to clipboard';
+
+            document.querySelectorAll('.readme pre > code').forEach(function (code) {
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className = 'readme__copy';
+
+                let timer = null;
+
+                // Font Awesome's JS bundle rewrites every <i> into an <svg>, and
+                // an SVG's className is a read-only SVGAnimatedString -- so the
+                // icon has to be replaced rather than reclassed. Writing fresh
+                // markup lets that bundle convert it again.
+                const paint = function (label, icon) {
+                    // The icon is decorative; the accessible name carries the
+                    // meaning, and it changes with the outcome so a screen
+                    // reader hears whether the copy worked.
+                    button.setAttribute('aria-label', label);
+                    button.innerHTML = '<i class="' + icon + '" aria-hidden="true"></i>';
+                };
+
+                const settle = function (state, label, icon) {
+                    button.dataset.state = state;
+                    paint(label, icon);
+
+                    window.clearTimeout(timer);
+                    timer = window.setTimeout(function () {
+                        delete button.dataset.state;
+                        paint(LABEL, 'fa-regular fa-copy');
+                    }, RESET_MS);
+                };
+
+                paint(LABEL, 'fa-regular fa-copy');
+
+                button.addEventListener('click', function () {
+                    // textContent, not innerText: the block is preformatted and
+                    // innerText would collapse the layout's own whitespace.
+                    navigator.clipboard.writeText(code.textContent.replace(/\n+$/, '')).then(
+                        function () {
+                            settle('done', 'Copied', 'fa-solid fa-check');
+                        },
+                        function () {
+                            // Refused, usually because the document lost focus.
+                            // Say so rather than looking like nothing happened.
+                            settle('failed', 'Could not copy — select the text instead', 'fa-solid fa-xmark');
+                        }
+                    );
+                });
+
+                code.parentElement.appendChild(button);
+            });
+        }
+    } catch (er) {
+        console.log(er);
+    }
+
+    /*[ Booking actions + sweetalert2 ]
+    ===========================================================*/
+    try {
         $("button[id^=deleteBooking_]").click(function () {
             let bookingID = $(this).data('booking-id');
 

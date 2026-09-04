@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\Api\Flights\SortMethod;
+use TripBuilder\CabinClass;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -50,7 +51,7 @@ final class FareBrandRepositoryTest extends IntegrationTestCase
     public function testEveryGeneratedLegNamesABrandTheSeedKnows(): void
     {
         $flights = new FlightRepository($this->connection());
-        $result = $flights->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Price, 0, 10);
+        $result = $flights->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Price, 0, 10, CabinClass::Economy);
 
         if ($result['total'] === 0) {
             self::markTestSkipped('No generated flights on this route (run flights:add).');
@@ -74,7 +75,7 @@ final class FareBrandRepositoryTest extends IntegrationTestCase
     {
         $flights = new FlightRepository($this->connection());
         $brands = new FareBrandRepository($this->connection());
-        $result = $flights->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Price, 0, 40);
+        $result = $flights->searchDirection('PAR', 'NYC', '2026-09-15', SortMethod::Price, 0, 40, CabinClass::Economy);
 
         if ($result['total'] === 0) {
             self::markTestSkipped('No generated flights on this route (run flights:add).');

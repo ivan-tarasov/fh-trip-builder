@@ -1,14 +1,9 @@
 <!-- SIDEBAR -->
 <div class="col-xl-4 col-lg-4 col-md-12 order-md-1 mb-4 search-sidebar">
 
-    <!-- Get fare alerts BUTTON -->
-    <div class="d-grid gap-2">
-        <button type="button" class="btn btn-outline-primary btn-lg btn-block empty-link mb-4">
-            <i class="fas pr-1 fa-bell"></i>
-            Get fare alerts
-        </button>
-    </div>
-    <!-- End / Get fare alerts BUTTON -->
+    {# A "Get fare alerts" button stood here and apologised when pressed.
+       Watching a fare needs somewhere to store the watch and something to send
+       the mail, and the app has neither, so the button only ever promised. #}
 
     <div class="card filters mb-5">
         <div class="card-body">
@@ -203,7 +198,7 @@
                being the last thing in the card is what gives sticky the room
                to hold it there. #}
             <div class="filters__apply">
-                <button type="submit" form="form_filters" class="btn btn-primary w-100">Apply filters</button>
+                <button type="submit" form="form_filters" class="btn btn-ink w-100">Apply filters</button>
                 {% if sidebar.any_applied %}
                     <a href="{{ sidebar.clear_url }}" class="filters__clear">Clear all filters</a>
                 {% endif %}

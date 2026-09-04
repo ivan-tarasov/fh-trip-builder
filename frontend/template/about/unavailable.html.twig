@@ -1,0 +1,24 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}About{% endblock %}
+
+{# The README ships with the repository, so it being unreadable means a broken
+   deploy. Better to say that than to render an empty page that looks finished. #}
+{% block content %}
+<main role="main" class="flex-shrink-0 mb-5">
+    <div class="container">
+        <div class="pt-5 pb-5 mx-auto">
+            <h1 class="display-4">About this project</h1>
+            <p class="lead">
+                This page is built from the project's README, and that file could
+                not be read.
+            </p>
+            <p>
+                <a href="{{ repo_url }}#readme" target="_blank" rel="noopener" class="btn btn-primary">
+                    Read it on GitHub<i class="fas fa-arrow-up-right-from-square ms-2"></i>
+                </a>
+            </p>
+        </div>
+    </div>
+</main>
+{% endblock %}

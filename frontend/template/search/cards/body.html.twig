@@ -1,8 +1,16 @@
 {% set row_id = (flight.outbound_ids|merge(flight.return_ids))|join('-') %}
 
-{# Badges sit above the card and overlap it, so they read as a label on it. #}
-{% if flight.itinerary.badges %}
+{# Badges sit above the card and overlap it, so they read as a label on it.
+   The "currently chosen" marker joins them, because it is the same kind of
+   statement about the row and belongs in the same place -- and it comes first,
+   since it is the reason this list is being looked at again. #}
+{% if flight.is_current is defined and flight.is_current or flight.itinerary.badges %}
     <div class="flight-badges">
+        {% if flight.is_current is defined and flight.is_current %}
+            <span class="badge badge--current">
+                <i class="fas fa-circle-check pe-1"></i>Currently chosen
+            </span>
+        {% endif %}
         {% for badge in flight.itinerary.badges %}
             <span class="badge badge--{{ badge.tone }}" data-toggle="tooltip" data-placement="top" title="{{ badge.text }}">
                 <i class="fas fa-{{ badge.icon }} pe-1"></i>{{ badge.label }}
@@ -11,7 +19,7 @@
     </div>
 {% endif %}
 
-<div class="card mb-3 shadow-sm flight-card position-relative{% if flight.itinerary.badges %} flight-card--badged{% endif %}">
+<div class="card mb-3 shadow-sm flight-card position-relative{% if flight.itinerary.badges or (flight.is_current is defined and flight.is_current) %} flight-card--badged{% endif %}{% if flight.is_current is defined and flight.is_current %} flight-card--current{% endif %}">
     <div class="card-body">
         <!-- Price, notices and the per-card actions -->
         <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
@@ -52,7 +60,7 @@
                 {% if flight.itinerary.notices %}
                     <div class="d-flex align-items-center gap-2 card-notices">
                         {% for notice in flight.itinerary.notices %}
-                            <span class="notice" data-toggle="tooltip" data-placement="top"
+                            <span class="notice notice--{{ notice.severity|default('note') }}" data-toggle="tooltip" data-placement="top"
                                   title="{{ notice.label }} — {{ notice.text }}">
                                 <i class="fas fa-{{ notice.icon }}"></i>
                             </span>
@@ -98,15 +106,15 @@
                 : (step == 2 ? 'Select return flight' : 'Select flight') %}
 
             {% if flight.select_url %}
-                <a href="{{ flight.select_url }}" class="btn btn-primary card-select">
+                <a href="{{ flight.select_url }}" class="btn btn-outline-primary card-select">
                     {{ select_label }}
                     <i class="fas fa-chevron-right ps-1"></i>
                 </a>
             {% else %}
                 {# A one-way search books from the list, so this is the last stop
                    before checkout rather than another step. #}
-                <a class="btn btn-primary card-select"
-                   href="/checkout?depart_itin={{ flight.outbound_ids|join(',') }}{% if flight.return_ids|length %}&amp;return_itin={{ flight.return_ids|join(',') }}{% endif %}">
+                <a class="btn btn-outline-primary card-select"
+                   href="/checkout?depart_itin={{ flight.outbound_ids|join(',') }}{% if flight.return_ids|length %}&amp;return_itin={{ flight.return_ids|join(',') }}{% endif %}{% if cabin is defined and cabin.value != 'economy' %}&amp;class={{ cabin.value }}{% endif %}">
                     Continue to checkout
                     <i class="fas fa-chevron-right ps-1"></i>
                 </a>

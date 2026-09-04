@@ -8,9 +8,21 @@
     <meta name="author" content="{{ config('meta.author.name') }} <{{ config('meta.author.email') }}>"/>
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
-    <title>{% block title %}Main Page{% endblock %} - {{ config('app.name') }}</title>
+    <title>{{ page_title|default('Flights') }} - {{ config('app.name') }}</title>
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
+
+    {# Plus Jakarta Sans is self-hosted -- the @font-face rules are the first
+       section of main.css. This preload is the one subset every page renders,
+       fetched in parallel with the stylesheet instead of waiting for it to be
+       parsed. The other subsets are left to unicode-range.
+
+       `crossorigin` is required even though the file is same-origin: fonts are
+       always fetched in CORS mode, and without it the preload is not reused and
+       the file downloads twice. The URL must also match what the stylesheet
+       asks for exactly -- no cache-buster here, for the same reason. #}
+    <link rel="preload" href="{{ config('site.directory.fonts') }}/plus-jakarta-sans-latin.woff2"
+          as="font" type="font/woff2" crossorigin />
 
     <link href="{{ cdn(config('site.static.endpoint.vendor')) }}/mdi-font/css/material-design-iconic-font.min.css" rel="stylesheet" media="all" />
     <link href="//cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" rel="stylesheet" type="text/css" />
@@ -47,16 +59,14 @@
                         </li>
                         {% endfor %}
                     </ul>
-                    <div class="d-flex">
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                            <li class="nav-item">
-                                <a class="nav-link empty-link" aria-current="page">
-                                    <img src="{{ config('site.avatar') }}" width="32" class="rounded-circle me-2" alt="User profile avatar"/>
-                                    User profile
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+                    {# There was a "User profile" item here, an avatar and a
+                       label with no href, wired to a dialog apologising that it
+                       does nothing. There is no account system -- a booking
+                       belongs to a session -- and everything personal the app
+                       does have, bookings and saved flights, is already in the
+                       nav above. An avatar in the account slot of a booking app
+                       promises somewhere to sign in. Authorship, which is what
+                       the avatar actually showed, is credited in the footer. #}
                 </div>
             </div>
         </nav>

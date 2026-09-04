@@ -6,6 +6,22 @@
 
 [![TripBulder form screenshot][project-screenshot]](https://trip-builder.tarasov.ca/)
 
+<!-- Everything below the about:start marker is rendered on the site's /about
+     page, straight from this file, so editing the README updates the page. The
+     marker is an HTML comment, so it stays invisible on GitHub, and comments
+     are stripped before rendering, so notes like this one never reach the page.
+
+     Only the badges and the screenshot above it are held back. The screenshot
+     is served over http:// from an S3 website endpoint, which a browser blocks
+     as mixed content on the https site -- that is a technical constraint, not a
+     judgement about the content. Moving the asset somewhere with https would
+     let the marker move up with it.
+
+     An about:end marker is also honoured if one is added, to stop the page
+     early. There isn't one: the whole README is the page. -->
+
+<!-- about:start -->
+
 # Trip Builder
 
 The Air Trips Builder is an application designed to help users search for one-way and round-trip flights easily. The application comes with built-in databases for airports, airlines, and countries, providing a comprehensive flight booking experience. Users can also order flights and manage their bookings through a personal page.

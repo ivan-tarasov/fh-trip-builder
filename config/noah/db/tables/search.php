@@ -87,6 +87,19 @@ return [
             'comment' => false,
         ],
         [
+            'name' => 'class',
+            'type' => 'varchar',
+            'length' => 16,
+            'default' => 'economy',
+            'nullable' => false,
+            'auto_inc' => false,
+            // The cabin the search was run in, so a shared hash link comes back
+            // in the cabin it was made for. Part of the row's identity: the
+            // hash folds it in, or one row would be overwritten by whoever
+            // searched the same route last in a different cabin.
+            'comment' => 'Cabin slug the search was run in',
+        ],
+        [
             'name' => 'search_count',
             'type' => 'int',
             'length' => null,

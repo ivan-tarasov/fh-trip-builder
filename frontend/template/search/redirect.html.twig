@@ -1,11 +1,63 @@
-<style>
-    body {
-        overflow: hidden;
-    }
-</style>
-<img src="{{ image_url }}" />
-<script>
-    setTimeout(function() {
-        window.location.replace("/search/?{{ search_params|escape('js') }}");
-    }, 100);
-</script>
+{# Shown while a shared /search/?hash=… link is expanded into a full query and
+   the results page is fetched. It is deliberately NOT wrapped in
+   layout.html.twig: this page exists to cover a wait, so loading Bootstrap,
+   Font Awesome and four webfonts to decorate it would delay the very thing it
+   is covering. Everything it needs is inline and it renders in one pass.
+
+   What it replaced was a bare unsized <img> in the top-left corner of an
+   otherwise empty document, with no doctype, no message, and no path forward
+   without JavaScript. #}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Searching for flights – {{ config('app.name') }}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
+    <noscript><meta http-equiv="refresh" content="0;url={{ config('site.paths.search') }}?{{ search_params|escape('html_attr') }}" /></noscript>
+    <style>
+        :root { color-scheme: light; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 2rem 1.5rem;
+            background-color: #F8F9FA;
+            color: #10243F;
+            font-family: Lato, Arial, "Helvetica Neue", sans-serif;
+            text-align: center;
+        }
+        .loader {
+            width: min(680px, 100%);
+            height: auto;
+            border-radius: .75rem;
+            box-shadow: 0 .5rem 1.5rem -.5rem rgba(16, 36, 63, .25);
+        }
+        h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em; }
+        p  { margin: 0; color: #646D75; font-size: .9375rem; }
+        a  { color: #C2410C; }
+        /* The wait is the same length either way, so say so in words and drop
+           the animation for anyone who asked for less of it. */
+        @media (prefers-reduced-motion: reduce) {
+            .loader { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <img class="loader" src="{{ image_url }}" alt="" width="800" height="435" />
+    <h1>Searching for flights</h1>
+    <p>Opening your results. This takes a few seconds.</p>
+    <noscript>
+        <p><a href="{{ config('site.paths.search') }}?{{ search_params|escape('html_attr') }}">Continue to your results</a></p>
+    </noscript>
+    <script>
+        setTimeout(function () {
+            window.location.replace("{{ config('site.paths.search')|escape('js') }}?{{ search_params|escape('js') }}");
+        }, 100);
+    </script>
+</body>
+</html>

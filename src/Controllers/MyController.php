@@ -121,7 +121,7 @@ class MyController extends AbstractController
      */
     private function savedKeys(): array
     {
-        $raw = json_decode($_COOKIE[self::SAVED_COOKIE] ?? '', true);
+        $raw = json_decode($this->request->cookies->str(self::SAVED_COOKIE), true);
 
         if (!is_array($raw)) {
             return [];

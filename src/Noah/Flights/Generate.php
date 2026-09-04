@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace TripBuilder\Noah\Flights;
 
-use DateTimeImmutable;
-use DateTimeInterface;
-use DateTimeZone;
 use Exception;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -32,20 +29,8 @@ class Generate extends AbstractCommand
 {
     private const int FLIGHTS_COUNT = 10000;
     private const int NUMBERS_POOL = 9999;
-    private const int PRICE_MULTIPLIER = 8;
-    private const array PRICE_ADD_DOLLARS = [5, 800];
 
-    // Nonstop convenience premium: a convex (distance^2) surcharge so a single
-    // long leg is priced above two shorter legs covering the same route —
-    // mirroring real fares where nonstops carry a premium, which makes the
-    // cheapest itinerary often a connection. Bounded (max ~4000 at the
-    // reference distance) so price_base stays within decimal(6,2).
-    private const int PRICE_NONSTOP_PREMIUM_MAX = 4000;
-    private const int PRICE_PREMIUM_REF_KM = 20000;
-    private const array PRICE_TAX_PERCENT = [5, 90];
-    private const array DURATION_ADD_KM = [10, 55];
     private const array DATE_ADD_DAYS = [1, 90];
-    private const array FLIGHT_SPEED_KMH = [700, 900];
 
     private const string PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory%\n %message%";
     private const string PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>';
@@ -75,9 +60,6 @@ class Generate extends AbstractCommand
     // size would. Keeps short-haul frequent without starving long-haul.
     private const int ROUTE_DISTANCE_HALVING_KM = 2000;
 
-    // How fast an aircraft's odds fall as its range overshoots the leg: at this
-    // much spare range a type is half as likely as one sized exactly right.
-    private const int AIRCRAFT_FIT_HALVING_KM = 3000;
 
     private const int INSERT_BATCH_SIZE = 500;
 
@@ -142,15 +124,12 @@ class Generate extends AbstractCommand
             return Command::INVALID;
         }
 
-        // Aircraft types, longest-legged last so a lookup can stop at the first
-        // one that cannot reach (see pickAircraft).
-        $fleet = $this->connection()->fetchAll(
-            'SELECT code, max_range_km FROM ' . Table::Aircraft->value
-            . ' WHERE max_range_km > 0 ORDER BY max_range_km ASC',
-        );
-
-        if ($fleet === []) {
-            $this->io->error('No aircraft types are seeded — run app:install first.');
+        // Which type flies a leg, how long it takes and what it sells all come
+        // from here, so a generated flight and a realigned one agree.
+        try {
+            $legs = LegBuilder::fromConnection($this->connection());
+        } catch (RuntimeException $e) {
+            $this->io->error($e->getMessage());
 
             return Command::INVALID;
         }
@@ -181,14 +160,20 @@ class Generate extends AbstractCommand
         // routeDistribution): each flight is then a single weighted draw that
         // yields the route, the airline flying it, and the distance already
         // measured.
+        // No route longer than the fleet can actually fly, and none longer than
+        // anyone schedules nonstop.
+        $maxLegKm = $legs->maxLegKm();
+
         [$routes, $cumulative, $distances, $carriers, $totalWeight] =
-            $this->routeDistribution($airports, $airlines);
+            $this->routeDistribution($airports, $airlines, $maxLegKm);
 
         if ($routes === []) {
             $this->io->error('No airline serves any route in this network — check airline hubs.');
 
             return Command::INVALID;
         }
+
+        $this->formatOutput('Longest nonstop scheduled', number_format($maxLegKm) . ' km', 'comment');
 
         // Show the progress bar
         $progressBar = new ProgressBar($output, $flightsToAdd);
@@ -207,7 +192,7 @@ class Generate extends AbstractCommand
 
             // One draw picks the route and the carrier together, weighted by how
             // much traffic that pairing should carry.
-            $pick = $this->pickWeighted($cumulative, $totalWeight);
+            $pick = Helper::pickWeighted($cumulative, $totalWeight);
             $airportCount = count($airports);
             $departAirport = $airports[intdiv($routes[$pick], $airportCount)];
             $arriveAirport = $airports[$routes[$pick] % $airportCount];
@@ -216,8 +201,10 @@ class Generate extends AbstractCommand
             // Already measured while building the distribution.
             $distance = $distances[$pick];
 
-            // Calculating flight duration between airports
-            $duration = $this->getDurationFromDistance($distance) + Helper::random(self::DURATION_ADD_KM);
+            // The type is settled first: it sets how fast the leg is flown and
+            // which cabins are on sale, so both follow from it rather than
+            // being drawn independently.
+            $leg = $legs->assign($distance);
 
             // Render departure date and time (UNIX timestamps for random day)
             $departureDateTime = date(
@@ -231,29 +218,28 @@ class Generate extends AbstractCommand
                 ),
             );
 
-            // Base price: distance-linear fare + a convex nonstop premium (so a
-            // direct leg is dearer than two shorter connecting legs), then tax
-            // as a percentage of that same base.
-            $nonstopPremium = self::PRICE_NONSTOP_PREMIUM_MAX * ($distance / self::PRICE_PREMIUM_REF_KM) ** 2;
-            $priceBase = ($distance * self::PRICE_MULTIPLIER / 100) + $nonstopPremium + Helper::random(self::PRICE_ADD_DOLLARS);
-            $priceTax = $priceBase * (Helper::random(self::PRICE_TAX_PERCENT) / 100);
+            // Both the fare and its tax live in FarePricing, so generated rows and
+            // repriced ones cannot disagree.
+            $priceBase = FarePricing::base($distance);
+            $priceTax = FarePricing::tax($priceBase);
 
             $flights[] = new Flight(
                 airline: $airline,
                 number: rand(1, self::NUMBERS_POOL),
-                aircraft: $this->pickAircraft($fleet, $distance),
-                fareBrand: $brandCodes[$this->pickWeighted($brandCumulative, $brandTotal)],
+                aircraft: $leg->aircraft,
+                fareBrand: $brandCodes[Helper::pickWeighted($brandCumulative, $brandTotal)],
                 departureAirport: $departAirport['code'],
                 departureTime: $departureDateTime,
                 arrivalAirport: $arriveAirport['code'],
-                arrivalTime: $this->calculateArriveTime(
+                arrivalTime: LegBuilder::arrivalTime(
                     $departureDateTime,
-                    $departAirport['timezone_name'],
-                    $arriveAirport['timezone_name'],
-                    $duration,
+                    (string) $departAirport['timezone_name'],
+                    (string) $arriveAirport['timezone_name'],
+                    $leg->duration,
                 ),
                 distance: $distance,
-                duration: $duration,
+                duration: $leg->duration,
+                cabins: $leg->cabins,
                 priceBase: $priceBase,
                 priceTax: $priceTax,
                 rating: rand(1, 4) + rand(0, 100) / 100,
@@ -347,11 +333,17 @@ class Generate extends AbstractCommand
      * inside its home country, which is what stops Emirates flying Montreal to
      * Toronto. A route no carrier serves simply never appears.
      *
+     * A route longer than `$maxLegKm` is left out entirely: nothing in the
+     * fleet could fly it, and nobody schedules a nonstop that long. Those city
+     * pairs are still reachable, as the connecting tiers of the search build
+     * them out of legs that do exist.
+     *
      * @param list<array<string, mixed>> $airports
      * @param list<array<string, mixed>> $airlines
+     * @param int $maxLegKm longest nonstop this network will schedule
      * @return array{0: list<int>, 1: list<float>, 2: list<int>, 3: list<string>, 4: float}
      */
-    private function routeDistribution(array $airports, array $airlines): array
+    private function routeDistribution(array $airports, array $airlines, int $maxLegKm): array
     {
         $count = count($airports);
 
@@ -410,6 +402,10 @@ class Generate extends AbstractCommand
                     (float) $airports[$j]['longitude'],
                 ) / 1000);
 
+                if ($distance > $maxLegKm) {
+                    continue;
+                }
+
                 $routeWeight = (int) $airports[$i]['traffic_weight'] * (int) $airports[$j]['traffic_weight']
                     / (1 + $distance / self::ROUTE_DISTANCE_HALVING_KM);
 
@@ -428,70 +424,8 @@ class Generate extends AbstractCommand
         return [$routes, $cumulative, $distances, $carriers, $running];
     }
 
-    /**
-     * Sample an index from cumulative weights (binary search). Used for both
-     * the route and the airline that flies it.
-     *
-     * @param list<float> $cumulative
-     */
-    private function pickWeighted(array $cumulative, float $totalWeight): int
-    {
-        $target = mt_rand() / mt_getrandmax() * $totalWeight;
 
-        $low = 0;
-        $high = count($cumulative) - 1;
 
-        while ($low < $high) {
-            $mid = intdiv($low + $high, 2);
-
-            if ($cumulative[$mid] < $target) {
-                $low = $mid + 1;
-            } else {
-                $high = $mid;
-            }
-        }
-
-        return $low;
-    }
-
-    /**
-     * An aircraft type that could actually fly this leg.
-     *
-     * Only types whose range covers the distance are eligible, and among those
-     * the smaller ones are favoured — weight falls off as a type's range
-     * overshoots what the leg needs. Without that a 400 km hop drew an A380 as
-     * often as an A320, because both can reach.
-     *
-     * @param list<array<string, mixed>> $fleet ordered by max_range_km ascending
-     */
-    private function pickAircraft(array $fleet, int $distance): ?string
-    {
-        $codes = [];
-        $cumulative = [];
-        $running = 0.0;
-
-        foreach ($fleet as $type) {
-            $range = (int) $type['max_range_km'];
-
-            // Ordered ascending, so everything from here on can reach as well —
-            // but keep going, they are the long-haul candidates.
-            if ($range < $distance) {
-                continue;
-            }
-
-            $running += self::AIRCRAFT_FIT_HALVING_KM / (self::AIRCRAFT_FIT_HALVING_KM + ($range - $distance));
-            $codes[] = (string) $type['code'];
-            $cumulative[] = $running;
-        }
-
-        // Longer than anything in the fleet can fly: leave it unassigned rather
-        // than inventing an aircraft that could not make it.
-        if ($codes === []) {
-            return null;
-        }
-
-        return $codes[$this->pickWeighted($cumulative, $running)];
-    }
 
     /**
      * Distance between two points on Earth using the Vincenty formula
@@ -523,68 +457,7 @@ class Generate extends AbstractCommand
         return $angle * $earthRadius;
     }
 
-    /**
-     * Calculate flight duration (in minutes) from flight distance.
-     *
-     * @param float|int $distance Flight distance in kilometers
-     * @return int Duration in minutes
-     */
-    private function getDurationFromDistance(float|int $distance): int
-    {
-        if ($distance <= 0) {
-            return 0;
-        }
 
-        $speedKmh = Helper::random(self::FLIGHT_SPEED_KMH);
-        if ($speedKmh <= 0) {
-            throw new RuntimeException("Flight speed must be greater than zero.");
-        }
-
-        $timeHours = $distance / $speedKmh;
-        $timeMinutes = $timeHours * 60;
-
-        return (int) round($timeMinutes);
-    }
-
-    /**
-     * Calculate arrival local time given a departure time, timezones, and duration in minutes.
-     *
-     * @param DateTimeInterface|string $departDateTime  Departure datetime (object or parseable string)
-     * @param DateTimeZone|string $departTimezone  Departure timezone (object or IANA string)
-     * @param DateTimeZone|string $arriveTimezone  Arrival timezone (object or IANA string)
-     * @param int $durationMinutes Flight duration in minutes (can be negative)
-     * @return string Arrival datetime formatted as 'Y-m-d H:i'
-     * @throws Exception If inputs are invalid (e.g., bad timezone or date string)
-     */
-    private function calculateArriveTime(
-        DateTimeInterface|string $departDateTime,
-        DateTimeZone|string $departTimezone,
-        DateTimeZone|string $arriveTimezone,
-        int $durationMinutes,
-    ): string {
-        try {
-            $tzDepart = $departTimezone instanceof DateTimeZone ? $departTimezone : new DateTimeZone((string) $departTimezone);
-            $tzArrive = $arriveTimezone instanceof DateTimeZone ? $arriveTimezone : new DateTimeZone((string) $arriveTimezone);
-
-            // Normalize departure to an immutable instance in the specified departure TZ
-            if ($departDateTime instanceof DateTimeInterface) {
-                // Rebase via timestamp to avoid double-parsing and then set the intended depart TZ
-                $depart = new DateTimeImmutable('@' . $departDateTime->getTimestamp())->setTimezone($tzDepart);
-            } else {
-                $depart = new DateTimeImmutable((string) $departDateTime, $tzDepart);
-            }
-
-            // Add minutes (supports negative durations), then convert to arrival TZ
-            $arrival = $depart
-                ->modify(sprintf('%+d minutes', $durationMinutes))
-                ->setTimezone($tzArrive);
-
-            return $arrival->format('Y-m-d H:i');
-        } catch (Throwable $e) {
-            // Re-throw as Exception to match signature while preserving context
-            throw new Exception('Unable to calculate arrival time: ' . $e->getMessage(), previous: $e);
-        }
-    }
 
     private function getRandomProgressMessage(): string
     {

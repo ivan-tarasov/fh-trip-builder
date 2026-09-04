@@ -161,6 +161,17 @@ return [
     | roundtrip_topk caps the cheapest candidates kept per direction before
     | pairing, so round-trip pairing stays bounded.
     |
+    | The detour bounds cap how far an itinerary may fly against the direct
+    | distance between the two cities. Layover windows alone do not bound this:
+    | legs that merely connect in time can wander arbitrarily far, and London to
+    | Paris -- 344 km apart -- was returning London, Kuala Lumpur, Newark, Paris
+    | at 31,631 km, because every hop happened to connect.
+    |
+    | A ratio alone does not work across scales, so the cap is the larger of the
+    | two. Short trips need the floor: Paris via Frankfurt is a routing airlines
+    | really sell, and it is 3.3x the direct distance. Long trips need the ratio:
+    | 1.6x of a transatlantic leg is generous, while the floor would be nothing.
+    |
     */
 
     /*
@@ -203,6 +214,10 @@ return [
         // the network is ever narrowed again, re-measure before leaving this at 2.
         'max_stops' => 2,
         'roundtrip_topk' => 50,
+        // Furthest an itinerary may fly, as a multiple of the direct distance.
+        'max_detour_ratio' => 1.6,
+        // Floor for that cap, so short trips can still connect at all.
+        'min_detour_km' => 2000,
     ],
 
 ];

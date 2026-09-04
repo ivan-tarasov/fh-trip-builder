@@ -149,6 +149,20 @@ return [
             'comment' => false,
         ],
         [
+            'name' => 'cabins',
+            'type' => 'tinyint',
+            'length' => 3,
+            'default' => ['1'],
+            'nullable' => false,
+            'auto_inc' => false,
+            // Bitmask of the cabins this flight sells: 1 Economy, 2 Premium
+            // Economy, 4 Business, 8 First. A set rather than a grade, because
+            // real cabins are not nested -- a short-haul narrowbody sells
+            // Economy and Business but no Premium Economy. Defaults to 1 so an
+            // unpopulated row still sells the cabin every flight has.
+            'comment' => 'Cabin bitmask: 1=Y 2=W 4=C 8=F',
+        ],
+        [
             'name' => 'rating',
             'type' => 'decimal',
             'length' => '3,2',
