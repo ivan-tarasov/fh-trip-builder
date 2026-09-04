@@ -21,6 +21,11 @@ return [
             'triptype' => 'triptype',
             'class' => 'class',
             'shown' => 'shown',
+            // Collected by the forms but not yet read anywhere: the search
+            // prices one seat and checkout books one traveller.
+            'adults' => 'adults',
+            'children' => 'children',
+            'infants' => 'infants',
         ],
     ],
 

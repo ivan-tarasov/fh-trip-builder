@@ -638,42 +638,68 @@
 
     /*[ Fly this route again ]
     ===========================================================*/
-    // A picker per booking card. The search form's own init above cannot be
-    // reused here: it is wired to four page-specific element ids and writes the
-    // chosen date into those globals, so a second copy on the page would fight
-    // it. This one only ever touches its own form.
-    try {
-        $('.js-rebook-date').each(function () {
-            const $input = $(this);
-            const $form = $input.closest('.js-rebook');
-            const roundtrip = $input.data('triptype') === 'roundtrip';
-            const display = 'MMMM D, YYYY';
+    // A picker per booking, inside its dialog. The search form's own init
+    // cannot be reused: it is wired to four page-specific element ids and
+    // writes the chosen date into those globals, so a second copy on the page
+    // would fight it. This one only ever touches its own form.
+    //
+    // Built on first open rather than on load, because daterangepicker measures
+    // the field to place its calendar and a field inside a hidden modal has no
+    // position to measure. parentEl keeps the calendar inside the dialog, where
+    // it stacks above the backdrop instead of behind it.
+    document.addEventListener('show.bs.modal', function (event) {
+        const modal = event.target;
+        const input = modal.querySelector('.js-rebook-date');
 
-            $input.daterangepicker({
-                autoApply: true,
-                showCustomRangeLabel: false,
-                autoUpdateInput: false,
-                singleDatePicker: !roundtrip,
-                minDate: moment().format(display),
-                opens: 'center',
-                drops: 'auto',
-                locale: {format: display, separator: ' – ', firstDay: 1}
-            });
+        if (!input || input.dataset.pickerReady) {
+            return;
+        }
 
-            $input.on('apply.daterangepicker', function (ev, picker) {
-                $form.find('.js-rebook-depart').val(picker.startDate.format('YYYY-MM-DD'));
+        input.dataset.pickerReady = '1';
 
-                if (roundtrip) {
-                    $form.find('.js-rebook-return').val(picker.endDate.format('YYYY-MM-DD'));
-                    $input.val(picker.startDate.format(display) + ' – ' + picker.endDate.format(display));
-                } else {
-                    $input.val(picker.startDate.format(display));
-                }
-            });
+        const $input = $(input);
+        const $form = $input.closest('.js-rebook');
+        const roundtrip = $input.data('triptype') === 'roundtrip';
+        const display = 'MMMM D, YYYY';
+
+        $input.daterangepicker({
+            autoApply: true,
+            showCustomRangeLabel: false,
+            autoUpdateInput: false,
+            singleDatePicker: !roundtrip,
+            minDate: moment().format(display),
+            parentEl: '#' + modal.id + ' .modal-content',
+            opens: 'center',
+            drops: 'auto',
+            locale: {format: display, separator: ' – ', firstDay: 1}
         });
-    } catch (err) {
-        console.log(err);
-    }
+
+        $input.on('apply.daterangepicker', function (ev, picker) {
+            $form.find('.js-rebook-depart').val(picker.startDate.format('YYYY-MM-DD'));
+
+            if (roundtrip) {
+                $form.find('.js-rebook-return').val(picker.endDate.format('YYYY-MM-DD'));
+                $input.val(picker.startDate.format(display) + ' – ' + picker.endDate.format(display));
+            } else {
+                $input.val(picker.startDate.format(display));
+            }
+        });
+    });
+
+    // "No children" is the absence of a number, not an empty one. A disabled
+    // control is not submitted, which keeps `children=&infants=` out of a
+    // search URL people share.
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('.js-rebook');
+
+        if (!form) {
+            return;
+        }
+
+        form.querySelectorAll('select').forEach(function (select) {
+            select.disabled = select.value === '';
+        });
+    });
 
     // Cards arrive after load too, when the list grows, so this has to be
     // callable again. getOrCreateInstance rather than new: running it twice

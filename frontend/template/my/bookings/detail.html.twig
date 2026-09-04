@@ -50,10 +50,19 @@
                 <span class="booking-status booking-status--{{ booking.is_cancelled ? 'cancelled' : (booking.is_past ? 'flown' : 'confirmed') }}">
                     {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
                 </span>
-                <a class="btn btn-sm btn-outline-secondary" href="/my/bookings/{{ booking.id }}/calendar">
-                    <i class="fas fa-calendar-plus pe-1"></i> Add to calendar
-                </a>
             </div>
+        </div>
+
+        {# What you can do with this booking. Kept as one row so the next thing
+           added here sits beside these rather than somewhere else on the page. #}
+        <div class="booking-actions mb-4">
+            <a class="btn btn-sm btn-outline-secondary" href="/my/bookings/{{ booking.id }}/calendar">
+                <i class="fas fa-calendar-plus pe-1"></i> Add to calendar
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    data-bs-toggle="modal" data-bs-target="#rebook-{{ booking.id }}">
+                <i class="fas fa-rotate-right pe-1"></i> Fly this route again
+            </button>
         </div>
 
         <div class="card mb-3 shadow-sm flight-card booking-card">
@@ -74,4 +83,6 @@
         </div>
     </div>
 </main>
+
+{% include 'my/bookings/rebook-modal.html.twig' with { 'booking': booking } only %}
 {% endblock %}

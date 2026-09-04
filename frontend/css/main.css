@@ -3621,4 +3621,10 @@ textarea {
 .booking-card--past .flight-card__footer,
 .booking-card--cancelled .flight-card__footer { background-color: var(--surface-sunken); }
 
-.booking-rebook { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+/* What you can do with a booking, as one row. Wraps rather than squeezing, so
+   the next action added here does not have to find its own corner of the page. */
+.booking-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* daterangepicker positions itself absolutely against parentEl; without a
+   containing block it lands at the dialog's top-left corner on open. */
+.modal-content { position: relative; }

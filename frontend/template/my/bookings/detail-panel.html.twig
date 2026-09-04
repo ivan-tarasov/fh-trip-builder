@@ -41,34 +41,3 @@
         </div>
     {% endif %}
 </dl>
-
-{# Pick the same route back up on a new date. A plain GET form, so the search
-   page receives exactly the parameters its own form sends -- no URL assembled
-   by hand in two places. #}
-<div class="booking-rebook">
-    <p class="booking-card__label">Fly this route again</p>
-    <form method="get" action="{{ config('site.paths.search') }}" class="row g-2 align-items-center js-rebook">
-        <input type="hidden" name="{{ config('search.form.input.depart_place') }}" value="{{ booking.rebook.from }}" />
-        <input type="hidden" name="{{ config('search.form.input.arrive_place') }}" value="{{ booking.rebook.to }}" />
-        <input type="hidden" name="{{ config('search.form.input.triptype') }}" value="{{ booking.rebook.triptype }}" />
-        <input type="hidden" name="{{ config('search.form.input.class') }}" value="{{ booking.rebook.class }}" />
-        <input type="hidden" name="{{ config('search.form.input.depart_date') }}" class="js-rebook-depart" value="" />
-        <input type="hidden" name="{{ config('search.form.input.return_date') }}" class="js-rebook-return" value="" />
-
-        <div class="col-auto">
-            <label class="visually-hidden" for="rebook-date-{{ booking.id }}">
-                New date for {{ booking.rebook.from }} to {{ booking.rebook.to }}
-            </label>
-            <input type="text" class="form-control form-control-sm js-rebook-date"
-                   id="rebook-date-{{ booking.id }}"
-                   data-triptype="{{ booking.rebook.triptype }}"
-                   placeholder="Pick a date" autocomplete="off" readonly required />
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-sm btn-primary">
-                Search {{ booking.rebook.from }} &rarr; {{ booking.rebook.to }}
-                <i class="fas fa-chevron-right ps-1"></i>
-            </button>
-        </div>
-    </form>
-</div>
