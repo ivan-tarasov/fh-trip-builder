@@ -17,7 +17,7 @@ class Routes
         '/' => 'Home@index',
         '/airlines' => 'Airlines@index',
         '/airports' => 'Airports@index',
-        // '/about' => 'About@index',
+        '/about' => 'About@index',
 
         /*
         |--------------------------------------------------------------------------

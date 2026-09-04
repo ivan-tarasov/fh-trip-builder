@@ -6,6 +6,19 @@
 
 [![TripBulder form screenshot][project-screenshot]](https://trip-builder.tarasov.ca/)
 
+<!-- Everything between the two about: markers below is rendered on the site's
+     /about page, straight from this file, so editing the README updates the
+     page. The markers are HTML comments, so they stay invisible on GitHub, and
+     comments are stripped before rendering, so notes like this one never reach
+     the page either.
+
+     The badges and the screenshot are deliberately above the start marker: the
+     badges report repository status, which means nothing to somebody browsing
+     for a flight, and the screenshot is served over http:// from an S3 website
+     endpoint, which a browser blocks as mixed content on the https site. -->
+
+<!-- about:start -->
+
 # Trip Builder
 
 The Air Trips Builder is an application designed to help users search for one-way and round-trip flights easily. The application comes with built-in databases for airports, airlines, and countries, providing a comprehensive flight booking experience. Users can also order flights and manage their bookings through a personal page.
@@ -53,6 +66,11 @@ Personalized user pages that shows all information about bookings and empower to
 
 ### Comprehensive Database
 A comprehensive database containing information about airports, airlines, and countries.
+
+<!-- about:end -->
+<!-- Below here is for somebody with a terminal, not a visitor. Reference link
+     definitions live at the very bottom of this file and are carried into the
+     page regardless of these markers, or the links above would not resolve. -->
 
 ## Installation
 

@@ -83,10 +83,7 @@ return [
         '/about/' => [
             'text' => 'About project',
             'icon' => 'fas fa-circle-info',
-            // The route is commented out in Routes::ENABLED_ROUTES, so this
-            // link was a 404 in the header of every page. Off until there is a
-            // page behind it, the same way software-tests is.
-            'enabled' => false,
+            'enabled' => true,
         ],
         '/software-tests/' => [
             'text' => 'Software tests',

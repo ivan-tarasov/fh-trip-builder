@@ -1156,6 +1156,146 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 /* ==========================================================================
+   #README
+   ========================================================================== */
+
+/* The /about page is the README, so this is the one place in the app styling
+   generic markdown -- headings, paragraphs, lists and links straight out of
+   CommonMark, with no classes to hook. Everything is scoped under .readme so
+   these bare element selectors cannot reach the rest of the app.
+
+   Measure is capped rather than left to the container: the README is prose, and
+   a 1,300px line of it is unreadable. */
+.readme {
+  max-width: 64ch;
+  color: var(--ink-body);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.readme > :first-child {
+  margin-top: 0;
+}
+
+.readme h1 {
+  margin-bottom: .75rem;
+  color: var(--brand-ink);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+/* The section headings carry the page's structure, so they get a rule above to
+   separate one section from the last. */
+.readme h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--brand-ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.readme h3 {
+  margin-top: 1.75rem;
+  margin-bottom: .35rem;
+  color: var(--brand-ink-700);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* A feature is a heading and one line about it, so the line sits tight under
+   its heading rather than floating between two. */
+.readme h3 + p {
+  margin-top: 0;
+  color: var(--ink-secondary);
+}
+
+.readme p,
+.readme ul,
+.readme ol {
+  margin-bottom: 1rem;
+}
+
+.readme li + li {
+  margin-top: .35rem;
+}
+
+.readme a {
+  color: var(--brand-accent-700);
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
+.readme a:hover {
+  color: var(--brand-accent);
+}
+
+/* The "Built With" badges are inline images inside links; without this they sit
+   on the text baseline and drag the line height around. */
+.readme p > a > img {
+  vertical-align: middle;
+  margin: 0 .15rem .35rem 0;
+}
+
+.readme code {
+  padding: .1rem .3rem;
+  border-radius: .25rem;
+  background-color: var(--surface-sunken);
+  color: var(--brand-ink);
+  font-size: .875em;
+}
+
+.readme pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background-color: var(--surface-sunken);
+}
+
+.readme pre code {
+  padding: 0;
+  background: none;
+}
+
+/* A README written on GitHub can carry a table; it has to be able to scroll on
+   a narrow screen rather than widen the page. */
+.readme table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+.readme th,
+.readme td {
+  padding: .4rem .75rem;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.readme th {
+  background-color: var(--surface-sunken);
+  font-weight: 600;
+}
+
+.readme img {
+  max-width: 100%;
+  height: auto;
+}
+
+.readme__source {
+  max-width: 64ch;
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: .875rem;
+}
+
+/* ==========================================================================
    #FOOTER
    ========================================================================== */
 
