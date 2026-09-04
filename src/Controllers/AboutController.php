@@ -16,7 +16,7 @@ class AboutController extends AbstractController
      *
      * Nothing about the project is written twice: this is the same file a
      * developer reads on GitHub, so the page cannot drift from it. See
-     * View\Readme for which part of the file is shown and why.
+     * View\Readme for what is held back and why.
      *
      * @throws Exception|\Twig\Error\Error
      */

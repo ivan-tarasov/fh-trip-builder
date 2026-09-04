@@ -1177,6 +1177,10 @@ input[type=number]::-webkit-outer-spin-button {
   margin-top: 0;
 }
 
+/* The ladder never drops below the 1rem body text: a heading smaller than the
+   paragraph it introduces reads as a caption. Below h3 there is no room left to
+   shrink, so the deeper levels separate on weight, colour and letter-spacing
+   instead of size. */
 .readme h1 {
   margin-bottom: .75rem;
   color: var(--brand-ink);
@@ -1193,29 +1197,93 @@ input[type=number]::-webkit-outer-spin-button {
   padding-top: 1.25rem;
   border-top: 1px solid var(--line);
   color: var(--brand-ink);
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
 }
 
 .readme h3 {
   margin-top: 1.75rem;
   margin-bottom: .35rem;
+  color: var(--brand-ink);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* Every level the file can reach, not only the levels it uses today. Bootstrap
+   sizes h4 at 1.5rem, which is larger than the h2 above -- so an unstyled h4
+   read as the biggest heading on the page and inverted the whole hierarchy.
+   The README drives this page, so a level it grows into later must not be able
+   to break it either. */
+.readme h4 {
+  margin-top: 1.5rem;
+  margin-bottom: .35rem;
   color: var(--brand-ink-700);
   font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Neither level appears in the README today. They hold body size and take an
+   uppercase label treatment, so a level added later is still unmistakably a
+   heading without being smaller than the text under it. */
+.readme h5,
+.readme h6 {
+  margin-top: 1.25rem;
+  margin-bottom: .35rem;
+  font-size: 1rem;
   font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.readme h5 {
+  color: var(--ink-secondary);
+}
+
+.readme h6 {
+  color: var(--ink-muted);
 }
 
 /* A feature is a heading and one line about it, so the line sits tight under
    its heading rather than floating between two. */
-.readme h3 + p {
+.readme h3 + p,
+.readme h4 + p,
+.readme h5 + p,
+.readme h6 + p {
   margin-top: 0;
   color: var(--ink-secondary);
+}
+
+/* A heading whose section opens with a list, which is how the command
+   reference is written. */
+.readme h4 + ol,
+.readme h4 + ul {
+  margin-top: .5rem;
 }
 
 .readme p,
 .readme ul,
 .readme ol {
   margin-bottom: 1rem;
+}
+
+/* Bootstrap's reboot zeroes list padding, and the markers are drawn outside the
+   box, so an unpadded list hung its numbers to the left of the text column.
+   Enough room for a two-digit marker to stay inside the measure. */
+.readme ul,
+.readme ol {
+  padding-left: 1.75rem;
+}
+
+.readme li > ul,
+.readme li > ol {
+  margin-top: .35rem;
+  margin-bottom: .35rem;
+}
+
+/* A step whose command sits in a block under it: the block lines up with the
+   step's text rather than starting a new indent. */
+.readme li > pre {
+  margin-top: .5rem;
 }
 
 .readme li + li {
@@ -1248,11 +1316,69 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 .readme pre {
+  position: relative;
   overflow-x: auto;
-  padding: 1rem;
+  /* Room on the right for the copy button, so a long line scrolls under empty
+     space rather than under the control. */
+  padding: 1rem 3.25rem 1rem 1rem;
   border: 1px solid var(--line);
   border-radius: .5rem;
   background-color: var(--surface-sunken);
+}
+
+/* Copy button on a code block.
+   Anchored to the block rather than the scrolling content, so it stays put
+   while a long command scrolls beneath it. Dimmed rather than hidden until
+   hover: a hover-only control does not exist on a touch screen, and one that
+   appears from nothing is easy to miss. */
+.readme__copy {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: .375rem;
+  background-color: var(--surface);
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+  line-height: 1;
+  opacity: .55;
+  transition: opacity var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+
+.readme pre:hover .readme__copy,
+.readme__copy:hover,
+.readme__copy:focus-visible {
+  opacity: 1;
+  border-color: var(--brand-accent);
+  color: var(--brand-accent-700);
+}
+
+/* Press feedback, the same 0.97 the rest of the app's controls use. */
+.readme__copy:active {
+  transform: scale(.94);
+}
+
+/* Held for a moment after a successful copy, so the tick is not gone before it
+   is noticed. */
+.readme__copy[data-state="done"] {
+  opacity: 1;
+  border-color: var(--brand-success);
+  color: var(--brand-success);
+}
+
+.readme__copy[data-state="failed"] {
+  opacity: 1;
+  border-color: var(--brand-danger);
+  color: var(--brand-danger);
 }
 
 .readme pre code {

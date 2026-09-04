@@ -6,16 +6,19 @@
 
 [![TripBulder form screenshot][project-screenshot]](https://trip-builder.tarasov.ca/)
 
-<!-- Everything between the two about: markers below is rendered on the site's
-     /about page, straight from this file, so editing the README updates the
-     page. The markers are HTML comments, so they stay invisible on GitHub, and
-     comments are stripped before rendering, so notes like this one never reach
-     the page either.
+<!-- Everything below the about:start marker is rendered on the site's /about
+     page, straight from this file, so editing the README updates the page. The
+     marker is an HTML comment, so it stays invisible on GitHub, and comments
+     are stripped before rendering, so notes like this one never reach the page.
 
-     The badges and the screenshot are deliberately above the start marker: the
-     badges report repository status, which means nothing to somebody browsing
-     for a flight, and the screenshot is served over http:// from an S3 website
-     endpoint, which a browser blocks as mixed content on the https site. -->
+     Only the badges and the screenshot above it are held back. The screenshot
+     is served over http:// from an S3 website endpoint, which a browser blocks
+     as mixed content on the https site -- that is a technical constraint, not a
+     judgement about the content. Moving the asset somewhere with https would
+     let the marker move up with it.
+
+     An about:end marker is also honoured if one is added, to stop the page
+     early. There isn't one: the whole README is the page. -->
 
 <!-- about:start -->
 
@@ -66,11 +69,6 @@ Personalized user pages that shows all information about bookings and empower to
 
 ### Comprehensive Database
 A comprehensive database containing information about airports, airlines, and countries.
-
-<!-- about:end -->
-<!-- Below here is for somebody with a terminal, not a visitor. Reference link
-     definitions live at the very bottom of this file and are carried into the
-     page regardless of these markers, or the links above would not resolve. -->
 
 ## Installation
 

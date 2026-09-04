@@ -18,10 +18,14 @@ use TripBuilder\Helper;
  * developer reads on GitHub and what a visitor reads on the site, so the two
  * cannot describe different projects -- editing the file changes the page.
  *
- * Only part of the file is wanted. A README ends in `git clone` and a CLI
- * command reference, which is for somebody with a terminal; the marker comments
- * pick out the half that describes the product. They are HTML comments, so they
- * do not show on GitHub, and moving them is how the page's extent is changed.
+ * The whole file is the page. Whoever opens /about on a coding assessment is
+ * evaluating the project, so the installation steps and the CLI reference are
+ * the substance rather than clutter.
+ *
+ * Two optional marker comments bound what is shown -- `about:start` holds back
+ * the badges and the screenshot at the top of the file, and `about:end` would
+ * stop the page early if one were added. They are HTML comments, so they do not
+ * show on GitHub, and moving them is how the page's extent is changed.
  */
 final class Readme
 {
@@ -35,9 +39,9 @@ final class Readme
     /**
      * Reference link definitions -- `[label]: https://…` on its own line.
      *
-     * These sit at the very bottom of a README, below the end marker, while the
-     * links and images that use them are above it. Slicing without them would
-     * leave every badge and link in the kept half unresolved, so they are
+     * These sit at the very bottom of a README while the links and images that
+     * use them are spread through it, so any slice that dropped them would
+     * leave badges and links printed literally rather than resolved. They are
      * carried across whatever the markers say. Definitions nothing references
      * render as nothing, so carrying all of them costs only parse time.
      */

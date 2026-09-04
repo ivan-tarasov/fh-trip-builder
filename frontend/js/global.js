@@ -82,6 +82,71 @@
         console.log(er);
     }
 
+    /*[ Copy button on README code blocks ]
+    ===========================================================*/
+    try {
+        // The clipboard API needs a secure context, so it is absent over plain
+        // http. Adding a button that could not copy would be worse than not
+        // offering one, hence the feature test rather than a fallback.
+        if (navigator.clipboard && window.isSecureContext) {
+            const RESET_MS = 1600;
+            const LABEL = 'Copy code to clipboard';
+
+            document.querySelectorAll('.readme pre > code').forEach(function (code) {
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className = 'readme__copy';
+
+                let timer = null;
+
+                // Font Awesome's JS bundle rewrites every <i> into an <svg>, and
+                // an SVG's className is a read-only SVGAnimatedString -- so the
+                // icon has to be replaced rather than reclassed. Writing fresh
+                // markup lets that bundle convert it again.
+                const paint = function (label, icon) {
+                    // The icon is decorative; the accessible name carries the
+                    // meaning, and it changes with the outcome so a screen
+                    // reader hears whether the copy worked.
+                    button.setAttribute('aria-label', label);
+                    button.innerHTML = '<i class="' + icon + '" aria-hidden="true"></i>';
+                };
+
+                const settle = function (state, label, icon) {
+                    button.dataset.state = state;
+                    paint(label, icon);
+
+                    window.clearTimeout(timer);
+                    timer = window.setTimeout(function () {
+                        delete button.dataset.state;
+                        paint(LABEL, 'fa-regular fa-copy');
+                    }, RESET_MS);
+                };
+
+                paint(LABEL, 'fa-regular fa-copy');
+
+                button.addEventListener('click', function () {
+                    // textContent, not innerText: the block is preformatted and
+                    // innerText would collapse the layout's own whitespace.
+                    navigator.clipboard.writeText(code.textContent.replace(/\n+$/, '')).then(
+                        function () {
+                            settle('done', 'Copied', 'fa-solid fa-check');
+                        },
+                        function () {
+                            // Refused, usually because the document lost focus.
+                            // Say so rather than looking like nothing happened.
+                            settle('failed', 'Could not copy — select the text instead', 'fa-solid fa-xmark');
+                        }
+                    );
+                });
+
+                code.parentElement.appendChild(button);
+            });
+        }
+    } catch (er) {
+        console.log(er);
+    }
+
     /*[ Booking actions + sweetalert2 ]
     ===========================================================*/
     try {
