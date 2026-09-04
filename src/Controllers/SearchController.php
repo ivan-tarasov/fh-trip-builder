@@ -12,6 +12,7 @@ use TripBuilder\Api\Flights\SortMethod;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Http\Input;
 use TripBuilder\Repository\AircraftRepository;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
@@ -39,6 +40,11 @@ class SearchController extends AbstractController
         // the return moves it to step 3, the assembled package.
         GET_DEPART_ITIN = 'depart_itin',
         GET_RETURN_ITIN = 'return_itin',
+        // The half being re-picked, carried by a "Change" link so the list can
+        // point out the flight that is being replaced. Otherwise the traveller
+        // arrives at a page of near-identical rows with no idea which one they
+        // already have.
+        GET_CURRENT = 'current',
         GET_SORT = 'sort';
 
     // The balanced sort, as the market leads with. It is the one sort ranked
@@ -103,6 +109,7 @@ class SearchController extends AbstractController
                 // moreUrl() — which rebuild from $this->get — carry them across
                 // a longer list, the step transitions and a shared link for
                 // free.
+                self::GET_CURRENT => $query->nullableStr(self::GET_CURRENT),
                 self::GET_SORT => $query->nullableStr(self::GET_SORT),
                 ...$this->filterQuery(),
             ]);
@@ -261,10 +268,15 @@ class SearchController extends AbstractController
                 'return_date_label' => $this->get[self::GET_RETURN],
                 // Changing one half keeps the other, so the traveller returns
                 // straight to the package once they have re-picked.
-                'change_url' => $this->stepUrl(null, keepReturn: true),
+                'change_url' => $this->stepUrl(
+                    null,
+                    keepReturn: true,
+                    current: array_map(intval(...), (array) $this->data->selected_ids),
+                ),
                 'change_return_url' => $this->stepUrl(
                     array_map(intval(...), (array) $this->data->selected_ids),
                     keepReturn: false,
+                    current: array_map(intval(...), (array) $this->data->selected_return_ids),
                 ),
                 // Flights / no-result
                 'total_flights' => $total_flights,
@@ -973,6 +985,8 @@ class SearchController extends AbstractController
                 },
                 'outbound_ids' => $built['ids'],
                 'return_ids' => [],
+                // The one already chosen, when a Change link sent us back here.
+                'is_current' => $built['ids'] === $this->currentIds(),
                 'price' => $this->presenter()->priceParts($total),
                 // Whole pounds/dollars: the cents of a difference are noise.
                 'is_cheapest' => $difference !== null && $difference < 0.5,
@@ -1028,8 +1042,9 @@ class SearchController extends AbstractController
      * lands back on the package, while changing the return clears it.
      *
      * @param list<int>|null $ids
+     * @param list<int>|null $current leg ids this link is replacing, if any
      */
-    private function stepUrl(?array $ids, bool $keepReturn = false): string
+    private function stepUrl(?array $ids, bool $keepReturn = false, ?array $current = null): string
     {
         return sprintf(
             '%s?%s',
@@ -1037,6 +1052,9 @@ class SearchController extends AbstractController
             $this->queryString(array_merge($this->get, [
                 self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
                 self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
+                // Only a Change link carries this; choosing from the list does
+                // not, or the marker would follow the traveller forward.
+                self::GET_CURRENT => $current === null || $current === [] ? null : implode(',', $current),
                 self::GET_SHOWN => null,
             ])),
         );
@@ -1194,6 +1212,16 @@ class SearchController extends AbstractController
      * to `/search` while the form above them posts to `/search/` -- the same
      * destination spelled two ways on one screen.
      */
+    /**
+     * Leg ids of the flight a Change link is replacing, if any.
+     *
+     * @return list<int>
+     */
+    private function currentIds(): array
+    {
+        return new Input($this->get)->ids(self::GET_CURRENT);
+    }
+
     private function searchPath(): string
     {
         return (string) Config::get('site.paths.search', '/search/');

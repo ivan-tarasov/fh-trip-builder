@@ -49,6 +49,10 @@ final readonly class FlightFinder
     private const string RESPONSE_FLIGHT_CARRIER_NAME = 'carrier_name';
     private const string RESPONSE_CABIN_CODE = 'cabin_code';
     private const string RESPONSE_AIRCRAFT = 'aircraft';
+    private const string RESPONSE_AIRCRAFT_WIDEBODY = 'aircraft_widebody';
+    private const string RESPONSE_SEAT_LAYOUT = 'seat_layout';
+    private const string RESPONSE_SEAT_PITCH = 'seat_pitch';
+    private const string RESPONSE_SEAT_FLAT_BED = 'seat_flat_bed';
     private const string RESPONSE_DISTANCE = 'distance';
     private const string RESPONSE_DURATION = 'duration';
     private const string RESPONSE_PRICE_BASE = 'price_base';
@@ -364,6 +368,18 @@ final readonly class FlightFinder
             self::RESPONSE_CABIN_CODE => $cabin,
             // Null when the type code is unknown to the aircraft table.
             self::RESPONSE_AIRCRAFT => $leg['aircraft_name'] ?? null,
+            self::RESPONSE_AIRCRAFT_WIDEBODY => isset($leg['aircraft_widebody'])
+                ? (bool) $leg['aircraft_widebody']
+                : null,
+            // The seat in the cabin being sold. Null when the type is unknown,
+            // or known but has no such cabin fitted.
+            self::RESPONSE_SEAT_LAYOUT => $leg['seat_layout'] ?? null,
+            self::RESPONSE_SEAT_PITCH => isset($leg['seat_pitch'])
+                ? (int) $leg['seat_pitch']
+                : null,
+            self::RESPONSE_SEAT_FLAT_BED => isset($leg['seat_flat_bed'])
+                ? (bool) $leg['seat_flat_bed']
+                : null,
             self::RESPONSE_DISTANCE => $leg['distance'],
             self::RESPONSE_DURATION => $leg['duration'],
             self::RESPONSE_RATING => (float) $leg['rating'],

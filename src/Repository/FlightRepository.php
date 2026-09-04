@@ -1050,6 +1050,16 @@ final readonly class FlightRepository
             // LEFT: a flight whose type code is missing from the aircraft
             // table should still return, just without a name.
             . ' LEFT JOIN ' . Table::Aircraft->value . ' aircraft_type ON flight.aircraft = aircraft_type.code'
+            // The fitted cabin, for the cabin being searched. Also LEFT, and
+            // for a second reason: a type may simply not have this cabin on
+            // board, in which case there is no seat to describe. The code is
+            // the enum's own, never user input.
+            . sprintf(
+                ' LEFT JOIN %s cabin_fit ON cabin_fit.aircraft = flight.aircraft'
+                . " AND cabin_fit.cabin = '%s'",
+                Table::AircraftCabins->value,
+                $cabin->code(),
+            )
             // The cabin has to be tested here as well as in the candidate
             // query. These are ids arriving from outside -- a checkout link, a
             // saved cookie -- and without it a leg would be priced for a cabin
@@ -1345,6 +1355,12 @@ final readonly class FlightRepository
             'flight.arrival_time AS arr_datetime',
             'flight.aircraft AS aircraft_code',
             'aircraft_type.title AS aircraft_name',
+            'aircraft_type.is_widebody AS aircraft_widebody',
+            // What the seat is like in the cabin being priced, which is the
+            // only cabin whose seat the traveller is being sold.
+            'cabin_fit.layout AS seat_layout',
+            'cabin_fit.pitch_inches AS seat_pitch',
+            'cabin_fit.is_flat_bed AS seat_flat_bed',
             'flight.distance AS distance',
             'flight.duration AS duration',
             $this->fare('flight', 'price_base', $cabin) . ' AS price_base',

@@ -1595,8 +1595,13 @@ textarea {
 .step-track__item.is-current .step-track__marker { background-color: var(--brand-accent); border-color: var(--brand-accent); color: #fff; }
 .step-track__item.is-done .step-track__marker { background-color: var(--brand-success); border-color: var(--brand-success); color: #fff; }
 
+/* The connector between two steps. It shrinks: at 40px fixed, three labels and
+   two rules came to more than a 375px screen and pushed "Review & book" off the
+   edge, taking the whole page's horizontal scroll with it. The rule is the only
+   part here that can lose width without losing meaning. */
 .step-track__line {
-  flex: 0 0 40px;
+  flex: 0 1 40px;
+  min-width: .5rem;
   height: 1px;
   background-color: var(--line-strongest);
 }
@@ -1776,7 +1781,26 @@ textarea {
 .badge--teal    { background-color: #0f9b8e; }
 .badge--secondary { background-color: var(--ink-secondary); }
 
+/* The flight a Change link came back to replace. Deliberately the brand accent
+   rather than one of the sort badges' colours: those describe how a row scored,
+   this one says the traveller already has it. */
+.badge--current { background-color: var(--brand-accent-700); }
+
 .flight-card--badged { border-top-left-radius: .5rem; }
+
+/* Ringed rather than filled: the row still has to be readable against its
+   neighbours and comparable with them, so the marker sits on the edge instead
+   of tinting the content.
+
+   The ring is the border alone. A box-shadow here is dead on arrival -- the
+   card also carries Bootstrap's .shadow-sm, and Bootstrap writes its utilities
+   with !important, so the shadow cannot be overridden from a class. Widening
+   the border is the honest way to make it read, rather than answering an
+   !important with another one. */
+.flight-card--current {
+  border-color: var(--brand-accent);
+  border-width: 2px;
+}
 
 /* Round icon buttons: save and share. */
 .icon-btn {
@@ -1885,7 +1909,8 @@ textarea {
   grid-template-columns: .875rem minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
     "rail depart carrier"
-    "rail arrive carrier";
+    "rail arrive carrier"
+    "rail facts  facts";
   column-gap: .875rem;
   row-gap: .625rem;
 }
@@ -3279,13 +3304,6 @@ textarea {
 }
 .review__half-date { margin: .125rem 0 0; font-size: .9375rem; color: #495057; }
 
-.review__half-actions {
-  display: flex;
-  align-items: center;
-  gap: .875rem;
-  flex: 0 0 auto;
-}
-.review__half-price { font-size: 1.0625rem; font-weight: 700; color: var(--ink-body); }
 .review__change {
   border: 1px solid var(--line-strong);
   border-radius: 999px;
@@ -3297,6 +3315,51 @@ textarea {
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .review__change:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+
+/* Aircraft and seat, under the carrier on a timeline leg.
+   Quiet by construction: these are facts somebody checks when they care, not
+   claims the card is making, so they sit at the size of the meta line above
+   them and in the same muted ink. */
+.leg__facts {
+  /* Its own row across the width of the segment rather than inside the carrier
+     column: that column is half of a 1fr, which broke "A330-900neo" over three
+     lines. These read as a short list, so they need the measure. */
+  grid-area: facts;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem 1.25rem;
+  margin: .125rem 0 0;
+  padding: .625rem 0 0;
+  border-top: 1px dashed var(--line);
+  list-style: none;
+}
+
+.leg__fact {
+  display: flex;
+  align-items: baseline;
+  gap: .45rem;
+  font-size: .8125rem;
+  line-height: 1.5;
+  color: var(--ink-secondary);
+}
+
+.leg__fact-icon {
+  flex: none;
+  width: .9rem;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: .75rem;
+}
+
+.leg__fact-note { color: var(--ink-muted); }
+
+/* The package's flight detail is always open, so it is separated by space
+   rather than by the button that used to reveal it. */
+.review__detail {
+  margin-top: .875rem;
+  padding-top: .875rem;
+  border-top: 1px solid var(--surface-sunken);
+}
 
 .review__total { margin: 0 0 .875rem; }
 .rules__more { margin: .875rem 0 0; font-size: .75rem; color: var(--ink-muted); }

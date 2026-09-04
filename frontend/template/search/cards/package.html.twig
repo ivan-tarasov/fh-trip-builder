@@ -16,9 +16,9 @@
     <div class="review__halves">
         {% for half in [
             { 'label': 'Departing', 'icon': 'fa-plane-departure', 'direction': selected,
-              'date': depart_date_label, 'price': selected_price, 'change': change_url },
+              'date': depart_date_label, 'change': change_url },
             { 'label': 'Returning', 'icon': 'fa-plane-arrival', 'direction': selected_return,
-              'date': return_date_label, 'price': selected_return_price, 'change': change_return_url }
+              'date': return_date_label, 'change': change_return_url }
         ] %}
             {% if half.direction %}
                 <section class="review__half">
@@ -29,27 +29,26 @@
                             </p>
                             <p class="review__half-date">{{ half.date|date('D, j M Y') }}</p>
                         </div>
-                        <div class="review__half-actions">
-                            <span class="review__half-price">${{ half.price }}</span>
-                            <a href="{{ half.change }}" class="review__change">Change</a>
-                        </div>
+                        {# The price used to sit here, immediately left of this
+                           link, which read as an offer to change the price. It
+                           was also the same figure the rail already itemises
+                           below, so removing it costs nothing and the action is
+                           left saying what it changes. #}
+                        <a href="{{ half.change }}" class="review__change">
+                            Change {{ half.label|lower }} flight
+                        </a>
                     </header>
 
                     {% include 'search/cards/itinerary.html.twig' with { 'direction': half.direction } only %}
 
-                    <button class="btn btn-sm details-toggle collapsed" type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#review-{{ half.label|lower }}" aria-expanded="false">
-                        <i class="fas fa-circle-info pe-1"></i>
-                        <span class="if-collapsed">Flight details</span>
-                        <span class="if-expanded">Hide details</span>
-                        <i class="fas fa-chevron-down ps-1 chevron"></i>
-                    </button>
-
-                    <div class="collapse" id="review-{{ half.label|lower }}">
-                        <div class="pt-2">
-                            {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}
-                        </div>
+                    {# Open, with no toggle. This is the last screen before
+                       payment and there are only two flights on it: the
+                       question being asked is "are these the right ones", and
+                       hiding the answer behind a button asks it badly. The
+                       search page keeps its toggle, because there the same
+                       detail is one of many rows. #}
+                    <div class="review__detail">
+                        {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}
                     </div>
                 </section>
             {% endif %}

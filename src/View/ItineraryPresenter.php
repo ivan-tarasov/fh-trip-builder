@@ -69,6 +69,24 @@ class ItineraryPresenter
                 'duration' => $this->minutesToStringTime($segment->duration),
                 'cabin' => self::CABIN_NAMES[$segment->cabin_code ?? ''] ?? null,
                 'aircraft' => $segment->aircraft ?? null,
+                // What the cabin is like on this frame. Each is null when the
+                // data does not reach that far -- an unknown type, or a type
+                // with no such cabin on board -- and the template prints only
+                // what it has rather than inventing a placeholder. This is the
+                // same restraint that removed the hardcoded amenity icons; the
+                // difference is that these are real, seeded per aircraft.
+                'aircraft_body' => match ($segment->aircraft_widebody ?? null) {
+                    true => 'widebody',
+                    false => 'narrowbody',
+                    default => null,
+                },
+                'seat_layout' => $segment->seat_layout ?? null,
+                // Pitch is held in inches, the trade's unit, and shown in
+                // centimetres to sit with the kilometres used everywhere else.
+                'seat_pitch' => isset($segment->seat_pitch) && $segment->seat_pitch > 0
+                    ? sprintf('%d cm', (int) round($segment->seat_pitch * 2.54))
+                    : null,
+                'seat_flat_bed' => (bool) ($segment->seat_flat_bed ?? false),
                 'depart_time' => date('H:i', strtotime($segment->depart->date_time)),
                 'depart_date' => date('D, d M', strtotime($segment->depart->date_time)),
                 'depart_city' => $segment->depart->airport_city,

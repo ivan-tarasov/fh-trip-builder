@@ -10,7 +10,12 @@
    What is gone: the Wi-Fi / entertainment / power / meal icons. They were
    hardcoded, so every segment of every flight claimed all four -- the page
    asserting amenities no data anywhere in this app knows about. They come
-   back when a supplier actually sends them. #}
+   back when a supplier actually sends them.
+
+   What is here instead is the aircraft and the seat, which the fleet tables do
+   know: the type flying the leg, and the layout and pitch of the cabin being
+   priced. Each line is printed only when its value exists, so a leg whose type
+   is unknown loses the block rather than showing an empty one. #}
 <div class="legs">
     {# A date is only worth printing when it changes. On a same-day connection
        the old markup repeated "Thu, 03 Sep" once per node; now the first
@@ -33,7 +38,10 @@
             <div class="leg__carrier">
                 <img class="leg__logo" src="{{ segment.logo_url }}" alt="" width="28" height="28" />
                 <span class="leg__airline">{{ segment.carrier_name }}</span>
-                <span class="leg__meta">{{ segment.flight_number }}{% if segment.aircraft %} · {{ segment.aircraft }}{% endif %}</span>
+                {# The aircraft used to be appended here. It moved to the facts
+                   row below, which says the same thing and adds the body type,
+                   so keeping both printed the type twice per segment. #}
+                <span class="leg__meta">{{ segment.flight_number }}</span>
                 {# Cabin is omitted rather than guessed when the code does not
                    resolve -- see CABIN_NAMES in ItineraryPresenter. #}
                 <span class="leg__meta">{{ segment.duration }}{% if segment.cabin %} · {{ segment.cabin }}{% endif %}</span>
@@ -47,6 +55,29 @@
                     {% set shown_date = segment.arrive_date %}
                 {% endif %}
             </div>
+
+            {% if segment.aircraft or segment.seat_layout or segment.seat_pitch %}
+                <ul class="leg__facts">
+                    {% if segment.aircraft %}
+                        <li class="leg__fact">
+                            <i class="fas fa-plane leg__fact-icon" aria-hidden="true"></i>
+                            {{ segment.aircraft }}{% if segment.aircraft_body %} <span class="leg__fact-note">({{ segment.aircraft_body }})</span>{% endif %}
+                        </li>
+                    {% endif %}
+                    {% if segment.seat_layout %}
+                        <li class="leg__fact">
+                            <i class="fas fa-grip leg__fact-icon" aria-hidden="true"></i>
+                            {{ segment.seat_layout }} seat layout
+                        </li>
+                    {% endif %}
+                    {% if segment.seat_pitch %}
+                        <li class="leg__fact">
+                            <i class="fas fa-up-right-and-down-left-from-center leg__fact-icon" aria-hidden="true"></i>
+                            {{ segment.seat_pitch }} seat pitch{% if segment.seat_flat_bed %}, lies flat{% endif %}
+                        </li>
+                    {% endif %}
+                </ul>
+            {% endif %}
         </div>
 
         {% if direction.layovers[loop.index0] is defined %}
