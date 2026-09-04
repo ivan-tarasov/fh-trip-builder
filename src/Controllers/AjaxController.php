@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
+use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
-use TripBuilder\CabinClass;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Service\FlightFinder;
 

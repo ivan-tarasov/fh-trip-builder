@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Exception;
-use TripBuilder\Config;
 use TripBuilder\CabinClass;
+use TripBuilder\Config;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\View\TwigRenderer;
 

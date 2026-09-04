@@ -50,7 +50,7 @@ return [
             'default' => false,
             'nullable' => true,
             'auto_inc' => false,
-            'comment' => False,
+            'comment' => false,
         ],
         [
             'name' => 'max_range_km',
@@ -77,7 +77,7 @@ return [
             'default' => [2],
             'nullable' => false,
             'auto_inc' => false,
-            'comment' => False,
+            'comment' => false,
         ],
         [
             'name' => 'is_widebody',

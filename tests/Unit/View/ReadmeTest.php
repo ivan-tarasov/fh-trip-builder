@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Unit\View;
 
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use TripBuilder\View\Readme;
 
 /**
@@ -48,7 +49,7 @@ final class ReadmeTest extends TestCase
     {
         // No end marker is in the README today, but the slice still honours one
         // so the page can be cut short without touching this code.
-        $method = new \ReflectionMethod(Readme::class, 'slice');
+        $method = new ReflectionMethod(Readme::class, 'slice');
 
         $sliced = (string) $method->invoke(
             new Readme(),

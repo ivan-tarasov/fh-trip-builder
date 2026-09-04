@@ -6,10 +6,10 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use stdClass;
+use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Repository\BookingRepository;
-use TripBuilder\CabinClass;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
