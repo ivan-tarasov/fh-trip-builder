@@ -3569,13 +3569,40 @@ textarea {
   color: var(--ink-body);
 }
 
-/* "in 4 days". Quiet: the departure is what matters, this only says how near. */
-.booking-card__soon {
-  margin-left: .5rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
+/* Where a booking stands. Bootstrap's .badge is 11px and sits under the
+   reference it is meant to qualify; at a glance the one word that answers
+   "is this trip still on?" was the smallest thing on the card. Sized to read
+   at arm's length, and coloured as a tint carrying dark text rather than a
+   solid fill, which stays legible at this weight without shouting.
+
+   Contrast, measured in the browser on the tint each sits on:
+     confirmed  #146C43 on #E4F2EA   5.59
+     cancelled  #B02A37 on #FBE9EB   5.56
+     flown      #3F4854 on #E8EDF3   7.87  */
+.booking-status {
+  display: inline-flex;
+  align-items: center;
+  padding: .3125rem .75rem;
+  border-radius: 999px;
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.booking-status--confirmed { background-color: #E4F2EA; color: var(--brand-success); }
+.booking-status--cancelled { background-color: #FBE9EB; color: var(--brand-danger); }
+.booking-status--flown { background-color: var(--surface-sunken); color: var(--ink-secondary); }
+
+/* "Departs in 40 days". Quiet beside the status pill: the status answers
+   whether the trip is on, this only says how near it is. */
+.booking-when {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  margin-right: .625rem;
+  font-size: .8125rem;
   color: var(--ink-muted);
+  white-space: nowrap;
 }
 
 /* A 38px circle beside an 18px code reads as the louder of the two. */

@@ -42,7 +42,12 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <span class="badge {{ booking.is_cancelled or booking.is_past ? 'text-bg-light border text-secondary fw-normal' : 'text-bg-success' }}">
+                {% if booking.departs_in and not booking.is_cancelled %}
+                    <span class="booking-when">
+                        <i class="fas fa-clock" aria-hidden="true"></i> {{ booking.departs_in }}
+                    </span>
+                {% endif %}
+                <span class="booking-status booking-status--{{ booking.is_cancelled ? 'cancelled' : (booking.is_past ? 'flown' : 'confirmed') }}">
                     {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
                 </span>
                 <a class="btn btn-sm btn-outline-secondary" href="/my/bookings/{{ booking.id }}/calendar">

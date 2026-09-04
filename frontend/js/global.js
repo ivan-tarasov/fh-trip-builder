@@ -590,14 +590,15 @@
         const status = card.querySelector('.js-booking-status');
 
         if (status) {
-            status.className = 'badge js-booking-status text-bg-light border text-secondary fw-normal';
+            status.className = 'booking-status js-booking-status booking-status--cancelled';
             status.textContent = 'Cancelled';
         }
 
-        const soon = card.querySelector('.booking-card__soon');
+        // How near the departure is stops being the point once it is cancelled.
+        const when = card.querySelector('.booking-when');
 
-        if (soon) {
-            soon.remove();
+        if (when) {
+            when.remove();
         }
 
         const live = document.querySelector('.js-bookings-live');

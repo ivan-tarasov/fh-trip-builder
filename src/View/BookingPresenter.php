@@ -146,11 +146,13 @@ final readonly class BookingPresenter
 
         $minutes = (int) round(($startsAt->getTimestamp() - $this->now->getTimestamp()) / 60);
 
+        // Whole phrases rather than a fragment a template prefixes: "departing
+        // soon" and "in 40 days" do not take the same lead-in.
         return match (true) {
-            $minutes < 90 => 'departing soon',
-            $minutes < 1440 => sprintf('in %d hours', (int) round($minutes / 60)),
-            $minutes < 2880 => 'tomorrow',
-            default => sprintf('in %d days', (int) floor($minutes / 1440)),
+            $minutes < 90 => 'Departing soon',
+            $minutes < 1440 => sprintf('Departs in %d hours', (int) round($minutes / 60)),
+            $minutes < 2880 => 'Departs tomorrow',
+            default => sprintf('Departs in %d days', (int) floor($minutes / 1440)),
         };
     }
 
