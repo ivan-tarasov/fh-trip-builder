@@ -26,10 +26,6 @@ class Routes
         */
 
         '/my/bookings' => 'My@bookings',
-        // Exact-match routing, so the booking is named by query string rather
-        // than a path segment -- the same arrangement as /checkout/confirmation.
-        '/my/booking' => 'My@booking',
-        '/my/booking/calendar' => 'My@calendar',
         '/my/saved' => 'My@saved',
 
         /*
@@ -74,6 +70,21 @@ class Routes
 
     public const string ROUTES_CONTROLLERS_PATH = 'TripBuilder\Controllers';
 
+    /**
+     * Routes that name a record in the path.
+     *
+     * The table above is an exact-match map, which is all this app needed while
+     * every page was a fixed address. A booking is not: it is one of many, and
+     * /my/bookings/100001 is the address a person expects to be able to keep.
+     *
+     * Kept deliberately small -- two patterns, both anchored, both matching
+     * digits only -- rather than growing a general router for one resource.
+     */
+    public const array DYNAMIC_ROUTES = [
+        '#^/my/bookings/(\d+)$#' => 'My@booking',
+        '#^/my/bookings/(\d+)/calendar$#' => 'My@calendar',
+    ];
+
     public const array EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
@@ -89,8 +100,41 @@ class Routes
      * in a header and footer corrupts the file.
      */
     public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
-        '/my/booking/calendar',
+        '#^/my/bookings/\d+/calendar$#',
     ];
+
+    /**
+     * The 'Controller@action' for a path, or null when nothing serves it.
+     */
+    public static function resolve(string $url): ?string
+    {
+        if (isset(self::ENABLED_ROUTES[$url])) {
+            return self::ENABLED_ROUTES[$url];
+        }
+
+        foreach (self::DYNAMIC_ROUTES as $pattern => $route) {
+            if (preg_match($pattern, $url) === 1) {
+                return $route;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether this path writes its own bytes and must not be wrapped in a
+     * header and footer.
+     */
+    public static function emitsOwnPayload(string $url): bool
+    {
+        foreach (self::EXCLUDE_HEADER_FOOTER_ROUTES as $pattern) {
+            if (preg_match($pattern, $url) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static string $currentPage;
 

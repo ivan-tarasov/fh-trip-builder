@@ -1,16 +1,14 @@
-{# One booking.
+{# One booking, as it appears in the list.
 
    The same shell as a search result, because it is the same object. What
    changes is what leads: a result leads with a price, since a price is what is
    being compared; a booking leads with its reference, since nothing is being
    compared any more and the reference is what somebody reads down a phone.
 
-   What the markup this replaced put on the page and this does not: the internal
-   row id (twice), a raw Y-m-d H:i, a <mark> around a flight number, four
-   unsubstituted %PLACEHOLDER% strings, and a full-width red delete button. What
-   it never put on the page and this does: the reference, a "Returning" label,
-   and the itinerary the booking has been carrying all along. #}
-{% set panel = 'booking-' ~ booking.id %}
+   The full itinerary used to open inside this card. It lives on the booking's
+   own page now -- a booking is a thing with an address worth keeping, not a
+   drawer in a list, and the card is easier to scan without a panel that pushes
+   every sibling down the page when it opens. #}
 {% set halves = [
     { 'label': 'Departing', 'icon': 'fa-plane-departure', 'direction': booking.outbound },
     { 'label': 'Returning', 'icon': 'fa-plane-arrival', 'direction': booking.return }
@@ -75,14 +73,11 @@
 
     <div class="card-footer flight-card__footer">
         <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-            <button class="btn btn-sm details-toggle collapsed" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#{{ panel }}"
-                    aria-expanded="false" aria-controls="{{ panel }}">
+            <a href="/my/bookings/{{ booking.id }}" class="btn btn-sm details-toggle">
                 <i class="fas fa-circle-info pe-1"></i>
-                <span class="if-collapsed">Flight details</span>
-                <span class="if-expanded">Hide details</span>
-                <i class="fas fa-chevron-down ps-1 chevron"></i>
-            </button>
+                View booking
+                <i class="fas fa-chevron-right ps-1"></i>
+            </a>
 
             <div class="text-end">
                 {% if booking.price_total %}
@@ -99,12 +94,6 @@
                        charged, so no total is shown rather than a wrong one. #}
                     <span class="small text-muted">Price not recorded</span>
                 {% endif %}
-            </div>
-        </div>
-
-        <div class="collapse" id="{{ panel }}">
-            <div class="pt-3">
-                {% include 'my/bookings/detail-panel.html.twig' with { 'booking': booking, 'halves': halves } only %}
             </div>
         </div>
     </div>

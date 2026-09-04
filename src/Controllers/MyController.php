@@ -119,18 +119,22 @@ class MyController extends AbstractController
     }
 
     /**
-     * The booking row named by ?id=, scoped to this session so an id from
+     * The booking row named by the path, scoped to this session so an id from
      * somebody else's browser resolves to nothing.
+     *
+     * The id is read back off the path rather than handed down from the router,
+     * which keeps the routing table a plain map of address to action and stops
+     * a second piece of global state existing just to carry one integer.
      *
      * @return array<string, mixed>|null
      */
     private function findRow(): ?array
     {
-        $id = $this->request->query->intWithin('id', 0, 1, PHP_INT_MAX);
+        if (preg_match('#/my/bookings/(\d+)#', $this->request->path(), $match) !== 1) {
+            return null;
+        }
 
-        return $id === 0
-            ? null
-            : new BookingRepository($this->connection())->findForSession($id, session_id());
+        return new BookingRepository($this->connection())->findForSession((int) $match[1], session_id());
     }
 
     /**

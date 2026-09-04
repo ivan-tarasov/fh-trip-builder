@@ -45,7 +45,7 @@
                 <span class="badge {{ booking.is_cancelled or booking.is_past ? 'text-bg-light border text-secondary fw-normal' : 'text-bg-success' }}">
                     {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
                 </span>
-                <a class="btn btn-sm btn-outline-secondary" href="/my/booking/calendar?id={{ booking.id }}">
+                <a class="btn btn-sm btn-outline-secondary" href="/my/bookings/{{ booking.id }}/calendar">
                     <i class="fas fa-calendar-plus pe-1"></i> Add to calendar
                 </a>
             </div>
