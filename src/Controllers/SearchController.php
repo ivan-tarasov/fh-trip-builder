@@ -133,15 +133,24 @@ class SearchController extends AbstractController
             ]);
 
             // Convert search hash to url and redirect
-            $this->checkHash();
+            if ($this->checkHash()) {
+                return;
+            }
 
             // The search itself comes from the path when there is one, and from
             // the query string when the link predates it.
             $this->searchUrl = SearchUrl::parse($this->request->path())
                 ?? SearchUrl::fromQuery($query);
 
+            // The route matched, so the URL is well formed; what it names is
+            // not. A date the calendar does not have, a window wider than the
+            // search will run, a return before its departure -- each is a page
+            // that cannot exist, and saying so in the status is what keeps it
+            // out of an index. The old answer was a 200 carrying an inline
+            // script, which only moved a visitor who ran JavaScript and whose
+            // content policy allowed it.
             if ($this->searchUrl === null) {
-                echo '<script>window.location.replace("/");</script>';
+                $this->notFound();
 
                 return;
             }
@@ -352,9 +361,16 @@ class SearchController extends AbstractController
     }
 
     /**
+     * Answer a `?hash=` link, if this is one.
+     *
+     * True when the request has been answered and nothing after it should run.
+     * It used to redirect and then fall through, so a 302 left here carrying a
+     * whole page body behind it -- and, once an unreachable search started
+     * answering 404, a status that overwrote the redirect.
+     *
      * @throws Exception|\Twig\Error\Error
      */
-    private function checkHash(): void
+    private function checkHash(): bool
     {
         if ($this->get['hash']) {
             $search = new SearchRepository($this->connection())->findByHash($this->get['hash']);
@@ -364,7 +380,7 @@ class SearchController extends AbstractController
             if ($search === null) {
                 $this->bounce('/');
 
-                return;
+                return true;
             }
 
             // Straight to the short form, which is what migrates every
@@ -398,6 +414,8 @@ class SearchController extends AbstractController
 
             die();
         }
+
+        return false;
     }
 
     private function searchStat(): void
