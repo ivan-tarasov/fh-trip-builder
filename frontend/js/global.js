@@ -689,8 +689,12 @@
     // "No children" is the absence of a number, not an empty one. A disabled
     // control is not submitted, which keeps `children=&infants=` out of a
     // search URL people share.
+    //
+    // Both search forms need this now that their passenger selects have names;
+    // it used to cover the rebook dialog alone, which was the only form in the
+    // app that submitted a count.
     document.addEventListener('submit', function (event) {
-        const form = event.target.closest('.js-rebook');
+        const form = event.target.closest('.js-rebook, #searchForm');
 
         if (!form) {
             return;

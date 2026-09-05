@@ -10,6 +10,7 @@ use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
+use TripBuilder\Party;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FareBrandRepository;
@@ -37,6 +38,12 @@ class CheckoutController extends AbstractController
     private const string GET_DEPART_ITIN = 'depart_itin';
     private const string GET_RETURN_ITIN = 'return_itin';
     private const string GET_REFERENCE = 'ref';
+
+    // Who is flying. Like the cabin above, this has to travel with the ids: the
+    // legs name what is being bought but not for how many, and the fare depends
+    // on it. A party that survives the POST is the difference between showing
+    // one price and charging another.
+    private const array GET_PAX = ['adults', 'children', 'infants'];
 
     // A card number that always declines, so the unhappy path can be walked
     // without a gateway. Everything else that passes a Luhn check approves.
@@ -187,8 +194,18 @@ class CheckoutController extends AbstractController
         }
 
         $presenter = new ItineraryPresenter();
-        $priceBase = (float) $outbound['price_base'] + (float) ($return['price_base'] ?? 0);
-        $priceTax = (float) $outbound['price_tax'] + (float) ($return['price_tax'] ?? 0);
+
+        // Priced here, once, for the whole party -- the same array feeds the Pay
+        // button and the money written to the booking, so the two cannot say
+        // different things. A total in the POST body would be a total the buyer
+        // chose; a total assembled in a template would be one nobody checked.
+        $party = $this->party();
+        $priced = $party->apply(
+            (float) $outbound['price_base'] + (float) ($return['price_base'] ?? 0),
+            (float) $outbound['price_tax'] + (float) ($return['price_tax'] ?? 0),
+        );
+        $priceBase = $priced['base'];
+        $priceTax = $priced['tax'];
 
         return [
             'outbound' => $presenter->direction($this->asObject($outbound['itinerary'])),
@@ -196,6 +213,9 @@ class CheckoutController extends AbstractController
             'price_base' => $presenter->priceParts($priceBase),
             'price_tax' => $presenter->priceParts($priceTax),
             'price_total' => $presenter->priceParts($priceBase + $priceTax),
+            // What that money is for, in the words the search form used.
+            'party_label' => $party->label(),
+            'party' => $party,
             'raw_base' => $priceBase,
             'raw_tax' => $priceTax,
             'rules' => $this->rules($outboundIds, $returnIds, $cabin),
@@ -443,6 +463,20 @@ class CheckoutController extends AbstractController
     }
 
     /**
+     * The party this checkout is for, defaulting to a lone adult.
+     */
+    private function party(): Party
+    {
+        $query = $this->request->query;
+
+        return Party::fromCounts(
+            $query->intWithin(self::GET_PAX[0], 1, 1, Party::MAX_SEATS),
+            $query->intWithin(self::GET_PAX[1], 0, 0, Party::MAX_SEATS),
+            $query->intWithin(self::GET_PAX[2], 0, 0, Party::MAX_SEATS),
+        ) ?? new Party();
+    }
+
+    /**
      * @param list<int> $outboundIds
      * @param list<int> $returnIds
      */
@@ -459,6 +493,17 @@ class CheckoutController extends AbstractController
         // and that is the price that would be charged.
         if ($cabin !== CabinClass::Economy) {
             $query[self::GET_CLASS] = $cabin->value;
+        }
+
+        // Same reasoning for the party: the POST reprices from this URL, so a
+        // dropped count would charge for one seat what was quoted for four.
+        // A lone adult is the default and says nothing.
+        $party = $this->party();
+
+        foreach (array_combine(self::GET_PAX, [$party->adults, $party->children, $party->infants]) as $key => $count) {
+            if ($count > ($key === self::GET_PAX[0] ? 1 : 0)) {
+                $query[$key] = $count;
+            }
         }
 
         // Commas survive: they read better in an address bar and the parser

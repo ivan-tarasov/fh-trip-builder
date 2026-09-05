@@ -8,6 +8,7 @@ use Exception;
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\ApiResponder;
 use TripBuilder\Api\HttpStatus;
+use TripBuilder\Party;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 
@@ -26,6 +27,7 @@ class Response extends AbstractApi
     private const string DATA_RETURN_DATE = 'return_date';
     private const string DATA_ADULT_COUNT = 'adult_count';
     private const string DATA_CHILD_COUNT = 'child_count';
+    private const string DATA_INFANT_COUNT = 'infant_count';
     private const string DATA_FLIGHT_ID = 'id';
 
     /**
@@ -64,8 +66,13 @@ class Response extends AbstractApi
             to: $this->data[self::DATA_ARRIVE],
             departDate: $this->data[self::DATA_DEPART_DATE],
             returnDate: $this->data[self::DATA_RETURN_DATE] ?? '',
-            adultNum: (int) $this->data[self::DATA_ADULT_COUNT],
-            childNum: (int) ($this->data[self::DATA_CHILD_COUNT] ?? 0),
+            // Falls back to a lone adult when the payload asks for a party
+            // that cannot fly -- no adult, or more laps than adults.
+            party: Party::fromCounts(
+                (int) $this->data[self::DATA_ADULT_COUNT],
+                (int) ($this->data[self::DATA_CHILD_COUNT] ?? 0),
+                (int) ($this->data[self::DATA_INFANT_COUNT] ?? 0),
+            ) ?? new Party(),
         );
 
         $result = new FlightFinder($this->connection())->search($query, $tripType);

@@ -10,6 +10,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
+use TripBuilder\Party;
 
 /**
  * Flight search: cheapest-itinerary search over direct and connecting flights.
@@ -159,12 +160,17 @@ final readonly class FlightRepository
         // Across every match, not just this page — otherwise page two would
         // call its own first row the cheapest.
         $cheapest = min(array_map(
-            static fn(array $c): float => (float) $c['price_base'] + (float) $c['price_tax'],
+            // Without the offset: FlightFinder adds the other half itself, and
+            // adding it twice would quote a round trip at double.
+            fn(array $c): float => $this->displayTotal(
+                ['price_base' => $c['price_base'], 'price_tax' => $c['price_tax']],
+                $filters->party,
+            ),
             $matching,
         ));
 
         return ['rows' => $rows, 'total' => $total, 'cheapest' => $cheapest, 'available' => $available, 'option_prices' => $optionPrices,
-            'bounds' => $bounds, 'highlights' => $this->highlights($matching)];
+            'bounds' => $bounds, 'highlights' => $this->highlights($matching, $filters->party)];
     }
 
     /**
@@ -254,7 +260,7 @@ final readonly class FlightRepository
             foreach ($candidates as $candidate) {
                 if ($filters->matches($candidate, $dimension) && $wouldKeep($candidate)) {
                     $available[$dimension] = true;
-                    $total = $this->displayTotal($candidate);
+                    $total = $this->displayTotal($candidate, $filters->party);
                     $cheapest = $cheapest === null ? $total : min($cheapest, $total);
                 }
             }
@@ -277,14 +283,18 @@ final readonly class FlightRepository
      * @param list<array<string, mixed>> $candidates
      * @return array<string, array{price: float, duration: int}>
      */
-    private function highlights(array $candidates): array
+    private function highlights(array $candidates, Party $party): array
     {
         if ($candidates === []) {
             return [];
         }
 
         $scores = $this->valueScores($candidates);
-        $total = static fn(array $c): float => (float) $c['price_base'] + (float) $c['price_tax'];
+        $total = static function (array $c) use ($party): float {
+            $priced = $party->apply((float) $c['price_base'], (float) $c['price_tax']);
+
+            return $priced['base'] + $priced['tax'];
+        };
 
         // How each option decides which itinerary wins. Lower is better in all
         // of them except rating, which is negated to keep one comparison.
@@ -337,10 +347,10 @@ final readonly class FlightRepository
     private function bounds(array $candidates, FlightFilters $filters): array
     {
         $measures = [
-            // Includes the offset, so the slider spans what the cards say.
-            FlightFilters::DIM_PRICE => static fn(array $c): array => [
-                (float) $c['price_base'] + (float) $c['price_tax'] + (float) ($c['price_offset'] ?? 0),
-            ],
+            // Includes the offset and the party, so the slider spans what the
+            // cards say. Scaled here rather than after, because base and tax
+            // carry different shares and this is the last place they are apart.
+            FlightFilters::DIM_PRICE => fn(array $c): array => [$this->displayTotal($c, $filters->party)],
             FlightFilters::DIM_DURATION => static fn(array $c): array => [(float) $c['duration']],
             // Every wait, not their total: the slider constrains connections
             // one at a time, so its ends have to span single waits.
@@ -492,7 +502,7 @@ final readonly class FlightRepository
                 continue;
             }
 
-            $total = $this->displayTotal($candidate);
+            $total = $this->displayTotal($candidate, $filters->party);
 
             // Once per itinerary, however many of its legs use the value —
             // otherwise a carrier flying both legs of a connection outranks one
@@ -524,11 +534,17 @@ final readonly class FlightRepository
      *
      * @param array<string, mixed> $candidate
      */
-    private function displayTotal(array $candidate): float
+    private function displayTotal(array $candidate, Party $party): float
     {
-        return (float) $candidate['price_base']
-            + (float) $candidate['price_tax']
-            + (float) ($candidate['price_offset'] ?? 0);
+        // Base and tax carry different shares -- a lap infant pays a token fare
+        // and no tax -- so they are scaled apart and added after. The offset is
+        // the other half of a round trip, so it rides with the base.
+        $priced = $party->apply(
+            (float) $candidate['price_base'] + (float) ($candidate['price_offset'] ?? 0),
+            (float) $candidate['price_tax'],
+        );
+
+        return $priced['base'] + $priced['tax'];
     }
 
     /**
