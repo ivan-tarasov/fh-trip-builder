@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use DateTimeImmutable;
 use Exception;
 use stdClass;
+use Throwable;
 use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
+use TripBuilder\Http\Input;
 use TripBuilder\Party;
+use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FareBrandRepository;
@@ -44,6 +48,12 @@ class CheckoutController extends AbstractController
     // on it. A party that survives the POST is the difference between showing
     // one price and charging another.
     private const array GET_PAX = ['adults', 'children', 'infants'];
+
+    // The repeated passenger block. Everything else on the form is asked once.
+    private const string POST_PASSENGERS = 'passengers';
+
+    // What each type is called on the form and in the messages beside it.
+    private const array PASSENGER_LABELS = ['A' => 'Adult', 'C' => 'Child', 'I' => 'Infant'];
 
     // A card number that always declines, so the unhappy path can be walked
     // without a gateway. Everything else that passes a Luhn check approves.
@@ -102,12 +112,23 @@ class CheckoutController extends AbstractController
         $errors = [];
         $submitted = [];
 
+        $party = $trip['party'];
+        $passengers = $this->submittedPassengers($party);
+
         if ($this->request->isPost()) {
             $submitted = $this->submitted();
             $errors = $this->validate($submitted);
 
+            foreach ($passengers as $index => $passenger) {
+                $errors += $this->validatePassenger(
+                    $passenger,
+                    $index,
+                    self::PASSENGER_LABELS[$passenger['type']],
+                );
+            }
+
             if ($errors === []) {
-                $reference = $this->book($trip, $submitted, $outboundIds, $returnIds, $cabin);
+                $reference = $this->book($trip, $submitted, $passengers, $outboundIds, $returnIds, $cabin);
 
                 $this->bounce(sprintf('/checkout/confirmation?%s=%s', self::GET_REFERENCE, $reference));
 
@@ -115,7 +136,16 @@ class CheckoutController extends AbstractController
             }
         }
 
+        // The values a failed submit puts back, keyed the way the template and
+        // the error messages look them up.
+        foreach ($passengers as $index => $passenger) {
+            foreach (['first_name', 'last_name', 'dob', 'gender'] as $field) {
+                $submitted[sprintf('%s.%d.%s', self::POST_PASSENGERS, $index, $field)] = $passenger[$field];
+            }
+        }
+
         echo new TwigRenderer()->renderPage('checkout/view.html.twig', [
+            'passengers' => $this->passengerBlocks($party),
             'trip' => $trip,
             'genders' => self::GENDERS,
             'countries' => new CountryRepository($this->connection())->all(),
@@ -151,7 +181,10 @@ class CheckoutController extends AbstractController
         // The same view-model the bookings list renders, so the trip a
         // traveller has just paid for and the one they come back to later are
         // drawn from one shape rather than two that drift.
-        $presented = new BookingPresenter()->booking($booking);
+        $presented = new BookingPresenter()->booking(
+            $booking,
+            new BookingPassengerRepository($this->connection())->forBooking((int) $booking['id']),
+        );
 
         if ($presented === null) {
             $this->bounce('/my/bookings');
@@ -290,11 +323,12 @@ class CheckoutController extends AbstractController
      *
      * @param array<string, mixed> $trip
      * @param array<string, string> $form
+     * @param list<array<string, string>> $passengers
      * @param list<int> $outboundIds
      * @param list<int> $returnIds
      * @throws Exception
      */
-    private function book(array $trip, array $form, array $outboundIds, array $returnIds, CabinClass $cabin): string
+    private function book(array $trip, array $form, array $passengers, array $outboundIds, array $returnIds, CabinClass $cabin): string
     {
         $finder = new FlightFinder($this->connection());
         $outbound = $finder->findSegments($outboundIds, $cabin);
@@ -307,32 +341,183 @@ class CheckoutController extends AbstractController
             [...new FlightRepository($this->connection())->fareBrandsByIds([...$outboundIds, ...$returnIds])],
         );
 
-        $bookings->create([
-            'session_id' => session_id(),
-            'reference' => $reference,
-            'status' => BookingStatus::Confirmed->value,
-            'departure_time' => $outbound[0]['depart']['date_time'] ?? null,
-            'flight_outbound' => json_encode($outbound),
-            'flight_return' => $return === [] ? null : json_encode($return),
-            'contact_email' => $form['email'],
-            'contact_phone' => $form['phone'],
-            'passenger_first' => $form['first_name'],
-            'passenger_last' => $form['last_name'],
-            'passenger_dob' => $form['dob'],
-            'passenger_gender' => $form['gender'],
-            'fare_brand' => $strictest?->title,
-            'price_base' => $trip['raw_base'],
-            'price_tax' => $trip['raw_tax'],
-            'card_brand' => Helper::cardScheme($form['card_number']),
-            // All of the card that is ever stored.
-            'card_last4' => substr(preg_replace('/\D+/', '', $form['card_number']) ?? '', -4),
-            'created' => date('Y-m-d H:i:s'),
-        ]);
+        $lead = $passengers[0];
+
+        // One booking and its travellers are one write. Without the transaction
+        // a failure partway leaves a booking whose party is half recorded,
+        // which is worse than no booking at all -- and this is the first place
+        // in checkout that writes more than one row.
+        $this->connection()->beginTransaction();
+
+        try {
+            $bookingId = $bookings->create([
+                'session_id' => session_id(),
+                'reference' => $reference,
+                'status' => BookingStatus::Confirmed->value,
+                'departure_time' => $outbound[0]['depart']['date_time'] ?? null,
+                'flight_outbound' => json_encode($outbound),
+                'flight_return' => $return === [] ? null : json_encode($return),
+                'contact_email' => $form['email'],
+                'contact_phone' => $form['phone'],
+                // The lead traveller, kept on the booking so the bookings list can
+                // show a name without joining. Everyone, this one included, is in
+                // booking_passengers.
+                'passenger_first' => $lead['first_name'],
+                'passenger_last' => $lead['last_name'],
+                'passenger_dob' => $lead['dob'],
+                'passenger_gender' => $lead['gender'],
+                'fare_brand' => $strictest?->title,
+                'price_base' => $trip['raw_base'],
+                'price_tax' => $trip['raw_tax'],
+                'card_brand' => Helper::cardScheme($form['card_number']),
+                // All of the card that is ever stored.
+                'card_last4' => substr(preg_replace('/\D+/', '', $form['card_number']) ?? '', -4),
+                'created' => date('Y-m-d H:i:s'),
+            ]);
+
+            new BookingPassengerRepository($this->connection())->createFor($bookingId, $passengers);
+
+            $this->connection()->commit();
+        } catch (Throwable $e) {
+            $this->connection()->rollBack();
+
+            throw $e;
+        }
 
         return $reference;
     }
 
     /**
+     * What is wrong with one traveller, keyed `passengers.0.first_name` so the
+     * repeated form can put each message back beside the field that earned it.
+     *
+     * @param array<string, string> $passenger
+     * @return array<string, string>
+     */
+    private function validatePassenger(array $passenger, int $index, string $label): array
+    {
+        $errors = [];
+        $at = static fn(string $field): string => sprintf('%s.%d.%s', self::POST_PASSENGERS, $index, $field);
+
+        foreach (['first_name' => 'First name', 'last_name' => 'Last name'] as $key => $name) {
+            if (mb_strlen($passenger[$key]) < 2) {
+                $errors[$at($key)] = sprintf('%s, as printed on the ID.', $name);
+            } elseif (mb_strlen($passenger[$key]) > self::MAX_LENGTHS[$key]) {
+                $errors[$at($key)] = sprintf('%d characters at most.', self::MAX_LENGTHS[$key]);
+            }
+        }
+
+        $dob = date_create_immutable($passenger['dob'] ?: 'invalid');
+        $today = date_create_immutable('today');
+
+        if ($dob === false || $dob >= $today || $dob < $today->modify('-120 years')) {
+            $errors[$at('dob')] = 'A date of birth in the past.';
+        } elseif (!$this->dobFitsType($dob, $passenger['type'], $today)) {
+            // The age decides the fare, so a date that contradicts the type
+            // would charge a child price for an adult seat.
+            $errors[$at('dob')] = sprintf('Does not match %s.', strtolower($label));
+        }
+
+        if (!isset(self::GENDERS[$passenger['gender']])) {
+            $errors[$at('gender')] = 'Pick one.';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Whether a date of birth agrees with the type that was searched for, as at
+     * the day of travel -- adult 12+, child 2 to 11, lap infant under 2.
+     */
+    private function dobFitsType(DateTimeImmutable $dob, string $type, DateTimeImmutable $today): bool
+    {
+        $age = (int) $dob->diff($today)->y;
+
+        return match ($type) {
+            'C' => $age >= 2 && $age < 12,
+            'I' => $age < 2,
+            default => $age >= 12,
+        };
+    }
+
+    /**
+     * What the form asks for, one block per traveller: "Adult 1", "Child 1".
+     *
+     * Numbered within a type rather than across the party, because "Adult 2" is
+     * what somebody filling this in is looking for -- not "Passenger 4".
+     *
+     * @return list<array{label: string, type: string}>
+     */
+    private function passengerBlocks(Party $party): array
+    {
+        $seen = [];
+        $blocks = [];
+
+        foreach ($this->passengerTypes($party) as $type) {
+            $seen[$type] = ($seen[$type] ?? 0) + 1;
+            $label = self::PASSENGER_LABELS[$type];
+            $total = match ($type) {
+                'C' => $party->children,
+                'I' => $party->infants,
+                default => $party->adults,
+            };
+
+            $blocks[] = [
+                'label' => $total > 1 ? sprintf('%s %d', $label, $seen[$type]) : $label,
+                'type' => $type,
+            ];
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * One entry per traveller, in the order the form asked for them, padded to
+     * the party so a missing block is an empty passenger to complain about
+     * rather than a passenger that quietly disappears.
+     *
+     * @return list<array<string, string>>
+     */
+    private function submittedPassengers(Party $party): array
+    {
+        $posted = $this->request->body->group(self::POST_PASSENGERS, $party->total());
+        $passengers = [];
+
+        foreach ($this->passengerTypes($party) as $index => $type) {
+            $entry = $posted[$index] ?? new Input();
+
+            $passengers[] = [
+                'type' => $type,
+                'first_name' => $entry->str('first_name'),
+                'last_name' => $entry->str('last_name'),
+                'dob' => $entry->str('dob'),
+                'gender' => $entry->str('gender'),
+            ];
+        }
+
+        return $passengers;
+    }
+
+    /**
+     * The type of each traveller, adults first, in the order they are asked for
+     * and stored. The form's labels and the passenger rows agree because both
+     * read this.
+     *
+     * @return list<string>
+     */
+    private function passengerTypes(Party $party): array
+    {
+        return [
+            ...array_fill(0, $party->adults, 'A'),
+            ...($party->children > 0 ? array_fill(0, $party->children, 'C') : []),
+            ...($party->infants > 0 ? array_fill(0, $party->infants, 'I') : []),
+        ];
+    }
+
+    /**
+     * The booking-wide fields. Passengers are a repeated group and read apart,
+     * by submittedPassengers().
+     *
      * @return array<string, string>
      */
     private function submitted(): array
@@ -343,10 +528,6 @@ class CheckoutController extends AbstractController
         return [
             'email' => $field('email'),
             'phone' => $field('phone'),
-            'first_name' => $field('first_name'),
-            'last_name' => $field('last_name'),
-            'dob' => $field('dob'),
-            'gender' => $field('gender'),
             'card_name' => $field('card_name'),
             'card_number' => $field('card_number'),
             'card_expiry' => $field('card_expiry'),
@@ -384,23 +565,6 @@ class CheckoutController extends AbstractController
             $errors['phone'] = 'A phone number the airline can reach you on.';
         }
 
-        foreach (['first_name' => 'First name', 'last_name' => 'Last name'] as $key => $label) {
-            if (mb_strlen($form[$key]) < 2) {
-                $errors[$key] = sprintf('%s, as printed on your ID.', $label);
-            }
-        }
-
-        $dob = date_create_immutable($form['dob'] ?: 'invalid');
-        $today = date_create_immutable('today');
-
-        if ($dob === false || $dob >= $today || $dob < $today->modify('-120 years')) {
-            $errors['dob'] = 'A date of birth in the past.';
-        }
-
-        if (!isset(self::GENDERS[$form['gender']])) {
-            $errors['gender'] = 'Pick one.';
-        }
-
         if (mb_strlen($form['card_name']) < 2) {
             $errors['card_name'] = 'The name printed on the card.';
         }
@@ -434,8 +598,11 @@ class CheckoutController extends AbstractController
         // Length last, so a field that is wrong in a more interesting way says
         // so first. Anything over its column is refused here rather than at the
         // INSERT, where it becomes a 500 on a form the buyer has just filled in.
+        // Only the booking-wide fields: a passenger's names are checked against
+        // the same limits inside validatePassenger(), where the key carries the
+        // index that tells them apart.
         foreach (self::MAX_LENGTHS as $key => $limit) {
-            if (!isset($errors[$key]) && mb_strlen($form[$key]) > $limit) {
+            if (isset($form[$key]) && !isset($errors[$key]) && mb_strlen($form[$key]) > $limit) {
                 $errors[$key] = sprintf('%d characters at most.', $limit);
             }
         }

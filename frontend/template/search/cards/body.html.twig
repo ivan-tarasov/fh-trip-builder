@@ -45,8 +45,8 @@
                         </span>
                     {% else %}
                         <span data-toggle="tooltip" data-placement="top"
-                              title="Base ${{ flight.price_base }} plus taxes ${{ flight.price_tax }} (GST ${{ flight.price_gst }}, QST ${{ flight.price_qst }})">
-                            total per passenger <i class="fas fa-info-circle"></i>
+                              title="Base ${{ flight.price_base }} plus taxes ${{ flight.price_tax }}, for {{ party_label|default('1 adult') }}.">
+                            total for {{ party_label|default('1 adult') }} <i class="fas fa-info-circle"></i>
                         </span>
                     {% endif %}
                     </span>

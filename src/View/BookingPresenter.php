@@ -26,6 +26,9 @@ use TripBuilder\TripType;
  */
 final readonly class BookingPresenter
 {
+    /** What each stored type is called on screen. */
+    private const array PASSENGER_TYPES = ['A' => 'Adult', 'C' => 'Child', 'I' => 'Infant'];
+
     public function __construct(
         private ItineraryPresenter $itinerary = new ItineraryPresenter(),
         private DateTimeImmutable $now = new DateTimeImmutable(),
@@ -36,9 +39,10 @@ final readonly class BookingPresenter
      * than draw a booking with no flights in it.
      *
      * @param array<string, mixed> $row a bookings row as the repository returns it
+     * @param list<array<string, mixed>> $passengers rows from booking_passengers, lead first
      * @return array<string, mixed>|null
      */
-    public function booking(array $row): ?array
+    public function booking(array $row, array $passengers = []): ?array
     {
         $stored = StoredItinerary::fromJson($row['flight_outbound'] ?? null);
 
@@ -71,7 +75,20 @@ final readonly class BookingPresenter
             'status_label' => $status->label(),
             'is_cancelled' => $status === BookingStatus::Cancelled,
             'created' => $row['created'] ?? null,
+            // The lead, from the booking's own row -- the bookings list shows a
+            // name for every row and reads them in one query.
             'passenger' => trim(($row['passenger_first'] ?? '') . ' ' . ($row['passenger_last'] ?? '')),
+            // Everyone, when the caller has fetched them. Empty for the list
+            // page, which does not join, and for rows written before a booking
+            // could carry more than one traveller.
+            'passengers' => array_map(
+                static fn(array $p): array => [
+                    'name' => trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')),
+                    'type' => self::PASSENGER_TYPES[$p['type'] ?? 'A'] ?? 'Adult',
+                    'dob' => $p['dob'] ?? null,
+                ],
+                $passengers,
+            ),
             'contact_email' => $row['contact_email'] ?? null,
             'contact_phone' => $row['contact_phone'] ?? null,
             'fare_brand' => $row['fare_brand'] ?? null,

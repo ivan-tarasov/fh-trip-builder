@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use stdClass;
+use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\SearchUrl;
 use TripBuilder\Service\Calendar;
@@ -72,7 +73,12 @@ class MyController extends AbstractController
     public function booking(): void
     {
         $row = $this->findRow();
-        $booking = $row === null ? null : new BookingPresenter()->booking($row);
+        $booking = $row === null
+            ? null
+            : new BookingPresenter()->booking(
+                $row,
+                new BookingPassengerRepository($this->connection())->forBooking((int) $row['id']),
+            );
 
         if ($booking === null) {
             $this->bounce('/my/bookings');

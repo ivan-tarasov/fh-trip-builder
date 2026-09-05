@@ -1035,8 +1035,6 @@ class SearchController extends AbstractController
                     : null,
                 'price_base' => number_format((float) $flight->price_base, 2),
                 'price_tax' => number_format((float) $flight->price_tax, 2),
-                'price_gst' => number_format(0, 2),
-                'price_qst' => number_format(0, 2),
                 // Path only; the browser resolves it against its own origin.
                 'share_url' => match ($step) {
                     1 => $this->stepUrl($built['ids'], keepReturn: true),
