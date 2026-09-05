@@ -106,11 +106,18 @@ final readonly class SearchUrl
             return null;
         }
 
-        // A return date is what makes it a round trip, but an explicit one-way
-        // has to win: the form leaves a stale return date in place when the
-        // traveller switches the tab back.
-        $oneway = TripType::fromRequest($query->nullableStr((string) Config::get('search.form.input.triptype')))
-            === TripType::Oneway;
+        // A return date is what makes it a round trip. An explicit one-way still
+        // wins, because links shared from the old form carry `triptype=oneway`
+        // alongside whatever return date its tab had left behind.
+        //
+        // tryFrom, not fromRequest: fromRequest answers Oneway for anything it
+        // does not recognise, including nothing at all. That was safe while the
+        // form always stated a trip type, and became a bug the moment it
+        // stopped -- every round trip submitted arrived with no `triptype` and
+        // had its return date discarded on the way in.
+        $oneway = TripType::tryFrom((string) $query->nullableStr(
+            (string) Config::get('search.form.input.triptype'),
+        )) === TripType::Oneway;
         $return = $oneway
             ? null
             : self::validDate($query->str((string) Config::get('search.form.input.return_date')));

@@ -143,6 +143,37 @@ final class SearchUrlTest extends TestCase
         self::assertSame('/search/YUL160926LHR300926C1', $url->path());
     }
 
+    public function testAReturnDateAloneMakesItARoundTrip(): void
+    {
+        // The form states no trip type any more -- an empty return field is how
+        // it says one-way, which is what let the tabs go. Reading an absent
+        // `triptype` as one-way threw the return date away on the way in, and
+        // every round trip submitted came back as a one-way search.
+        $url = SearchUrl::fromQuery(new Input([
+            'from' => 'YUL',
+            'to' => 'LHR',
+            'depart' => '2026-09-16',
+            'return' => '2026-09-30',
+        ]));
+
+        self::assertNotNull($url);
+        self::assertSame(TripType::Roundtrip, $url->tripType());
+        self::assertSame('/search/YUL160926LHR300926Y1', $url->path());
+    }
+
+    public function testNoReturnDateAndNoTripTypeIsAOneWay(): void
+    {
+        $url = SearchUrl::fromQuery(new Input([
+            'from' => 'YUL',
+            'to' => 'LHR',
+            'depart' => '2026-09-16',
+        ]));
+
+        self::assertNotNull($url);
+        self::assertSame(TripType::Oneway, $url->tripType());
+        self::assertSame('/search/YUL160926LHRY1', $url->path());
+    }
+
     public function testAnExplicitOneWayDropsAStaleReturnDate(): void
     {
         // The form leaves the return date in place when the tab is switched
