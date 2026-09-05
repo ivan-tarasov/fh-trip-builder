@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Integration;
 
 use ReflectionMethod;
+use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\CabinClass;
 use TripBuilder\Controllers\CheckoutController;
@@ -24,6 +25,11 @@ use TripBuilder\TripType;
  * resolveTrip() scales what the buyer is charged. Nothing but arithmetic keeps
  * those two in step, and when they drift the failure is silent and expensive:
  * a traveller is shown one total and billed another.
+ *
+ * The price filter is held to the same number. Its limit is set against the
+ * total on the card, so if anything ever compared that limit to one seat's
+ * share the row would vanish from the results with no error anywhere — a
+ * search that quietly returns less than it should.
  *
  * A mixed party is used throughout because it is the only kind that can catch
  * this. Base and tax carry different shares — a lap infant pays a token fare
@@ -106,6 +112,90 @@ final class PartyPriceAgreementTest extends IntegrationTestCase
             $this->cents($this->cardTotalFor($ids, new Party())),
             $this->cents($this->checkoutTotalFor($ids, [], new Party())),
         );
+    }
+
+    public function testAPriceLimitAtThePartyTotalKeepsTheRow(): void
+    {
+        $party = new Party(adults: 2, children: 1, infants: 1);
+        $ids = [$this->outboundOne, $this->outboundTwo];
+
+        $total = $this->cardTotalFor($ids, $party);
+
+        // The limit a visitor would set by dragging the slider to exactly this
+        // itinerary: the card says $total, so a limit of $total must keep it.
+        self::assertNotNull(
+            $this->findRow($ids, $party, new FlightFilters(maxPrice: $total, party: $party)),
+            'a limit set at the price on the card dropped the itinerary it names',
+        );
+    }
+
+    public function testAPriceLimitBelowThePartyTotalDropsIt(): void
+    {
+        // The other half of the boundary. Without this, a filter that had
+        // stopped pruning at all would pass the test above.
+        $party = new Party(adults: 2, children: 1, infants: 1);
+        $ids = [$this->outboundOne, $this->outboundTwo];
+
+        $justUnder = $this->cardTotalFor($ids, $party) - 0.01;
+
+        self::assertNull(
+            $this->findRow($ids, $party, new FlightFilters(maxPrice: $justUnder, party: $party)),
+            'the limit is not being applied to the party total at all',
+        );
+    }
+
+    public function testThePerSeatPriceIsNotWhatTheLimitIsComparedAgainst(): void
+    {
+        // The bug this guards: comparing a party-sized limit against one seat's
+        // share. A limit of one seat's price would then look satisfied, and the
+        // row would appear at a limit far below what it actually costs.
+        $party = new Party(adults: 2, children: 1, infants: 1);
+        $ids = [$this->outboundOne, $this->outboundTwo];
+
+        $perSeat = $this->cardTotalFor($ids, new Party());
+        $partyTotal = $this->cardTotalFor($ids, $party);
+
+        self::assertGreaterThan($perSeat, $partyTotal, 'the fixture party must cost more than one seat');
+        self::assertNull(
+            $this->findRow($ids, $party, new FlightFilters(maxPrice: $perSeat, party: $party)),
+            'a party itinerary passed a limit set at the price of one seat',
+        );
+    }
+
+    /**
+     * The search row for exactly these legs, or null when the filters drop it.
+     *
+     * @param list<int> $ids
+     * @return array<string, mixed>|null
+     */
+    private function findRow(array $ids, Party $party, FlightFilters $filters): ?array
+    {
+        $query = $this->query($party);
+        $query = new FlightSearchQuery(
+            offset: 0,
+            limit: 50,
+            sort: $query->sort,
+            from: $query->from,
+            to: $query->to,
+            departDate: $query->departDate,
+            returnDate: $query->returnDate,
+            party: $party,
+            cabin: $query->cabin,
+            filters: $filters,
+        );
+
+        foreach ($this->finder()->search($query, TripType::Oneway)['flights'] as $row) {
+            $legIds = array_map(
+                static fn(array $segment): int => (int) $segment['id'],
+                $row['itinerary']['segments'],
+            );
+
+            if ($legIds === $ids) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     /**
