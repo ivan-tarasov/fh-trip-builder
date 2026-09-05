@@ -44,9 +44,7 @@ final class LayoutData
     }
 
     /**
-     * Request-scoped footer stats, computed eagerly so their order is fixed:
-     * the flights count runs the only query on this connection, and the request
-     * counter is read afterwards so it reflects that query (as before).
+     * Request-scoped footer stats, computed eagerly so their order is fixed.
      *
      * @return array<string, string|int>
      *
@@ -54,6 +52,10 @@ final class LayoutData
      */
     public function stats(): array
     {
+        // Order matters: the flights count runs first so the request counter
+        // read below includes it. Both now sit on the one connection the whole
+        // request shares, so the count is every query the page ran -- it used
+        // to be this class's own connection, and therefore always 1.
         $flightsCount = $this->flightsCount();
 
         return [
