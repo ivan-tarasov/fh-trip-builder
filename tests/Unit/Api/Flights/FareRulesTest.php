@@ -134,6 +134,32 @@ final class FareRulesTest extends TestCase
         }
     }
 
+    public function testRulesSurviveTheRoundTripABookingStoresThemThrough(): void
+    {
+        // A booking keeps toArray() as JSON, because the legs it was folded from
+        // are deleted once they have flown. fromRow() reads a fare_brands row
+        // and toArray() writes that same shape on purpose -- if the two drift, a
+        // missing key reads back as 0, which is a real permission value, so the
+        // booking would quietly come back as a stricter fare than was sold.
+        //
+        // Both fixtures avoid 0 and false on every field for that reason: flex
+        // is generous throughout, and folding it with standard lands every
+        // permission on FOR_A_FEE rather than on NOT_ALLOWED.
+        $cases = [
+            'generous, refundable' => self::flex(),
+            'folded across two legs' => FareRules::strictest([self::flex(), self::standard()]),
+        ];
+
+        foreach ($cases as $label => $sold) {
+            $restored = FareRules::fromRow(
+                json_decode((string) json_encode($sold->toArray()), true),
+            );
+
+            self::assertEquals($sold, $restored, $label);
+            self::assertSame($sold->lines(), $restored->lines(), $label);
+        }
+    }
+
     /**
      * @return array<string, array{0: string, 1: bool, 2: FareRules}>
      */

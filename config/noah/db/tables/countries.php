@@ -11,12 +11,13 @@ return [
 
     'primary' => 'code',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
     'columns' => [
         [
             'name' => 'code',
             'type' => 'char',
             'length' => 2,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -26,6 +27,7 @@ return [
             'name' => 'code_iso_3',
             'type' => 'char',
             'length' => 3,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,

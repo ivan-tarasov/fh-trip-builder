@@ -88,6 +88,9 @@ class Install extends AbstractCommand
                 $this->formatOutput($action, 'created', 'success');
             } catch (Throwable $e) {
                 $this->formatOutput($action, 'failed', 'danger');
+                // Every other failure in this file prints its reason; this one
+                // swallowed it, which is what made the bug above so hard to see.
+                $this->io->error(sprintf('Creating `%s` failed: %s', $table, $e->getMessage()));
             }
         }
 
@@ -102,19 +105,20 @@ class Install extends AbstractCommand
     private function columnDefinition(array $column): string
     {
         return sprintf(
-            '`%s` %s%s%s%s%s%s',
+            '`%s` %s%s%s%s%s%s%s',
             $column['name'],
             strtoupper($column['type']),
             $column['length']
                 ? sprintf('(%s)', $column['length'])
                 : null,
-            $column['default']
-                // An array wraps a raw value -- [0] emits DEFAULT 0, where a
-                // bare 0 would be falsy and emit no default at all.
-                ? sprintf(' DEFAULT %s', is_array($column['default'])
-                    ? $column['default'][0]
-                    : sprintf('"%s"', $column['default']))
+            // Right after the type, which is where MySQL wants it. A column
+            // holding an IATA code or a hex digest is ASCII by definition, and
+            // in the table's utf8mb4 it would reserve four bytes per character
+            // -- in the clustered key and in every index built on it.
+            isset($column['charset'])
+                ? sprintf(' CHARACTER SET %s', $column['charset'])
                 : null,
+            $this->defaultClause($column),
             $column['nullable']
                 ? null
                 : ' NOT NULL',
@@ -125,6 +129,37 @@ class Install extends AbstractCommand
                 ? ' AUTO_INCREMENT'
                 : null,
         );
+    }
+
+    /**
+     * A column's DEFAULT clause, or null when it has none.
+     *
+     * `false` and `null` both spell "no default". Everything else is one --
+     * including 0, which the truthiness test this replaced treated as absent, so
+     * three columns whose config asked for a default of 0 were created without
+     * one and any insert omitting them failed with 1364.
+     *
+     * @param array<string, mixed> $column
+     */
+    private function defaultClause(array $column): ?string
+    {
+        // `??` folds a declared null into false, so both spellings of "no
+        // default" arrive here as false and there is one case to test.
+        $default = $column['default'] ?? false;
+
+        if ($default === false) {
+            return null;
+        }
+
+        // An array wraps raw SQL: [0] emits DEFAULT 0 and ['CURRENT_TIMESTAMP']
+        // emits the keyword, where quoting either would store it as a string.
+        if (is_array($default)) {
+            return sprintf(' DEFAULT %s', (string) $default[0]);
+        }
+
+        return is_string($default)
+            ? sprintf(' DEFAULT "%s"', $default)
+            : sprintf(' DEFAULT %s', (string) $default);
     }
 
     /**
@@ -222,8 +257,9 @@ class Install extends AbstractCommand
 
             try {
                 $this->connection()->pdo()->exec(sprintf(
-                    'ALTER TABLE `%s` ADD KEY `%s` (%s)',
+                    'ALTER TABLE `%s` ADD %s `%s` (%s)',
                     $table,
+                    ($index['unique'] ?? false) ? 'UNIQUE KEY' : 'KEY',
                     $name,
                     implode(', ', array_map(
                         static fn(string $column): string => sprintf('`%s`', $column),
@@ -243,9 +279,17 @@ class Install extends AbstractCommand
 
     private function tableExists(string $table): bool
     {
+        // DATABASE(), not $_ENV: Connection reads its credentials with getenv()
+        // first, and phpdotenv's immutable loader will not copy a variable into
+        // $_ENV when the process environment already has it. On any host where
+        // DB_* are real environment variables this read returned '', every
+        // table looked absent, and the whole additive-migration path below
+        // silently never ran. The two sibling queries in this file already ask
+        // the connection.
         return (int) $this->connection()->fetchValue(
-            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?',
-            [$_ENV['DB_DATABASE'] ?? '', $table],
+            'SELECT COUNT(*) FROM information_schema.tables'
+            . ' WHERE table_schema = DATABASE() AND table_name = ?',
+            [$table],
         ) > 0;
     }
 
@@ -298,7 +342,7 @@ class Install extends AbstractCommand
     /**
      * Build the `, KEY ...` fragment for a table's secondary indexes.
      *
-     * @param list<array{name: string, columns: list<string>}> $indexes
+     * @param list<array{name: string, columns: list<string>, unique?: bool}> $indexes
      */
     private function indexClause(array $indexes): string
     {
@@ -306,7 +350,12 @@ class Install extends AbstractCommand
 
         foreach ($indexes as $index) {
             $columns = implode(', ', array_map(static fn(string $c): string => "`$c`", $index['columns']));
-            $clause .= sprintf(', KEY `%s` (%s)', $index['name'], $columns);
+            $clause .= sprintf(
+                ', %s `%s` (%s)',
+                ($index['unique'] ?? false) ? 'UNIQUE KEY' : 'KEY',
+                $index['name'],
+                $columns,
+            );
         }
 
         return $clause;

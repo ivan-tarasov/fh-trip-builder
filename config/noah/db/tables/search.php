@@ -11,13 +11,14 @@ return [
 
     'primary' => 'hash',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     'columns' => [
         [
             'name' => 'hash',
             'type' => 'char',
             'length' => 32,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -27,6 +28,7 @@ return [
             'name' => 'from_code',
             'type' => 'char',
             'length' => 3,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -45,6 +47,7 @@ return [
             'name' => 'to_code',
             'type' => 'char',
             'length' => 3,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -61,8 +64,8 @@ return [
         ],
         [
             'name' => 'depart',
-            'type' => 'char',
-            'length' => 10,
+            'type' => 'date',
+            'length' => null,
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -70,8 +73,8 @@ return [
         ],
         [
             'name' => 'return',
-            'type' => 'char',
-            'length' => 10,
+            'type' => 'date',
+            'length' => null,
             'default' => false,
             'nullable' => true,
             'auto_inc' => false,

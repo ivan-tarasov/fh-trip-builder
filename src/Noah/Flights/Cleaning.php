@@ -22,18 +22,37 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Cleaning extends AbstractCommand
 {
+    private const int BATCH_SIZE = 5000;
+
     /**
      * @throws Exception
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        // Compared against the column, not DATE(column): wrapping it made the
+        // departure_time index unusable, so this walked all 716k rows to find
+        // the day's worth it wanted. Midnight is the same boundary either way.
+        $before = date('Y-m-d');
+        $deleted = 0;
+
         try {
-            $deleted = $this->connection()->execute(
-                'DELETE FROM ' . Table::Flights->value . ' WHERE DATE(departure_time) < ?',
-                [date('Y-m-d')],
-            );
+            // Bounded per statement, the same way Realign deletes over-cap legs:
+            // one open-ended DELETE holds row locks for its whole duration, and
+            // every concurrent search queues behind it.
+            do {
+                $removed = $this->connection()->execute(
+                    'DELETE FROM ' . Table::Flights->value
+                    . ' WHERE departure_time < ? LIMIT ' . self::BATCH_SIZE,
+                    [$before],
+                );
+                $deleted += $removed;
+            } while ($removed > 0);
         } catch (Throwable $e) {
-            $this->io->error('Deleting old flights failed: ' . $e->getMessage());
+            $this->io->error(sprintf(
+                'Deleting old flights failed after %s rows: %s',
+                number_format($deleted),
+                $e->getMessage(),
+            ));
 
             return Command::FAILURE;
         }

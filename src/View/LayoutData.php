@@ -24,6 +24,9 @@ final class LayoutData
 {
     private ?Connection $connection = null;
 
+    /** Below this, the estimate is close enough to print as it comes. */
+    private const int COUNT_ROUND_ABOVE = 10000;
+
     /**
      * A stylesheet or script URL with a version stamp taken from the file's
      * own modification time.
@@ -41,9 +44,7 @@ final class LayoutData
     }
 
     /**
-     * Request-scoped footer stats, computed eagerly so their order is fixed:
-     * the flights count runs the only query on this connection, and the request
-     * counter is read afterwards so it reflects that query (as before).
+     * Request-scoped footer stats, computed eagerly so their order is fixed.
      *
      * @return array<string, string|int>
      *
@@ -51,10 +52,14 @@ final class LayoutData
      */
     public function stats(): array
     {
+        // Order matters: the flights count runs first so the request counter
+        // read below includes it. Both now sit on the one connection the whole
+        // request shares, so the count is every query the page ran -- it used
+        // to be this class's own connection, and therefore always 1.
         $flightsCount = $this->flightsCount();
 
         return [
-            'flights_count' => number_format($flightsCount),
+            'flights_count' => $flightsCount,
             'database_requests' => $this->connection()->queryCount(),
             'execution_time' => $this->executionTime(),
         ];
@@ -97,9 +102,34 @@ final class LayoutData
     /**
      * @throws Exception
      */
-    private function flightsCount(): int
+    private function flightsCount(): string
     {
-        return (int) $this->connection()->fetchValue('SELECT count(*) FROM ' . Table::Flights->value);
+        // InnoDB does not keep a row count, so COUNT(*) scans an index -- 45ms
+        // of every page render, for a line in the footer that sits next to the
+        // execution time. The optimiser's own estimate costs 2ms.
+        //
+        // It is an estimate, and after a large delete it can be several percent
+        // stale, so it is rounded and marked rather than printed as though it
+        // were counted. A precise-looking wrong number is worse than an
+        // obviously approximate right one.
+        $rows = (int) $this->connection()->fetchValue(
+            'SELECT table_rows FROM information_schema.tables'
+            . ' WHERE table_schema = DATABASE() AND table_name = ?',
+            [Table::Flights->value],
+        );
+
+        return $rows < self::COUNT_ROUND_ABOVE
+            ? number_format($rows)
+            : '~' . number_format(self::roundToThousand($rows));
+    }
+
+    /**
+     * To the nearest thousand, so the digits that are shown are ones the
+     * estimate can stand behind.
+     */
+    private static function roundToThousand(int $rows): int
+    {
+        return (int) round($rows, -3);
     }
 
     /**
