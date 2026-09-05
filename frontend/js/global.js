@@ -9,73 +9,91 @@
         const inputDateFormat = 'YYYY-MM-DD';
         const showDateFormat = 'MMM D';
 
+        // Days a window may cover, itself included. SearchUrl::MAX_SPAN is the
+        // definition; this is the picker's own limit and the two must agree.
+        const MAX_SPAN = 3;
+
         const departInput = $('#depart_date');
         const returnInput = $('#return_date');
         const departValue = $('#depart_date_value');
         const returnValue = $('#return_date_value');
+        const departFlex = $('#depart_flex_value');
+        const returnFlex = $('#return_flex_value');
         const clearReturn = $('.js-clear-return');
 
-        // One picker per field, where a single range picker used to hold
-        // "depart – return". That control could not express a one-way trip on
-        // its own, which is why a tab existed to switch it; two fields can, by
-        // leaving the second one empty.
-        const pickerFor = ($input, seed) => {
+        const spanOf = ($flex) => Math.max(1, parseInt($flex.val(), 10) || 1);
+
+        // A range picker per field, where each used to pick a single day. The
+        // range here is not "depart to return" -- that is what the two fields
+        // are for -- but how flexible one end of the trip is.
+        const pickerFor = ($input, seed, span) => {
             $input.daterangepicker({
-                singleDatePicker: true,
                 autoApply: true,
                 showCustomRangeLabel: false,
                 autoUpdateInput: false,
                 startDate: seed ? moment(seed) : moment(),
+                endDate: seed ? moment(seed).add(span - 1, 'day') : moment(),
                 minDate: moment(),
+                maxSpan: {days: MAX_SPAN - 1},
                 opens: 'center',
                 drops: 'auto',
-                locale: {format: showDateFormat, firstDay: 1}
+                locale: {format: showDateFormat, separator: ' – ', firstDay: 1}
             });
         };
 
-        pickerFor(departInput, departValue.val());
-        pickerFor(returnInput, returnValue.val() || departValue.val());
+        pickerFor(departInput, departValue.val(), spanOf(departFlex));
+        pickerFor(returnInput, returnValue.val() || departValue.val(), spanOf(returnFlex));
 
-        // autoUpdateInput is off so the field can stay empty until it is picked:
+        // autoUpdateInput is off so a field can stay empty until it is picked:
         // left to itself the plugin writes today's date in on load, which would
         // turn every one-way search into a round trip nobody asked for.
-        const show = ($input, $hidden, date) => {
-            $hidden.val(date.format(inputDateFormat));
-            $input.val(date.format(showDateFormat));
+        const show = ($input, $hidden, $flex, start, end) => {
+            const days = Math.min(MAX_SPAN, end.diff(start, 'days') + 1);
+
+            $hidden.val(start.format(inputDateFormat));
+            // Blank rather than 1: a plain search should send no flex at all.
+            $flex.val(days > 1 ? String(days) : '');
+            $input.val(days > 1
+                ? start.format(showDateFormat) + ' – ' + end.format(showDateFormat)
+                : start.format(showDateFormat));
         };
 
         departInput.on('apply.daterangepicker', function (ev, picker) {
-            show(departInput, departValue, picker.startDate);
+            show(departInput, departValue, departFlex, picker.startDate, picker.endDate);
 
             // The return can never precede the departure. Nothing enforced this
             // before -- a return a year earlier rendered a results page.
             if (returnValue.val() && moment(returnValue.val()).isBefore(picker.startDate, 'day')) {
-                show(returnInput, returnValue, picker.startDate);
+                show(returnInput, returnValue, returnFlex, picker.startDate, picker.startDate);
             }
         });
 
         returnInput.on('apply.daterangepicker', function (ev, picker) {
             const departed = departValue.val() ? moment(departValue.val()) : null;
-            const chosen = departed && picker.startDate.isBefore(departed, 'day') ? departed : picker.startDate;
+            const from = departed && picker.startDate.isBefore(departed, 'day') ? departed : picker.startDate;
+            const to = picker.endDate.isBefore(from, 'day') ? from : picker.endDate;
 
-            show(returnInput, returnValue, chosen);
+            show(returnInput, returnValue, returnFlex, from, to);
             clearReturn.prop('hidden', false);
         });
 
         // The way back to a one-way trip, now that no tab does it.
         clearReturn.on('click', function () {
             returnValue.val('');
+            returnFlex.val('');
             returnInput.val('');
             $(this).prop('hidden', true);
         });
 
-        if (departValue.val()) {
-            departInput.val(moment(departValue.val()).format(showDateFormat));
-        }
+        const redraw = ($input, $hidden, $flex) => {
+            if (!$hidden.val()) { return; }
 
-        if (returnValue.val()) {
-            returnInput.val(moment(returnValue.val()).format(showDateFormat));
-        }
+            const start = moment($hidden.val());
+            show($input, $hidden, $flex, start, start.clone().add(spanOf($flex) - 1, 'day'));
+        };
+
+        redraw(departInput, departValue, departFlex);
+        redraw(returnInput, returnValue, returnFlex);
     } catch (er) {
         console.log(er);
     }

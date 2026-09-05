@@ -178,6 +178,8 @@ class SearchController extends AbstractController
                 departDate: $this->get[self::GET_DEPART],
                 returnDate: $this->get[self::GET_RETURN] ?? '',
                 party: $this->searchUrl->party(),
+                departSpan: $this->searchUrl->departSpan,
+                returnSpan: $this->searchUrl->returnSpan,
                 cabin: CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
                 filters: FlightFilters::fromQuery($this->get, party: $this->searchUrl->party()),
                 returnFilters: FlightFilters::fromQuery(
@@ -252,6 +254,8 @@ class SearchController extends AbstractController
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],
                 'return_date' => $this->get[self::GET_RETURN],
+                'depart_flex' => $this->searchUrl->departSpan,
+                'return_flex' => $this->searchUrl->returnSpan,
                 // Filter forms submit with GET, so they post to the search's
                 // own path and carry only the rest -- sort and filters -- as
                 // hidden fields. The search itself is in that path now.
@@ -371,6 +375,10 @@ class SearchController extends AbstractController
                 cabin: CabinClass::fromRequest(
                     is_string($search[self::GET_CLASS] ?? null) ? $search[self::GET_CLASS] : null,
                 ),
+                // Rows written before flexible dates have no span columns to
+                // read, so they rebuild as the single-date searches they were.
+                departSpan: max(1, (int) ($search['depart_span'] ?? 1)),
+                returnSpan: max(1, (int) ($search['return_span'] ?? 1)),
             );
 
             echo new TwigRenderer()->render('search/redirect.html.twig', [
@@ -404,6 +412,8 @@ class SearchController extends AbstractController
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
+            $this->searchUrl->departSpan,
+            $this->searchUrl->returnSpan,
         );
 
         // Offered back in the origin and destination fields next time. Kept in
@@ -422,6 +432,8 @@ class SearchController extends AbstractController
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
+            $this->searchUrl->departSpan,
+            $this->searchUrl->returnSpan,
         );
     }
 

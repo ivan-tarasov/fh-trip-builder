@@ -24,6 +24,8 @@
 {% set return_date = return_date|default('') %}
 {% set cabin_value = cabin_value|default('economy') %}
 {% set recent = recent|default([]) %}
+{% set depart_flex = depart_flex|default(1) %}
+{% set return_flex = return_flex|default(1) %}
 
 <form method="get" action="{{ config('site.paths.search') }}" id="searchForm"
       class="searchbar searchbar--{{ variant }}">
@@ -90,6 +92,11 @@
                    placeholder="Add date" autocomplete="off" required readonly />
             <input type="hidden" id="depart_date_value"
                    name="{{ config('search.form.input.depart_date') }}" value="{{ depart_date }}" />
+            {# How many days the window covers. Written by the picker; submitted
+               only when it is more than one, so a plain search sends nothing. #}
+            <input type="hidden" id="depart_flex_value" class="js-flex-value"
+                   name="{{ config('search.form.input.depart_flex') }}"
+                   value="{{ depart_flex > 1 ? depart_flex : '' }}" />
         </div>
 
         <div class="searchbar__field searchbar__field--date">
@@ -98,6 +105,9 @@
                    placeholder="One way" autocomplete="off" readonly />
             <input type="hidden" id="return_date_value"
                    name="{{ config('search.form.input.return_date') }}" value="{{ return_date }}" />
+            <input type="hidden" id="return_flex_value" class="js-flex-value"
+                   name="{{ config('search.form.input.return_flex') }}"
+                   value="{{ return_flex > 1 ? return_flex : '' }}" />
             {# The way back to a one-way trip, now that no tab does it. Hidden
                until there is something to clear. #}
             <button type="button" class="searchbar__clear js-clear-return"

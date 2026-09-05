@@ -213,4 +213,117 @@ final class SearchUrlTest extends TestCase
     {
         self::assertNull(SearchUrl::fromQuery(new Input($query)));
     }
+
+    public function testASingleDateStillSpellsItselfExactlyAsBefore(): void
+    {
+        // The whole reason a span of one writes nothing: every link already
+        // shared has to render byte for byte as it did, or the canonical
+        // redirect at SearchController::index bounces it somewhere new.
+        foreach ([
+            '/search/YUL151026LHRY1',
+            '/search/YUL151026LHR221026Y1',
+            '/search/YUL160926LHR300926C211',
+        ] as $path) {
+            self::assertSame($path, SearchUrl::parse($path)?->path());
+        }
+    }
+
+    public function testAFlexibleDateRoundTripsThroughTheUrl(): void
+    {
+        $url = SearchUrl::parse('/search/YUL151026x3LHR221026x2Y1');
+
+        self::assertNotNull($url);
+        self::assertSame(3, $url->departSpan);
+        self::assertSame(2, $url->returnSpan);
+        self::assertSame('/search/YUL151026x3LHR221026x2Y1', $url->path());
+
+        // The window the search will actually cover, inclusive of the named day.
+        self::assertSame('2026-10-15', $url->depart);
+        self::assertSame('2026-10-17', $url->departUntil());
+        self::assertSame('2026-10-22', $url->return);
+        self::assertSame('2026-10-23', $url->returnUntil());
+    }
+
+    public function testAnAirportCodeCarryingADigitSurvivesASpanBesideIt(): void
+    {
+        // A39 is a real airport. A bare digit after the date could not be told
+        // from one, which is why a span is marked rather than appended.
+        $url = SearchUrl::parse('/search/A39151026x2A39221026Y1');
+
+        self::assertNotNull($url);
+        self::assertSame('A39', $url->from);
+        self::assertSame('A39', $url->to);
+        self::assertSame(2, $url->departSpan);
+        self::assertSame('/search/A39151026x2A39221026Y1', $url->path());
+    }
+
+    public function testASpanTheSearchWillNotRunIsRefused(): void
+    {
+        // Not clamped: the URL asked for something specific, and answering a
+        // different search would look like it had worked.
+        self::assertNull(SearchUrl::parse('/search/YUL151026x9LHRY1'));
+        self::assertNull(SearchUrl::parse('/search/YUL151026x4LHRY1'));
+        // A span of one is spelled by writing nothing, so `x1` is not a path.
+        self::assertNull(SearchUrl::parse('/search/YUL151026x1LHRY1'));
+        self::assertNull(SearchUrl::parse('/search/YUL151026xLHRY1'));
+    }
+
+    public function testATripCannotComeBackBeforeItLeaves(): void
+    {
+        // Unchecked until flexible dates: this exact path answered 200 and drew
+        // a results page.
+        self::assertNull(SearchUrl::parse('/search/YUL151026LHR011025Y1'));
+        self::assertNull(SearchUrl::fromQuery(new Input([
+            'from' => 'YUL',
+            'to' => 'LHR',
+            'depart' => '2026-10-15',
+            'return' => '2025-10-01',
+        ])));
+
+        // Leaving and returning the same day is a real, if short, trip.
+        self::assertNotNull(SearchUrl::parse('/search/YUL151026LHR151026Y1'));
+    }
+
+    public function testTheFormsFlexFieldsReachTheUrl(): void
+    {
+        $url = SearchUrl::fromQuery(new Input([
+            'from' => 'YUL',
+            'to' => 'LHR',
+            'depart' => '2026-10-15',
+            'return' => '2026-10-22',
+            'depart_flex' => '3',
+            'return_flex' => '2',
+        ]));
+
+        self::assertSame('/search/YUL151026x3LHR221026x2Y1', $url?->path());
+    }
+
+    public function testAFlexTheSearchWillNotRunBecomesNoFlex(): void
+    {
+        // Fewer days than asked for, never more.
+        $url = SearchUrl::fromQuery(new Input([
+            'from' => 'YUL',
+            'to' => 'LHR',
+            'depart' => '2026-10-15',
+            'depart_flex' => '9',
+        ]));
+
+        self::assertNotNull($url);
+        self::assertSame(1, $url->departSpan);
+        self::assertSame('/search/YUL151026LHRY1', $url->path());
+    }
+
+    public function testAOneWayCarriesNoReturnSpan(): void
+    {
+        $url = SearchUrl::fromQuery(new Input([
+            'from' => 'YUL',
+            'to' => 'LHR',
+            'depart' => '2026-10-15',
+            'return_flex' => '3',
+        ]));
+
+        self::assertNotNull($url);
+        self::assertSame(1, $url->returnSpan);
+        self::assertNull($url->returnUntil());
+    }
 }

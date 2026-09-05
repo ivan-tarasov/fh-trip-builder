@@ -65,6 +65,8 @@ final readonly class SearchRepository
         ?string $return,
         string $triptype,
         CabinClass $cabin,
+        int $departSpan = 1,
+        int $returnSpan = 1,
     ): string {
         $identity = sprintf(
             '%s:%s:%s:%s:%s',
@@ -77,6 +79,13 @@ final readonly class SearchRepository
 
         if ($cabin !== CabinClass::Economy) {
             $identity .= ':' . $cabin->value;
+        }
+
+        // Appended only when there is a window, for the same reason Economy is
+        // left out: folding a default into the digest would change the hash of
+        // every search already recorded and orphan its count.
+        if ($departSpan > 1 || $returnSpan > 1) {
+            $identity .= sprintf(':%d:%d', $departSpan, $returnSpan);
         }
 
         return md5($identity);
@@ -96,13 +105,16 @@ final readonly class SearchRepository
         ?string $return,
         string $triptype,
         CabinClass $cabin,
+        int $departSpan = 1,
+        int $returnSpan = 1,
     ): void {
         $this->connection->execute(
             'INSERT INTO ' . Table::Search->value
-            . ' (hash, from_code, from_name, to_code, to_name, depart, `return`, triptype, `class`)'
-            . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            . ' (hash, from_code, from_name, to_code, to_name, depart, depart_span,'
+            . ' `return`, return_span, triptype, `class`)'
+            . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             . ' ON DUPLICATE KEY UPDATE search_count = search_count + 1, last_search = NOW()',
-            [$hash, $fromCode, $fromName, $toCode, $toName, $depart, $return, $triptype, $cabin->value],
+            [$hash, $fromCode, $fromName, $toCode, $toName, $depart, $departSpan, $return, $returnSpan, $triptype, $cabin->value],
         );
     }
 }

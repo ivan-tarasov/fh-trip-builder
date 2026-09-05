@@ -138,6 +138,7 @@ final readonly class FlightFinder
                 // own set — the outbound's filters have already done their job.
                 $query->returnFilters,
                 $addBase + $addTax,
+                $query->returnSpan,
             );
         } else {
             // Step 1 (round trip) or the whole search (one way): the outbound.
@@ -147,7 +148,7 @@ final readonly class FlightFinder
             // return, so step 1 prices are comparable with the totals at step 2.
             // Resolved before the search for the same reason as step 2 above.
             $addBase = ($step === 1
-                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate, $query->cabin)
+                ? $flights->cheapestTotal($query->to, $query->from, $query->returnDate, $query->cabin, $query->returnSpan)
                 : null) ?? 0.0;
 
             $result = $flights->searchDirection(
@@ -160,6 +161,7 @@ final readonly class FlightFinder
                 $query->cabin,
                 $query->filters,
                 $addBase + $addTax,
+                $query->departSpan,
             );
         }
 
