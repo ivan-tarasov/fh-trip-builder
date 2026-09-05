@@ -21,17 +21,39 @@ return [
     | in one query, so keeping the lead on the parent saves a join on the only
     | page that shows many bookings at once.
     |
-    | Keyed by (booking_id, position) like aircraft_cabins — the project's other
-    | child table — because a passenger has no identity apart from the booking
-    | that carries them, and position is the order they were entered in.
+    | Keyed by its own id, like `bookings` and `flights` and unlike the reference
+    | tables, which key on an immutable external code. A passenger is a record
+    | other records will point at: a ticket number, a seat, a bag and a check-in
+    | each belong to one traveller. A composite (booking_id, position) key would
+    | make every one of those carry two columns, and position is not stable —
+    | remove one traveller from a party of four and the rest either go sparse or
+    | get renumbered, silently repointing anything that referenced position 3.
+    |
+    | (booking_id, position) is indexed rather than unique because the installer
+    | emits only KEY. Only createFor() writes these rows, and it writes them in
+    | sequence, so the pairing holds in practice.
     |
     */
 
-    'primary' => 'booking_id, position',
+    'primary' => 'id',
     'engine' => 'InnoDB',
     'charset' => 'utf8',
 
+    'indexes' => [
+        // Every read is one booking's travellers in the order they were entered.
+        ['name' => 'booking_position', 'columns' => ['booking_id', 'position']],
+    ],
+
     'columns' => [
+        [
+            'name' => 'id',
+            'type' => 'int',
+            'length' => 9,
+            'default' => false,
+            'nullable' => false,
+            'auto_inc' => true,
+            'comment' => false,
+        ],
         [
             'name' => 'booking_id',
             'type' => 'int',
