@@ -118,13 +118,7 @@ class Install extends AbstractCommand
             isset($column['charset'])
                 ? sprintf(' CHARACTER SET %s', $column['charset'])
                 : null,
-            $column['default']
-                // An array wraps a raw value -- [0] emits DEFAULT 0, where a
-                // bare 0 would be falsy and emit no default at all.
-                ? sprintf(' DEFAULT %s', is_array($column['default'])
-                    ? $column['default'][0]
-                    : sprintf('"%s"', $column['default']))
-                : null,
+            $this->defaultClause($column),
             $column['nullable']
                 ? null
                 : ' NOT NULL',
@@ -135,6 +129,37 @@ class Install extends AbstractCommand
                 ? ' AUTO_INCREMENT'
                 : null,
         );
+    }
+
+    /**
+     * A column's DEFAULT clause, or null when it has none.
+     *
+     * `false` and `null` both spell "no default". Everything else is one --
+     * including 0, which the truthiness test this replaced treated as absent, so
+     * three columns whose config asked for a default of 0 were created without
+     * one and any insert omitting them failed with 1364.
+     *
+     * @param array<string, mixed> $column
+     */
+    private function defaultClause(array $column): ?string
+    {
+        // `??` folds a declared null into false, so both spellings of "no
+        // default" arrive here as false and there is one case to test.
+        $default = $column['default'] ?? false;
+
+        if ($default === false) {
+            return null;
+        }
+
+        // An array wraps raw SQL: [0] emits DEFAULT 0 and ['CURRENT_TIMESTAMP']
+        // emits the keyword, where quoting either would store it as a string.
+        if (is_array($default)) {
+            return sprintf(' DEFAULT %s', (string) $default[0]);
+        }
+
+        return is_string($default)
+            ? sprintf(' DEFAULT "%s"', $default)
+            : sprintf(' DEFAULT %s', (string) $default);
     }
 
     /**

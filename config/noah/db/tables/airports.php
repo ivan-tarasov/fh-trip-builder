@@ -102,7 +102,7 @@ return [
             'name' => 'altitude',
             'type' => 'int',
             'length' => 4,
-            'default' => 0,
+            'default' => [0],
             'nullable' => false,
             'auto_inc' => false,
             'comment' => false,
