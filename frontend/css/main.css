@@ -897,33 +897,10 @@ button {
   margin-right: 30px;
 }
 
-.hidden {
-  position: absolute;
-  z-index: 9999;
-  color: rgba(0,0,0,0);
-  min-width: 100%;
-  min-height: 3em;
-  /*background-color: rgba(255,0,0,0.5);*/
-}
 
 /* CHECKBOX */
 /* Radio button */
 
-.search.dropdown-menu {
-  /* position: absolute !important; */
-  width: 100%;
-  margin-top: -15px !important;
-  -webkit-box-shadow: 0 10px 6px -6px #777;
-     -moz-box-shadow: 0 10px 6px -6px #777;
-          box-shadow: 0 10px 6px -6px #777;
-  border-top: none;
-  border-left-color: #fff;
-  border-right-color: #fff;
-}
-
-.search.dropdown-menu li {
-  cursor: pointer;
-}
 
 /* ==========================================================================
    #SEARCHBAR
@@ -3609,6 +3586,36 @@ textarea {
   font-weight: 600;
   color: var(--brand-accent-700);
 }
+
+/* In the search bar a field is a fifth of the row, which is narrower than an
+   airport name. The list is allowed to be wider than the field it hangs off
+   rather than wrapping "London Gatwick Airport" over three lines. */
+.searchbar__field .combo__list {
+  right: auto;
+  min-width: 20rem;
+  max-width: 24rem;
+}
+
+/* Except where the field is already full width, and a wider panel would run off
+   the screen. */
+@media (max-width: 991.98px) {
+  .searchbar__field .combo__list { right: 0; min-width: 0; max-width: none; }
+}
+
+/* Two lines and a code, for a list of places: the name reads first, the city
+   and country sit under it, and the IATA code is where someone who knows it
+   looks. A city row leads its own airports, so it is weighted to say so. */
+.combo__option--stacked {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 .75rem;
+  align-items: baseline;
+}
+
+.combo__name { grid-column: 1; font-size: .875rem; color: var(--ink-body); }
+.combo__code { grid-column: 2; grid-row: 1; font-size: .75rem; color: var(--ink-muted); }
+.combo__sub  { grid-column: 1 / -1; font-size: .75rem; color: var(--ink-muted); }
+.combo__option--city .combo__name { font-weight: 600; }
 
 .combo__empty {
   padding: .5rem .6rem;

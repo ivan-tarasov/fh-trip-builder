@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Exception;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
+use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\View\TwigRenderer;
 
@@ -51,6 +52,9 @@ class HomeController extends AbstractController
             'today_date' => date('Y-m-d'),
             'poi_cards' => $poi,
             'top_searches' => $topSearches,
+            // Everywhere a search can start or end. Small enough to ship whole,
+            // which is what lets the form filter in the browser.
+            'places' => new AirportRepository($this->connection())->pickable(),
         ]);
     }
 

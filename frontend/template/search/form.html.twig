@@ -28,25 +28,28 @@
       class="searchbar searchbar--{{ variant }}">
     <div class="searchbar__bar">
 
-        <div class="searchbar__field searchbar__field--place">
-            <label class="searchbar__label" for="departing_airport">From</label>
-            <input type="text" class="searchbar__input auto-clear" id="departing_airport"
-                   value="{{ depart_city }}"
-                   data-filter="/api/airports/autofill?query=#QUERY#"
-                   placeholder="City or airport" required autocomplete="off" />
-            <input type="hidden" id="departing_airport_value"
-                   name="{{ config('search.form.input.depart_place') }}" value="{{ depart_code }}" />
-        </div>
-
-        <div class="searchbar__field searchbar__field--place">
-            <label class="searchbar__label" for="arrival_airport">To</label>
-            <input type="text" class="searchbar__input auto-clear" id="arrival_airport"
-                   value="{{ arrive_city }}"
-                   data-filter="/api/airports/autofill?query=#QUERY#"
-                   placeholder="City or airport" required autocomplete="off" />
-            <input type="hidden" id="arrival_airport_value"
-                   name="{{ config('search.form.input.arrive_place') }}" value="{{ arrive_code }}" />
-        </div>
+        {# A select, not a text box asking the server after every third
+           keystroke. The whole network is 265 places -- every airport that has a
+           departure, plus the cities holding more than one of them -- so the
+           list ships with the page and filters instantly. What it replaced was a
+           plugin served from a CDN and absent from this repo, capped at five
+           rows, that read its result out of the rendered text of whatever node
+           was clicked. #}
+        {% for place in [
+            { 'id': 'departing_airport', 'label': 'From', 'name': config('search.form.input.depart_place'), 'value': depart_code },
+            { 'id': 'arrival_airport', 'label': 'To', 'name': config('search.form.input.arrive_place'), 'value': arrive_code }
+        ] %}
+            <div class="searchbar__field searchbar__field--place">
+                <label class="searchbar__label" for="{{ place.id }}">{{ place.label }}</label>
+                <select class="searchbar__input" id="{{ place.id }}" name="{{ place.name }}"
+                        data-searchable data-empty="No airport matches that." required>
+                    <option value="">City or airport</option>
+                    {% for row in places|default([]) %}
+                        <option value="{{ row.code }}" data-sub="{{ row.sub }}"{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endfor %}
 
         {# Two date fields rather than one range input. The old single control
            held "depart – return" and so could not express a one-way trip without

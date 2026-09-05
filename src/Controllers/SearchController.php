@@ -243,6 +243,7 @@ class SearchController extends AbstractController
                 // So the results page's own form comes back showing the cabin
                 // that produced these results.
                 'cabin' => $cabin,
+                'places' => new AirportRepository($this->connection())->pickable(),
                 'depart_city' => $this->data->depart,
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],

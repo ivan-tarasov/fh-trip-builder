@@ -52,7 +52,6 @@ class Routes
         */
 
         '/api/airports' => 'Api@airports',
-        '/api/airports/autofill' => 'Api@airportsAutofill',
         '/api/airlines' => 'Api@airlines',
         '/api/flights' => 'Api@flights',
         '/api/flights/one' => 'Api@flightsOne',

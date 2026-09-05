@@ -368,7 +368,7 @@
         console.log(er);
     }
 
-    /*[ Searchable select (billing country) ]
+    /*[ Searchable select: billing country, and the search form's places ]
     ===========================================================*/
     try {
         document.querySelectorAll('select[data-searchable]').forEach(function (select) {
@@ -424,11 +424,17 @@
                 // then the country code, then anything containing it.
                 const rank = function (option) {
                     const name = option.textContent.trim().toLowerCase();
+                    // The second line counts too: an airport is looked up by its
+                    // city at least as often as by its own name, and "Montreal"
+                    // must find Trudeau.
+                    const sub = (option.dataset.sub || '').toLowerCase();
 
                     if (needle === '') { return 0; }
                     if (name.startsWith(needle)) { return 0; }
                     if (option.value.toLowerCase().startsWith(needle)) { return 1; }
-                    if (name.includes(needle)) { return 2; }
+                    if (sub.startsWith(needle)) { return 2; }
+                    if (name.includes(needle)) { return 3; }
+                    if (sub.includes(needle)) { return 4; }
 
                     return -1;
                 };
@@ -445,7 +451,7 @@
                 if (matches.length === 0) {
                     const empty = document.createElement('li');
                     empty.className = 'combo__empty';
-                    empty.textContent = 'No country matches that.';
+                    empty.textContent = select.dataset.empty || 'Nothing matches that.';
                     list.appendChild(empty);
                     return;
                 }
@@ -456,7 +462,30 @@
                     li.setAttribute('role', 'option');
                     li.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
                     li.dataset.value = option.value;
-                    li.textContent = option.textContent.trim();
+
+                    // One line where there is only a name, two where the option
+                    // carries a place under it. The code sits at the end, which
+                    // is where a traveller who knows it looks.
+                    if (option.dataset.sub) {
+                        const name = document.createElement('span');
+                        name.className = 'combo__name';
+                        name.textContent = option.textContent.trim();
+
+                        const sub = document.createElement('span');
+                        sub.className = 'combo__sub';
+                        sub.textContent = option.dataset.sub;
+
+                        const code = document.createElement('span');
+                        code.className = 'combo__code';
+                        code.textContent = option.value;
+
+                        li.classList.add('combo__option--stacked');
+                        if (option.hasAttribute('data-city')) { li.classList.add('combo__option--city'); }
+                        li.append(name, code, sub);
+                    } else {
+                        li.textContent = option.textContent.trim();
+                    }
+
                     if (i === active) { li.classList.add('is-active'); }
                     list.appendChild(li);
                 });
@@ -491,7 +520,14 @@
                 if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'nearest' }); }
             };
 
-            input.addEventListener('focus', open);
+            input.addEventListener('focus', function () {
+                // Select what is there, so typing replaces the current choice
+                // instead of landing inside it. The text inputs this replaced
+                // carried a class for exactly this; a combobox that reopens on
+                // an already-filled field needs it more, not less.
+                input.select();
+                open();
+            });
             input.addEventListener('input', function () { active = -1; open(); });
 
             input.addEventListener('keydown', function (e) {
@@ -1888,29 +1924,5 @@
         }
     });
 
-    $( ".auto-clear" ).on( "focus", function() {
-        $(this).select();
-    } );
-
 })(jQuery);
 
-document.addEventListener('DOMContentLoaded', () => {
-    const departingAirportInput = $('#departing_airport');
-    const arrivalAirportInput   = $('#arrival_airport');
-
-    // Picking an origin moves to the destination, and a destination to the
-    // date. Which date it was used to depend on the open tab, through a
-    // module-scoped variable whose own comment read "Ugly as hell"; there is one
-    // departure field now, so there is nothing to track.
-    departingAirportInput.autocomplete({
-        onPick() {
-            arrivalAirportInput.focus();
-        }
-    });
-    arrivalAirportInput.autocomplete({
-        onPick() {
-            $('#depart_date').trigger('focus');
-        }
-    });
-
-}, false);
