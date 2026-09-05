@@ -6,6 +6,7 @@ namespace TripBuilder\View;
 
 use DateTimeImmutable;
 use Throwable;
+use TripBuilder\Api\Flights\FareRules;
 use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\TripType;
@@ -75,6 +76,7 @@ final readonly class BookingPresenter
             'contact_email' => $row['contact_email'] ?? null,
             'contact_phone' => $row['contact_phone'] ?? null,
             'fare_brand' => $row['fare_brand'] ?? null,
+            'fare_rules' => $this->fareRules($row['fare_rules'] ?? null),
             'card_brand' => $row['card_brand'] ?? null,
             'card_last4' => $row['card_last4'] ?? null,
             // From the columns, never from the segments. The per-leg prices in
@@ -119,6 +121,26 @@ final readonly class BookingPresenter
             'triptype' => ($storedReturn === null ? TripType::Oneway : TripType::Roundtrip)->value,
             'class' => ($cabin ?? CabinClass::Economy)->value,
         ];
+    }
+
+    /**
+     * The rules a booking was sold under, as the page lists them.
+     *
+     * Null for a row written before the column existed. Those cannot be
+     * recovered -- the legs they were folded from are long deleted -- so the
+     * page says nothing rather than guessing from a brand name.
+     *
+     * @return list<array{text: string, allowed: bool}>|null
+     */
+    private function fareRules(mixed $stored): ?array
+    {
+        if (!is_string($stored) || $stored === '') {
+            return null;
+        }
+
+        $data = json_decode($stored, true);
+
+        return is_array($data) ? FareRules::fromRow($data)->lines() : null;
     }
 
     /**

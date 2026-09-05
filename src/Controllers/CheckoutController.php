@@ -301,6 +301,10 @@ class CheckoutController extends AbstractController
             'passenger_dob' => $form['dob'],
             'passenger_gender' => $form['gender'],
             'fare_brand' => $strictest?->title,
+            // The rules themselves, not just their label. flights:cleaning
+            // deletes a leg once it has flown, so this is the only place the
+            // terms a traveller bought survive.
+            'fare_rules' => $strictest === null ? null : json_encode($strictest->toArray()),
             'price_base' => $trip['raw_base'],
             'price_tax' => $trip['raw_tax'],
             'card_brand' => Helper::cardScheme($form['card_number']),

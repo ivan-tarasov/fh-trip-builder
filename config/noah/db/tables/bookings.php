@@ -172,6 +172,18 @@ return [
             'comment' => false,
         ],
         [
+            'name' => 'fare_rules',
+            'type' => 'json',
+            'length' => null,
+            'default' => ['NULL'],
+            'nullable' => true,
+            'auto_inc' => false,
+            // What the ticket allows, kept because nothing else does. The legs
+            // it was folded from are deleted once they have flown, so a booking
+            // that does not hold its own rules cannot recover them.
+            'comment' => 'Fare rules as sold, folded across the legs',
+        ],
+        [
             'name' => 'price_base',
             'type' => 'decimal',
             'length' => '10,2',
