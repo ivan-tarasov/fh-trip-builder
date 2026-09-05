@@ -87,16 +87,6 @@ final class PartyTest extends TestCase
         self::assertNull(Party::fromCounts(5, 5, 0));
     }
 
-    public function testTheSmallestShareIsTheSafeDivisorForAPruningLimit(): void
-    {
-        // The two shares move independently: an infant lifts the fare share
-        // but not the tax share, a child lifts the tax share more than the fare
-        // share. A pruning bound takes whichever is smaller, so it can only ever
-        // be too generous.
-        self::assertSame(1.0, new Party(adults: 1, infants: 1)->smallestShare());
-        self::assertSame(1.75, new Party(adults: 1, children: 1)->smallestShare());
-    }
-
     /**
      * @return list<array{0: Party, 1: string}>
      */

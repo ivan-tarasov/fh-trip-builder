@@ -102,20 +102,6 @@ final readonly class Party
     }
 
     /**
-     * The lower of the two shares, for turning a party-sized limit back into a
-     * per-seat one.
-     *
-     * Base and tax scale differently, so no single divisor is exact. Taking the
-     * smaller share makes the per-seat limit the looser of the two readings,
-     * which is the safe direction for a filter that prunes: it can keep a row it
-     * did not need to, and can never drop one that qualifies.
-     */
-    public function smallestShare(): float
-    {
-        return min($this->fareShare(), $this->taxShare());
-    }
-
-    /**
      * "2 adults, 1 child" -- what the price is for, in the words the form used.
      */
     public function label(): string
