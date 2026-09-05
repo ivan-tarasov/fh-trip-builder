@@ -682,187 +682,138 @@ a:active {
 
 /* ==========================================================================
    #DATEPICKER
-   ========================================================================== */
-/*.daterangepicker {*/
-/*  display: none;*/
-/*  width: 790px;*/
-/*  -webkit-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);*/
-/*  -moz-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);*/
-/*  box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);*/
-/*  -webkit-border-radius: 10px;*/
-/*  -moz-border-radius: 10px;*/
-/*  border-radius: 10px;*/
-/*  padding: 20px 35px;*/
-/*  padding-top: 27px;*/
-/*  padding-bottom: 25px;*/
-/*  margin-top: 2px;*/
-/*  margin-left: -127px;*/
-/*}*/
+   ==========================================================================
 
-/*@media (max-width: 767px) {*/
-/*  .daterangepicker {*/
-/*    width: -webkit-calc(100% - 60px);*/
-/*    width: -moz-calc(100% - 60px);*/
-/*    width: calc(100% - 60px);*/
-/*    padding: 25px 0px;*/
-/*  }*/
-/*}*/
+   Dan Grossman's daterangepicker, restyled. This whole section was commented
+   out, so the picker rendered on the vendor stylesheet alone -- a dense little
+   grid in someone else's colours, next to a form that had just been rebuilt.
 
-/*.daterangepicker:before, .daterangepicker:after {*/
-/*  display: none;*/
-/*}*/
+   The range reads as one pill: the days between are tinted and square-edged so
+   they run together, and only the two ends are round. A single day is both ends
+   at once, so it is a circle. */
 
-/*.daterangepicker .calendar {*/
-/*  margin: 0;*/
-/*  width: 325px;*/
-/*  max-width: 325px;*/
-/*}*/
+.daterangepicker {
+  padding: .5rem;
+  font-family: inherit;
+  background-color: #fff;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.5rem rgba(21, 26, 33, .16);
+}
 
-/*.daterangepicker .calendar th {*/
-/*  font-size: 14px;*/
-/*  color: #aaa;*/
-/*  cursor: default;*/
-/*}*/
+/* The little pointer the vendor draws at the top. The panel sits under a field
+   that is already visually attached to it. */
+.daterangepicker:after,
+.daterangepicker:before { display: none; }
 
-/*.daterangepicker .calendar th.month {*/
-/*  font-size: 16px;*/
-/*  color: #555;*/
-/*  font-weight: 700;*/
-/*}*/
+.daterangepicker .drp-calendar {
+  max-width: none;
+  padding: .5rem .75rem;
+}
 
-/*.daterangepicker .calendar th.next, .daterangepicker .calendar th.prev {*/
-/*  font-size: 20px;*/
-/*  color: #ccc;*/
-/*  text-align: center;*/
-/*}*/
+.daterangepicker .drp-calendar.left,
+.daterangepicker .drp-calendar.right { padding: .5rem .75rem; }
 
-/*.daterangepicker .calendar.right {*/
-/*  float: right;*/
-/*}*/
+.daterangepicker .calendar-table { border: none; }
 
-/*@media (max-width: 767px) {*/
-/*  .daterangepicker .calendar {*/
-/*    width: 235px;*/
-/*    max-width: 270px;*/
-/*  }*/
-/*  .daterangepicker .calendar.right, .daterangepicker .calendar.left {*/
-/*    float: none !important;*/
-/*    clear: none !important;*/
-/*    margin: 0 auto !important;*/
-/*  }*/
-/*  .daterangepicker .calendar.left {*/
-/*    margin-bottom: 30px !important;*/
-/*  }*/
-/*}*/
+.daterangepicker th.month {
+  padding-bottom: .5rem;
+  font-size: .9375rem;
+  font-weight: 700;
+  color: var(--ink-body);
+}
 
-/*.daterangepicker .calendar-table {*/
-/*  padding: 0;*/
-/*}*/
+/* Round, quiet, and out of the way until wanted -- the months are the heading,
+   not the arrows. */
+.daterangepicker th.prev,
+.daterangepicker th.next {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  transition: background-color var(--dur-fast) ease;
+}
 
-/*.daterangepicker .calendar-table .table-condensed thead tr:nth-child(2) th {*/
-/*  padding-top: 27px;*/
-/*  padding-bottom: 17px;*/
-/*}*/
+.daterangepicker th.prev:hover,
+.daterangepicker th.next:hover { background-color: var(--surface); }
+.daterangepicker th.prev span,
+.daterangepicker th.next span { border-color: var(--ink-secondary); border-width: 0 2px 2px 0; }
 
-/*.daterangepicker.ltr .calendar.left .calendar-table {*/
-/*  padding: 0;*/
-/*}*/
+/* Day-of-week headings. The weekend pair is greyed, which is most of what makes
+   a calendar scannable at a glance. */
+.daterangepicker th:not(.month):not(.prev):not(.next) {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
 
-/*.daterangepicker_input {*/
-/*  display: none;*/
-/*}*/
+.daterangepicker .calendar-table th.weekend-head { color: var(--ink-faint); }
 
-/*.daterangepicker td {*/
-/*  -webkit-border-radius: 50%;*/
-/*  -moz-border-radius: 50%;*/
-/*  border-radius: 50%;*/
-/*  height: 46px;*/
-/*  width: 32px;*/
-/*  font-family: "Poppins", "Arial", "Helvetica Neue", sans-serif;*/
-/*  text-align: center;*/
-/*  font-size: 14px;*/
-/*  color: #555;*/
-/*}*/
+/* min-width and line-height, not width and height: on a table cell those two
+   are hints the layout algorithm is free to ignore, and it did -- the cells
+   stayed the vendor's size. The line height is what actually gives a day its
+   room. */
+/* Through .calendar-table, because the vendor reaches its cells that way too
+   and a bare `.daterangepicker td` loses to it. */
+.daterangepicker .calendar-table td,
+.daterangepicker .calendar-table th {
+  min-width: 2.375rem;
+  padding: 0;
+  line-height: 2.375rem;
+  text-align: center;
+}
 
-/*@media (max-width: 767px) {*/
-/*  .daterangepicker td {*/
-/*    height: 32px;*/
-/*    width: 32px;*/
-/*  }*/
-/*}*/
+.daterangepicker td {
+  font-size: .875rem;
+  color: var(--ink-body);
+  border-radius: 0;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
 
-/*.daterangepicker td.start-date, .daterangepicker td.end-date {*/
-/*  -webkit-border-radius: 50%;*/
-/*  -moz-border-radius: 50%;*/
-/*  border-radius: 50%;*/
-/*  background: #00ad5f;*/
-/*}*/
+.daterangepicker td.available:hover {
+  background-color: var(--surface);
+  border-radius: .5rem;
+}
 
-/*.daterangepicker td.start-date.end-date {*/
-/*  -webkit-border-radius: 50%;*/
-/*  -moz-border-radius: 50%;*/
-/*  border-radius: 50%;*/
-/*}*/
+/* A day in another month, or one already gone. */
+.daterangepicker td.off,
+.daterangepicker td.off.in-range,
+.daterangepicker td.off.start-date,
+.daterangepicker td.off.end-date {
+  color: var(--ink-faint);
+  background-color: #fff;
+}
 
-/*.daterangepicker td.in-range {*/
-/*  background: #ececff;*/
-/*}*/
+.daterangepicker td.disabled { color: var(--ink-faint); text-decoration: none; }
 
-/*.daterangepicker td.today {*/
-/*  -webkit-border-radius: 50% !important;*/
-/*  -moz-border-radius: 50% !important;*/
-/*  border-radius: 50% !important;*/
-/*  background: #c9c9c9;*/
-/*}*/
+/* The middle of the range: square, so consecutive days join up. */
+.daterangepicker td.in-range {
+  color: var(--ink-body);
+  background-color: var(--brand-tint);
+  border-radius: 0;
+}
 
-/*.daterangepicker td.today.in-range {*/
-/*  -webkit-border-radius: 0 !important;*/
-/*  -moz-border-radius: 0 !important;*/
-/*  border-radius: 0 !important;*/
-/*  background: #6c7ae0;*/
-/*}*/
+/* The ends, which are the only round corners. */
+.daterangepicker td.active,
+.daterangepicker td.active:hover {
+  color: #fff;
+  background-color: var(--brand-accent);
+}
 
-/*.daterangepicker td.off, .daterangepicker td.off.in-range, .daterangepicker td.off.start-date, .daterangepicker td.off.end-date {*/
-/*  background: transparent;*/
-/*  color: #aaa;*/
-/*}*/
+.daterangepicker td.start-date { border-radius: .75rem 0 0 .75rem; }
+.daterangepicker td.end-date { border-radius: 0 .75rem .75rem 0; }
+.daterangepicker td.start-date.end-date { border-radius: .75rem; }
 
-/*.daterangepicker select {*/
-/*  outline: none;*/
-/*  font-family: inherit;*/
-/*}*/
+/* Dragging: the browser would otherwise select the numbers as text. */
+.daterangepicker .calendar-table,
+.daterangepicker td { user-select: none; }
 
-/*.daterangepicker select.monthselect, .daterangepicker select.yearselect {*/
-/*  font-size: 16px;*/
-/*  padding: 8px 4px;*/
-/*}*/
+.daterangepicker .drp-buttons { border-top-color: var(--line); }
 
-/*.daterangepicker td.active,*/
-/*.daterangepicker td.active:hover {*/
-/*  background: #6c7ae0;*/
-/*}*/
-
-/*.dropdown-datepicker {*/
-/*  position: relative;*/
-/*}*/
-
-/*.dropdown-datepicker .daterangepicker {*/
-/*  width: 385px;*/
-/*  padding: 20px;*/
-/*  max-width: 385px;*/
-/*  margin-left: 0;*/
-/*  margin-right: -20px;*/
-/*}*/
-
-/*.dropdown-datepicker .daterangepicker .calendar {*/
-/*  width: 100%;*/
-/*  max-width: 100%;*/
-/*}*/
-
-/*.dropdown-datepicker .daterangepicker .calendar td {*/
-/*  width: 32px;*/
-/*  height: 32px;*/
-/*}*/
+@media (max-width: 575.98px) {
+  .daterangepicker .calendar-table td,
+  .daterangepicker .calendar-table th { min-width: 2rem; line-height: 2rem; }
+  .daterangepicker .drp-calendar { padding: .5rem .25rem; }
+}
 
 /* ==========================================================================
    #FORM

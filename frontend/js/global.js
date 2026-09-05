@@ -94,6 +94,59 @@
 
         redraw(departInput, departValue, departFlex);
         redraw(returnInput, returnValue, returnFlex);
+
+        // Drag across the days to pick a window, rather than clicking one end
+        // and then the other.
+        //
+        // The plugin listens for `mousedown` on a day, not `click` -- so the
+        // press that begins a drag has already chosen the first date by itself,
+        // and its own hover handler paints the range on the way. All that is
+        // missing is the second date, which a plain drag never sends because the
+        // release lands on a different cell than the press.
+        //
+        // Capture, not bubbling: the plugin's own handler sits closer to the
+        // cell, so it runs first and redraws the calendar. By the time a
+        // bubbling listener on the document sees the event, its target has been
+        // detached and no longer matches anything inside `.daterangepicker`.
+        let pressedOn = null;
+
+        const dayUnder = (event) => {
+            const cell = event.target instanceof Element
+                ? event.target.closest('td.available')
+                : null;
+
+            return cell && cell.closest('.daterangepicker') ? cell : null;
+        };
+
+        document.addEventListener('mousedown', function (event) {
+            pressedOn = dayUnder(event);
+        }, true);
+
+        document.addEventListener('mouseup', function (event) {
+            const from = pressedOn;
+            const to = dayUnder(event);
+
+            pressedOn = null;
+
+            // A press and release on one day is a plain click, and the plugin
+            // has already done the right thing with it.
+            if (!from || !to || from === to) {
+                return;
+            }
+
+            // Described rather than held: choosing the first date redrew the
+            // calendar, so the released cell may already be out of the document
+            // and its replacement has to be found by position.
+            const calendar = to.closest('.drp-calendar');
+            const side = calendar && calendar.classList.contains('left') ? 'left' : 'right';
+            const picker = to.closest('.daterangepicker') || from.closest('.daterangepicker');
+            const fresh = picker
+                && picker.querySelector('.drp-calendar.' + side + ' td[data-title="' + to.dataset.title + '"]');
+
+            if (fresh) {
+                $(fresh).trigger('mousedown');
+            }
+        }, true);
     } catch (er) {
         console.log(er);
     }
