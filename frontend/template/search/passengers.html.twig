@@ -1,35 +1,76 @@
-{# Who is travelling. Shared by the home page and the results header, which
-   carried two different sets of these -- four types on one, three on the other,
-   different ids, different labels, and not one of them with a `name`, so no
-   browser ever submitted a passenger count.
+{# Who is travelling, and in what. Shared by the home page and the results
+   header, which carried two different sets of these -- four types on one, three
+   on the other, different ids, different labels, and not one of them with a
+   `name`, so no browser ever submitted a passenger count.
 
    Three types, matching what the URL spells and what the fare model prices. An
    infant here is on a lap: it takes no seat, which is why it is cheap and why
-   there may not be more of them than there are adults to hold them. #}
-{% set types = [
-    { 'key': 'adults', 'label': 'Adult', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
-    { 'key': 'children', 'label': 'Child', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
-    { 'key': 'infants', 'label': 'Infant', 'hint': 'on lap', 'from': 0, 'value': party.infants|default(0) }
-] %}
+   there may not be more of them than there are adults to hold them.
 
-<div class="row g-2 mb-3">
-    {% for type in types %}
-        {% set id = 'passengers_' ~ type.key %}
-        <div class="col-md">
-            <div class="form-floating">
-                <select class="form-select" id="{{ id }}" name="{{ config('search.form.input.' ~ type.key) }}">
+   One trigger, not four fields. Four controls will not fit a single-row bar --
+   which is the whole reason the reference collapses them -- and "two adults in
+   economy" is one decision anyway. The selects behind it are the real controls
+   and the ones that submit; the panel is a place to put them.
+
+   The cabin used to be compared against the literal `'economy' == 'economy'` on
+   the home page, so it rendered Economy selected whatever had been chosen. It
+   takes the value now, like every other field here. #}
+{% set types = [
+    { 'key': 'adults', 'label': 'Adults', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
+    { 'key': 'children', 'label': 'Children', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
+    { 'key': 'infants', 'label': 'Infants', 'hint': 'on lap, no seat', 'from': 0, 'value': party.infants|default(0) }
+] %}
+{% set cabin_value = cabin_value|default('economy') %}
+{# A map, so the label the trigger shows is a lookup rather than a loop: `set`
+   inside a `for` does not escape it, and Twig 3 dropped the inline `for … if`. #}
+{% set cabins = {
+    'economy': 'Economy',
+    'premium': 'Premium Economy',
+    'business': 'Business',
+    'first': 'First'
+} %}
+{% set cabin_label = cabins[cabin_value]|default('Economy') %}
+{% set heads = types[0].value + types[1].value + types[2].value %}
+
+<div class="party">
+    <button type="button" class="party__trigger js-party-trigger"
+            aria-expanded="false" aria-controls="party-panel">
+        <span class="searchbar__label">Passengers</span>
+        <span class="party__summary js-party-summary"
+              data-one="passenger" data-many="passengers">{{ heads }} {{ heads == 1 ? 'passenger' : 'passengers' }}, {{ cabin_label }}</span>
+    </button>
+
+    <div class="party__panel" id="party-panel" hidden>
+        {% for type in types %}
+            {% set id = 'passengers_' ~ type.key %}
+            <div class="party__row">
+                <label class="party__name" for="{{ id }}">
+                    {{ type.label }}
+                    <small>{{ type.hint }}</small>
+                </label>
+                <select class="party__select js-party-count" id="{{ id }}"
+                        name="{{ config('search.form.input.' ~ type.key) }}">
                     {# "No children" is the absence of a number, not a zero. The
                        empty option is dropped on submit by the same handler the
                        rebook dialog uses, so it stays out of a shared URL. #}
                     {% if type.from == 0 %}
-                        <option value=""{{ type.value == 0 ? ' selected' : '' }}>&ndash;</option>
+                        <option value=""{{ type.value == 0 ? ' selected' : '' }}>0</option>
                     {% endif %}
                     {% for n in 1..9 %}
                         <option value="{{ n }}"{{ type.value == n ? ' selected' : '' }}>{{ n }}{{ n == 9 ? ' (maximum)' : '' }}</option>
                     {% endfor %}
                 </select>
-                <label for="{{ id }}">{{ type.label }} <small>({{ type.hint }})</small></label>
             </div>
+        {% endfor %}
+
+        <div class="party__row party__row--cabin">
+            <label class="party__name" for="cabin_class">Cabin</label>
+            <select class="party__select js-party-cabin" id="cabin_class"
+                    name="{{ config('search.form.input.class') }}">
+                {% for value, label in cabins %}
+                    <option value="{{ value }}"{{ cabin_value == value ? ' selected' : '' }}>{{ label }}</option>
+                {% endfor %}
+            </select>
         </div>
-    {% endfor %}
+    </div>
 </div>

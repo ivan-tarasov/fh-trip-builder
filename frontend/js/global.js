@@ -3,81 +3,144 @@
 
     const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
+    /*[ Search form: the two date fields ]
+    ===========================================================*/
     try {
-        const singleDatePickers = $('.js-single-datepicker');
         const inputDateFormat = 'YYYY-MM-DD';
-        const showDateFormat  = 'MMMM D, YYYY';
+        const showDateFormat = 'MMM D';
 
-        let inputStart = $("#depart_date_value").val();
-        let startDate  = inputStart
-            ? moment(inputStart).format(showDateFormat)
-            : moment().format(showDateFormat);
+        const departInput = $('#depart_date');
+        const returnInput = $('#return_date');
+        const departValue = $('#depart_date_value');
+        const returnValue = $('#return_date_value');
+        const clearReturn = $('.js-clear-return');
 
-        let inputEnd   = $("#return_date_value").val();
-        let endDate    = inputEnd
-            ? moment(inputEnd).format(showDateFormat)
-            : moment(inputStart).add(1, 'day').format(showDateFormat);
-
-        singleDatePickers.each(function () {
-            const $this = $(this);
-            const elementID = $this.attr('id');
-            const dropId = $this.data('drop');
-            const today = moment().format(showDateFormat);
-
-            const commonConfig = {
+        // One picker per field, where a single range picker used to hold
+        // "depart – return". That control could not express a one-way trip on
+        // its own, which is why a tab existed to switch it; two fields can, by
+        // leaving the second one empty.
+        const pickerFor = ($input, seed) => {
+            $input.daterangepicker({
+                singleDatePicker: true,
                 autoApply: true,
                 showCustomRangeLabel: false,
-                autoUpdateInput: true,
-                startDate: startDate,
-                endDate: endDate,
-                minDate: today,
-                opens: "center",
-                drops: "auto",
-                locale: {
-                    format: showDateFormat,
-                    separator: " – ",
-                    firstDay: 1
-                }
-            };
+                autoUpdateInput: false,
+                startDate: seed ? moment(seed) : moment(),
+                minDate: moment(),
+                opens: 'center',
+                drops: 'auto',
+                locale: {format: showDateFormat, firstDay: 1}
+            });
+        };
 
-            commonConfig.singleDatePicker = (elementID == 'oneway_depart_date');
+        pickerFor(departInput, departValue.val());
+        pickerFor(returnInput, returnValue.val() || departValue.val());
 
-            // Initialize the date range picker
-            $this.daterangepicker(commonConfig);
-        });
+        // autoUpdateInput is off so the field can stay empty until it is picked:
+        // left to itself the plugin writes today's date in on load, which would
+        // turn every one-way search into a round trip nobody asked for.
+        const show = ($input, $hidden, date) => {
+            $hidden.val(date.format(inputDateFormat));
+            $input.val(date.format(showDateFormat));
+        };
 
-        $(singleDatePickers).on('apply.daterangepicker', function (ev, picker) {
-            $("#depart_date_value").val(picker.startDate.format(inputDateFormat));
+        departInput.on('apply.daterangepicker', function (ev, picker) {
+            show(departInput, departValue, picker.startDate);
 
-            if (ev.target.id == 'roundtrip_dates') {
-                $("#return_date_value").val(picker.endDate.format(inputDateFormat));
+            // The return can never precede the departure. Nothing enforced this
+            // before -- a return a year earlier rendered a results page.
+            if (returnValue.val() && moment(returnValue.val()).isBefore(picker.startDate, 'day')) {
+                show(returnInput, returnValue, picker.startDate);
             }
         });
 
-        let departDate_roundtrip = $('#depart_date_value').val();
-        let departDate_oneway = $('#depart_date_value').val();
+        returnInput.on('apply.daterangepicker', function (ev, picker) {
+            const departed = departValue.val() ? moment(departValue.val()) : null;
+            const chosen = departed && picker.startDate.isBefore(departed, 'day') ? departed : picker.startDate;
 
-        $('#tab-roundtrip').click(function () {
-            $('#tab-roundtrip').prop('disabled', true);
-            $('#tab-oneway').prop('disabled', false);
-
-            departDate_oneway = $('#depart_date_value').val();
-            $('#depart_date_value').val(departDate_roundtrip);
-
-            $('#hidden_triptype').val('roundtrip');
-            $('#return_date_value').prop('disabled', false);
-        });
-        $('#tab-oneway').click(function () {
-            $('#tab-roundtrip').prop('disabled', false);
-            $('#tab-oneway').prop('disabled', true);
-
-            departDate_roundtrip = $('#depart_date_value').val();
-            $('#depart_date_value').val(departDate_oneway);
-
-            $('#hidden_triptype').val('oneway');
-            $('#return_date_value').prop('disabled', true);
+            show(returnInput, returnValue, chosen);
+            clearReturn.prop('hidden', false);
         });
 
+        // The way back to a one-way trip, now that no tab does it.
+        clearReturn.on('click', function () {
+            returnValue.val('');
+            returnInput.val('');
+            $(this).prop('hidden', true);
+        });
+
+        if (departValue.val()) {
+            departInput.val(moment(departValue.val()).format(showDateFormat));
+        }
+
+        if (returnValue.val()) {
+            returnInput.val(moment(returnValue.val()).format(showDateFormat));
+        }
+    } catch (er) {
+        console.log(er);
+    }
+
+    /*[ Search form: who is flying ]
+    ===========================================================*/
+    try {
+        const trigger = document.querySelector('.js-party-trigger');
+        const panel = document.getElementById('party-panel');
+
+        if (trigger && panel) {
+            const summary = document.querySelector('.js-party-summary');
+            const counts = panel.querySelectorAll('.js-party-count');
+            const cabin = panel.querySelector('.js-party-cabin');
+
+            const open = (yes) => {
+                panel.hidden = !yes;
+                trigger.setAttribute('aria-expanded', yes ? 'true' : 'false');
+            };
+
+            const retitle = () => {
+                let heads = 0;
+
+                counts.forEach((select) => {
+                    heads += parseInt(select.value, 10) || 0;
+                });
+
+                const word = heads === 1 ? summary.dataset.one : summary.dataset.many;
+
+                summary.textContent = heads + ' ' + word + ', '
+                    + cabin.options[cabin.selectedIndex].text;
+            };
+
+            trigger.addEventListener('click', () => open(panel.hidden));
+
+            // The counts are only valid together -- there must be an adult, and
+            // no more infants than there are laps to hold them. Party enforces
+            // this server side; without it here the panel can offer a search
+            // that comes back rejected.
+            panel.addEventListener('change', () => {
+                const adults = parseInt(counts[0].value, 10) || 0;
+                const infants = counts[2];
+
+                if ((parseInt(infants.value, 10) || 0) > adults) {
+                    infants.value = adults > 0 ? String(adults) : '';
+                }
+
+                retitle();
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) {
+                    open(false);
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !panel.hidden) {
+                    open(false);
+                    trigger.focus();
+                }
+            });
+
+            retitle();
+        }
     } catch (er) {
         console.log(er);
     }
@@ -1834,23 +1897,19 @@
 document.addEventListener('DOMContentLoaded', () => {
     const departingAirportInput = $('#departing_airport');
     const arrivalAirportInput   = $('#arrival_airport');
-    const roundtripDatesInput   = $('#roundtrip_dates');
-    const onewayDatesInput      = $('#oneway_depart_date');
 
-    // Ugly as hell
-    let nextDateInput = roundtripDatesInput;
-    $('#tab-oneway, #tab-roundtrip').click(function () {
-        nextDateInput = $(this).attr('id') === 'tab-roundtrip' ? roundtripDatesInput : onewayDatesInput;
-    });
-
+    // Picking an origin moves to the destination, and a destination to the
+    // date. Which date it was used to depend on the open tab, through a
+    // module-scoped variable whose own comment read "Ugly as hell"; there is one
+    // departure field now, so there is nothing to track.
     departingAirportInput.autocomplete({
-        onPick(el, item) {
+        onPick() {
             arrivalAirportInput.focus();
         }
     });
     arrivalAirportInput.autocomplete({
-        onPick(el, item) {
-            nextDateInput.focus();
+        onPick() {
+            $('#depart_date').trigger('focus');
         }
     });
 

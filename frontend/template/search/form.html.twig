@@ -1,0 +1,87 @@
+{# The search form, once.
+
+   It used to exist twice — the home hero and the results header — as two copies
+   of the same markup sharing every element id, which worked only because the two
+   never render on the same page. global.js is wired to those literal ids, so the
+   duplication was one accidental include away from breaking. This is the single
+   definition; `variant` is the only thing that differs.
+
+   There is no round trip / one way switch. An empty return field is a one-way
+   trip, which is already how SearchUrl derives the trip type — the tabs were a
+   second control for state the return field expresses, and two controls that can
+   disagree is how a permanently `disabled` Round trip tab went unnoticed on the
+   home page.
+
+   Included with `only`, so every value is passed explicitly and defaulted here
+   rather than depending on whatever the page happens to have in scope. #}
+
+{% set variant = variant|default('bar') %}
+{% set depart_code = depart_code|default('') %}
+{% set arrive_code = arrive_code|default('') %}
+{% set depart_city = depart_city|default('') %}
+{% set arrive_city = arrive_city|default('') %}
+{% set depart_date = depart_date|default('') %}
+{% set return_date = return_date|default('') %}
+{% set cabin_value = cabin_value|default('economy') %}
+
+<form method="get" action="{{ config('site.paths.search') }}" id="searchForm"
+      class="searchbar searchbar--{{ variant }}">
+    <div class="searchbar__bar">
+
+        <div class="searchbar__field searchbar__field--place">
+            <label class="searchbar__label" for="departing_airport">From</label>
+            <input type="text" class="searchbar__input auto-clear" id="departing_airport"
+                   value="{{ depart_city }}"
+                   data-filter="/api/airports/autofill?query=#QUERY#"
+                   placeholder="City or airport" required autocomplete="off" />
+            <input type="hidden" id="departing_airport_value"
+                   name="{{ config('search.form.input.depart_place') }}" value="{{ depart_code }}" />
+        </div>
+
+        <div class="searchbar__field searchbar__field--place">
+            <label class="searchbar__label" for="arrival_airport">To</label>
+            <input type="text" class="searchbar__input auto-clear" id="arrival_airport"
+                   value="{{ arrive_city }}"
+                   data-filter="/api/airports/autofill?query=#QUERY#"
+                   placeholder="City or airport" required autocomplete="off" />
+            <input type="hidden" id="arrival_airport_value"
+                   name="{{ config('search.form.input.arrive_place') }}" value="{{ arrive_code }}" />
+        </div>
+
+        {# Two date fields rather than one range input. The old single control
+           held "depart – return" and so could not express a one-way trip without
+           a tab to switch it; these two can, by leaving the second one empty. #}
+        <div class="searchbar__field searchbar__field--date">
+            <label class="searchbar__label" for="depart_date">When</label>
+            <input type="text" class="searchbar__input js-depart-date" id="depart_date"
+                   placeholder="Add date" autocomplete="off" required readonly />
+            <input type="hidden" id="depart_date_value"
+                   name="{{ config('search.form.input.depart_date') }}" value="{{ depart_date }}" />
+        </div>
+
+        <div class="searchbar__field searchbar__field--date">
+            <label class="searchbar__label" for="return_date">Return</label>
+            <input type="text" class="searchbar__input js-return-date" id="return_date"
+                   placeholder="One way" autocomplete="off" readonly />
+            <input type="hidden" id="return_date_value"
+                   name="{{ config('search.form.input.return_date') }}" value="{{ return_date }}" />
+            {# The way back to a one-way trip, now that no tab does it. Hidden
+               until there is something to clear. #}
+            <button type="button" class="searchbar__clear js-clear-return"
+                    aria-label="Clear return date"{{ return_date ? '' : ' hidden' }}>
+                <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="searchbar__field searchbar__field--party">
+            {% include 'search/passengers.html.twig' with {
+                'party': party|default(null),
+                'cabin_value': cabin_value
+            } only %}
+        </div>
+
+        <button class="searchbar__submit" type="submit">
+            Search flights
+        </button>
+    </div>
+</form>

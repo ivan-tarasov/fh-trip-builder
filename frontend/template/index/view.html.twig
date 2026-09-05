@@ -65,77 +65,15 @@
                 <div class="col-lg-7 text-center text-lg-start"></div>
                 <div class="col-md-10 mx-auto col-lg-5">
 
-                    <nav class="mx-2">
-                        <div class="nav nav-tabs" id="nav-tab" role="tablist">
-                            <button class="nav-link text-uppercase active" id="tab-roundtrip" data-bs-toggle="tab" data-bs-target="#roundtrip" type="button" role="tab" aria-controls="roundtrip" aria-selected="true" disabled>
-                                <i class="fas fa-exchange pe-1"></i>
-                                Round trip
-                            </button>
-                            <button class="nav-link text-uppercase" id="tab-oneway" data-bs-toggle="tab" data-bs-target="#oneway" type="button" role="tab" aria-controls="oneway" aria-selected="false">
-                                <i class="fas fa-plane-arrival pe-1"></i>
-                                One way
-                            </button>
-                        </div>
-                    </nav>
-
-                    <form method="get" action="{{ config('site.paths.search') }}" id="searchForm" class="p-4 p-md-5 rounded-3 bg-body-tertiary">
-                        <div class="form-floating mb-3">
-                            <input type="text" class="form-control auto-clear" id="departing_airport" data-filter="/api/airports/autofill?query=#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
-                            <input type="hidden" id="departing_airport_value" name="{{ config('search.form.input.depart_place') }}" value=""/>
-                            <label for="departing_airport">From:</label>
-                        </div>
-                        <div class="form-floating mb-3">
-                            <input type="text" class="form-control auto-clear" id="arrival_airport" data-filter="/api/airports/autofill?query=#QUERY#" placeholder="Start typing..." required="required" autocomplete="off" />
-                            <input type="hidden" id="arrival_airport_value" name="{{ config('search.form.input.arrive_place') }}" value=""/>
-                            <label for="arrival_airport">To</label>
-                        </div>
-
-                        <div class="tab-content" id="nav-tabContent">
-                            <div class="tab-pane p-0 m-0 show active" id="roundtrip" role="tabpanel"
-                                 aria-labelledby="roundtrip-tab" tabindex="0">
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control js-single-datepicker" id="roundtrip_dates" placeholder="yyyy-mm-dd" data-drop="1" autocomplete="off" required="required" />
-                                            <label for="roundtrip_dates">Depart and Return dates</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="tab-pane p-0 m-0" id="oneway" role="tabpanel" aria-labelledby="oneway-tab"
-                                 tabindex="0">
-                                <div class="form-floating pb-3">
-                                    <div class="form-floating">
-                                        <input type="text" class="form-control js-single-datepicker" id="oneway_depart_date" placeholder="yyyy-mm-dd" data-drop="3" autocomplete="off" required="required" />
-                                        <label for="oneway_depart_date">Depart date</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {% include 'search/passengers.html.twig' only %}
-
-                        <div class="form-floating mb-3">
-                            {# The select had no name attribute, so the cabin was never submitted:
-                               the value below is what finally reaches the search. #}
-                            <select class="form-select" id="floatingSelectGrid" name="{{ config('search.form.input.class') }}">
-                                <option value="economy"{{ 'economy' == 'economy' ? ' selected' : '' }}>Economy</option>
-                                <option value="premium"{{ 'economy' == 'premium' ? ' selected' : '' }}>Premium Economy</option>
-                                <option value="business"{{ 'economy' == 'business' ? ' selected' : '' }}>Business</option>
-                                <option value="first"{{ 'economy' == 'first' ? ' selected' : '' }}>First</option>
-                            </select>
-                            <label for="floatingSelectGrid">Cabin class</label>
-                        </div>
-
-                        <input type="hidden" id="depart_date_value" name="{{ config('search.form.input.depart_date') }}" value="{{ today_date }}"/>
-                        <input type="hidden" id="return_date_value" name="{{ config('search.form.input.return_date') }}" value=""/>
-                        <input type="hidden" id="hidden_triptype" name="triptype" value="roundtrip"/>
-
-                        <button class="w-100 btn btn-lg btn-primary" type="submit">
-                            Search flights
-                            <i class="fa-solid fa-plane ps-2"></i>
-                        </button>
-                    </form>
+                    {# The whole form lives in search/form.html.twig now. The hero used
+                       to carry its own copy: a Round trip tab that shipped `disabled`, a
+                       cabin select comparing 'economy' to itself so it always rendered
+                       Economy, and the passenger partial included with no party so it
+                       always said one adult. #}
+                    {% include 'search/form.html.twig' with {
+                        'variant': 'hero',
+                        'depart_date': today_date
+                    } only %}
                 </div>
             </div>
         </div>
