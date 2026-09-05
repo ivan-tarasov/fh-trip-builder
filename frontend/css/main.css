@@ -3628,3 +3628,74 @@ textarea {
 /* daterangepicker positions itself absolutely against parentEl; without a
    containing block it lands at the dialog's top-left corner on open. */
 .modal-content { position: relative; }
+
+
+/* ==========================================================================
+   #BREADCRUMB
+   ==========================================================================
+   Where you are, said quietly. It sits between the nav and the page's own
+   heading, and it is the only thing on a child page that says so: the header's
+   active test is exact string equality, so no nav item lights up on
+   /my/bookings/100001.
+
+   Sized and coloured as one of this file's micro-labels (see .done__direction
+   and .booking-card__label) rather than as navigation, because it is
+   orientation and the h1 under it should stay the loudest thing on the page.
+   Not uppercased though -- these are page names, and a booking reference read
+   in small caps is harder to check against a phone screen than it looks. */
+.breadcrumbs {
+  padding-top: 1.25rem;
+  font-size: .8125rem;
+}
+
+.breadcrumbs__list {
+  display: flex;
+  /* Wraps rather than scrolls. Three crumbs and two separators overflowed a
+     375px screen once already on the step track above the search results, and
+     took the whole page's horizontal scroll with them. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .0625rem .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbs__item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--ink-muted);
+}
+
+/* Drawn here rather than as an <i>: FontAwesome's JS rewrites every <i> into
+   an <svg>, so a rule selecting the icon element stops applying once it runs. */
+.breadcrumbs__item + .breadcrumbs__item::before {
+  content: '\203A';
+  color: var(--line-strongest);
+  /* The glyph carries no meaning a screen reader needs -- the <ol> already
+     says these are ordered steps -- and generated content is not announced. */
+}
+
+.breadcrumbs__link {
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: color var(--dur-fast) ease;
+}
+
+/* Gated, because on a touchscreen :hover latches on tap and the crumb would
+   stay dark after the page it points at has been left. */
+@media (hover: hover) and (pointer: fine) {
+  .breadcrumbs__link:hover { color: var(--brand-accent); text-decoration: underline; }
+}
+
+/* The page you are on is not a link, and reads a step darker so the trail has
+   an end rather than trailing off. */
+.breadcrumbs__item--current {
+  color: var(--ink-secondary);
+  font-weight: 600;
+  /* A long booking reference or city pair should not push the row wider than
+     the viewport. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

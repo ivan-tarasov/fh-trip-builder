@@ -136,7 +136,9 @@ class Routes
         return false;
     }
 
-    private static string $currentPage;
+    // Defaulted: this is read on every page render, and a typed static with no
+    // default is a fatal for any render that does not come through index.php.
+    private static string $currentPage = '/';
 
     public static function setCurrentPage(string $page): void
     {

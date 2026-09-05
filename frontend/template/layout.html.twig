@@ -6,5 +6,6 @@
    declares no title still renders. #}
 {% set page_title %}{% block title %}{% endblock %}{% endset %}
 {% include 'partials/header.html.twig' with { 'page_title': page_title|trim } %}
+{% include 'partials/breadcrumbs.html.twig' %}
 {% block content %}{{ page_content|default('')|raw }}{% endblock %}
 {% include 'partials/footer.html.twig' %}

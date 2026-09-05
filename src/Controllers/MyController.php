@@ -10,6 +10,7 @@ use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Service\Calendar;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\View\BookingPresenter;
+use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\TwigRenderer;
 
@@ -81,6 +82,13 @@ class MyController extends AbstractController
 
         echo new TwigRenderer()->renderPage('my/bookings/detail.html.twig', [
             'booking' => $booking,
+            // Overrides the trail derived from the path, which would otherwise
+            // end on the row id. Matches the <h1> below it, including for the
+            // rows written before checkout issued references.
+            'breadcrumbs' => Breadcrumbs::trail(
+                $this->request->path(),
+                $booking['reference'] ?? 'Your booking',
+            ),
         ]);
     }
 

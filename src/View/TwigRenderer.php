@@ -75,6 +75,12 @@ final readonly class TwigRenderer
      */
     public function renderPage(string $template, array $context = []): string
     {
-        return $this->render($template, $context + $this->layout->stats());
+        // `+`, not array_merge: a controller that passes its own breadcrumbs
+        // wins, which is how a page named by its data (a booking, by its
+        // reference) overrides the trail derived from the path.
+        return $this->render(
+            $template,
+            $context + ['breadcrumbs' => $this->layout->breadcrumbs()] + $this->layout->stats(),
+        );
     }
 }

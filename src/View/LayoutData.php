@@ -65,6 +65,19 @@ final class LayoutData
         return Routes::getCurrentPage();
     }
 
+    /**
+     * The breadcrumb trail for the page being rendered.
+     *
+     * Empty for pages that show none -- home, and the booking funnel, which
+     * carries a step indicator instead.
+     *
+     * @return list<array{label: string, url: string|null, current: bool}>
+     */
+    public function breadcrumbs(): array
+    {
+        return Breadcrumbs::trail($this->currentPage());
+    }
+
     public function csrfToken(): string
     {
         return Csrf::token();

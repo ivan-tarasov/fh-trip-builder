@@ -1,0 +1,33 @@
+{# Where this page sits in the site.
+
+   Rendered from the layout, so it lands above whatever each page opens with --
+   there is no shared wrapper inside <main> to sit in, since every page opens
+   its own. Outside <main> is where a <nav> landmark belongs anyway.
+
+   An empty trail renders nothing at all: that is how home and the booking
+   funnel opt out. The funnel shows a step indicator instead, which answers how
+   far through the task rather than where in the site.
+
+   The separator is drawn by CSS rather than an <i>, because Font Awesome's JS
+   rewrites every <i> into an <svg> and rules that select one stop applying the
+   moment it runs. #}
+{% set trail = breadcrumbs|default([]) %}
+
+{% if trail|length > 1 %}
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <div class="container">
+            <ol class="breadcrumbs__list">
+                {% for crumb in trail %}
+                    <li class="breadcrumbs__item{{ crumb.current ? ' breadcrumbs__item--current' : '' }}"
+                        {{ crumb.current ? 'aria-current="page"' : '' }}>
+                        {% if crumb.url %}
+                            <a class="breadcrumbs__link" href="{{ crumb.url }}">{{ crumb.label }}</a>
+                        {% else %}
+                            {{ crumb.label }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </nav>
+{% endif %}
