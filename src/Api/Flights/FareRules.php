@@ -87,6 +87,28 @@ final readonly class FareRules
     }
 
     /**
+     * The rule values, in the shape fromRow() reads them back from.
+     *
+     * The values and not lines(): the wording belongs to the page and can be
+     * improved, where a stored sentence would freeze whatever it said the day
+     * the booking was made.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'title' => $this->title,
+            'carry_on' => $this->carryOn,
+            'checked_bag' => $this->checkedBag,
+            'changes' => $this->changes,
+            'cancellation' => $this->cancellation,
+            'seat_selection' => $this->seatSelection,
+            'refundable' => $this->refundable,
+        ];
+    }
+
+    /**
      * The rules as a traveller reads them, strictest first.
      *
      * Baggage leads because it is what people check, and the restrictions that

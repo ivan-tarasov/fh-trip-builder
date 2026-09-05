@@ -21,6 +21,12 @@ final class FlightRepositoryTest extends IntegrationTestCase
     private const float FIXTURE_BASE = 20.00;
     private const float FIXTURE_TAX = 3.00;
 
+    // Reference rows these tests deliberately leave dangling: an airport whose
+    // country is absent, and an airline that was never in the table.
+    private const DANGLING_AIRPORT = 'ZQX';
+    private const DANGLING_COUNTRY = 'QQ';
+    private const MISSING_AIRLINE = 'Q0';
+
     private const LEG_KEYS = [
         'id', 'carrier', 'carrier_name', 'number',
         'dep_code', 'dep_name', 'dep_country', 'dep_city', 'dep_datetime',
@@ -43,6 +49,8 @@ final class FlightRepositoryTest extends IntegrationTestCase
      */
     private array $extraIds = [];
 
+    private ?string $danglingAirport = null;
+
     protected function setUp(): void
     {
         // Two cheap direct YUL->YYZ on the depart date, one cheap return
@@ -64,6 +72,12 @@ final class FlightRepositoryTest extends IntegrationTestCase
         if ($ids !== []) {
             $placeholders = implode(', ', array_fill(0, count($ids), '?'));
             $this->connection()->execute("DELETE FROM flights WHERE id IN ($placeholders)", $ids);
+        }
+
+        // After the flights, so nothing is left pointing at it.
+        if ($this->danglingAirport !== null) {
+            $this->connection()->execute('DELETE FROM airports WHERE code = ?', [$this->danglingAirport]);
+            $this->danglingAirport = null;
         }
     }
 
@@ -381,6 +395,89 @@ final class FlightRepositoryTest extends IntegrationTestCase
                 sprintf('%s advertises a duration it does not deliver', $sort),
             );
         }
+    }
+
+    public function testALegSurvivesAnAirportWhoseCountryIsMissing(): void
+    {
+        // A country supplies a label and a notice, so an airport pointing at one
+        // that is not there has to cost a label. Joined INNER it cost the whole
+        // leg -- while the candidate that produced it, which joins no reference
+        // table at all, went on counting and pricing it.
+        $this->insertDanglingAirport();
+
+        $id = $this->insertFlight(
+            'AC',
+            'YUL',
+            self::DEPART_DATE . ' 06:30:00',
+            self::DANGLING_AIRPORT,
+            self::DEPART_DATE . ' 07:40:00',
+        );
+
+        $this->extraIds[] = $id;
+
+        $leg = $this->repository()->findById($id, CabinClass::Economy);
+
+        self::assertNotNull($leg, 'A missing country must not delete the leg');
+        self::assertSame(self::DANGLING_AIRPORT, $leg['arr_code']);
+        self::assertNull($leg['arr_country'], 'The label is what goes missing');
+        self::assertNotNull($leg['dep_country'], 'The other end still has its country');
+    }
+
+    public function testAnItineraryIsDroppedRatherThanShownShortOfALeg(): void
+    {
+        // Hydration can still fail to build a leg for a reason that is not a
+        // label -- here an airline absent from the table. A card that keeps its
+        // stop count and its price while quietly losing a leg is selling
+        // something it is not showing, so the row goes instead.
+        $orphan = $this->insertFlight(
+            self::MISSING_AIRLINE,
+            'YUL',
+            self::DEPART_DATE . ' 05:00:00',
+            'YYZ',
+            self::DEPART_DATE . ' 06:15:00',
+        );
+
+        $this->extraIds[] = $orphan;
+
+        $result = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 0, 10, CabinClass::Economy);
+
+        self::assertNotEmpty($result['rows']);
+
+        foreach ($result['rows'] as $row) {
+            self::assertCount(
+                $row['stops'] + 1,
+                $row['legs'],
+                'A card must show every leg it counts and charges for',
+            );
+
+            foreach ($row['legs'] as $leg) {
+                self::assertNotSame($orphan, (int) $leg['id'], 'The unbuildable leg must not be offered');
+            }
+        }
+    }
+
+    private function insertDanglingAirport(): void
+    {
+        // Placed beside YUL so the detour cap has no opinion about it.
+        $this->connection()->execute(
+            'INSERT INTO airports (code, title, country_code, city_code, city,'
+            . ' timezone, timezone_name, latitude, longitude, altitude)'
+            . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                self::DANGLING_AIRPORT,
+                'Dangling Country Field',
+                self::DANGLING_COUNTRY,
+                self::DANGLING_AIRPORT,
+                'Nowhere',
+                -4.00,
+                'America/Toronto',
+                45.0000,
+                -73.0000,
+                10,
+            ],
+        );
+
+        $this->danglingAirport = self::DANGLING_AIRPORT;
     }
 
     /**

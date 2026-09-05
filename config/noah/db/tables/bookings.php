@@ -23,7 +23,7 @@ return [
 
     'primary' => 'id',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
     'auto_increment' => 100001,
 
     /*
@@ -39,7 +39,12 @@ return [
     */
     'indexes' => [
         ['name' => 'session_departure', 'columns' => ['session_id', 'departure_time']],
-        ['name' => 'reference', 'columns' => ['reference']],
+        // UNIQUE: unusedReference() picks a code, checks it is free and then
+        // inserts, which is two steps and can be raced. Without the constraint
+        // the loser wins silently and two bookings answer to the same code --
+        // the one a traveller quotes down a phone, and the one findByReference()
+        // resolves with LIMIT 1.
+        ['name' => 'reference', 'columns' => ['reference'], 'unique' => true],
     ],
 
     'columns' => [
@@ -92,6 +97,7 @@ return [
             'name' => 'reference',
             'type' => 'char',
             'length' => 6,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -155,6 +161,7 @@ return [
             'name' => 'passenger_gender',
             'type' => 'char',
             'length' => 1,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -168,6 +175,18 @@ return [
             'nullable' => true,
             'auto_inc' => false,
             'comment' => false,
+        ],
+        [
+            'name' => 'fare_rules',
+            'type' => 'json',
+            'length' => null,
+            'default' => ['NULL'],
+            'nullable' => true,
+            'auto_inc' => false,
+            // What the ticket allows, kept because nothing else does. The legs
+            // it was folded from are deleted once they have flown, so a booking
+            // that does not hold its own rules cannot recover them.
+            'comment' => 'Fare rules as sold, folded across the legs',
         ],
         [
             'name' => 'price_base',
@@ -200,6 +219,7 @@ return [
             'name' => 'card_last4',
             'type' => 'char',
             'length' => 4,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,

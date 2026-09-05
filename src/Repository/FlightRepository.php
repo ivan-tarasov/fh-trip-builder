@@ -155,7 +155,14 @@ final readonly class FlightRepository
 
         $legs = $this->hydrateLegs($this->collectLegIds($window), $cabin);
 
-        $rows = array_map(fn(array $c): array => $this->assembleItinerary($c, $legs, $badges), $window);
+        // array_filter, because an itinerary whose legs did not all hydrate is
+        // dropped rather than shown short. `total` is counted from candidates
+        // and can then be one high, which is a cosmetic inaccuracy; a price for
+        // legs that are not on the card is not.
+        $rows = array_values(array_filter(array_map(
+            fn(array $c): ?array => $this->assembleItinerary($c, $legs, $badges),
+            $window,
+        )));
 
         // Across every match, not just this page — otherwise page two would
         // call its own first row the cheapest.
@@ -1061,8 +1068,14 @@ final readonly class FlightRepository
             . ' INNER JOIN ' . Table::Airports->value . ' depart_airport ON flight.departure_airport = depart_airport.code'
             . ' INNER JOIN ' . Table::Airports->value . ' arrive_airport ON flight.arrival_airport = arrive_airport.code'
             . ' INNER JOIN ' . Table::Airlines->value . ' airline ON flight.airline = airline.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' depart_country ON depart_airport.country_code = depart_country.code'
-            . ' INNER JOIN ' . Table::Countries->value . ' arrive_country ON arrive_airport.country_code = arrive_country.code'
+            // LEFT, as AirportRepository already joins this table, because a
+            // country supplies a label and a notice and nothing structural.
+            // Joined INNER, an airport whose country_code matched no row took
+            // the whole leg out of the result -- while the candidate it came
+            // from, which joins none of these tables, went on counting and
+            // pricing it.
+            . ' LEFT JOIN ' . Table::Countries->value . ' depart_country ON depart_airport.country_code = depart_country.code'
+            . ' LEFT JOIN ' . Table::Countries->value . ' arrive_country ON arrive_airport.country_code = arrive_country.code'
             // LEFT: a flight whose type code is missing from the aircraft
             // table should still return, just without a name.
             . ' LEFT JOIN ' . Table::Aircraft->value . ' aircraft_type ON flight.aircraft = aircraft_type.code'
@@ -1121,18 +1134,29 @@ final readonly class FlightRepository
      * @param array<string, mixed> $candidate
      * @param array<int, array<string, mixed>> $legs
      * @param array<string, list<string>> $badges
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null null when a leg could not be built
      */
-    private function assembleItinerary(array $candidate, array $legs, array $badges = []): array
+    private function assembleItinerary(array $candidate, array $legs, array $badges = []): ?array
     {
         $ordered = [];
 
         foreach (['seg1', 'seg2', 'seg3'] as $seg) {
             $id = $candidate[$seg] ?? null;
 
-            if ($id !== null && isset($legs[(int) $id])) {
-                $ordered[] = $legs[(int) $id];
+            if ($id === null) {
+                continue;
             }
+
+            // A leg the hydration could not build -- a missing airport or
+            // airline -- used to be skipped while the candidate's stop count
+            // and price came through untouched, so the card showed fewer legs
+            // than it claimed at a price for legs it was not showing. There is
+            // nothing to sell here, so there is nothing to show.
+            if (!isset($legs[(int) $id])) {
+                return null;
+            }
+
+            $ordered[] = $legs[(int) $id];
         }
 
         return [

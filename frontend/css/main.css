@@ -3213,6 +3213,8 @@ textarea {
   color: #495057;
 }
 .rules__list { margin: 0; padding: 0; list-style: none; }
+/* In a booking's Fare row the list follows the brand name, so it needs the gap a standalone block does not. */
+.rules__list--compact { margin-top: .375rem; }
 .rules__item {
   display: flex;
   gap: .5rem;

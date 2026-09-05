@@ -123,9 +123,10 @@ abstract class AbstractCommand extends Command
     protected function getAllDatabaseTables(): array
     {
         $rows = $this->connection()->fetchAll(
+            // DATABASE() rather than $_ENV -- see the note in Install::tableExists().
             'SELECT table_name AS name FROM information_schema.tables'
-            . ' WHERE table_schema = ? AND table_type = ?',
-            [$_ENV['DB_DATABASE'] ?? '', 'BASE TABLE'],
+            . ' WHERE table_schema = DATABASE() AND table_type = ?',
+            ['BASE TABLE'],
         );
 
         return array_map(static fn(array $row): string => (string) $row['name'], $rows);

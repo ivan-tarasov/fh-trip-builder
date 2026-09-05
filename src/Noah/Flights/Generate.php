@@ -477,14 +477,22 @@ class Generate extends AbstractCommand
         // A single PDO connection so the TEMPORARY TABLE stays visible across steps.
         $connection = $this->connection();
 
-        // 1. Creating a temporary table to keep duplicates
+        // 1. Collecting the rows to delete: every flight of a duplicated
+        //    airline/number/date except the lowest id, which is the one kept.
+        //    Holding the rows rather than the groups is what makes the count
+        //    below the number actually deleted -- a group of three reported one
+        //    -- and lets step 2 match on the primary key instead of deriving
+        //    DATE(departure_time) again for every row it looks at.
         $progressIndicator->advance();
         $connection->pdo()->exec(sprintf(
             'CREATE TEMPORARY TABLE %s AS
-            SELECT airline, number, DATE(departure_time) AS flight_date, MIN(id) AS min_id
-            FROM ' . Table::Flights->value . '
-            GROUP BY airline, number, DATE(departure_time)
-            HAVING COUNT(*) > 1;',
+            SELECT id FROM (
+                SELECT id, ROW_NUMBER() OVER (
+                    PARTITION BY airline, number, DATE(departure_time) ORDER BY id
+                ) AS row_in_group
+                FROM ' . Table::Flights->value . '
+            ) ranked
+            WHERE row_in_group > 1;',
             $tempTable,
         ));
 
@@ -496,10 +504,7 @@ class Generate extends AbstractCommand
         $progressIndicator->advance();
         $connection->pdo()->exec(sprintf(
             'DELETE flight FROM ' . Table::Flights->value . ' flight
-            JOIN %s temp ON
-            flight.airline = temp.airline AND flight.number = temp.number AND
-            DATE(flight.departure_time) = temp.flight_date
-            WHERE flight.id <> temp.min_id',
+            JOIN %s temp ON flight.id = temp.id',
             $tempTable,
         ));
 
