@@ -20,8 +20,21 @@ final readonly class SearchRepository
      */
     public function topSearches(int $limit): array
     {
+        // Only trips that can still be taken. A row is identified partly by its
+        // departure date, so a popular search ages into a dead one: the most
+        // searched route on the home page was offering a date two days before
+        // the earliest flight in the table, and returned nothing when clicked.
+        // The card prints the date without a year, so it read as an upcoming
+        // trip rather than a stale one.
+        //
+        // Compared as a string because `depart` is CHAR(10) holding 'Y-m-d',
+        // which orders correctly that way; against CURDATE() MySQL would coerce
+        // the column instead.
         return $this->connection->fetchAll(
-            'SELECT * FROM ' . Table::Search->value . ' ORDER BY search_count DESC LIMIT ' . $limit,
+            'SELECT * FROM ' . Table::Search->value
+            . ' WHERE depart >= ?'
+            . ' ORDER BY search_count DESC LIMIT ' . $limit,
+            [date('Y-m-d')],
         );
     }
 
