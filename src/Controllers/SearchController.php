@@ -287,6 +287,13 @@ class SearchController extends AbstractController
                 'step_date' => $this->data->step === 2
                     ? $this->get[self::GET_RETURN]
                     : $this->get[self::GET_DEPART],
+                // The last day the search covers. A flexible search draws its
+                // cards from up to three days, and the header named only the
+                // first of them -- so a page of results dated the 17th sat
+                // under a line that said the 15th.
+                'step_date_until' => $this->data->step === 2
+                    ? $this->searchUrl->returnUntil()
+                    : $this->searchUrl->departUntil(),
                 'price_mode' => $this->data->price_mode,
                 'selected' => $this->data->selected === null
                     ? null

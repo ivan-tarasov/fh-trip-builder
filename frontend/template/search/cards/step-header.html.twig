@@ -28,7 +28,13 @@
         {% if step == 3 %}
             &middot; {{ depart_date_label|date('D, j M') }} &ndash; {{ return_date_label|date('D, j M Y') }}
         {% else %}
-            {% if step_date %}&middot; {{ step_date|date('D, j M Y') }}{% endif %}
+            {% if step_date %}
+                {%- if step_date_until and step_date_until != step_date %}
+                    &middot; {{ step_date|date('D, j M') }} &ndash; {{ step_date_until|date('D, j M Y') }}
+                {%- else %}
+                    &middot; {{ step_date|date('D, j M Y') }}
+                {%- endif %}
+            {% endif %}
             &middot; {{ total_flights_text }}
         {% endif %}
     </p>

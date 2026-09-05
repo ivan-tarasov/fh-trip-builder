@@ -647,6 +647,31 @@
             // a mouse can see.
             let entries = [];
 
+            /**
+             * Point the box -- and with it the screen reader -- at one row.
+             *
+             * Every row is cleared first rather than just the one being left
+             * behind: a listbox may hold one selected option, and render marks
+             * whatever is already chosen, so without this the arrows would add
+             * a second.
+             */
+            const mark = function (rows, index) {
+                rows.forEach(function (row) {
+                    row.classList.remove('is-active');
+                    row.setAttribute('aria-selected', 'false');
+                });
+
+                const row = rows[index];
+
+                if (!row) {
+                    return;
+                }
+
+                row.classList.add('is-active');
+                row.setAttribute('aria-selected', 'true');
+                input.setAttribute('aria-activedescendant', row.id);
+            };
+
             const render = function (query) {
                 const needle = query.trim().toLowerCase();
                 // Rank, do not just filter. Alphabetical order alone answered
@@ -765,8 +790,18 @@
                 // is a row, and the arrow keys walk both.
                 const rows = list.querySelectorAll('[role="option"]');
 
+                // Focus stays in the text box while the arrows walk the list, so
+                // the only thing telling a screen reader which row is being read
+                // is aria-activedescendant. That is an id, which means every row
+                // has to carry one.
+                rows.forEach(function (row, i) {
+                    row.id = listId + '-option-' + i;
+                });
+
                 if (active >= 0 && rows[active]) {
-                    rows[active].classList.add('is-active');
+                    mark(rows, active);
+                } else {
+                    input.removeAttribute('aria-activedescendant');
                 }
             };
 
@@ -779,6 +814,7 @@
             const close = function () {
                 list.hidden = true;
                 input.setAttribute('aria-expanded', 'false');
+                input.removeAttribute('aria-activedescendant');
                 active = -1;
             };
 
@@ -806,18 +842,17 @@
 
                 const rows = list.querySelectorAll('[role="option"]');
 
-                if (rows[active]) { rows[active].classList.remove('is-active'); }
-
                 active = (active + step + entries.length) % entries.length;
 
                 // Move the marker rather than rebuild the list: re-rendering on
                 // every arrow press meant holding the key down rebuilt hundreds
                 // of rows per second.
+                mark(rows, active);
+
                 const el = rows[active];
 
-                if (el) {
-                    el.classList.add('is-active');
-                    if (el.scrollIntoView) { el.scrollIntoView({ block: 'nearest' }); }
+                if (el && el.scrollIntoView) {
+                    el.scrollIntoView({ block: 'nearest' });
                 }
             };
 
