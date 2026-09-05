@@ -8,6 +8,7 @@ use Exception;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Party;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
@@ -45,6 +46,11 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('config', Config::get(...)));
 
         // ...and the dynamic header/footer data (see LayoutData).
+        // A global, so it reaches the passenger partial through the `only`
+        // includes that otherwise cut the context off. There is one definition
+        // of how many seats a booking may hold and it is Party's.
+        $this->twig->addGlobal('max_seats', Party::MAX_SEATS);
+
         $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));
         // Given the trail the partial is about to draw, so the two agree.
         $this->twig->addFunction(new TwigFunction('breadcrumb_jsonld', Breadcrumbs::structuredData(...)));

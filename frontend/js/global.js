@@ -83,48 +83,89 @@
     /*[ Search form: who is flying ]
     ===========================================================*/
     try {
-        const trigger = document.querySelector('.js-party-trigger');
-        const panel = document.getElementById('party-panel');
+        // Every one on the page: the search bar has one, and a booking's rebook
+        // dialog now uses the same control rather than a third copy of it.
+        document.querySelectorAll('.js-party-trigger').forEach(function (trigger) {
+            const panel = document.getElementById(trigger.getAttribute('aria-controls'));
 
-        if (trigger && panel) {
-            const summary = document.querySelector('.js-party-summary');
-            const counts = panel.querySelectorAll('.js-party-count');
-            const cabin = panel.querySelector('.js-party-cabin');
+            if (!panel) { return; }
+
+            const summary = trigger.querySelector('.js-party-summary');
+            const counts = [...panel.querySelectorAll('.js-party-count')];
+            const cabins = [...panel.querySelectorAll('.js-party-cabin')];
+            const maxSeats = parseInt(panel.dataset.maxSeats, 10) || 9;
+
+            const at = (key) => counts.find(c => c.id.endsWith(key));
+            const adults = at('adults');
+            const children = at('children');
+            const infants = at('infants');
+            const value = (select) => parseInt(select.value, 10) || 0;
+
+            // Party::fromCounts() in the browser, from its own number: somebody
+            // is responsible for the booking, a lap needs an adult attached to
+            // it, and the cabin has a limit that infants do not count against
+            // because they are not in a seat. Enforced here only so the panel
+            // cannot offer a search the server will refuse -- PHP still decides.
+            const ceiling = (select) => {
+                if (select === adults) { return maxSeats - value(children); }
+                if (select === children) { return maxSeats - value(adults); }
+
+                return value(adults);
+            };
+
+            const floor = (select) => parseInt(select.dataset.floor, 10) || 0;
+
+            const write = (select, next) => {
+                select.value = next === 0 ? (floor(select) === 0 ? '' : '0') : String(next);
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+
+            const paint = () => {
+                counts.forEach((select) => {
+                    const row = select.closest('.party__row');
+                    const now = value(select);
+
+                    row.querySelector('.party__value').textContent = String(now);
+                    row.querySelector('.js-party-less').disabled = now <= floor(select);
+                    row.querySelector('.js-party-more').disabled = now >= ceiling(select);
+                });
+
+                const heads = counts.reduce((sum, select) => sum + value(select), 0);
+                const cabin = cabins.find(c => c.checked);
+
+                summary.textContent = heads + ' '
+                    + (heads === 1 ? summary.dataset.one : summary.dataset.many)
+                    + ', ' + (cabin ? cabin.closest('label').textContent.trim() : '');
+            };
 
             const open = (yes) => {
                 panel.hidden = !yes;
                 trigger.setAttribute('aria-expanded', yes ? 'true' : 'false');
             };
 
-            const retitle = () => {
-                let heads = 0;
+            panel.addEventListener('click', (event) => {
+                const step = event.target.closest('.js-party-less, .js-party-more');
 
-                counts.forEach((select) => {
-                    heads += parseInt(select.value, 10) || 0;
-                });
+                if (!step) { return; }
 
-                const word = heads === 1 ? summary.dataset.one : summary.dataset.many;
+                const select = step.closest('.party__row').querySelector('.js-party-count');
+                const now = value(select);
+                const next = step.classList.contains('js-party-more') ? now + 1 : now - 1;
 
-                summary.textContent = heads + ' ' + word + ', '
-                    + cabin.options[cabin.selectedIndex].text;
-            };
+                if (next < floor(select) || next > ceiling(select)) { return; }
 
-            trigger.addEventListener('click', () => open(panel.hidden));
+                write(select, next);
 
-            // The counts are only valid together -- there must be an adult, and
-            // no more infants than there are laps to hold them. Party enforces
-            // this server side; without it here the panel can offer a search
-            // that comes back rejected.
-            panel.addEventListener('change', () => {
-                const adults = parseInt(counts[0].value, 10) || 0;
-                const infants = counts[2];
-
-                if ((parseInt(infants.value, 10) || 0) > adults) {
-                    infants.value = adults > 0 ? String(adults) : '';
+                // Fewer adults can leave more infants than laps to hold them.
+                if (select === adults && value(infants) > next) {
+                    write(infants, next);
                 }
 
-                retitle();
+                paint();
             });
+
+            panel.addEventListener('change', paint);
+            trigger.addEventListener('click', () => open(panel.hidden));
 
             document.addEventListener('click', (event) => {
                 if (!panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) {
@@ -139,8 +180,8 @@
                 }
             });
 
-            retitle();
-        }
+            paint();
+        });
     } catch (er) {
         console.log(er);
     }

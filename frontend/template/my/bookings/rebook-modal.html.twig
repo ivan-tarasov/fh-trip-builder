@@ -41,56 +41,15 @@
                     <label for="rebook-date-{{ booking.id }}">{{ roundtrip ? 'Depart and return dates' : 'Departure date' }}</label>
                 </div>
 
-                <div class="row g-2 mb-3">
-                    <div class="col">
-                        <div class="form-floating">
-                            <select class="form-select" id="rebook-adults-{{ booking.id }}"
-                                    name="{{ config('search.form.input.adults') }}">
-                                {% for n in 1..9 %}
-                                    <option value="{{ n }}"{{ n == 1 ? ' selected' : '' }}>{{ n }}{{ n == 9 ? ' (maximum)' : '' }}</option>
-                                {% endfor %}
-                            </select>
-                            <label for="rebook-adults-{{ booking.id }}">Adult</label>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-floating">
-                            <select class="form-select" id="rebook-children-{{ booking.id }}"
-                                    name="{{ config('search.form.input.children') }}">
-                                <option value="" selected>&ndash;</option>
-                                {% for n in 1..9 %}
-                                    <option value="{{ n }}">{{ n }}{{ n == 9 ? ' (maximum)' : '' }}</option>
-                                {% endfor %}
-                            </select>
-                            <label for="rebook-children-{{ booking.id }}">Child</label>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="form-floating">
-                            <select class="form-select" id="rebook-infants-{{ booking.id }}"
-                                    name="{{ config('search.form.input.infants') }}">
-                                <option value="" selected>&ndash;</option>
-                                {% for n in 1..4 %}
-                                    <option value="{{ n }}">{{ n }}{{ n == 4 ? ' &ndash; maximum' : '' }}</option>
-                                {% endfor %}
-                            </select>
-                            <label for="rebook-infants-{{ booking.id }}">Infant</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-floating">
-                    {# Defaults to the cabin that was bought, which is the answer
-                       most of the time and the whole point of repeating a trip. #}
-                    <select class="form-select" id="rebook-class-{{ booking.id }}"
-                            name="{{ config('search.form.input.class') }}">
-                        <option value="economy"{{ booking.rebook.class == 'economy' ? ' selected' : '' }}>Economy</option>
-                        <option value="premium"{{ booking.rebook.class == 'premium' ? ' selected' : '' }}>Premium Economy</option>
-                        <option value="business"{{ booking.rebook.class == 'business' ? ' selected' : '' }}>Business</option>
-                        <option value="first"{{ booking.rebook.class == 'first' ? ' selected' : '' }}>First</option>
-                    </select>
-                    <label for="rebook-class-{{ booking.id }}">Cabin class</label>
-                </div>
+                {# The same control the search bar uses. This dialog carried a
+                   third copy of these selects -- its own ids, its own labels,
+                   and an infant cap of four where the form allowed nine. The
+                   cabin defaults to the one that was bought, which is the answer
+                   most of the time and the whole point of repeating a trip. #}
+                {% include 'search/passengers.html.twig' with {
+                    'prefix': 'rebook-' ~ booking.id,
+                    'cabin_value': booking.rebook.class
+                } only %}
             </div>
 
             <div class="modal-footer">

@@ -1,24 +1,28 @@
-{# Who is travelling, and in what. Shared by the home page and the results
-   header, which carried two different sets of these -- four types on one, three
-   on the other, different ids, different labels, and not one of them with a
-   `name`, so no browser ever submitted a passenger count.
+{# Who is travelling, and in what. Shared by the home page, the results header
+   and the rebook dialog, which carried three different sets of these -- four
+   types on one, three on the others, different ids, different limits, and for a
+   long time not one of them with a `name`, so no browser ever submitted a
+   passenger count.
 
    Three types, matching what the URL spells and what the fare model prices. An
-   infant here is on a lap: it takes no seat, which is why it is cheap and why
-   there may not be more of them than there are adults to hold them.
+   infant here is on a lap: it takes no seat, which is why it is cheap, why it
+   does not count against the seat limit, and why there may not be more of them
+   than there are adults to hold them.
 
    One trigger, not four fields. Four controls will not fit a single-row bar --
    which is the whole reason the reference collapses them -- and "two adults in
-   economy" is one decision anyway. The selects behind it are the real controls
-   and the ones that submit; the panel is a place to put them.
+   economy" is one decision anyway.
 
-   The cabin used to be compared against the literal `'economy' == 'economy'` on
-   the home page, so it rendered Economy selected whatever had been chosen. It
-   takes the value now, like every other field here. #}
+   The selects are still here, hidden. They are what submits, what the empty
+   select disabler acts on so `children=&infants=` stays out of a shared URL,
+   and what the page is left with if the script never runs. The steppers write
+   to them; they are a layer on top, exactly as combo__native is for a place. #}
+{% set prefix = prefix|default('passengers') %}
+{% set panel_id = prefix ~ '-panel' %}
 {% set types = [
     { 'key': 'adults', 'label': 'Adults', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
     { 'key': 'children', 'label': 'Children', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
-    { 'key': 'infants', 'label': 'Infants', 'hint': 'on lap, no seat', 'from': 0, 'value': party.infants|default(0) }
+    { 'key': 'infants', 'label': 'Infants', 'hint': 'on a lap, no seat', 'from': 0, 'value': party.infants|default(0) }
 ] %}
 {% set cabin_value = cabin_value|default('economy') %}
 {# A map, so the label the trigger shows is a lookup rather than a loop: `set`
@@ -34,43 +38,57 @@
 
 <div class="party">
     <button type="button" class="party__trigger js-party-trigger"
-            aria-expanded="false" aria-controls="party-panel">
+            aria-expanded="false" aria-controls="{{ panel_id }}">
         <span class="searchbar__label">Passengers</span>
         <span class="party__summary js-party-summary"
               data-one="passenger" data-many="passengers">{{ heads }} {{ heads == 1 ? 'passenger' : 'passengers' }}, {{ cabin_label }}</span>
     </button>
 
-    <div class="party__panel" id="party-panel" hidden>
+    {# The rules come from Party::fromCounts() as a number rather than being
+       retyped in JavaScript: there is one definition of how many seats a booking
+       may hold, and it is in PHP. #}
+    <div class="party__panel" id="{{ panel_id }}" data-max-seats="{{ max_seats }}" hidden>
         {% for type in types %}
-            {% set id = 'passengers_' ~ type.key %}
+            {% set id = prefix ~ '_' ~ type.key %}
             <div class="party__row">
-                <label class="party__name" for="{{ id }}">
+                <span class="party__name" id="{{ id }}-label">
                     {{ type.label }}
                     <small>{{ type.hint }}</small>
-                </label>
-                <select class="party__select js-party-count" id="{{ id }}"
-                        name="{{ config('search.form.input.' ~ type.key) }}">
-                    {# "No children" is the absence of a number, not a zero. The
-                       empty option is dropped on submit by the same handler the
-                       rebook dialog uses, so it stays out of a shared URL. #}
+                </span>
+
+                <div class="party__stepper">
+                    <button type="button" class="party__step js-party-less"
+                            aria-label="Fewer {{ type.label|lower }}">&minus;</button>
+                    <output class="party__value" for="{{ id }}" aria-live="polite">{{ type.value }}</output>
+                    <button type="button" class="party__step js-party-more"
+                            aria-label="More {{ type.label|lower }}">+</button>
+                </div>
+
+                <select class="party__native js-party-count" id="{{ id }}"
+                        name="{{ config('search.form.input.' ~ type.key) }}"
+                        data-floor="{{ type.from }}" aria-labelledby="{{ id }}-label"
+                        tabindex="-1" aria-hidden="true">
+                    {# "No children" is the absence of a number, not a zero. #}
                     {% if type.from == 0 %}
                         <option value=""{{ type.value == 0 ? ' selected' : '' }}>0</option>
                     {% endif %}
-                    {% for n in 1..9 %}
-                        <option value="{{ n }}"{{ type.value == n ? ' selected' : '' }}>{{ n }}{{ n == 9 ? ' (maximum)' : '' }}</option>
+                    {% for n in 1..max_seats %}
+                        <option value="{{ n }}"{{ type.value == n ? ' selected' : '' }}>{{ n }}</option>
                     {% endfor %}
                 </select>
             </div>
         {% endfor %}
 
-        <div class="party__row party__row--cabin">
-            <label class="party__name" for="cabin_class">Cabin</label>
-            <select class="party__select js-party-cabin" id="cabin_class"
-                    name="{{ config('search.form.input.class') }}">
-                {% for value, label in cabins %}
-                    <option value="{{ value }}"{{ cabin_value == value ? ' selected' : '' }}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
+        <fieldset class="party__cabins">
+            <legend class="party__name">Cabin</legend>
+            {% for value, label in cabins %}
+                <label class="party__cabin">
+                    {{ label }}
+                    <input type="radio" class="js-party-cabin"
+                           name="{{ config('search.form.input.class') }}" value="{{ value }}"
+                           {{ cabin_value == value ? ' checked' : '' }} />
+                </label>
+            {% endfor %}
+        </fieldset>
     </div>
 </div>
