@@ -36,10 +36,13 @@ final readonly class SearchUrl
      * that airport unaddressable.
      */
     private const string PATTERN = '#^/?search/'
-        . '(?<from>[A-Z0-9]{3})(?<depart>\d{4})(?<to>[A-Z0-9]{3})(?<return>\d{4})?'
+        . '(?<from>[A-Z0-9]{3})(?<depart>\d{6})(?<to>[A-Z0-9]{3})(?<return>\d{6})?'
         . '(?<cabin>[YWCF])(?<pax>\d{1,3})$#';
 
     private const int MAX_PASSENGERS = 9;
+
+    /** Two digits is a century's worth, and this one is not running out. */
+    private const int CENTURY = 2000;
 
     public function __construct(
         public string $from,
@@ -60,29 +63,20 @@ final readonly class SearchUrl
      * for. This is also the first format check `from`, `to` and `depart` have
      * ever had -- the query-string path validated none of them.
      */
-    public static function parse(string $path, ?DateTimeImmutable $now = null): ?self
+    public static function parse(string $path): ?self
     {
         if (preg_match(self::PATTERN, trim($path), $match) !== 1) {
             return null;
         }
 
-        $now ??= new DateTimeImmutable();
-        $depart = self::resolveDate($match['depart'], $now);
+        $depart = self::readDate($match['depart']);
+        $return = $match['return'] === '' ? null : self::readDate($match['return']);
 
-        if ($depart === null) {
+        // A date the calendar does not have is not a search. Past dates are
+        // read faithfully and simply find nothing, which is the honest answer
+        // and what the query-string form has always done.
+        if ($depart === null || ($match['return'] !== '' && $return === null)) {
             return null;
-        }
-
-        $return = null;
-
-        if ($match['return'] !== '') {
-            // Anchored to the departure, not to today: a trip leaving on 30
-            // December and back on 5 January returns in the following year.
-            $return = self::resolveDate($match['return'], new DateTimeImmutable($depart));
-
-            if ($return === null) {
-                return null;
-            }
         }
 
         $pax = str_split($match['pax']);
@@ -167,34 +161,26 @@ final readonly class SearchUrl
     }
 
     /**
-     * DDMM to a full date, taking the next occurrence -- the same reading a
-     * traveller gives "the 16th of September" in December.
+     * DDMMYY to a full date, or null when the calendar has no such day.
+     *
+     * checkdate rather than a DateTimeImmutable: the latter rolls 31 February
+     * into March without complaint, which would quietly answer a different
+     * search from the one the URL names.
      */
-    private static function resolveDate(string $ddmm, DateTimeImmutable $after): ?string
+    private static function readDate(string $ddmmyy): ?string
     {
-        $day = (int) substr($ddmm, 0, 2);
-        $month = (int) substr($ddmm, 2, 2);
-        $year = (int) $after->format('Y');
+        $day = (int) substr($ddmmyy, 0, 2);
+        $month = (int) substr($ddmmyy, 2, 2);
+        $year = self::CENTURY + (int) substr($ddmmyy, 4, 2);
 
-        for ($attempt = 0; $attempt < 5; $attempt++) {
-            // checkdate first: a bare DateTimeImmutable would roll 31 February
-            // into March rather than rejecting it, and 29 February is only a
-            // date in some of the years this loop tries.
-            if (checkdate($month, $day, $year + $attempt)) {
-                $date = sprintf('%04d-%02d-%02d', $year + $attempt, $month, $day);
-
-                if ($date >= $after->format('Y-m-d')) {
-                    return $date;
-                }
-            }
-        }
-
-        return null;
+        return checkdate($month, $day, $year)
+            ? sprintf('%04d-%02d-%02d', $year, $month, $day)
+            : null;
     }
 
     private static function shortDate(string $date): string
     {
-        return date('dm', (int) strtotime($date));
+        return date('dmy', (int) strtotime($date));
     }
 
     private static function validCode(string $code): bool

@@ -24,7 +24,7 @@ final class TwigRendererTest extends TestCase
     {
         $html = $this->renderer->render('search/redirect.html.twig', [
             'image_url' => '//cdn.example.test/gif.gif',
-            'search_url' => '/search/YUL1609LHRY1',
+            'search_url' => '/search/YUL160926LHRY1',
         ]);
 
         self::assertStringContainsString('window.location.replace', $html);
