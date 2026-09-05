@@ -29,19 +29,22 @@ return [
     | remove one traveller from a party of four and the rest either go sparse or
     | get renumbered, silently repointing anything that referenced position 3.
     |
-    | (booking_id, position) is indexed rather than unique because the installer
-    | emits only KEY. Only createFor() writes these rows, and it writes them in
-    | sequence, so the pairing holds in practice.
+    | (booking_id, position) is unique: only createFor() writes these rows and it
+    | writes them in sequence, so the constraint states what already held rather
+    | than changing it.
     |
     */
 
     'primary' => 'id',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     'indexes' => [
         // Every read is one booking's travellers in the order they were entered.
-        ['name' => 'booking_position', 'columns' => ['booking_id', 'position']],
+        // UNIQUE because two travellers cannot both be third in the same party:
+        // it was a plain KEY only because the installer could not emit anything
+        // else, which is no longer true.
+        ['name' => 'booking_position', 'columns' => ['booking_id', 'position'], 'unique' => true],
     ],
 
     'columns' => [
@@ -76,6 +79,7 @@ return [
             'name' => 'type',
             'type' => 'char',
             'length' => 1,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -102,6 +106,7 @@ return [
         [
             'name' => 'dob',
             'type' => 'date',
+            'length' => null,
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -111,6 +116,7 @@ return [
             'name' => 'gender',
             'type' => 'char',
             'length' => 1,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
