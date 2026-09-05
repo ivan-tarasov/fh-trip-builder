@@ -13,7 +13,9 @@
    moment it runs. #}
 {% set trail = breadcrumbs|default([]) %}
 
-{% if trail|length > 1 %}
+{# Empty or not: a trail is never one crumb, since anything with a name also
+   has Home above it. The old `> 1` read as guarding a case that cannot arise. #}
+{% if trail is not empty %}
     <nav class="breadcrumbs" aria-label="Breadcrumb">
         <div class="container">
             <ol class="breadcrumbs__list">
