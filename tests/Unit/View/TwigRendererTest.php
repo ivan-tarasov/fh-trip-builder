@@ -24,7 +24,7 @@ final class TwigRendererTest extends TestCase
     {
         $html = $this->renderer->render('search/redirect.html.twig', [
             'image_url' => '//cdn.example.test/gif.gif',
-            'search_params' => 'from=YUL',
+            'search_url' => '/search/YUL1609LHRY1',
         ]);
 
         self::assertStringContainsString('window.location.replace', $html);
@@ -35,7 +35,7 @@ final class TwigRendererTest extends TestCase
     {
         $html = $this->renderer->render('search/redirect.html.twig', [
             'image_url' => 'x"><script>alert(1)</script>',
-            'search_params' => '',
+            'search_url' => '',
         ]);
 
         self::assertStringNotContainsString('<script>alert(1)', $html);
@@ -46,7 +46,7 @@ final class TwigRendererTest extends TestCase
     {
         $html = $this->renderer->render('search/redirect.html.twig', [
             'image_url' => '',
-            'search_params' => 'a="b"&c=<d>',
+            'search_url' => '/search/x"&<d>',
         ]);
 
         // \uXXXX sequences, built here without a literal backslash in the source.
@@ -54,7 +54,7 @@ final class TwigRendererTest extends TestCase
 
         // The raw quote must not survive unescaped into the JS string; escape('js')
         // emits \uXXXX sequences instead.
-        self::assertStringNotContainsString('?a="b"', $html);
+        self::assertStringNotContainsString('search/x"', $html);
         self::assertStringContainsString($u . '0022', $html); // escaped "
         self::assertStringContainsString($u . '0026', $html); // escaped &
     }

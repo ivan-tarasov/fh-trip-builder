@@ -22,12 +22,26 @@ final class RoutesTest extends TestCase
         self::assertSame('My@calendar', Routes::resolve('/my/bookings/100001/calendar'));
     }
 
+    public function testASearchIsAddressedByItsOwnPath(): void
+    {
+        self::assertSame('Search@index', Routes::resolve('/search/YUL1609LHRY1'));
+        self::assertSame('Search@index', Routes::resolve('/search/YUL1609LHR3009W421'));
+        // The digit-bearing airport code, which [A-Z]{3} would reject.
+        self::assertSame('Search@index', Routes::resolve('/search/A391609A39W1'));
+        // The query-string form still answers; it is what redirects here.
+        self::assertSame('Search@index', Routes::resolve('/search'));
+    }
+
     /**
      * @return list<array{0: string}>
      */
     public static function notRoutes(): array
     {
         return [
+            ['/search/YUL1609LHR'],
+            ['/search/YUL1609LHRY'],
+            ['/search/yul1609lhry1'],
+            ['/search/YUL1609LHRY1234'],
             ['/my/bookings/abc'],
             ['/my/bookings/'],
             ['/my/bookings/12/'],

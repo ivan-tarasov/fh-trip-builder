@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Exception;
 use stdClass;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\SearchUrl;
 use TripBuilder\Service\Calendar;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\View\BookingPresenter;
@@ -226,13 +227,12 @@ class MyController extends AbstractController
         $first = $segments[0];
         $last = $segments[array_key_last($segments)];
 
-        return '/search?' . http_build_query([
-            'from' => $first->depart->airport_code,
-            'to' => $last->arrive->airport_code,
-            'depart' => date('Y-m-d', strtotime($first->depart->date_time)),
-            'triptype' => 'oneway',
-            'class' => 'economy',
-        ]);
+        return new SearchUrl(
+            from: (string) $first->depart->airport_code,
+            to: (string) $last->arrive->airport_code,
+            depart: date('Y-m-d', (int) strtotime((string) $first->depart->date_time)),
+            return: null,
+        )->path();
     }
 
 }

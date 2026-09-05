@@ -83,6 +83,10 @@ class Routes
     public const array DYNAMIC_ROUTES = [
         '#^/my/bookings/(\d+)$#' => 'My@booking',
         '#^/my/bookings/(\d+)/calendar$#' => 'My@calendar',
+        // A whole search in one segment -- see SearchUrl. The plain /search
+        // route below still answers, because that is where the query-string
+        // form lands before being redirected here.
+        '#^/search/[A-Z0-9]{3}\d{4}[A-Z0-9]{3}(?:\d{4})?[YWCF]\d{1,3}$#' => 'Search@index',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

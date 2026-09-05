@@ -1208,7 +1208,13 @@
 
             // `after` is what the page already holds; the href already carries
             // the new total, along with the search, sort and filters.
-            const url = link.href + '&fragment=1&after=' + encodeURIComponent(link.dataset.after);
+            //
+            // The separator has to be worked out: the search itself lives in the
+            // path now, so a link with no filters or sort carries no query
+            // string at all and a bare `&` would make a URL nothing serves.
+            const url = link.href
+                + (link.href.includes('?') ? '&' : '?')
+                + 'fragment=1&after=' + encodeURIComponent(link.dataset.after);
 
             fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
                 .then(function (response) {
