@@ -26,9 +26,20 @@
         // A range picker per field, where each used to pick a single day. The
         // range here is not "depart to return" -- that is what the two fields
         // are for -- but how flexible one end of the trip is.
+        const pickers = [];
+
+        // Which pickers the visitor has actually picked a day in. A picker opens
+        // seeded with a date whether or not it is the one on the field, so an
+        // empty return field that is opened and dismissed must close having done
+        // nothing -- otherwise looking at the return dates would book a return.
+        const touched = new Set();
+
         const pickerFor = ($input, seed, span) => {
             $input.daterangepicker({
-                autoApply: true,
+                // Off, so the calendar stays open once a day is chosen and the
+                // window can still be widened. It closes on Done or on a click
+                // outside, both of which the plugin already routes through hide.
+                autoApply: false,
                 showCustomRangeLabel: false,
                 autoUpdateInput: false,
                 startDate: seed ? moment(seed) : moment(),
@@ -37,8 +48,24 @@
                 maxSpan: {days: MAX_SPAN - 1},
                 opens: 'center',
                 drops: 'auto',
-                locale: {format: showDateFormat, separator: ' – ', firstDay: 1}
+                locale: {
+                    format: showDateFormat,
+                    separator: ' – ',
+                    firstDay: 1,
+                    applyLabel: 'Done'
+                }
             });
+
+            const picker = $input.data('daterangepicker');
+
+            // The rebook dialog puts a second picker on the page, and that one
+            // still picks a departure and a return with two clicks. Only these
+            // two can be dragged wider, so only these two say so.
+            picker.container.addClass('daterangepicker--flex');
+
+            // Reopening is a fresh decision.
+            $input.on('show.daterangepicker', () => touched.delete(picker));
+            pickers.push(picker);
         };
 
         pickerFor(departInput, departValue.val(), spanOf(departFlex));
@@ -58,7 +85,13 @@
                 : start.format(showDateFormat));
         };
 
-        departInput.on('apply.daterangepicker', function (ev, picker) {
+        // hide, not apply: apply fires only for the Done button, and a click
+        // outside the calendar closes it just as deliberately.
+        departInput.on('hide.daterangepicker', function (ev, picker) {
+            if (!touched.has(picker)) {
+                return;
+            }
+
             show(departInput, departValue, departFlex, picker.startDate, picker.endDate);
 
             // The return can never precede the departure. Nothing enforced this
@@ -68,7 +101,11 @@
             }
         });
 
-        returnInput.on('apply.daterangepicker', function (ev, picker) {
+        returnInput.on('hide.daterangepicker', function (ev, picker) {
+            if (!touched.has(picker)) {
+                return;
+            }
+
             const departed = departValue.val() ? moment(departValue.val()) : null;
             const from = departed && picker.startDate.isBefore(departed, 'day') ? departed : picker.startDate;
             const to = picker.endDate.isBefore(from, 'day') ? from : picker.endDate;
@@ -95,57 +132,127 @@
         redraw(departInput, departValue, departFlex);
         redraw(returnInput, returnValue, returnFlex);
 
-        // Drag across the days to pick a window, rather than clicking one end
-        // and then the other.
+        // Pick by dragging. Pressing either end of the window and pulling moves
+        // that end and leaves the other where it is -- which is what the arrows
+        // drawn on those two cells advertise. Pressing anywhere else starts a
+        // new window, and a press with no drag picks that one day.
         //
-        // The plugin listens for `mousedown` on a day, not `click` -- so the
-        // press that begins a drag has already chosen the first date by itself,
-        // and its own hover handler paints the range on the way. All that is
-        // missing is the second date, which a plain drag never sends because the
-        // release lands on a different cell than the press.
-        //
-        // Capture, not bubbling: the plugin's own handler sits closer to the
-        // cell, so it runs first and redraws the calendar. By the time a
-        // bubbling listener on the document sees the event, its target has been
-        // detached and no longer matches anything inside `.daterangepicker`.
-        let pressedOn = null;
+        // The plugin's own click-to-pick is intercepted rather than extended. It
+        // binds `mousedown` on `td.available`, delegated on the container, so a
+        // capture-phase listener on the document sees the press first and can
+        // stop it going any further. Driving the selection ourselves is what
+        // makes a drag possible at all: left alone, the plugin answers the first
+        // press by redrawing the calendar, detaching the very cell the release
+        // would have landed on.
+        let drag = null;
 
-        const dayUnder = (event) => {
-            const cell = event.target instanceof Element
-                ? event.target.closest('td.available')
-                : null;
+        const pickerAt = (node) => pickers.find((picker) => picker.container[0].contains(node)) ?? null;
 
-            return cell && cell.closest('.daterangepicker') ? cell : null;
+        /** The day a cell stands for, read the way the plugin reads it itself. */
+        const dayAt = (picker, cell) => {
+            const spot = /^r(\d+)c(\d+)$/.exec(cell.dataset.title ?? '');
+            const month = cell.closest('.drp-calendar').classList.contains('left')
+                ? picker.leftCalendar
+                : picker.rightCalendar;
+
+            return spot ? month.calendar[Number(spot[1])][Number(spot[2])].clone() : null;
+        };
+
+        const dayUnder = (node) => {
+            const cell = node instanceof Element ? node.closest('td.available') : null;
+            const picker = cell ? pickerAt(cell) : null;
+            const day = picker ? dayAt(picker, cell) : null;
+
+            return day ? {picker: picker, day: day} : null;
+        };
+
+        /**
+         * A day pulled back inside what the search will run. setStartDate does
+         * not police maxSpan the way setEndDate does, so widening from the far
+         * end has to be caught here or a window wider than MAX_SPAN gets drawn.
+         */
+        const reachable = (picker, fixed, day) => {
+            const reach = MAX_SPAN - 1;
+            let capped = day;
+
+            if (day.diff(fixed, 'days') > reach) {
+                capped = fixed.clone().add(reach, 'day');
+            } else if (fixed.diff(day, 'days') > reach) {
+                capped = fixed.clone().subtract(reach, 'day');
+            }
+
+            return capped.isBefore(picker.minDate, 'day') ? picker.minDate.clone() : capped;
+        };
+
+        const paint = (picker, fixed, day) => {
+            const to = reachable(picker, fixed, day);
+
+            picker.setStartDate(moment.min(fixed, to));
+            picker.setEndDate(moment.max(fixed, to));
+            picker.updateView();
         };
 
         document.addEventListener('mousedown', function (event) {
-            pressedOn = dayUnder(event);
-        }, true);
+            const spot = dayUnder(event.target);
 
-        document.addEventListener('mouseup', function (event) {
-            const from = pressedOn;
-            const to = dayUnder(event);
-
-            pressedOn = null;
-
-            // A press and release on one day is a plain click, and the plugin
-            // has already done the right thing with it.
-            if (!from || !to || from === to) {
+            if (spot === null) {
                 return;
             }
 
-            // Described rather than held: choosing the first date redrew the
-            // calendar, so the released cell may already be out of the document
-            // and its replacement has to be found by position.
-            const calendar = to.closest('.drp-calendar');
-            const side = calendar && calendar.classList.contains('left') ? 'left' : 'right';
-            const picker = to.closest('.daterangepicker') || from.closest('.daterangepicker');
-            const fresh = picker
-                && picker.querySelector('.drp-calendar.' + side + ' td[data-title="' + to.dataset.title + '"]');
+            // Ours to handle, and not the plugin's. preventDefault also keeps
+            // the drag from selecting the day numbers as text.
+            event.preventDefault();
+            event.stopPropagation();
 
-            if (fresh) {
-                $(fresh).trigger('mousedown');
+            const picker = spot.picker;
+            const wide = picker.endDate && !picker.startDate.isSame(picker.endDate, 'day');
+            let fixed = spot.day;
+
+            // Grabbing one end pivots on the other.
+            if (wide && spot.day.isSame(picker.startDate, 'day')) {
+                fixed = picker.endDate.clone();
+            } else if (wide && spot.day.isSame(picker.endDate, 'day')) {
+                fixed = picker.startDate.clone();
             }
+
+            drag = {picker: picker, fixed: fixed, held: spot.day, moved: false};
+        }, true);
+
+        document.addEventListener('mousemove', function (event) {
+            if (drag === null) {
+                return;
+            }
+
+            // The target is hit-tested as the event is dispatched, so a repaint
+            // mid-drag cannot hand back a cell that has since been replaced.
+            // The point is the fallback, for a pointer over the gap between two
+            // cells rather than over either of them.
+            const spot = dayUnder(event.target)
+                ?? dayUnder(document.elementFromPoint(event.clientX, event.clientY));
+
+            if (spot === null || spot.picker !== drag.picker) {
+                return;
+            }
+
+            if (!drag.moved && spot.day.isSame(drag.held, 'day')) {
+                return;
+            }
+
+            drag.moved = true;
+            paint(drag.picker, drag.fixed, spot.day);
+        }, true);
+
+        document.addEventListener('mouseup', function () {
+            if (drag === null) {
+                return;
+            }
+
+            if (!drag.moved) {
+                paint(drag.picker, drag.held, drag.held);
+            }
+
+            touched.add(drag.picker);
+            drag = null;
         }, true);
     } catch (er) {
         console.log(er);

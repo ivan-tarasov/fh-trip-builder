@@ -763,6 +763,7 @@ a:active {
 }
 
 .daterangepicker td {
+  position: relative;
   font-size: .875rem;
   color: var(--ink-body);
   border-radius: 0;
@@ -803,11 +804,79 @@ a:active {
 .daterangepicker td.end-date { border-radius: 0 .75rem .75rem 0; }
 .daterangepicker td.start-date.end-date { border-radius: .75rem; }
 
+/* The two arrows that say the window can be pulled wider. They sit just
+   outside the ends of the range rather than on them, where they read as
+   something to grab instead of decoration on a chosen day -- there is room,
+   because the calendar is padded past its last column.
+
+   Drawn rather than inserted: the plugin rebuilds the whole table on every
+   repaint, and a repaint is exactly what dragging causes several times a
+   second. A pseudo-element survives that; an appended node would not.
+
+   Only on the search form's two pickers. The rebook dialog's calendar spans a
+   departure and a return, which is a different thing that these arrows cannot
+   move. */
+.daterangepicker--flex td.start-date::before,
+.daterangepicker--flex td.end-date::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: .3125rem;
+  height: .3125rem;
+  border: solid var(--brand-accent);
+  border-width: 2px 2px 0 0;
+  pointer-events: none;
+}
+
+.daterangepicker--flex td.start-date::before {
+  left: -.4375rem;
+  transform: translateY(-50%) rotate(-135deg);
+}
+
+.daterangepicker--flex td.end-date::after {
+  right: -.4375rem;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.daterangepicker td.available { cursor: pointer; }
+.daterangepicker--flex td.start-date,
+.daterangepicker--flex td.end-date { cursor: ew-resize; }
+
 /* Dragging: the browser would otherwise select the numbers as text. */
 .daterangepicker .calendar-table,
 .daterangepicker td { user-select: none; }
 
-.daterangepicker .drp-buttons { border-top-color: var(--line); }
+/* One button, because there is only one decision left to make. The plugin's
+   Cancel would discard a window that has been on screen since the first
+   click, and its running total already reads on the field behind. */
+.daterangepicker .drp-buttons {
+  padding: .5rem .75rem .25rem;
+  text-align: center;
+  border-top-color: var(--line);
+}
+
+.daterangepicker .drp-buttons .drp-selected,
+.daterangepicker .drp-buttons .cancelBtn { display: none; }
+
+.daterangepicker .drp-buttons .applyBtn {
+  width: 100%;
+  padding: .5625rem 1rem;
+  font-size: .9375rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: var(--brand-accent);
+  border: none;
+  border-radius: .625rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.daterangepicker .drp-buttons .applyBtn:hover { background-color: var(--brand-accent-700); }
+.daterangepicker .drp-buttons .applyBtn:active { transform: scale(.98); }
+
+.daterangepicker .drp-buttons .applyBtn:focus-visible {
+  outline: 2px solid var(--brand-accent-700);
+  outline-offset: 2px;
+}
 
 @media (max-width: 575.98px) {
   .daterangepicker .calendar-table td,
