@@ -155,4 +155,12 @@ return [
         ],
     ],
 
+    'indexes' => [
+        // A search endpoint arrives as either an airport code or a city code,
+        // and resolveAirportCodes() asks for both at once. With only the
+        // primary key on `code` that OR could not seek at all and read the
+        // whole table; indexing `city_code` lets it merge the two sides.
+        ['name' => 'city_code', 'columns' => ['city_code']],
+    ],
+
 ];
