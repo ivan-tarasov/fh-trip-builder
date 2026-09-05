@@ -27,14 +27,13 @@ final readonly class SearchRepository
         // The card prints the date without a year, so it read as an upcoming
         // trip rather than a stale one.
         //
-        // Compared as a string because `depart` is CHAR(10) holding 'Y-m-d',
-        // which orders correctly that way; against CURDATE() MySQL would coerce
-        // the column instead.
+        // CURDATE(), now that `depart` is a DATE: the comparison is between two
+        // dates rather than between two strings that happen to sort like them,
+        // and the cutoff is the database's own day rather than PHP's.
         return $this->connection->fetchAll(
             'SELECT * FROM ' . Table::Search->value
-            . ' WHERE depart >= ?'
+            . ' WHERE depart >= CURDATE()'
             . ' ORDER BY search_count DESC LIMIT ' . $limit,
-            [date('Y-m-d')],
         );
     }
 

@@ -64,9 +64,8 @@ return [
         ],
         [
             'name' => 'depart',
-            'type' => 'char',
-            'length' => 10,
-            'charset' => 'ascii',
+            'type' => 'date',
+            'length' => null,
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -74,9 +73,8 @@ return [
         ],
         [
             'name' => 'return',
-            'type' => 'char',
-            'length' => 10,
-            'charset' => 'ascii',
+            'type' => 'date',
+            'length' => null,
             'default' => false,
             'nullable' => true,
             'auto_inc' => false,
