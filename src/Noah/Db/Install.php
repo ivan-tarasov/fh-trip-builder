@@ -105,11 +105,18 @@ class Install extends AbstractCommand
     private function columnDefinition(array $column): string
     {
         return sprintf(
-            '`%s` %s%s%s%s%s%s',
+            '`%s` %s%s%s%s%s%s%s',
             $column['name'],
             strtoupper($column['type']),
             $column['length']
                 ? sprintf('(%s)', $column['length'])
+                : null,
+            // Right after the type, which is where MySQL wants it. A column
+            // holding an IATA code or a hex digest is ASCII by definition, and
+            // in the table's utf8mb4 it would reserve four bytes per character
+            // -- in the clustered key and in every index built on it.
+            isset($column['charset'])
+                ? sprintf(' CHARACTER SET %s', $column['charset'])
                 : null,
             $column['default']
                 // An array wraps a raw value -- [0] emits DEFAULT 0, where a

@@ -29,6 +29,7 @@ return [
             'name' => 'code',
             'type' => 'char',
             'length' => 3,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
