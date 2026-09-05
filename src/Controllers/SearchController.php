@@ -176,11 +176,14 @@ class SearchController extends AbstractController
                 to: $this->get[self::GET_TO],
                 departDate: $this->get[self::GET_DEPART],
                 returnDate: $this->get[self::GET_RETURN] ?? '',
-                adultNum: 1, // FIXME: now we provide only 1 adult count
-                childNum: 0, // FIXME: now we provide only 0 child count
+                party: $this->searchUrl->party(),
                 cabin: CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
-                filters: FlightFilters::fromQuery($this->get),
-                returnFilters: FlightFilters::fromQuery($this->get, FlightFilters::RETURN_PREFIX),
+                filters: FlightFilters::fromQuery($this->get, party: $this->searchUrl->party()),
+                returnFilters: FlightFilters::fromQuery(
+                    $this->get,
+                    FlightFilters::RETURN_PREFIX,
+                    $this->searchUrl->party(),
+                ),
             );
 
             // Call the flight search directly; reuse the nested-object shape the
@@ -226,6 +229,13 @@ class SearchController extends AbstractController
             }
 
             echo new TwigRenderer()->renderPage('search/view.html.twig', [
+                // So the form above the results shows the party that was
+                // searched for rather than resetting to one adult.
+                'party' => $this->searchUrl->party(),
+                'party_label' => $this->searchUrl->party()->label(),
+                // Carried onto the checkout links so the party survives the hop
+                // -- the legs say what is being bought, not for how many.
+                'checkout_pax' => $this->checkoutPax(),
                 // Lead form + sidebar + cards share the resolved query context.
                 'triptype' => $this->get[self::GET_TRIPTYPE],
                 'depart_code' => $this->get[self::GET_FROM],
@@ -1025,8 +1035,6 @@ class SearchController extends AbstractController
                     : null,
                 'price_base' => number_format((float) $flight->price_base, 2),
                 'price_tax' => number_format((float) $flight->price_tax, 2),
-                'price_gst' => number_format(0, 2),
-                'price_qst' => number_format(0, 2),
                 // Path only; the browser resolves it against its own origin.
                 'share_url' => match ($step) {
                     1 => $this->stepUrl($built['ids'], keepReturn: true),
@@ -1244,6 +1252,22 @@ class SearchController extends AbstractController
      * The search as a path segment, so every URL this page builds carries it
      * instead of six query parameters.
      */
+    /**
+     * The party as a query fragment for the checkout links, empty for a lone
+     * adult so the common URL stays clean.
+     */
+    private function checkoutPax(): string
+    {
+        $party = $this->searchUrl->party();
+        $query = array_filter([
+            'adults' => $party->adults > 1 ? $party->adults : null,
+            'children' => $party->children ?: null,
+            'infants' => $party->infants ?: null,
+        ]);
+
+        return $query === [] ? '' : '&' . http_build_query($query);
+    }
+
     private function searchPath(): string
     {
         return $this->searchUrl?->path() ?? (string) Config::get('site.paths.search', '/search/');

@@ -11,8 +11,14 @@
 <p class="booking-card__label">Receipt</p>
 <dl class="order__prices">
     <div class="order__price-row">
-        <dt>Passenger</dt>
-        <dd>{{ booking.passenger }}</dd>
+        <dt>{{ booking.passengers|length > 1 ? 'Passengers' : 'Passenger' }}</dt>
+        <dd>
+            {% for traveller in booking.passengers %}
+                {{ traveller.name }}{% if booking.passengers|length > 1 %} <span class="text-muted">({{ traveller.type|lower }})</span>{% endif %}{{ not loop.last ? '<br />'|raw : '' }}
+            {% else %}
+                {{ booking.passenger }}
+            {% endfor %}
+        </dd>
     </div>
     {% if booking.contact_email %}
         <div class="order__price-row">

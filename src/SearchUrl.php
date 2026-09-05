@@ -140,6 +140,16 @@ final readonly class SearchUrl
         );
     }
 
+    /**
+     * Who the search is for. Falls back to a lone adult when the counts in the
+     * URL do not describe a bookable party -- a hand-edited link should answer
+     * a sensible search rather than nothing at all.
+     */
+    public function party(): Party
+    {
+        return Party::fromCounts($this->adults, $this->children, $this->infants) ?? new Party();
+    }
+
     public function tripType(): TripType
     {
         return $this->return === null ? TripType::Oneway : TripType::Roundtrip;

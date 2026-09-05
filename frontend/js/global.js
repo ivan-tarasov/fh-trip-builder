@@ -196,15 +196,27 @@
 
             const pad = n => String(n).padStart(2, '0');
 
-            const born = function () {
-                // Somewhere between 18 and 75, which is who buys a ticket.
+            // The server checks that a date of birth matches the fare type, so
+            // these ranges have to agree with it: adult 12+, child 2-11, lap
+            // infant under 2. A plausible-looking date that fails validation
+            // would make the button that exists to save typing cost more of it.
+            const AGES = { A: [18, 75], C: [2, 11], I: [0, 1] };
+
+            const born = function (type) {
+                const [low, high] = AGES[type] || AGES.A;
                 const now = new Date();
-                const year = now.getFullYear() - (18 + Math.floor(Math.random() * 58));
+                const year = now.getFullYear() - (low + Math.floor(Math.random() * (high - low + 1)));
                 const month = 1 + Math.floor(Math.random() * 12);
                 // 28 keeps every month valid without caring which one it is.
                 const day = 1 + Math.floor(Math.random() * 28);
+                const dob = new Date(year, month - 1, day);
 
-                return year + '-' + pad(month) + '-' + pad(day);
+                // An age drawn at the edge can land in the future or a month
+                // ahead of today; pull it back a year rather than emit a date
+                // the form will reject.
+                return dob > now
+                    ? (year - 1) + '-' + pad(month) + '-' + pad(day)
+                    : year + '-' + pad(month) + '-' + pad(day);
             };
 
             const expiry = function () {
@@ -228,10 +240,6 @@
                 const values = {
                     email: slug(first) + '.' + slug(last) + Math.floor(Math.random() * 90 + 10) + '@' + pick(DOMAINS),
                     phone: shape(place.phone),
-                    first_name: first,
-                    last_name: last,
-                    dob: born(),
-                    gender: pick(['F', 'M', 'X']),
                     card_name: first + ' ' + last,
                     card_number: groupCard(cardNumber(scheme)),
                     card_expiry: expiry(),
@@ -240,7 +248,38 @@
                     billing_country: place.country,
                 };
 
-                Object.keys(values).forEach(function (name) {
+                // One traveller per block, each with their own name. querySelector
+            // returns the first match, so filling by bare field name would have
+            // filled passenger one and silently left the rest blank -- the same
+            // failure the comment below describes for the country field.
+            form.querySelectorAll('[data-passenger]').forEach(function (block) {
+                const index = block.dataset.passenger;
+                const type = block.dataset.passengerType;
+                const at = function (field) {
+                    return form.querySelector('[name="passengers[' + index + '][' + field + ']"]');
+                };
+
+                const entries = {
+                    first_name: pick(FIRST),
+                    last_name: last,
+                    dob: born(type),
+                    gender: pick(['F', 'M', 'X']),
+                };
+
+                Object.keys(entries).forEach(function (field) {
+                    const input = at(field);
+
+                    if (!input) {
+                        return;
+                    }
+
+                    input.value = entries[field];
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+
+            Object.keys(values).forEach(function (name) {
                     // By name attribute, not form.elements[name]: that lookup
                     // matches on id as well, and the searchable country field
                     // puts its input's id alongside the select's name -- so it
@@ -689,8 +728,12 @@
     // "No children" is the absence of a number, not an empty one. A disabled
     // control is not submitted, which keeps `children=&infants=` out of a
     // search URL people share.
+    //
+    // Both search forms need this now that their passenger selects have names;
+    // it used to cover the rebook dialog alone, which was the only form in the
+    // app that submitted a count.
     document.addEventListener('submit', function (event) {
-        const form = event.target.closest('.js-rebook');
+        const form = event.target.closest('.js-rebook, #searchForm');
 
         if (!form) {
             return;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Api\Flights;
 
 use TripBuilder\Config;
+use TripBuilder\Party;
 
 /**
  * The filters a visitor has applied to a search, and the rules for deciding
@@ -74,6 +75,9 @@ final readonly class FlightFilters
         public bool $noNightLayover = false,
         public bool $noGulfLayover = false,
         public bool $noVisaLayover = false,
+        // Last, and defaulted: everything that builds this positionally was
+        // written before there was a party to carry.
+        public Party $party = new Party(),
     ) {}
 
     /**
@@ -131,7 +135,7 @@ final readonly class FlightFilters
      * @param array<string, mixed> $query
      * @param string $prefix RETURN_PREFIX to read the return leg's set
      */
-    public static function fromQuery(array $query, string $prefix = ''): self
+    public static function fromQuery(array $query, string $prefix = '', ?Party $party = null): self
     {
         // Read every key through the prefix, so one leg never sees the other's.
         $query = self::forPrefix($query, $prefix);
@@ -168,6 +172,7 @@ final readonly class FlightFilters
         $duration = $positive($query[self::DIM_DURATION] ?? null);
 
         return new self(
+            party: $party ?? new Party(),
             stops: array_values(array_filter(
                 array_map(intval(...), $csv($query[self::DIM_STOPS] ?? null, '/^[0-9]$/')),
                 static fn(int $n): bool => $n >= 0 && $n <= 9,
@@ -395,9 +400,21 @@ final readonly class FlightFilters
             // `price_offset` is whatever the other half of a round trip adds
             // before this row is shown; without it a limit set against the
             // displayed total would be compared to one leg's share of it.
-            self::DIM_PRICE => fn(array $c): bool => $this->maxPrice === null
-                || (float) $c['price_base'] + (float) $c['price_tax']
-                    + (float) ($c['price_offset'] ?? 0) <= $this->maxPrice,
+            // Scaled for the party, because that is the number on the card and
+            // the number the slider is labelled with. Base and tax carry
+            // different shares, so they are scaled apart and added after.
+            self::DIM_PRICE => function (array $c): bool {
+                if ($this->maxPrice === null) {
+                    return true;
+                }
+
+                $priced = $this->party->apply(
+                    (float) $c['price_base'] + (float) ($c['price_offset'] ?? 0),
+                    (float) $c['price_tax'],
+                );
+
+                return $priced['base'] + $priced['tax'] <= $this->maxPrice;
+            },
 
             self::DIM_DURATION => fn(array $c): bool => $this->maxDuration === null
                 || (int) $c['duration'] <= $this->maxDuration,

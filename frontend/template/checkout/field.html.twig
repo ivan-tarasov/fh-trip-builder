@@ -1,22 +1,35 @@
 {# One labelled input, with its error in place of its hint when it has one.
    A field that failed keeps what was typed — retyping an address because one
-   digit of a postcode was wrong is the fastest way to lose a booking. #}
+   digit of a postcode was wrong is the fastest way to lose a booking.
+
+   `name` is what is posted; `key` is where the value, the error and the length
+   limit are looked up. They are the same for the fields asked once, and differ
+   for a passenger, which posts `passengers[0][first_name]` and is keyed
+   `passengers.0.first_name` — a dotted key, because a Twig lookup cannot walk
+   brackets. #}
+{% set key = key|default(name) %}
+{# Guarded rather than `|default(max_lengths[name])`: Twig evaluates a filter's
+   argument even when it is not used, and strict_variables then throws on the
+   includes that pass a limit directly instead of the whole table. #}
+{% set limit = limit is defined
+    ? limit
+    : (max_lengths is defined and max_lengths[name] is defined ? max_lengths[name] : null) %}
 <div class="field">
-    <label class="field__label" for="{{ name }}">{{ label }}</label>
-    <input class="field__input{{ errors[name] is defined ? ' is-invalid' : '' }}"
-           id="{{ name }}"
+    <label class="field__label" for="{{ key }}">{{ label }}</label>
+    <input class="field__input{{ errors[key] is defined ? ' is-invalid' : '' }}"
+           id="{{ key }}"
            name="{{ name }}"
            type="{{ type|default('text') }}"
-           value="{{ form[name]|default('') }}"
+           value="{{ form[key]|default('') }}"
            {% if placeholder is defined %}placeholder="{{ placeholder }}"{% endif %}
            {% if autocomplete is defined %}autocomplete="{{ autocomplete }}"{% endif %}
            {# Mirrors the server's limit for this field, so the browser stops
               the typing rather than the INSERT stopping the booking. The
               server still checks: an attribute is a courtesy, not a guard. #}
-           {% if max_lengths[name] is defined %}maxlength="{{ max_lengths[name] }}"{% endif %}
+           {% if limit %}maxlength="{{ limit }}"{% endif %}
            {% if attrs is defined %}{{ attrs|raw }}{% endif %}
-           {{ errors[name] is defined ? 'aria-invalid="true"' : '' }} />
-    {% if errors[name] is defined %}
-        <p class="field__error">{{ errors[name] }}</p>
+           {{ errors[key] is defined ? 'aria-invalid="true"' : '' }} />
+    {% if errors[key] is defined %}
+        <p class="field__error">{{ errors[key] }}</p>
     {% endif %}
 </div>

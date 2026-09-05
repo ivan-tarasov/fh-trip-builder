@@ -1,0 +1,35 @@
+{# Who is travelling. Shared by the home page and the results header, which
+   carried two different sets of these -- four types on one, three on the other,
+   different ids, different labels, and not one of them with a `name`, so no
+   browser ever submitted a passenger count.
+
+   Three types, matching what the URL spells and what the fare model prices. An
+   infant here is on a lap: it takes no seat, which is why it is cheap and why
+   there may not be more of them than there are adults to hold them. #}
+{% set types = [
+    { 'key': 'adults', 'label': 'Adult', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
+    { 'key': 'children', 'label': 'Child', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
+    { 'key': 'infants', 'label': 'Infant', 'hint': 'on lap', 'from': 0, 'value': party.infants|default(0) }
+] %}
+
+<div class="row g-2 mb-3">
+    {% for type in types %}
+        {% set id = 'passengers_' ~ type.key %}
+        <div class="col-md">
+            <div class="form-floating">
+                <select class="form-select" id="{{ id }}" name="{{ config('search.form.input.' ~ type.key) }}">
+                    {# "No children" is the absence of a number, not a zero. The
+                       empty option is dropped on submit by the same handler the
+                       rebook dialog uses, so it stays out of a shared URL. #}
+                    {% if type.from == 0 %}
+                        <option value=""{{ type.value == 0 ? ' selected' : '' }}>&ndash;</option>
+                    {% endif %}
+                    {% for n in 1..9 %}
+                        <option value="{{ n }}"{{ type.value == n ? ' selected' : '' }}>{{ n }}{{ n == 9 ? ' (maximum)' : '' }}</option>
+                    {% endfor %}
+                </select>
+                <label for="{{ id }}">{{ type.label }} <small>({{ type.hint }})</small></label>
+            </div>
+        </div>
+    {% endfor %}
+</div>

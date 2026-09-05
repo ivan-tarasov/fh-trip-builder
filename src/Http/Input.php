@@ -158,6 +158,36 @@ final readonly class Input
         return $this->values[$key] ?? null;
     }
 
+    /**
+     * A repeated group of fields, as one Input per entry.
+     *
+     * The checkout form posts `passengers[0][first_name]`, so every accessor
+     * above -- which reads scalars -- has nothing to reach it with. Each entry
+     * comes back as an Input of its own so the same validation reads a
+     * passenger the way it always read the form.
+     *
+     * Entries arrive keyed by index; the keys are dropped so a hand-posted
+     * `passengers[7]` cannot leave a hole the caller has to think about.
+     *
+     * @return list<self>
+     */
+    public function group(string $key, int $limit): array
+    {
+        $raw = $this->values[$key] ?? null;
+
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $entries = [];
+
+        foreach (array_slice($raw, 0, $limit) as $entry) {
+            $entries[] = new self(is_array($entry) ? $entry : []);
+        }
+
+        return $entries;
+    }
+
     /** @return array<array-key, mixed> */
     public function all(): array
     {
