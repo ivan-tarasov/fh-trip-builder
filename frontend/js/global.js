@@ -371,6 +371,10 @@
     /*[ Searchable select: billing country, and the search form's places ]
     ===========================================================*/
     try {
+        // Rows rendered per keystroke. The place list is a few hundred long and
+        // laying all of it out is what made the dropdown slow to open.
+        const SHOWN_AT_ONCE = 40;
+
         document.querySelectorAll('select[data-searchable]').forEach(function (select) {
             // The select stays: it is what the form submits, what autofill
             // writes to, and what the page is left with if this never runs.
@@ -448,12 +452,19 @@
                     return -1;
                 };
 
-                const found = options
+                const ranked = options
                     .map(o => ({ option: o, rank: rank(o) }))
                     .filter(m => m.rank >= 0)
                     // Stable within a rank, so each band stays alphabetical.
                     .sort((a, b) => a.rank - b.rank)
                     .map(m => m.option);
+
+                // Only the first screenful. Every row costs layout, and a few
+                // hundred of them held the thread long enough that the list
+                // took a noticeable moment to appear -- for a list nobody reads
+                // to the end, since typing one more letter is quicker than
+                // scrolling. What is cut is always the worst-ranked.
+                const found = ranked.slice(0, SHOWN_AT_ONCE);
 
                 entries = found.map(option => ({ option }));
 
@@ -489,10 +500,15 @@
                     // carries a place under it. The code sits at the end, which
                     // is where a traveller who knows it looks.
                     if (option.dataset.sub) {
-                        const icon = document.createElement('i');
+                        // A span drawn by CSS, not a Font Awesome <i>. Its
+                        // script rewrites every <i> into an <svg>, and with a
+                        // few hundred rows that scan blocks the main thread for
+                        // most of two seconds -- the list took seconds to
+                        // appear. Same trap the breadcrumb separator documents.
+                        const icon = document.createElement('span');
                         icon.className = option.hasAttribute('data-city')
-                            ? 'fas fa-location-dot combo__icon'
-                            : 'fas fa-plane combo__icon';
+                            ? 'combo__icon combo__icon--city'
+                            : 'combo__icon combo__icon--airport';
                         icon.setAttribute('aria-hidden', 'true');
 
                         const name = document.createElement('span');
@@ -516,6 +532,13 @@
 
                     list.appendChild(li);
                 });
+
+                if (ranked.length > found.length) {
+                    const more = document.createElement('li');
+                    more.className = 'combo__more';
+                    more.textContent = (ranked.length - found.length) + ' more — keep typing to narrow';
+                    list.appendChild(more);
+                }
 
                 // After both kinds are in the DOM, so the index lines up with
                 // `entries` rather than with either half of it.
@@ -561,10 +584,22 @@
             const moveActive = function (step) {
                 if (list.hidden) { open(); }
                 if (entries.length === 0) { return; }
+
+                const rows = list.querySelectorAll('[role="option"]');
+
+                if (rows[active]) { rows[active].classList.remove('is-active'); }
+
                 active = (active + step + entries.length) % entries.length;
-                render(input.value);
-                const el = list.querySelectorAll('[role="option"]')[active];
-                if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'nearest' }); }
+
+                // Move the marker rather than rebuild the list: re-rendering on
+                // every arrow press meant holding the key down rebuilt hundreds
+                // of rows per second.
+                const el = rows[active];
+
+                if (el) {
+                    el.classList.add('is-active');
+                    if (el.scrollIntoView) { el.scrollIntoView({ block: 'nearest' }); }
+                }
             };
 
             input.addEventListener('focus', function () {

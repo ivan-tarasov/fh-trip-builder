@@ -289,6 +289,12 @@
      - hover and colour     -> plain `ease` is right; it is not movement
      - constant motion      -> linear (the spinner, and only the spinner) */
 :root {
+  /* Row icons for the place dropdown, as masks so they inherit their colour.
+     Inline here rather than as <i> elements: see .combo__icon. */
+  --icon-plane: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/%3E%3C/svg%3E");
+  --icon-pin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E");
+  --icon-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5v4l5-4.5L13 0z'/%3E%3Cpath d='M12.5 8v5l4 2 .75-1.23-3.25-1.77V8z'/%3E%3C/svg%3E");
+
   --dur-fast: .12s;   /* hover feedback, press, small reveals */
   --dur-base: .2s;    /* chevrons and anything that rotates or slides */
   --dur-slow: .5s;    /* the card flip -- deliberately unhurried */
@@ -3669,19 +3675,53 @@ textarea {
 .combo__option--stacked + .combo__option--stacked { box-shadow: inset 0 1px 0 var(--line); }
 .combo__option--city + .combo__option--stacked { box-shadow: none; }
 
+/* Masked SVG rather than a Font Awesome <i>. Its script rewrites every <i> it
+   finds into an <svg>, and scanning a few hundred rows blocked the main thread
+   for most of two seconds -- the dropdown took seconds to open. A mask keeps
+   currentColor working, so these still take their colour from the row. */
 .combo__icon {
   grid-row: 1 / span 2;
   align-self: center;
   width: 1rem;
-  font-size: .8125rem;
-  color: var(--ink-muted);
-  text-align: center;
+  height: 1rem;
+  background-color: var(--ink-muted);
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+}
+
+.combo__icon--airport {
+  -webkit-mask-image: var(--icon-plane);
+          mask-image: var(--icon-plane);
+}
+
+.combo__icon--city {
+  -webkit-mask-image: var(--icon-pin);
+          mask-image: var(--icon-pin);
+}
+
+.combo__icon--recent {
+  flex: 0 0 auto;
+  width: .875rem;
+  height: .875rem;
+  -webkit-mask-image: var(--icon-clock);
+          mask-image: var(--icon-clock);
 }
 
 .combo__name { grid-column: 2; font-size: .9375rem; color: var(--ink-body); }
 .combo__code { grid-column: 3; grid-row: 1; font-size: .8125rem; color: var(--ink-muted); }
 .combo__sub  { grid-column: 2 / -1; font-size: .8125rem; color: var(--ink-muted); }
 .combo__option--city .combo__name { font-weight: 600; }
+
+/* What was left out, said plainly rather than by a list that just stops. */
+.combo__more {
+  padding: .5rem .75rem .625rem;
+  font-size: .75rem;
+  color: var(--ink-muted);
+}
 
 .combo__empty {
   padding: .5rem .6rem;
