@@ -88,6 +88,9 @@ class Install extends AbstractCommand
                 $this->formatOutput($action, 'created', 'success');
             } catch (Throwable $e) {
                 $this->formatOutput($action, 'failed', 'danger');
+                // Every other failure in this file prints its reason; this one
+                // swallowed it, which is what made the bug above so hard to see.
+                $this->io->error(sprintf('Creating `%s` failed: %s', $table, $e->getMessage()));
             }
         }
 
@@ -243,9 +246,17 @@ class Install extends AbstractCommand
 
     private function tableExists(string $table): bool
     {
+        // DATABASE(), not $_ENV: Connection reads its credentials with getenv()
+        // first, and phpdotenv's immutable loader will not copy a variable into
+        // $_ENV when the process environment already has it. On any host where
+        // DB_* are real environment variables this read returned '', every
+        // table looked absent, and the whole additive-migration path below
+        // silently never ran. The two sibling queries in this file already ask
+        // the connection.
         return (int) $this->connection()->fetchValue(
-            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?',
-            [$_ENV['DB_DATABASE'] ?? '', $table],
+            'SELECT COUNT(*) FROM information_schema.tables'
+            . ' WHERE table_schema = DATABASE() AND table_name = ?',
+            [$table],
         ) > 0;
     }
 
