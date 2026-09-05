@@ -39,7 +39,9 @@
 <body class=" d-flex flex-column h-100">
 <header class="p-3 bg-primary text-white" id="top">
     <div class="container">
-        <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+        {# Named because the breadcrumb below is a second <nav>, and two
+           unlabelled landmarks of the same role are indistinguishable. #}
+        <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark" aria-label="Main">
             <div class="container-fluid">
                 <!--a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none me-5"-->
                 <a class="navbar-brand d-flex align-items-center mb-2 mb-lg-0 text-decoration-none me-5 text-white" href="/">
@@ -53,7 +55,13 @@
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         {% for link, item in config('site.main-menu')|filter(item => item.enabled) %}
                         <li class="nav-item me-{{ item.spacer|default(2) }}">
-                            <a class="nav-link{{ current_page() == (link|trim('/', 'right')) ? ' active' : '' }}" aria-current="page" href="{{ link }}">
+                            {# Two different questions. The highlight marks the section you
+                               are in, so "My bookings" stays lit on a single booking --
+                               exact equality is why it used to go dark there. aria-current
+                               stays exact, because an ancestor is not the current page and
+                               the breadcrumb's last crumb is already claiming that. #}
+                            {% set is_page = current_page() == (link|trim('/', 'right')) %}
+                            <a class="nav-link{{ in_section(link) ? ' active' : '' }}"{{ is_page ? ' aria-current="page"' : '' }} href="{{ link }}">
                                 <i class="{{ item.icon }} fa-lg me-2"></i>{{ item.text }}
                             </a>
                         </li>

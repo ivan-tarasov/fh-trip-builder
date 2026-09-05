@@ -46,7 +46,10 @@ final readonly class TwigRenderer
 
         // ...and the dynamic header/footer data (see LayoutData).
         $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));
+        // Given the trail the partial is about to draw, so the two agree.
+        $this->twig->addFunction(new TwigFunction('breadcrumb_jsonld', Breadcrumbs::structuredData(...)));
         $this->twig->addFunction(new TwigFunction('current_page', $this->layout->currentPage(...)));
+        $this->twig->addFunction(new TwigFunction('in_section', $this->layout->inSection(...)));
         $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
         $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));
         $this->twig->addFunction(new TwigFunction('git_repo', $this->layout->gitRepo(...)));
@@ -75,6 +78,12 @@ final readonly class TwigRenderer
      */
     public function renderPage(string $template, array $context = []): string
     {
-        return $this->render($template, $context + $this->layout->stats());
+        // `+`, not array_merge: a controller that passes its own breadcrumbs
+        // wins, which is how a page named by its data (a booking, by its
+        // reference) overrides the trail derived from the path.
+        return $this->render(
+            $template,
+            $context + ['breadcrumbs' => $this->layout->breadcrumbs()] + $this->layout->stats(),
+        );
     }
 }

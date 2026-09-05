@@ -3,11 +3,19 @@
 {% block title %}Page not found{% endblock %}
 
 {% block content %}
-<link href="{{ asset(app_css_folder ~ '/404.css') }}" rel="stylesheet" media="all" />
+{# The same local path and cache-buster main.css uses. This asked the CDN for
+   it, so `frontend/css/404.css` was a file nothing could reach: editing it
+   changed nothing, and the deployed copy was the only one that counted. #}
+<link href="{{ asset(config('site.directory.css') ~ '/404.css') }}" rel="stylesheet" media="all" />
 <div class="wrapper">
     <div class="text_group">
         <p class="text_404">404</p>
         <p class="text_lost">The page you are looking for <br />has been lost in the sky.</p>
+        {# The body offered nothing to do -- only the header nav, which is not
+           where anyone looks after landing on a 404. Same primary action the
+           empty states use, because it is the same situation: nothing here,
+           here is the thing to do instead. #}
+        <a href="/" class="btn btn-primary mt-3">Search for flights</a>
     </div>
     <div class="window_group">
         <div class="window_404">
