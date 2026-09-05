@@ -45,6 +45,40 @@ final readonly class BookingPassengerRepository
     }
 
     /**
+     * How many travellers each of these bookings carries.
+     *
+     * One query for the whole page rather than one per booking: the bookings
+     * list reads its rows without joining -- which is why the lead is kept on
+     * the booking itself -- so this is what lets a card say a party is larger
+     * than the one name it shows.
+     *
+     * @param list<int> $bookingIds
+     * @return array<int, int> booking id => traveller count, absent when none
+     */
+    public function countsFor(array $bookingIds): array
+    {
+        if ($bookingIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($bookingIds), '?'));
+
+        $rows = $this->connection->fetchAll(
+            'SELECT booking_id, COUNT(*) AS travellers FROM ' . Table::BookingPassengers->value
+            . " WHERE booking_id IN ($placeholders) GROUP BY booking_id",
+            $bookingIds,
+        );
+
+        $counts = [];
+
+        foreach ($rows as $row) {
+            $counts[(int) $row['booking_id']] = (int) $row['travellers'];
+        }
+
+        return $counts;
+    }
+
+    /**
      * A booking's travellers, lead first.
      *
      * @return list<array<string, mixed>>

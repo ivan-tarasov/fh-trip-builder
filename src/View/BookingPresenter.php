@@ -43,7 +43,7 @@ final readonly class BookingPresenter
      * @param list<array<string, mixed>> $passengers rows from booking_passengers, lead first
      * @return array<string, mixed>|null
      */
-    public function booking(array $row, array $passengers = []): ?array
+    public function booking(array $row, array $passengers = [], ?int $travellerCount = null): ?array
     {
         $stored = StoredItinerary::fromJson($row['flight_outbound'] ?? null);
 
@@ -89,6 +89,14 @@ final readonly class BookingPresenter
                     'dob' => $p['dob'] ?? null,
                 ],
                 $passengers,
+            ),
+            // The lead's name, and how many others are on the booking. The list
+            // page knows only the count -- it does not join -- and the detail
+            // page has everyone; either way a party of four stops reading as a
+            // trip for one.
+            'passenger_summary' => $this->passengerSummary(
+                trim(($row['passenger_first'] ?? '') . ' ' . ($row['passenger_last'] ?? '')),
+                $passengers === [] ? $travellerCount : count($passengers),
             ),
             'contact_email' => $row['contact_email'] ?? null,
             'contact_phone' => $row['contact_phone'] ?? null,
@@ -138,6 +146,22 @@ final readonly class BookingPresenter
             'triptype' => ($storedReturn === null ? TripType::Oneway : TripType::Roundtrip)->value,
             'class' => ($cabin ?? CabinClass::Economy)->value,
         ];
+    }
+
+    /**
+     * "Ada Lovelace" alone, or "Ada Lovelace + 2" when others are travelling.
+     *
+     * The count is null for a booking made before travellers were rows of their
+     * own, and 1 for a party of one; both say just the name, because there is
+     * nobody else to account for.
+     */
+    private function passengerSummary(string $lead, ?int $travellers): string
+    {
+        if ($travellers === null || $travellers < 2) {
+            return $lead;
+        }
+
+        return sprintf('%s + %d', $lead, $travellers - 1);
     }
 
     /**

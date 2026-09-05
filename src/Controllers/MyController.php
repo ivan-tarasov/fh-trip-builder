@@ -32,8 +32,16 @@ class MyController extends AbstractController
         $upcoming = [];
         $past = [];
 
-        foreach (new BookingRepository($this->connection())->forSession(session_id()) as $row) {
-            $booking = $presenter->booking($row);
+        $rows = new BookingRepository($this->connection())->forSession(session_id());
+
+        // One count query for the page. The rows themselves are read without a
+        // join, so without this a card could only ever name the lead.
+        $counts = new BookingPassengerRepository($this->connection())->countsFor(
+            array_map(static fn(array $row): int => (int) $row['id'], $rows),
+        );
+
+        foreach ($rows as $row) {
+            $booking = $presenter->booking($row, travellerCount: $counts[(int) $row['id']] ?? null);
 
             // Stored flight JSON that will not rebuild. Skip the row rather
             // than draw a booking with no flights in it.
