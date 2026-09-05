@@ -257,8 +257,9 @@ class Install extends AbstractCommand
 
             try {
                 $this->connection()->pdo()->exec(sprintf(
-                    'ALTER TABLE `%s` ADD KEY `%s` (%s)',
+                    'ALTER TABLE `%s` ADD %s `%s` (%s)',
                     $table,
+                    ($index['unique'] ?? false) ? 'UNIQUE KEY' : 'KEY',
                     $name,
                     implode(', ', array_map(
                         static fn(string $column): string => sprintf('`%s`', $column),
@@ -341,7 +342,7 @@ class Install extends AbstractCommand
     /**
      * Build the `, KEY ...` fragment for a table's secondary indexes.
      *
-     * @param list<array{name: string, columns: list<string>}> $indexes
+     * @param list<array{name: string, columns: list<string>, unique?: bool}> $indexes
      */
     private function indexClause(array $indexes): string
     {
@@ -349,7 +350,12 @@ class Install extends AbstractCommand
 
         foreach ($indexes as $index) {
             $columns = implode(', ', array_map(static fn(string $c): string => "`$c`", $index['columns']));
-            $clause .= sprintf(', KEY `%s` (%s)', $index['name'], $columns);
+            $clause .= sprintf(
+                ', %s `%s` (%s)',
+                ($index['unique'] ?? false) ? 'UNIQUE KEY' : 'KEY',
+                $index['name'],
+                $columns,
+            );
         }
 
         return $clause;

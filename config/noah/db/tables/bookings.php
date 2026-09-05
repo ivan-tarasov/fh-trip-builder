@@ -39,7 +39,12 @@ return [
     */
     'indexes' => [
         ['name' => 'session_departure', 'columns' => ['session_id', 'departure_time']],
-        ['name' => 'reference', 'columns' => ['reference']],
+        // UNIQUE: unusedReference() picks a code, checks it is free and then
+        // inserts, which is two steps and can be raced. Without the constraint
+        // the loser wins silently and two bookings answer to the same code --
+        // the one a traveller quotes down a phone, and the one findByReference()
+        // resolves with LIMIT 1.
+        ['name' => 'reference', 'columns' => ['reference'], 'unique' => true],
     ],
 
     'columns' => [
