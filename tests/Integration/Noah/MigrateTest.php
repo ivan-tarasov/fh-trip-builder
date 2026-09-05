@@ -22,11 +22,27 @@ final class MigrateTest extends IntegrationTestCase
 {
     private const string TABLE = 'schema_migrations';
 
+    protected function setUp(): void
+    {
+        // The command creates the ledger, and nothing else does -- not the table
+        // configs, which is the point of it. So a test that reads the ledger has
+        // to make sure the command has run, rather than assume someone ran it by
+        // hand: on a database that has never seen `noah db:migrate` there is no
+        // table to read, and the tests below run before the ones that make one.
+        if (!$this->ledgerExists()) {
+            $this->runMigration('test_' . uniqid(), []);
+        }
+    }
+
     protected function tearDown(): void
     {
-        $this->connection()->execute(
-            'DELETE FROM ' . self::TABLE . " WHERE version LIKE 'test\\_%'",
-        );
+        // Guarded: an early failure can leave the ledger absent, and cleaning up
+        // after it should not raise a second, less useful error on the way out.
+        if ($this->ledgerExists()) {
+            $this->connection()->execute(
+                'DELETE FROM ' . self::TABLE . " WHERE version LIKE 'test\\_%'",
+            );
+        }
 
         $this->connection()->pdo()->exec('DROP TABLE IF EXISTS _migrate_probe');
     }
@@ -43,11 +59,11 @@ final class MigrateTest extends IntegrationTestCase
     public function testTheLedgerExistsOnceMigrateHasRun(): void
     {
         // Created by the command rather than declared as a table config: it has
-        // to exist before anything can be recorded in it.
-        self::assertTrue(
-            $this->ledgerExists(),
-            'schema_migrations is missing — run `noah db:migrate` once.',
-        );
+        // to exist before anything can be recorded in it. setUp() runs the
+        // command, so this asserts the command made the table -- where before it
+        // asserted that somebody had, and passed only on a database where they
+        // had already done so.
+        self::assertTrue($this->ledgerExists(), 'db:migrate did not create the ledger');
     }
 
     public function testAVersionIsRecordedOnlyOnce(): void
