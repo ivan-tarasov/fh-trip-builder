@@ -13,6 +13,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Symfony\Component\Console\Application;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
+use TripBuilder\Noah\Db\Migrate as DatabaseMigrate;
 use TripBuilder\Noah\Flights\Cabins as CabinsFlights;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
@@ -51,6 +52,18 @@ try {
     */
 
     $application->add(new DatabaseClear());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Migrate DB
+    |--------------------------------------------------------------------------
+    |
+    | Apply the schema changes app:install cannot make -- a changed type, a
+    | dropped column, a new constraint -- and record which have run.
+    |
+    */
+
+    $application->add(new DatabaseMigrate());
 
     /*
     |--------------------------------------------------------------------------
