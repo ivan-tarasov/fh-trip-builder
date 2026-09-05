@@ -9,7 +9,10 @@
 
 <div class="modal fade" id="rebook-{{ booking.id }}" tabindex="-1"
      aria-labelledby="rebook-title-{{ booking.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    {# Scrollable, because the passenger panel opens inside the dialog rather
+       than over the page: without it the body grows past the viewport and the
+       Search button goes with it. #}
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <form method="get" action="{{ config('site.paths.search') }}" class="modal-content js-rebook">
             <input type="hidden" name="{{ config('search.form.input.depart_place') }}" value="{{ booking.rebook.from }}" />
             <input type="hidden" name="{{ config('search.form.input.arrive_place') }}" value="{{ booking.rebook.to }}" />

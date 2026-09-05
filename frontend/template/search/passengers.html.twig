@@ -79,16 +79,22 @@
             </div>
         {% endfor %}
 
+        {# Radios rather than a select: four options, one choice, and no reason
+           to hide three of them behind a click. Laid out two by two, because as
+           full-width rows they made the panel taller than the dialog holding
+           it. The input is the control; the tile is its label. #}
         <fieldset class="party__cabins">
             <legend class="party__name">Cabin</legend>
-            {% for value, label in cabins %}
-                <label class="party__cabin">
-                    {{ label }}
-                    <input type="radio" class="js-party-cabin"
-                           name="{{ config('search.form.input.class') }}" value="{{ value }}"
-                           {{ cabin_value == value ? ' checked' : '' }} />
-                </label>
-            {% endfor %}
+            <div class="party__cabin-grid">
+                {% for value, label in cabins %}
+                    <label class="party__cabin">
+                        <input type="radio" class="js-party-cabin"
+                               name="{{ config('search.form.input.class') }}" value="{{ value }}"
+                               {{ cabin_value == value ? ' checked' : '' }} />
+                        <span>{{ label }}</span>
+                    </label>
+                {% endfor %}
+            </div>
         </fieldset>
     </div>
 </div>
