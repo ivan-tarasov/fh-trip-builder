@@ -78,6 +78,14 @@ final class LayoutData
         return Breadcrumbs::trail($this->currentPage());
     }
 
+    /**
+     * Whether a nav link points at the section the current page sits in.
+     */
+    public function inSection(string $path): bool
+    {
+        return Breadcrumbs::covers($path, $this->currentPage());
+    }
+
     public function csrfToken(): string
     {
         return Csrf::token();

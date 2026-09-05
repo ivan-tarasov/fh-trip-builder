@@ -74,6 +74,27 @@ final class Breadcrumbs
     }
 
     /**
+     * Whether $path is the page being viewed or an ancestor of it.
+     *
+     * The nav highlights a section, not a page: on /my/bookings/100001 the
+     * "My bookings" item should light up, and exact string equality is why it
+     * did not. The ancestry this class already walks for the trail is the same
+     * question, so it is answered here rather than a second way in the header.
+     */
+    public static function covers(string $path, string $current): bool
+    {
+        $path = self::normalise($path);
+        $current = self::normalise($current);
+
+        if ($path === $current) {
+            return true;
+        }
+
+        // The separator matters: without it /airport would cover /airports.
+        return $path !== '/' && str_starts_with($current, $path . '/');
+    }
+
+    /**
      * Request::path() already strips the trailing slash, but this is also
      * called with hand-written paths in tests and from controllers.
      */

@@ -94,6 +94,31 @@ final class BreadcrumbsTest extends TestCase
         self::assertSame([], Breadcrumbs::trail('//'));
     }
 
+    public function testASectionCoversItsOwnPageAndItsChildren(): void
+    {
+        // What the nav highlight asks: "My bookings" should stay lit while you
+        // are looking at one booking.
+        self::assertTrue(Breadcrumbs::covers('/my/bookings', '/my/bookings'));
+        self::assertTrue(Breadcrumbs::covers('/my/bookings', '/my/bookings/100001'));
+        self::assertTrue(Breadcrumbs::covers('/my/bookings/', '/my/bookings/100001'));
+    }
+
+    public function testASectionDoesNotCoverASiblingThatMerelyStartsTheSame(): void
+    {
+        // The separator is what makes this true; a bare str_starts_with would
+        // light up Airports while you are on Airlines' neighbour.
+        self::assertFalse(Breadcrumbs::covers('/airport', '/airports'));
+        self::assertFalse(Breadcrumbs::covers('/my/booking', '/my/bookings'));
+        self::assertFalse(Breadcrumbs::covers('/my/saved', '/my/bookings'));
+    }
+
+    public function testRootCoversOnlyItself(): void
+    {
+        // Otherwise every nav item's ancestor check would match every page.
+        self::assertTrue(Breadcrumbs::covers('/', '/'));
+        self::assertFalse(Breadcrumbs::covers('/', '/my/bookings'));
+    }
+
     public function testEveryConfiguredPageResolvesToATrail(): void
     {
         // Guards the map against an entry that never renders -- a path typed
