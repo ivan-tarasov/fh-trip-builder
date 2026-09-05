@@ -20,6 +20,7 @@ use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\SearchRepository;
+use TripBuilder\SearchUrl;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 use TripBuilder\View\ItineraryPresenter;
@@ -50,6 +51,20 @@ class SearchController extends AbstractController
     // The balanced sort, as the market leads with. It is the one sort ranked
     // across the whole result set rather than by ORDER BY, so it costs a pass
     // over the candidates that the others do not.
+    /**
+     * The keys SearchUrl spells into the path. Everything else the search reads
+     * -- sort, paging, the chosen legs, and every filter -- stays in the query
+     * string, because it describes the screen rather than the trip.
+     */
+    private const array PATH_KEYS = [
+        self::GET_FROM,
+        self::GET_TO,
+        self::GET_DEPART,
+        self::GET_RETURN,
+        self::GET_TRIPTYPE,
+        self::GET_CLASS,
+    ];
+
     private const string DEFAULT_SORT = 'recommended';
 
     // Ten is a first screen; after that the visitor is scanning, and more per
@@ -79,6 +94,8 @@ class SearchController extends AbstractController
 
     /** @var array<string, array<array-key, float>> */
     private array $optionPrices = [];
+
+    private ?SearchUrl $searchUrl = null;
 
     public function index(): void
     {
@@ -117,13 +134,31 @@ class SearchController extends AbstractController
             // Convert search hash to url and redirect
             $this->checkHash();
 
-            // If one of important params is empty or not provided – redirect to index page
-            if (empty($this->get[self::GET_TRIPTYPE])
-                || empty($this->get[self::GET_FROM])
-                || empty($this->get[self::GET_TO])
-                || empty($this->get[self::GET_DEPART])
-            ) {
+            // The search itself comes from the path when there is one, and from
+            // the query string when the link predates it.
+            $this->searchUrl = SearchUrl::parse($this->request->path())
+                ?? SearchUrl::fromQuery($query);
+
+            if ($this->searchUrl === null) {
                 echo '<script>window.location.replace("/");</script>';
+
+                return;
+            }
+
+            $this->setGet([...$this->get, ...$this->identity()]);
+
+            // One redirect covers both an older query-string link and a path
+            // spelled a way this page would not write -- `W10` for one adult,
+            // say. Parse whatever arrived, write it back out, and move only if
+            // the spellings differ. path() is a pure function of a parsed
+            // search and parse(path($x)) is $x, so this settles in one hop and
+            // cannot ping-pong.
+            //
+            // Never on a fragment request: the JS injects the answer as cards,
+            // and fetch follows redirects, so it would splice a whole page --
+            // header, footer and all -- into the results list.
+            if ($this->request->path() !== $this->searchUrl->path() && !$this->request->isFragment()) {
+                $this->bounce($this->link($this->get), 301);
 
                 return;
             }
@@ -202,14 +237,9 @@ class SearchController extends AbstractController
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],
                 'return_date' => $this->get[self::GET_RETURN],
-                // Sidebar
-                'form_url' => sprintf(
-                    '%s?%s',
-                    $this->searchPath(),
-                    $this->queryString(array_merge($this->get, [self::GET_SHOWN => null])),
-                ),
-                // Filter forms submit with GET, so they post to the bare path
-                // and carry the rest of the search as hidden fields.
+                // Filter forms submit with GET, so they post to the search's
+                // own path and carry only the rest -- sort and filters -- as
+                // hidden fields. The search itself is in that path now.
                 'form_path' => $this->searchPath(),
                 'session_sort' => $this->sort(),
                 'default_sort' => self::DEFAULT_SORT,
@@ -311,25 +341,29 @@ class SearchController extends AbstractController
                 return;
             }
 
-            $search_params = http_build_query([
-                self::GET_FROM => $search[self::GET_FROM . '_code'],
-                self::GET_TO => $search[self::GET_TO . '_code'],
-                self::GET_DEPART => $search[self::GET_DEPART],
-                self::GET_RETURN => $search[self::GET_RETURN],
-                self::GET_TRIPTYPE => $search[self::GET_TRIPTYPE],
+            // Straight to the short form, which is what migrates every
+            // `?hash=` link already out there -- the row holds components, so
+            // there is no old URL to rewrite.
+            $searchUrl = new SearchUrl(
+                from: (string) $search[self::GET_FROM . '_code'],
+                to: (string) $search[self::GET_TO . '_code'],
+                depart: (string) $search[self::GET_DEPART],
+                return: ($search[self::GET_RETURN] ?? null) === null
+                    ? null
+                    : (string) $search[self::GET_RETURN],
                 // Rows recorded before the column existed default to economy,
                 // which is the cabin they were all searched in.
-                self::GET_CLASS => CabinClass::fromRequest(
+                cabin: CabinClass::fromRequest(
                     is_string($search[self::GET_CLASS] ?? null) ? $search[self::GET_CLASS] : null,
-                )->value,
-            ]);
+                ),
+            );
 
             echo new TwigRenderer()->render('search/redirect.html.twig', [
                 'image_url' => Cdn::getUrl(sprintf(
                     '%s/search_redirect.gif',
                     Config::get('site.static.endpoint.images'),
                 )),
-                'search_params' => $search_params,
+                'search_url' => $searchUrl->path(),
             ]);
 
             die();
@@ -946,11 +980,7 @@ class SearchController extends AbstractController
             $kept[$key] = null;
         }
 
-        return sprintf(
-            '%s?%s',
-            $this->searchPath(),
-            $this->queryString(array_merge($kept, [self::GET_SHOWN => null])),
-        );
+        return $this->link(array_merge($kept, [self::GET_SHOWN => null]));
     }
 
     /**
@@ -1046,18 +1076,14 @@ class SearchController extends AbstractController
      */
     private function stepUrl(?array $ids, bool $keepReturn = false, ?array $current = null): string
     {
-        return sprintf(
-            '%s?%s',
-            $this->searchPath(),
-            $this->queryString(array_merge($this->get, [
-                self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
-                self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
-                // Only a Change link carries this; choosing from the list does
-                // not, or the marker would follow the traveller forward.
-                self::GET_CURRENT => $current === null || $current === [] ? null : implode(',', $current),
-                self::GET_SHOWN => null,
-            ])),
-        );
+        return $this->link(array_merge($this->get, [
+            self::GET_DEPART_ITIN => $ids === null ? null : implode(',', $ids),
+            self::GET_RETURN_ITIN => $keepReturn ? ($this->get[self::GET_RETURN_ITIN] ?? null) : null,
+            // Only a Change link carries this; choosing from the list does
+            // not, or the marker would follow the traveller forward.
+            self::GET_CURRENT => $current === null || $current === [] ? null : implode(',', $current),
+            self::GET_SHOWN => null,
+        ]));
     }
 
     /**
@@ -1067,14 +1093,10 @@ class SearchController extends AbstractController
      */
     private function returnStepUrl(array $ids): string
     {
-        return sprintf(
-            '%s?%s',
-            $this->searchPath(),
-            $this->queryString(array_merge($this->get, [
-                self::GET_RETURN_ITIN => implode(',', $ids),
-                self::GET_SHOWN => null,
-            ])),
-        );
+        return $this->link(array_merge($this->get, [
+            self::GET_RETURN_ITIN => implode(',', $ids),
+            self::GET_SHOWN => null,
+        ]));
     }
 
     /**
@@ -1168,11 +1190,7 @@ class SearchController extends AbstractController
 
     private function moreUrl(int $shown): string
     {
-        return sprintf(
-            '%s?%s',
-            $this->searchPath(),
-            $this->queryString(array_merge($this->get, [self::GET_SHOWN => $shown])),
-        );
+        return $this->link(array_merge($this->get, [self::GET_SHOWN => $shown]));
     }
 
     /**
@@ -1222,9 +1240,52 @@ class SearchController extends AbstractController
         return new Input($this->get)->ids(self::GET_CURRENT);
     }
 
+    /**
+     * The search as a path segment, so every URL this page builds carries it
+     * instead of six query parameters.
+     */
     private function searchPath(): string
     {
-        return (string) Config::get('site.paths.search', '/search/');
+        return $this->searchUrl?->path() ?? (string) Config::get('site.paths.search', '/search/');
+    }
+
+    /**
+     * Where an old-format link should have landed: the short path, keeping
+     * whatever filtering and sorting rode along with it.
+     */
+    /**
+     * A link to this search, with whatever is being changed applied on top.
+     *
+     * The `?` is conditional because it has to be: with the search itself in
+     * the path, a plain unsorted unfiltered result has nothing left to put in a
+     * query string, and every one of these used to end in a bare `?`.
+     *
+     * @param array<string, mixed> $params
+     */
+    private function link(array $params): string
+    {
+        $query = $this->queryString($params);
+
+        return $this->searchPath() . ($query === '' ? '' : '?' . $query);
+    }
+
+    /**
+     * The six keys the path now carries. Written back into $this->get so the
+     * rest of the page -- the form, the template, the stat row -- keeps reading
+     * them from one place.
+     *
+     * @return array<string, string|null>
+     */
+    private function identity(): array
+    {
+        return [
+            self::GET_FROM => $this->searchUrl->from,
+            self::GET_TO => $this->searchUrl->to,
+            self::GET_DEPART => $this->searchUrl->depart,
+            self::GET_RETURN => $this->searchUrl->return,
+            self::GET_TRIPTYPE => $this->searchUrl->tripType()->value,
+            self::GET_CLASS => $this->searchUrl->cabin->value,
+        ];
     }
 
     /**
@@ -1239,6 +1300,17 @@ class SearchController extends AbstractController
      */
     private function queryString(array $params): string
     {
+        foreach ([...self::PATH_KEYS, self::GET_HASH] as $key) {
+            unset($params[$key]);
+        }
+
+        // The first slice is what you get without asking, so saying so adds
+        // nothing but noise to a canonical URL. A larger one is a real
+        // instruction and stays.
+        if ((int) ($params[self::GET_SHOWN] ?? 0) === self::FIRST_SLICE) {
+            unset($params[self::GET_SHOWN]);
+        }
+
         return str_replace('%2C', ',', http_build_query($params));
     }
 
@@ -1252,7 +1324,10 @@ class SearchController extends AbstractController
      */
     private function carried(array $without): array
     {
-        $drop = [self::GET_SHOWN, self::GET_HASH, ...$without];
+        // The identity keys are in the form's action path now. Leaving them as
+        // hidden inputs would put them back in the query string on every Apply,
+        // and the request would redirect straight back here.
+        $drop = [self::GET_SHOWN, self::GET_HASH, ...self::PATH_KEYS, ...$without];
 
         return array_filter(
             $this->get,
@@ -1373,14 +1448,10 @@ class SearchController extends AbstractController
      */
     private function sortUrl(string $sort): string
     {
-        return sprintf(
-            '%s?%s',
-            $this->searchPath(),
-            $this->queryString(array_merge($this->get, [
-                self::GET_SORT => $sort === self::DEFAULT_SORT ? null : $sort,
-                self::GET_SHOWN => null,
-            ])),
-        );
+        return $this->link(array_merge($this->get, [
+            self::GET_SORT => $sort === self::DEFAULT_SORT ? null : $sort,
+            self::GET_SHOWN => null,
+        ]));
     }
 
     /**

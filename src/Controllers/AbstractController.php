@@ -35,10 +35,10 @@ class AbstractController
      * Falls back to a script when the response has already started, which is
      * what happens on a page that redirects after rendering has begun.
      */
-    protected function bounce(string $url): void
+    protected function bounce(string $url, int $status = 302): void
     {
         if (!headers_sent()) {
-            header('Location: ' . $url, true, 302);
+            header('Location: ' . $url, true, $status);
 
             return;
         }
