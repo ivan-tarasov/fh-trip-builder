@@ -113,65 +113,7 @@
                             </div>
                         </div>
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-md">
-                                <div class="form-floating">
-                                    <select class="form-select" id="passengers_adt">
-                                        <option value="1" selected>1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                        <option value="6">6</option>
-                                        <option value="7">7</option>
-                                        <option value="8">8</option>
-                                        <option value="9">9 max</option>
-                                    </select>
-                                    <label for="passengers_adt">Adult <small>(12+)</small></label>
-                                </div>
-                            </div>
-                            <div class="col-md">
-                                <div class="form-floating">
-                                    <select class="form-select" id="passengers_chd">
-                                        <option selected>–</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                        <option value="6">6</option>
-                                        <option value="7">7</option>
-                                        <option value="8">8</option>
-                                        <option value="9">9 max</option>
-                                    </select>
-                                    <label for="passengers_chd">Child <small>(2–11)</small></label>
-                                </div>
-                            </div>
-                            <div class="col-md">
-                                <div class="form-floating">
-                                    <select class="form-select" id="passengers_inf">
-                                        <option selected>–</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4 max</option>
-                                    </select>
-                                    <label for="passengers_inf">Infant <small>in seat</small></label>
-                                </div>
-                            </div>
-                            <div class="col-md">
-                                <div class="form-floating">
-                                    <select class="form-select" id="passengers_inl">
-                                        <option selected>–</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4 max</option>
-                                    </select>
-                                    <label for="passengers_inl">Infant <small>on lap</small></label>
-                                </div>
-                            </div>
-                        </div>
+                        {% include 'search/passengers.html.twig' only %}
 
                         <div class="form-floating mb-3">
                             {# The select had no name attribute, so the cabin was never submitted:

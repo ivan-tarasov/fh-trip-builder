@@ -29,7 +29,7 @@ return [
 
     'primary' => 'aircraft, cabin',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     'indexes' => [
         // Reading a type's whole cabin list is what the primary key already
@@ -43,6 +43,7 @@ return [
             'name' => 'aircraft',
             'type' => 'char',
             'length' => 3,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -52,6 +53,7 @@ return [
             'name' => 'cabin',
             'type' => 'char',
             'length' => 1,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,

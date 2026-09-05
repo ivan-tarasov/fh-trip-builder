@@ -14,6 +14,7 @@ enum Table: string
     case Airlines = 'airlines';
     case Airports = 'airports';
     case Bookings = 'bookings';
+    case BookingPassengers = 'booking_passengers';
     case Countries = 'countries';
     case FareBrands = 'fare_brands';
     case Flights = 'flights';

@@ -14,7 +14,7 @@
     <meta name="robots" content="noindex" />
     <title>Searching for flights – {{ config('app.name') }}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
-    <noscript><meta http-equiv="refresh" content="0;url={{ config('site.paths.search') }}?{{ search_params|escape('html_attr') }}" /></noscript>
+    <noscript><meta http-equiv="refresh" content="0;url={{ search_url|escape('html_attr') }}" /></noscript>
     <style>
         :root { color-scheme: light; }
         body {
@@ -52,11 +52,11 @@
     <h1>Searching for flights</h1>
     <p>Opening your results. This takes a few seconds.</p>
     <noscript>
-        <p><a href="{{ config('site.paths.search') }}?{{ search_params|escape('html_attr') }}">Continue to your results</a></p>
+        <p><a href="{{ search_url|escape('html_attr') }}">Continue to your results</a></p>
     </noscript>
     <script>
         setTimeout(function () {
-            window.location.replace("{{ config('site.paths.search')|escape('js') }}?{{ search_params|escape('js') }}");
+            window.location.replace("{{ search_url|escape('js') }}");
         }, 100);
     </script>
 </body>

@@ -11,13 +11,14 @@ return [
 
     'primary' => 'code',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     'columns' => [
         [
             'name' => 'code',
             'type' => 'char',
             'length' => 3,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -36,6 +37,7 @@ return [
             'name' => 'country_code',
             'type' => 'char',
             'length' => 2,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -45,6 +47,7 @@ return [
             'name' => 'city_code',
             'type' => 'char',
             'length' => 3,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -99,7 +102,7 @@ return [
             'name' => 'altitude',
             'type' => 'int',
             'length' => 4,
-            'default' => 0,
+            'default' => [0],
             'nullable' => false,
             'auto_inc' => false,
             'comment' => false,
@@ -153,6 +156,14 @@ return [
             'auto_inc' => false,
             'comment' => false,
         ],
+    ],
+
+    'indexes' => [
+        // A search endpoint arrives as either an airport code or a city code,
+        // and resolveAirportCodes() asks for both at once. With only the
+        // primary key on `code` that OR could not seek at all and read the
+        // whole table; indexing `city_code` lets it merge the two sides.
+        ['name' => 'city_code', 'columns' => ['city_code']],
     ],
 
 ];

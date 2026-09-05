@@ -23,13 +23,14 @@ return [
 
     'primary' => 'code',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     'columns' => [
         [
             'name' => 'code',
             'type' => 'char',
             'length' => 2,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,

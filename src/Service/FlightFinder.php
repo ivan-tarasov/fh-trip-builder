@@ -8,6 +8,7 @@ use TripBuilder\Api\Flights\FlightSearchQuery;
 use TripBuilder\Api\Flights\SortMethod;
 use TripBuilder\CabinClass;
 use TripBuilder\Database\Connection;
+use TripBuilder\Party;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\FlightRepository;
@@ -162,19 +163,32 @@ final readonly class FlightFinder
             );
         }
 
-        $rows = array_map(fn(array $itinerary): array => [
-            self::RESPONSE_PRICE_BASE => (float) $itinerary['price_base'] + $addBase,
-            self::RESPONSE_PRICE_TAX => round((float) $itinerary['price_tax'] + $addTax, 2),
-            self::RESPONSE_ITINERARY => $this->mapItinerary(
-                $itinerary,
-                $query->cabin->code(),
-            ),
-        ], $result['rows']);
+        // Everything above this line is one seat: that is what the flights
+        // table holds, what the SQL sums and what the pruning compares. The
+        // party is applied here, once, where a per-seat price becomes the
+        // number somebody reads.
+        $party = $query->party;
 
-        $packagePrice = $return === null ? null : round(
-            (float) $outbound['price_base'] + (float) $outbound['price_tax']
-            + (float) $return['price_base'] + (float) $return['price_tax'],
-            2,
+        $rows = array_map(function (array $itinerary) use ($query, $party, $addBase, $addTax): array {
+            $priced = $party->apply(
+                (float) $itinerary['price_base'] + $addBase,
+                (float) $itinerary['price_tax'] + $addTax,
+            );
+
+            return [
+                self::RESPONSE_PRICE_BASE => $priced['base'],
+                self::RESPONSE_PRICE_TAX => $priced['tax'],
+                self::RESPONSE_ITINERARY => $this->mapItinerary(
+                    $itinerary,
+                    $query->cabin->code(),
+                ),
+            ];
+        }, $result['rows']);
+
+        $packagePrice = $return === null ? null : $this->partyTotal(
+            $party,
+            (float) $outbound['price_base'] + (float) $return['price_base'],
+            (float) $outbound['price_tax'] + (float) $return['price_tax'],
         );
 
         return [
@@ -185,27 +199,40 @@ final readonly class FlightFinder
             'total_flights' => $result['total'],
             // The lowest total on offer, in the same money the rows show, so a
             // row can say how much more than the best option it costs.
+            // The repository scaled it; only the other half of the trip is
+            // still one seat, so scale that and add.
             'cheapest_total' => $result['cheapest'] === null
                 ? null
-                : round($result['cheapest'] + $addBase + $addTax, 2),
+                : round($result['cheapest'] + $this->partyTotal($party, $addBase, $addTax), 2),
             'trip_type' => $tripType->value,
             'step' => $step,
             // Step 1 totals assume the cheapest return, so they are a floor;
             // everywhere else the price is exact for the trip being booked.
             'price_mode' => $step === 1 ? 'from' : 'total',
             'selected' => $outbound === null ? null : $this->mapItinerary($outbound, $query->cabin->code()),
-            'selected_price' => $outbound === null ? null : round((float) $outbound['price_base'] + (float) $outbound['price_tax'], 2),
+            'selected_price' => $outbound === null ? null : $this->partyTotal(
+                $party,
+                (float) $outbound['price_base'],
+                (float) $outbound['price_tax'],
+            ),
             'selected_ids' => $outbound === null ? [] : $outboundIds,
             'selected_return' => $return === null ? null : $this->mapItinerary($return, $query->cabin->code()),
-            'selected_return_price' => $return === null ? null : round((float) $return['price_base'] + (float) $return['price_tax'], 2),
+            'selected_return_price' => $return === null ? null : $this->partyTotal(
+                $party,
+                (float) $return['price_base'],
+                (float) $return['price_tax'],
+            ),
             'selected_return_ids' => $return === null ? [] : $returnIds,
             'package_price' => $packagePrice,
             self::RESPONSE_DEPART => $cities[self::RESPONSE_DEPART],
             self::RESPONSE_ARRIVE => $cities[self::RESPONSE_ARRIVE],
             'depart_city_name' => $departCity,
             'arrive_city_name' => $arriveCity,
-            'adult_count' => $query->adultNum,
-            'child_count' => $query->childNum,
+            'adult_count' => $query->party->adults,
+            'child_count' => $query->party->children,
+            'infant_count' => $query->party->infants,
+            // What the prices on this page are for, in the form's own words.
+            'party_label' => $query->party->label(),
             // Which filter options would still return something, so the sidebar
             // can grey out the ones that would empty the page.
             'available' => $result['available'],
@@ -215,9 +242,12 @@ final readonly class FlightFinder
             // The ends each slider should span.
             'bounds' => $result['bounds'],
             // What each sort would put first, in the money the cards show.
+            // The offset is scaled too: the repository already applied the party
+            // to the row, so adding a one-seat other-half here would quote a
+            // total in two different currencies of passenger.
             'highlights' => array_map(
-                static fn(array $best): array => [
-                    'price' => round($best['price'] + $addBase + $addTax, 2),
+                fn(array $best): array => [
+                    'price' => round($best['price'] + $this->partyTotal($party, $addBase, $addTax), 2),
                     'duration' => $best['duration'],
                 ],
                 $result['highlights'],
@@ -302,6 +332,19 @@ final readonly class FlightFinder
     public function findOne(int $id, CabinClass $cabin = CabinClass::Economy): ?array
     {
         return $this->findSegments([$id], $cabin)[0] ?? null;
+    }
+
+    /**
+     * A per-seat base and tax as one number this party pays.
+     *
+     * Base and tax carry different shares -- a lap infant pays a token fare and
+     * no tax -- so they are scaled apart and added after, never summed first.
+     */
+    private function partyTotal(Party $party, float $base, float $tax): float
+    {
+        $priced = $party->apply($base, $tax);
+
+        return round($priced['base'] + $priced['tax'], 2);
     }
 
     /**

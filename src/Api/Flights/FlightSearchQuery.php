@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Api\Flights;
 
 use TripBuilder\CabinClass;
+use TripBuilder\Party;
 
 /**
  * Immutable set of validated parameters for a flight search request.
@@ -21,8 +22,10 @@ final readonly class FlightSearchQuery
         public string $to,
         public string $departDate,
         public string $returnDate,
-        public int $adultNum,
-        public int $childNum,
+        // Who is flying. Two loose ints lived here before and neither was ever
+        // read; there was no infant count at all, which is the tell that they
+        // were not a model of anything.
+        public Party $party,
         // The cabin the search asked for. Carried so the results can say which
         // cabin they describe; the flights table has no cabin column, so this
         // is the query's cabin and not the aircraft's.

@@ -11,8 +11,14 @@
 <p class="booking-card__label">Receipt</p>
 <dl class="order__prices">
     <div class="order__price-row">
-        <dt>Passenger</dt>
-        <dd>{{ booking.passenger }}</dd>
+        <dt>{{ booking.passengers|length > 1 ? 'Passengers' : 'Passenger' }}</dt>
+        <dd>
+            {% for traveller in booking.passengers %}
+                {{ traveller.name }}{% if booking.passengers|length > 1 %} <span class="text-muted">({{ traveller.type|lower }})</span>{% endif %}{{ not loop.last ? '<br />'|raw : '' }}
+            {% else %}
+                {{ booking.passenger }}
+            {% endfor %}
+        </dd>
     </div>
     {% if booking.contact_email %}
         <div class="order__price-row">
@@ -23,7 +29,22 @@
     {% if booking.fare_brand %}
         <div class="order__price-row">
             <dt>Fare</dt>
-            <dd>{{ booking.fare_brand }}</dd>
+            <dd>
+                {{ booking.fare_brand }}
+                {# The terms as they were sold, marked the same way checkout
+                   marked them, so what was agreed to and what is shown back
+                   read identically. Older bookings kept only the brand name. #}
+                {% if booking.fare_rules %}
+                    <ul class="rules__list rules__list--compact">
+                        {% for line in booking.fare_rules %}
+                            <li class="rules__item{{ line.allowed ? '' : ' rules__item--restricted' }}">
+                                <i class="fas {{ line.allowed ? 'fa-check' : 'fa-xmark' }} rules__icon"></i>
+                                {{ line.text }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </dd>
         </div>
     {% endif %}
     {% if booking.price_total %}

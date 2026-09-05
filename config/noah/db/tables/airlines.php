@@ -11,13 +11,14 @@ return [
 
     'primary' => 'code',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     'columns' => [
         [
             'name' => 'code',
             'type' => 'char',
             'length' => 2,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -57,6 +58,7 @@ return [
             'name' => 'country',
             'type' => 'char',
             'length' => 2,
+            'charset' => 'ascii',
             'default' => false,
             'nullable' => true,
             'auto_inc' => false,
@@ -75,7 +77,7 @@ return [
             'name' => 'traffic',
             'type' => 'int',
             'length' => 6,
-            'default' => 0,
+            'default' => [0],
             'nullable' => true,
             'auto_inc' => false,
             'comment' => false,
@@ -84,7 +86,7 @@ return [
             'name' => 'is_major',
             'type' => 'tinyint',
             'length' => 1,
-            'default' => 0,
+            'default' => [0],
             'nullable' => false,
             'auto_inc' => false,
             'comment' => false,

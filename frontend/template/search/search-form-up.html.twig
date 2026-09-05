@@ -60,53 +60,7 @@
 
                 <div class="row">
                     <div class="col">
-                        <div class="row g-2 mb-3">
-                            <div class="col-md">
-                                <div class="form-floating">
-                                    <select class="form-select" id="passengers_adult">
-                                        <option value="1" selected>1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                        <option value="6">6</option>
-                                        <option value="7">7</option>
-                                        <option value="8">8</option>
-                                        <option value="9">9 (maximum)</option>
-                                    </select>
-                                    <label for="passengers_adult">Adult</label>
-                                </div>
-                            </div>
-                            <div class="col-md">
-                                <div class="form-floating">
-                                    <select class="form-select" id="passengers_child">
-                                        <option selected>–</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4</option>
-                                        <option value="5">5</option>
-                                        <option value="6">6</option>
-                                        <option value="7">7</option>
-                                        <option value="8">8</option>
-                                        <option value="9">9 (maximum)</option>
-                                    </select>
-                                    <label for="passengers_child">Child</label>
-                                </div>
-                            </div>
-                            <div class="col-md">
-                                <div class="form-floating">
-                                    <select class="form-select" id="passengers_infant">
-                                        <option selected>–</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                        <option value="4">4 – maximum</option>
-                                    </select>
-                                    <label for="passengers_infant">Infant</label>
-                                </div>
-                            </div>
-                        </div>
+                        {% include 'search/passengers.html.twig' with { 'party': party } only %}
                     </div>
 
                     <div class="col">

@@ -36,7 +36,7 @@
                     </div>
                 {% endif %}
                 <p class="small text-muted mb-0">
-                    {{ booking.passenger }}{% if booking.created %} &middot; booked {{ booking.created|date('j M Y') }}{% endif %}
+                    {{ booking.passenger_summary }}{% if booking.created %} &middot; booked {{ booking.created|date('j M Y') }}{% endif %}
                 </p>
             </div>
 

@@ -38,7 +38,11 @@ use TripBuilder\Helper;
  */
 final class FarePricing
 {
-    /** Per-passenger cost that does not scale with distance: handling, fees. */
+    /**
+     * Flat cost on a leg that does not scale with distance: handling, fees.
+     * Charged per leg, so a connection carries it once for each -- part of what
+     * stops connections undercutting the nonstop covering the same ground.
+     */
     public const float FIXED_DOLLARS = 30.0;
 
     /** Dollars per kilometre of the base fare. */

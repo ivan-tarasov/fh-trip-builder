@@ -76,46 +76,63 @@
                 {# --- Passenger --- #}
                 <section class="pane" aria-labelledby="passenger-heading">
                     <h2 class="pane__heading" id="passenger-heading">
-                        <span class="pane__step">2</span> Passenger
+                        <span class="pane__step">2</span>
+                        {{ passengers|length == 1 ? 'Passenger' : 'Passengers' }}
                     </h2>
                     <p class="pane__hint">Exactly as printed on the passport or ID you will
                         travel with — airlines will not board a name that does not match.</p>
 
-                    <div class="field-row">
-                        {% include 'checkout/field.html.twig' with {
-                            'name': 'first_name', 'label': 'First name',
-                            'autocomplete': 'given-name', 'errors': errors, 'form': form, 'max_lengths': max_lengths
-                        } only %}
-                        {% include 'checkout/field.html.twig' with {
-                            'name': 'last_name', 'label': 'Last name',
-                            'autocomplete': 'family-name', 'errors': errors, 'form': form, 'max_lengths': max_lengths
-                        } only %}
-                    </div>
+                    {% for passenger in passengers %}
+                        {% set at = 'passengers.' ~ loop.index0 ~ '.' %}
+                        {% set posted = 'passengers[' ~ loop.index0 ~ ']' %}
 
-                    <div class="field-row">
-                        {% include 'checkout/field.html.twig' with {
-                            'name': 'dob', 'label': 'Date of birth', 'type': 'date',
-                            'autocomplete': 'bday', 'errors': errors, 'form': form, 'max_lengths': max_lengths
-                        } only %}
+                        {% if passengers|length > 1 %}
+                            <p class="passenger__label">{{ passenger.label }}</p>
+                        {% endif %}
 
-                        <div class="field">
-                            <label class="field__label" for="gender">Gender</label>
-                            <select class="field__input{{ errors.gender is defined ? ' is-invalid' : '' }}"
-                                    id="gender" name="gender">
-                                <option value="">Choose…</option>
-                                {% for value, label in genders %}
-                                    <option value="{{ value }}"{{ form.gender|default('') == value ? ' selected' : '' }}>
-                                        {{ label }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            {% if errors.gender is defined %}
-                                <p class="field__error">{{ errors.gender }}</p>
-                            {% else %}
-                                <p class="field__note">Required by airlines for security checks.</p>
-                            {% endif %}
+                        {# The type is on the block so autofill can pick an age
+                           the server will accept -- a child born last year would
+                           fail the check that the date matches the fare. #}
+                        <div data-passenger="{{ loop.index0 }}" data-passenger-type="{{ passenger.type }}"></div>
+
+                        <div class="field-row">
+                            {% include 'checkout/field.html.twig' with {
+                                'name': posted ~ '[first_name]', 'key': at ~ 'first_name', 'label': 'First name',
+                                'autocomplete': 'given-name', 'limit': 64,
+                                'errors': errors, 'form': form
+                            } only %}
+                            {% include 'checkout/field.html.twig' with {
+                                'name': posted ~ '[last_name]', 'key': at ~ 'last_name', 'label': 'Last name',
+                                'autocomplete': 'family-name', 'limit': 64,
+                                'errors': errors, 'form': form
+                            } only %}
                         </div>
-                    </div>
+
+                        <div class="field-row">
+                            {% include 'checkout/field.html.twig' with {
+                                'name': posted ~ '[dob]', 'key': at ~ 'dob', 'label': 'Date of birth', 'type': 'date',
+                                'autocomplete': 'bday', 'errors': errors, 'form': form
+                            } only %}
+
+                            <div class="field">
+                                <label class="field__label" for="{{ at }}gender">Gender</label>
+                                <select class="field__input{{ errors[at ~ 'gender'] is defined ? ' is-invalid' : '' }}"
+                                        id="{{ at }}gender" name="{{ posted }}[gender]">
+                                    <option value="">Choose…</option>
+                                    {% for value, label in genders %}
+                                        <option value="{{ value }}"{{ form[at ~ 'gender']|default('') == value ? ' selected' : '' }}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if errors[at ~ 'gender'] is defined %}
+                                    <p class="field__error">{{ errors[at ~ 'gender'] }}</p>
+                                {% else %}
+                                    <p class="field__note">Required by airlines for security checks.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
                 </section>
 
                 {# --- Payment --- #}

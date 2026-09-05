@@ -17,6 +17,12 @@ final class Connection
 {
     private int $queryCount = 0;
 
+    /**
+     * One connection per process. A request is a process here, so this is
+     * request scope; a Noah command holds it for the length of the command.
+     */
+    private static ?self $shared = null;
+
     public function __construct(private readonly PDO $pdo) {}
 
     /**
@@ -28,7 +34,15 @@ final class Connection
     }
 
     /**
-     * Build a connection from the DB_* environment variables.
+     * The connection for this process, built from the DB_* environment
+     * variables on first use.
+     *
+     * Shared rather than built per caller. A page used to open two -- one for
+     * the controller and one for LayoutData -- which cost a second MySQL
+     * connection per request and, because queryCount() is per instance, made
+     * the footer's "DB requests" read 1 on every page in the app including a
+     * search that runs dozens. The number was measuring the connection nobody
+     * was using.
      *
      * Reads real environment variables first (getenv), falling back to $_ENV.
      * This matters in CI, where the credentials are process env vars and
@@ -36,6 +50,10 @@ final class Connection
      */
     public static function fromEnv(): self
     {
+        if (self::$shared instanceof self) {
+            return self::$shared;
+        }
+
         $pdo = new PDO(
             self::dsn([
                 'DB_HOST' => self::env('DB_HOST'),
@@ -51,7 +69,7 @@ final class Connection
             ],
         );
 
-        return new self($pdo);
+        return self::$shared = new self($pdo);
     }
 
     /**

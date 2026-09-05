@@ -6,7 +6,9 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use stdClass;
+use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\SearchUrl;
 use TripBuilder\Service\Calendar;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\View\BookingPresenter;
@@ -31,8 +33,16 @@ class MyController extends AbstractController
         $upcoming = [];
         $past = [];
 
-        foreach (new BookingRepository($this->connection())->forSession(session_id()) as $row) {
-            $booking = $presenter->booking($row);
+        $rows = new BookingRepository($this->connection())->forSession(session_id());
+
+        // One count query for the page. The rows themselves are read without a
+        // join, so without this a card could only ever name the lead.
+        $counts = new BookingPassengerRepository($this->connection())->countsFor(
+            array_map(static fn(array $row): int => (int) $row['id'], $rows),
+        );
+
+        foreach ($rows as $row) {
+            $booking = $presenter->booking($row, travellerCount: $counts[(int) $row['id']] ?? null);
 
             // Stored flight JSON that will not rebuild. Skip the row rather
             // than draw a booking with no flights in it.
@@ -72,7 +82,12 @@ class MyController extends AbstractController
     public function booking(): void
     {
         $row = $this->findRow();
-        $booking = $row === null ? null : new BookingPresenter()->booking($row);
+        $booking = $row === null
+            ? null
+            : new BookingPresenter()->booking(
+                $row,
+                new BookingPassengerRepository($this->connection())->forBooking((int) $row['id']),
+            );
 
         if ($booking === null) {
             $this->bounce('/my/bookings');
@@ -234,13 +249,12 @@ class MyController extends AbstractController
         $first = $segments[0];
         $last = $segments[array_key_last($segments)];
 
-        return '/search?' . http_build_query([
-            'from' => $first->depart->airport_code,
-            'to' => $last->arrive->airport_code,
-            'depart' => date('Y-m-d', strtotime($first->depart->date_time)),
-            'triptype' => 'oneway',
-            'class' => 'economy',
-        ]);
+        return new SearchUrl(
+            from: (string) $first->depart->airport_code,
+            to: (string) $last->arrive->airport_code,
+            depart: date('Y-m-d', (int) strtotime((string) $first->depart->date_time)),
+            return: null,
+        )->path();
     }
 
 }

@@ -31,7 +31,7 @@
                     <h1 class="h3 mb-0">Your booking</h1>
                 {% endif %}
                 <p class="small text-muted mb-0 mt-2">
-                    {{ booking.passenger }}{% if booking.created %} &middot; booked {{ booking.created|date('j M Y') }}{% endif %}
+                    {{ booking.passenger_summary }}{% if booking.created %} &middot; booked {{ booking.created|date('j M Y') }}{% endif %}
                 </p>
             </div>
 

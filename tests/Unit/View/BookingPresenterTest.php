@@ -169,4 +169,40 @@ final class BookingPresenterTest extends TestCase
 
         self::assertSame('Business', $booking['outbound']['segments'][0]['cabin']);
     }
+
+    public function testTheSummaryNamesTheLeadAndCountsTheRest(): void
+    {
+        // The bookings list reads its rows without joining, so a count is all it
+        // has. A party of three still must not read as a trip for one.
+        $booking = self::presenter()->booking(self::row(), travellerCount: 3);
+
+        self::assertSame('Ada Lovelace + 2', $booking['passenger_summary']);
+    }
+
+    public function testOneTravellerIsJustTheirName(): void
+    {
+        self::assertSame(
+            'Ada Lovelace',
+            self::presenter()->booking(self::row(), travellerCount: 1)['passenger_summary'],
+        );
+
+        // Written before travellers were rows of their own, so there is nothing
+        // to count and nothing to add.
+        self::assertSame(
+            'Ada Lovelace',
+            self::presenter()->booking(self::row())['passenger_summary'],
+        );
+    }
+
+    public function testTheDetailPageCountsTheTravellersItAlreadyHolds(): void
+    {
+        // Handed the travellers themselves, it counts those rather than relying
+        // on a number the caller also has to remember to pass.
+        $booking = self::presenter()->booking(self::row(), [
+            ['first_name' => 'Ada', 'last_name' => 'Lovelace', 'type' => 'A', 'dob' => '1990-01-01'],
+            ['first_name' => 'Mary', 'last_name' => 'Somerville', 'type' => 'A', 'dob' => '1992-02-02'],
+        ]);
+
+        self::assertSame('Ada Lovelace + 1', $booking['passenger_summary']);
+    }
 }

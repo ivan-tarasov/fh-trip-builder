@@ -6,6 +6,7 @@ namespace TripBuilder\View;
 
 use DateTimeImmutable;
 use Throwable;
+use TripBuilder\Api\Flights\FareRules;
 use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\TripType;
@@ -26,6 +27,9 @@ use TripBuilder\TripType;
  */
 final readonly class BookingPresenter
 {
+    /** What each stored type is called on screen. */
+    private const array PASSENGER_TYPES = ['A' => 'Adult', 'C' => 'Child', 'I' => 'Infant'];
+
     public function __construct(
         private ItineraryPresenter $itinerary = new ItineraryPresenter(),
         private DateTimeImmutable $now = new DateTimeImmutable(),
@@ -36,9 +40,10 @@ final readonly class BookingPresenter
      * than draw a booking with no flights in it.
      *
      * @param array<string, mixed> $row a bookings row as the repository returns it
+     * @param list<array<string, mixed>> $passengers rows from booking_passengers, lead first
      * @return array<string, mixed>|null
      */
-    public function booking(array $row): ?array
+    public function booking(array $row, array $passengers = [], ?int $travellerCount = null): ?array
     {
         $stored = StoredItinerary::fromJson($row['flight_outbound'] ?? null);
 
@@ -71,10 +76,32 @@ final readonly class BookingPresenter
             'status_label' => $status->label(),
             'is_cancelled' => $status === BookingStatus::Cancelled,
             'created' => $row['created'] ?? null,
+            // The lead, from the booking's own row -- the bookings list shows a
+            // name for every row and reads them in one query.
             'passenger' => trim(($row['passenger_first'] ?? '') . ' ' . ($row['passenger_last'] ?? '')),
+            // Everyone, when the caller has fetched them. Empty for the list
+            // page, which does not join, and for rows written before a booking
+            // could carry more than one traveller.
+            'passengers' => array_map(
+                static fn(array $p): array => [
+                    'name' => trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')),
+                    'type' => self::PASSENGER_TYPES[$p['type'] ?? 'A'] ?? 'Adult',
+                    'dob' => $p['dob'] ?? null,
+                ],
+                $passengers,
+            ),
+            // The lead's name, and how many others are on the booking. The list
+            // page knows only the count -- it does not join -- and the detail
+            // page has everyone; either way a party of four stops reading as a
+            // trip for one.
+            'passenger_summary' => $this->passengerSummary(
+                trim(($row['passenger_first'] ?? '') . ' ' . ($row['passenger_last'] ?? '')),
+                $passengers === [] ? $travellerCount : count($passengers),
+            ),
             'contact_email' => $row['contact_email'] ?? null,
             'contact_phone' => $row['contact_phone'] ?? null,
             'fare_brand' => $row['fare_brand'] ?? null,
+            'fare_rules' => $this->fareRules($row['fare_rules'] ?? null),
             'card_brand' => $row['card_brand'] ?? null,
             'card_last4' => $row['card_last4'] ?? null,
             // From the columns, never from the segments. The per-leg prices in
@@ -119,6 +146,42 @@ final readonly class BookingPresenter
             'triptype' => ($storedReturn === null ? TripType::Oneway : TripType::Roundtrip)->value,
             'class' => ($cabin ?? CabinClass::Economy)->value,
         ];
+    }
+
+    /**
+     * "Ada Lovelace" alone, or "Ada Lovelace + 2" when others are travelling.
+     *
+     * The count is null for a booking made before travellers were rows of their
+     * own, and 1 for a party of one; both say just the name, because there is
+     * nobody else to account for.
+     */
+    private function passengerSummary(string $lead, ?int $travellers): string
+    {
+        if ($travellers === null || $travellers < 2) {
+            return $lead;
+        }
+
+        return sprintf('%s + %d', $lead, $travellers - 1);
+    }
+
+    /**
+     * The rules a booking was sold under, as the page lists them.
+     *
+     * Null for a row written before the column existed. Those cannot be
+     * recovered -- the legs they were folded from are long deleted -- so the
+     * page says nothing rather than guessing from a brand name.
+     *
+     * @return list<array{text: string, allowed: bool}>|null
+     */
+    private function fareRules(mixed $stored): ?array
+    {
+        if (!is_string($stored) || $stored === '') {
+            return null;
+        }
+
+        $data = json_decode($stored, true);
+
+        return is_array($data) ? FareRules::fromRow($data)->lines() : null;
     }
 
     /**
