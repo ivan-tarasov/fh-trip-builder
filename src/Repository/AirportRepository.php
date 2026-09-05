@@ -53,8 +53,8 @@ final readonly class AirportRepository
      */
     public function pickable(): array
     {
-        $sql = 'SELECT code, label, sub, is_city FROM ('
-            . ' SELECT a.city_code AS code, a.city AS label, c.title AS sub,'
+        $sql = 'SELECT code, label, sub, city, is_city FROM ('
+            . ' SELECT a.city_code AS code, a.city AS label, c.title AS sub, a.city AS city,'
             . '  1 AS is_city, a.city AS in_city, 0 AS depth'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
@@ -66,7 +66,7 @@ final readonly class AirportRepository
             // like it offers a choice it does not.
             . ' HAVING COUNT(*) > 1'
             . ' UNION ALL'
-            . ' SELECT a.code, a.title, CONCAT(a.city, \', \', c.title),'
+            . ' SELECT a.code, a.title, CONCAT(a.city, \', \', c.title), a.city,'
             . '  0, a.city, 1'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'

@@ -9,6 +9,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\SearchRepository;
+use TripBuilder\View\RecentSearches;
 use TripBuilder\View\TwigRenderer;
 
 class HomeController extends AbstractController
@@ -47,6 +48,8 @@ class HomeController extends AbstractController
             new SearchRepository($this->connection())->topSearches(5),
         );
 
+        $places = new AirportRepository($this->connection())->pickable();
+
         echo new TwigRenderer()->renderPage('index/view.html.twig', [
             'bg_image_url' => $bgImageUrl,
             'today_date' => date('Y-m-d'),
@@ -54,7 +57,8 @@ class HomeController extends AbstractController
             'top_searches' => $topSearches,
             // Everywhere a search can start or end. Small enough to ship whole,
             // which is what lets the form filter in the browser.
-            'places' => new AirportRepository($this->connection())->pickable(),
+            'places' => $places,
+            'recent' => RecentSearches::rows($this->request->cookies, $places),
         ]);
     }
 

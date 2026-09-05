@@ -24,6 +24,7 @@ use TripBuilder\SearchUrl;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 use TripBuilder\View\ItineraryPresenter;
+use TripBuilder\View\RecentSearches;
 use TripBuilder\View\TwigRenderer;
 
 class SearchController extends AbstractController
@@ -228,6 +229,8 @@ class SearchController extends AbstractController
                 return;
             }
 
+            $places = new AirportRepository($this->connection())->pickable();
+
             echo new TwigRenderer()->renderPage('search/view.html.twig', [
                 // So the form above the results shows the party that was
                 // searched for rather than resetting to one adult.
@@ -243,7 +246,8 @@ class SearchController extends AbstractController
                 // So the results page's own form comes back showing the cabin
                 // that produced these results.
                 'cabin' => $cabin,
-                'places' => new AirportRepository($this->connection())->pickable(),
+                'places' => $places,
+                'recent' => RecentSearches::rows($this->request->cookies, $places),
                 'depart_city' => $this->data->depart,
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],
@@ -401,6 +405,11 @@ class SearchController extends AbstractController
             $this->get[self::GET_TRIPTYPE],
             $cabin,
         );
+
+        // Offered back in the origin and destination fields next time. Kept in
+        // this browser rather than in the `search` table, which counts how
+        // popular a route is and has no column for who ran it.
+        RecentSearches::remember($this->request->cookies, $this->searchUrl, $this->request->isSecure());
 
         // Insert or update search
         new SearchRepository($this->connection())->record(

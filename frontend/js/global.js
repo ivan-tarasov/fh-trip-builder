@@ -376,6 +376,12 @@
             // writes to, and what the page is left with if this never runs.
             // Everything below is a layer on top of it.
             const options = [...select.options].filter(o => o.value !== '');
+            // Searches this browser has run, offered while nothing is typed.
+            // One template serves both fields -- it is the same history either
+            // way -- so it is cloned rather than moved.
+            const recentTpl = select.dataset.recent
+                ? document.getElementById(select.dataset.recent)
+                : null;
             const placeholder = (select.options[0] || {}).textContent || 'Search…';
             const listId = select.id + '-listbox';
 
@@ -413,7 +419,10 @@
             wrap.appendChild(select);
 
             let active = -1;
-            let matches = [];
+            // Both kinds of row live in one list so the arrow keys walk them
+            // together: a recent search the keyboard cannot reach is a row only
+            // a mouse can see.
+            let entries = [];
 
             const render = function (query) {
                 const needle = query.trim().toLowerCase();
@@ -439,16 +448,29 @@
                     return -1;
                 };
 
-                matches = options
+                const found = options
                     .map(o => ({ option: o, rank: rank(o) }))
                     .filter(m => m.rank >= 0)
                     // Stable within a rank, so each band stays alphabetical.
                     .sort((a, b) => a.rank - b.rank)
                     .map(m => m.option);
 
+                entries = found.map(option => ({ option }));
+
                 list.innerHTML = '';
 
-                if (matches.length === 0) {
+                // Only with an empty box: once someone is typing they are
+                // looking for a place, not for last week.
+                if (needle === '' && recentTpl) {
+                    const block = recentTpl.content.cloneNode(true);
+                    const recents = [...block.querySelectorAll('[data-path]')]
+                        .map(el => ({ path: el.dataset.path }));
+
+                    list.appendChild(block);
+                    entries = [...recents, ...entries];
+                }
+
+                if (found.length === 0) {
                     const empty = document.createElement('li');
                     empty.className = 'combo__empty';
                     empty.textContent = select.dataset.empty || 'Nothing matches that.';
@@ -456,7 +478,7 @@
                     return;
                 }
 
-                matches.forEach(function (option, i) {
+                found.forEach(function (option, i) {
                     const li = document.createElement('li');
                     li.className = 'combo__option';
                     li.setAttribute('role', 'option');
@@ -467,6 +489,12 @@
                     // carries a place under it. The code sits at the end, which
                     // is where a traveller who knows it looks.
                     if (option.dataset.sub) {
+                        const icon = document.createElement('i');
+                        icon.className = option.hasAttribute('data-city')
+                            ? 'fas fa-location-dot combo__icon'
+                            : 'fas fa-plane combo__icon';
+                        icon.setAttribute('aria-hidden', 'true');
+
                         const name = document.createElement('span');
                         name.className = 'combo__name';
                         name.textContent = option.textContent.trim();
@@ -481,14 +509,23 @@
 
                         li.classList.add('combo__option--stacked');
                         if (option.hasAttribute('data-city')) { li.classList.add('combo__option--city'); }
-                        li.append(name, code, sub);
+                        li.append(icon, name, code, sub);
                     } else {
                         li.textContent = option.textContent.trim();
                     }
 
-                    if (i === active) { li.classList.add('is-active'); }
                     list.appendChild(li);
                 });
+
+                // After both kinds are in the DOM, so the index lines up with
+                // `entries` rather than with either half of it.
+                // By role, not by class: a recent search is a chip and a place
+                // is a row, and the arrow keys walk both.
+                const rows = list.querySelectorAll('[role="option"]');
+
+                if (active >= 0 && rows[active]) {
+                    rows[active].classList.add('is-active');
+                }
             };
 
             const open = function () {
@@ -503,9 +540,19 @@
                 active = -1;
             };
 
-            const choose = function (option) {
-                select.value = option.value;
-                input.value = option.textContent.trim();
+            const choose = function (entry) {
+                if (!entry) { return; }
+
+                // A recent search is a whole search, not a place: it carries its
+                // own dates, cabin and party, so it reopens rather than filling
+                // one field with half of itself.
+                if (entry.path) {
+                    window.location.assign(entry.path);
+                    return;
+                }
+
+                select.value = entry.option.value;
+                input.value = entry.option.textContent.trim();
                 // So validation, autofill and anything else see a real change.
                 select.dispatchEvent(new Event('change', { bubbles: true }));
                 close();
@@ -513,10 +560,10 @@
 
             const moveActive = function (step) {
                 if (list.hidden) { open(); }
-                if (matches.length === 0) { return; }
-                active = (active + step + matches.length) % matches.length;
+                if (entries.length === 0) { return; }
+                active = (active + step + entries.length) % entries.length;
                 render(input.value);
-                const el = list.children[active];
+                const el = list.querySelectorAll('[role="option"]')[active];
                 if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'nearest' }); }
             };
 
@@ -534,7 +581,7 @@
                 if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
                 else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
                 else if (e.key === 'Enter') {
-                    if (!list.hidden && matches[active]) { e.preventDefault(); choose(matches[active]); }
+                    if (!list.hidden && entries[active]) { e.preventDefault(); choose(entries[active]); }
                 } else if (e.key === 'Escape') {
                     close();
                     input.value = select.selectedOptions[0] ? select.selectedOptions[0].textContent.trim() : '';
@@ -543,10 +590,13 @@
 
             list.addEventListener('mousedown', function (e) {
                 // mousedown, not click: blur would close the list first.
-                const li = e.target.closest('.combo__option');
+                const li = e.target.closest('[role="option"]');
                 if (!li) { return; }
                 e.preventDefault();
-                choose(options.find(o => o.value === li.dataset.value));
+
+                choose(li.dataset.path
+                    ? { path: li.dataset.path }
+                    : { option: options.find(o => o.value === li.dataset.value) });
             });
 
             input.addEventListener('blur', function () {

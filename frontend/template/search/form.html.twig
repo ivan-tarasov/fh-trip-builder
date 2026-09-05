@@ -23,6 +23,7 @@
 {% set depart_date = depart_date|default('') %}
 {% set return_date = return_date|default('') %}
 {% set cabin_value = cabin_value|default('economy') %}
+{% set recent = recent|default([]) %}
 
 <form method="get" action="{{ config('site.paths.search') }}" id="searchForm"
       class="searchbar searchbar--{{ variant }}">
@@ -42,7 +43,8 @@
             <div class="searchbar__field searchbar__field--place">
                 <label class="searchbar__label" for="{{ place.id }}">{{ place.label }}</label>
                 <select class="searchbar__input" id="{{ place.id }}" name="{{ place.name }}"
-                        data-searchable data-empty="No airport matches that." required>
+                        data-searchable data-empty="No airport matches that."
+                        {{ recent is not empty ? 'data-recent="searchbar-recent"' : '' }} required>
                     <option value="">City or airport</option>
                     {% for row in places|default([]) %}
                         <option value="{{ row.code }}" data-sub="{{ row.sub }}"{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
@@ -50,6 +52,34 @@
                 </select>
             </div>
         {% endfor %}
+
+        {# Offered above the list while nothing has been typed, the way the
+           reference does. Rendered once and pointed at by both fields: it is the
+           same history either way, and the combobox clones it into whichever
+           list is open. #}
+        {% if recent is not empty %}
+            <template id="searchbar-recent">
+                <li class="combo__group" role="presentation">You searched earlier</li>
+                {# Chips rather than rows: a past search is one thing to take or
+                   leave, and laying them across the panel keeps the airports --
+                   which is what the field is actually for -- above the fold.
+                   role="group" so they stay inside the listbox without each
+                   pill needing to be an <li>. #}
+                <li class="combo__pills" role="group" aria-label="You searched earlier">
+                    {% for row in recent %}
+                        <span class="combo__pill" role="option" aria-selected="false"
+                              data-path="{{ row.path }}">
+                            <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
+                            {# One span, not a bare text node beside the strong:
+                               in a flex row each text node becomes its own item
+                               and the gap lands before the comma. #}
+                            <span><strong>{{ row.from }} &mdash; {{ row.to }}</strong>, {{ row.when }}</span>
+                        </span>
+                    {% endfor %}
+                </li>
+                <li class="combo__group" role="presentation">Cities and airports</li>
+            </template>
+        {% endif %}
 
         {# Two date fields rather than one range input. The old single control
            held "depart – return" and so could not express a one-way trip without

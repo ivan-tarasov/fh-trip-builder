@@ -3592,8 +3592,14 @@ textarea {
    rather than wrapping "London Gatwick Airport" over three lines. */
 .searchbar__field .combo__list {
   right: auto;
-  min-width: 20rem;
-  max-width: 24rem;
+  min-width: 24rem;
+  max-width: 28rem;
+  /* Taller than the checkout's country list: this one opens with two sections
+     in it, and the airports should not start already scrolled. */
+  max-height: 26rem;
+  padding: 0 0 .25rem;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.5rem rgba(21, 26, 33, .16);
 }
 
 /* Except where the field is already full width, and a wider panel would run off
@@ -3602,19 +3608,79 @@ textarea {
   .searchbar__field .combo__list { right: 0; min-width: 0; max-width: none; }
 }
 
-/* Two lines and a code, for a list of places: the name reads first, the city
-   and country sit under it, and the IATA code is where someone who knows it
-   looks. A city row leads its own airports, so it is weighted to say so. */
-.combo__option--stacked {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0 .75rem;
-  align-items: baseline;
+/* A section heading inside the list -- "You searched earlier", "Cities and
+   airports". Bold and dark rather than a small grey caption: the panel is a
+   place with two parts, and the parts should read as parts. */
+.combo__group {
+  padding: .75rem .75rem .375rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink-body);
 }
 
-.combo__name { grid-column: 1; font-size: .875rem; color: var(--ink-body); }
-.combo__code { grid-column: 2; grid-row: 1; font-size: .75rem; color: var(--ink-muted); }
-.combo__sub  { grid-column: 1 / -1; font-size: .75rem; color: var(--ink-muted); }
+.combo__group:first-child { padding-top: .5rem; }
+
+/* Past searches, laid across the panel as chips. A chip is one thing to take or
+   leave, and wrapping them keeps the airports -- what the field is for -- from
+   being pushed off the bottom. */
+.combo__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+  padding: 0 .75rem .5rem;
+}
+
+.combo__pill {
+  display: inline-flex;
+  gap: .375rem;
+  align-items: center;
+  max-width: 100%;
+  padding: .4375rem .75rem;
+  overflow: hidden;
+  font-size: .8125rem;
+  color: var(--ink-body);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: var(--surface);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.combo__pill i { flex: 0 0 auto; font-size: .75rem; color: var(--ink-muted); }
+.combo__pill span { overflow: hidden; text-overflow: ellipsis; }
+.combo__pill:hover,
+.combo__pill.is-active { background-color: var(--surface-sunken); }
+
+/* A place: an icon, the name with its code, and the city and country under it.
+   The icon says which kind of row it is -- a city that stands for several
+   airports, or one airport. */
+.combo__option--stacked {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0 .625rem;
+  align-items: baseline;
+  padding: .5rem .75rem;
+}
+
+/* Ruled between rows the way the reference is, so a long list reads as a list
+   rather than as a wall. Not after the last one, and not under a city -- a city
+   and its airports are one group. */
+.combo__option--stacked + .combo__option--stacked { box-shadow: inset 0 1px 0 var(--line); }
+.combo__option--city + .combo__option--stacked { box-shadow: none; }
+
+.combo__icon {
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 1rem;
+  font-size: .8125rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.combo__name { grid-column: 2; font-size: .9375rem; color: var(--ink-body); }
+.combo__code { grid-column: 3; grid-row: 1; font-size: .8125rem; color: var(--ink-muted); }
+.combo__sub  { grid-column: 2 / -1; font-size: .8125rem; color: var(--ink-muted); }
 .combo__option--city .combo__name { font-weight: 600; }
 
 .combo__empty {
