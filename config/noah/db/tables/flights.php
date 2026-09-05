@@ -28,6 +28,15 @@ return [
         // on (departure_airport, departure_time).
         ['name' => 'departure_airport_time', 'columns' => ['departure_airport', 'departure_time']],
         ['name' => 'airline_number_departure_time', 'columns' => ['airline', 'number', 'departure_time']],
+        // The maintenance commands work by distance band -- flights:realign
+        // counts and deletes legs no aircraft can fly, and realign, reprice and
+        // cabins all report samples per band. Every one of those was a full
+        // scan of the whole table, and the delete ran one per 5,000-row batch.
+        ['name' => 'distance', 'columns' => ['distance']],
+        // flights:cleaning removes departures that have passed. The existing
+        // indexes all lead with an airport or an airline, so a date-only sweep
+        // could not seek on any of them.
+        ['name' => 'departure_time', 'columns' => ['departure_time']],
     ],
 
     'columns' => [
