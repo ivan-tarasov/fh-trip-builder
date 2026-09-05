@@ -74,6 +74,62 @@ final class Breadcrumbs
     }
 
     /**
+     * The same trail as schema.org BreadcrumbList JSON-LD, or null when a page
+     * shows none.
+     *
+     * Takes the rendered trail rather than a path, so the structured data and
+     * the visible crumbs can never describe different things -- a controller
+     * that supplies its own trail, as the booking page and the 404 do, is
+     * described by what it supplied.
+     *
+     * URLs stay relative, exactly as the links above them are. The app knows no
+     * canonical host, and resolving them against the page is well defined --
+     * inventing an absolute base would be a second source of truth that nothing
+     * else in the app could keep correct.
+     *
+     * @param list<array{label: string, url: string|null, current: bool}> $trail
+     */
+    public static function structuredData(array $trail): ?string
+    {
+        if ($trail === []) {
+            return null;
+        }
+
+        $items = [];
+
+        foreach ($trail as $index => $crumb) {
+            $item = [
+                '@type' => 'ListItem',
+                'position' => $index + 1,
+                'name' => $crumb['label'],
+            ];
+
+            // The current page carries no `item`: schema.org reads its absence
+            // as "this one", and a crumb pointing at the page it sits on says
+            // nothing.
+            if ($crumb['url'] !== null) {
+                $item['item'] = $crumb['url'];
+            }
+
+            $items[] = $item;
+        }
+
+        // JSON_HEX_TAG matters more than it looks: a label reaches this from the
+        // URL on a 404 and from a booking reference elsewhere, and an unescaped
+        // `<` would let one close the <script> it is written into.
+        $json = json_encode(
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => $items,
+            ],
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP,
+        );
+
+        return $json === false ? null : $json;
+    }
+
+    /**
      * Whether $path is the page being viewed or an ancestor of it.
      *
      * The nav highlights a section, not a page: on /my/bookings/100001 the

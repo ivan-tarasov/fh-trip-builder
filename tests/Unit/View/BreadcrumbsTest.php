@@ -127,4 +127,54 @@ final class BreadcrumbsTest extends TestCase
             self::assertNotSame([], Breadcrumbs::trail((string) $path), $path . ' yields no trail');
         }
     }
+
+    public function testTheTrailIsAlsoOfferedAsBreadcrumbListJsonLd(): void
+    {
+        $json = Breadcrumbs::structuredData(Breadcrumbs::trail('/my/bookings/100001', 'K7PQ2M'));
+
+        self::assertNotNull($json);
+        $data = json_decode($json, true);
+
+        self::assertSame('https://schema.org', $data['@context']);
+        self::assertSame('BreadcrumbList', $data['@type']);
+        self::assertSame(
+            ['Home', 'My bookings', 'K7PQ2M'],
+            array_column($data['itemListElement'], 'name'),
+        );
+        // Numbered from one, in order, or a search engine reads the trail as a
+        // different shape than the one on the page.
+        self::assertSame([1, 2, 3], array_column($data['itemListElement'], 'position'));
+        self::assertSame(['/', '/my/bookings'], array_column($data['itemListElement'], 'item'));
+    }
+
+    public function testTheCurrentPageCarriesNoItemUrl(): void
+    {
+        // Its absence is what marks the last entry as the page being viewed.
+        $data = json_decode((string) Breadcrumbs::structuredData(Breadcrumbs::trail('/airlines')), true);
+        $last = end($data['itemListElement']);
+
+        self::assertSame('Airlines', $last['name']);
+        self::assertArrayNotHasKey('item', $last);
+    }
+
+    public function testAPageWithNoTrailOffersNoStructuredData(): void
+    {
+        self::assertNull(Breadcrumbs::structuredData(Breadcrumbs::trail('/')));
+        self::assertNull(Breadcrumbs::structuredData(Breadcrumbs::trail('/checkout')));
+    }
+
+    public function testALabelCannotCloseTheScriptItIsWrittenInto(): void
+    {
+        // A label reaches this from the URL on a 404 and from a booking
+        // reference elsewhere, so it is not all site-authored text.
+        $hostile = '</script><script>alert(1)</script>';
+        $json = (string) Breadcrumbs::structuredData([
+            ['label' => 'Home', 'url' => '/', 'current' => false],
+            ['label' => $hostile, 'url' => null, 'current' => true],
+        ]);
+
+        self::assertStringNotContainsString('</script>', $json);
+        // Escaped, not mangled: it still reads back as what was passed in.
+        self::assertSame($hostile, json_decode($json, true)['itemListElement'][1]['name']);
+    }
 }

@@ -30,4 +30,15 @@
             </ol>
         </div>
     </nav>
+
+    {# The same trail again, for machines. A search result can then show
+       Trip Builder > Airlines rather than a bare URL. Built from `trail`, not
+       from the path, so it cannot describe a different page than the crumbs
+       above it -- and `raw` is safe because structuredData() hex-escapes `<`,
+       which is what a label taken from a URL could otherwise close this tag
+       with. #}
+    {% set jsonld = breadcrumb_jsonld(trail) %}
+    {% if jsonld %}
+        <script type="application/ld+json">{{ jsonld|raw }}</script>
+    {% endif %}
 {% endif %}
