@@ -11,7 +11,7 @@ return [
 
     'primary' => 'id',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     /*
     | Secondary indexes. The composite (departure_airport, arrival_airport,

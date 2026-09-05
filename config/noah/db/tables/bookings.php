@@ -23,7 +23,7 @@ return [
 
     'primary' => 'id',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
     'auto_increment' => 100001,
 
     /*

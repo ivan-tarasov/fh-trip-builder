@@ -22,7 +22,7 @@ return [
 
     'primary' => 'code',
     'engine' => 'InnoDB',
-    'charset' => 'utf8',
+    'charset' => 'utf8mb4',
 
     'columns' => [
         [
