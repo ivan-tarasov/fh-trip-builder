@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration\Repository;
 
+use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -22,6 +23,7 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
 {
     private const string FROM = 'YUL';
     private const string TO = 'LHR';
+    private const CabinClass CABIN = CabinClass::Economy;
 
     private RoutePriceRepository $prices;
     private string $since;
@@ -56,8 +58,8 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
     {
         $this->forget('ZZZ', 'ZZY');
 
-        self::assertNull($this->prices->builtAt('ZZZ', 'ZZY'));
-        self::assertTrue($this->prices->isStale('ZZZ', 'ZZY', 24));
+        self::assertNull($this->prices->builtAt('ZZZ', 'ZZY', self::CABIN));
+        self::assertTrue($this->prices->isStale('ZZZ', 'ZZY', self::CABIN, 24));
     }
 
     public function testBuildingARouteWithNoFlightsStillRecordsThatItWasTried(): void
@@ -65,17 +67,17 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         // Otherwise every visitor who opens the calendar on a route that has no
         // fares pays to find that out again.
         $this->forget('ZZZ', 'ZZY');
-        $this->prices->build('ZZZ', 'ZZY', $this->since, $this->until);
+        $this->prices->build('ZZZ', 'ZZY', self::CABIN, $this->since, $this->until);
 
-        self::assertNotNull($this->prices->builtAt('ZZZ', 'ZZY'), 'the attempt should be recorded');
-        self::assertSame([], $this->prices->read('ZZZ', 'ZZY', $this->since, $this->until));
-        self::assertFalse($this->prices->isStale('ZZZ', 'ZZY', 24), 'and it should not be tried again at once');
+        self::assertNotNull($this->prices->builtAt('ZZZ', 'ZZY', self::CABIN), 'the attempt should be recorded');
+        self::assertSame([], $this->prices->read('ZZZ', 'ZZY', self::CABIN, $this->since, $this->until));
+        self::assertFalse($this->prices->isStale('ZZZ', 'ZZY', self::CABIN, 24), 'and it should not be tried again at once');
     }
 
     public function testARealRouteIsPricedAndReadsBackByDate(): void
     {
-        $this->prices->build(self::FROM, self::TO, $this->since, $this->until);
-        $prices = $this->prices->read(self::FROM, self::TO, $this->since, $this->until);
+        $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
+        $prices = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
 
         self::assertNotSame([], $prices, 'this route has flights, so it should have fares');
 
@@ -89,10 +91,10 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
 
     public function testReadingIsBoundedByTheWindowAsked(): void
     {
-        $this->prices->build(self::FROM, self::TO, $this->since, $this->until);
+        $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
 
         $narrow = date('Y-m-d', strtotime('+10 day'));
-        $prices = $this->prices->read(self::FROM, self::TO, $this->since, $narrow);
+        $prices = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $narrow);
 
         foreach (array_keys($prices) as $date) {
             self::assertLessThan($narrow, $date);
@@ -103,11 +105,11 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
     {
         // The build deletes before it inserts, so a route whose flights have
         // thinned out does not keep the days it used to have.
-        $this->prices->build(self::FROM, self::TO, $this->since, $this->until);
-        $first = $this->prices->read(self::FROM, self::TO, $this->since, $this->until);
+        $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
+        $first = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
 
-        $this->prices->build(self::FROM, self::TO, $this->since, $this->until);
-        $second = $this->prices->read(self::FROM, self::TO, $this->since, $this->until);
+        $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
+        $second = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
 
         self::assertSame($first, $second);
     }
@@ -116,11 +118,11 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
     {
         // A price filed under LON has to be the price a search for LON finds,
         // and a search for LON looks at every London airport.
-        $this->prices->build('LON', 'NYC', $this->since, $this->until);
-        $city = $this->prices->read('LON', 'NYC', $this->since, $this->until);
+        $this->prices->build('LON', 'NYC', self::CABIN, $this->since, $this->until);
+        $city = $this->prices->read('LON', 'NYC', self::CABIN, $this->since, $this->until);
 
-        $this->prices->build('LHR', 'JFK', $this->since, $this->until);
-        $single = $this->prices->read('LHR', 'JFK', $this->since, $this->until);
+        $this->prices->build('LHR', 'JFK', self::CABIN, $this->since, $this->until);
+        $single = $this->prices->read('LHR', 'JFK', self::CABIN, $this->since, $this->until);
 
         self::assertNotSame([], $city);
 
@@ -130,6 +132,39 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
             self::assertArrayHasKey($date, $city, $date . ' is priced LHR-JFK but not LON-NYC');
             self::assertLessThanOrEqual($price, $city[$date], 'the city should never be dearer on ' . $date);
         }
+    }
+
+    public function testACabinWithAnUpliftIsPricedAboveEconomy(): void
+    {
+        // The whole reason cabin is in the key. Business carries an uplift that
+        // scales with haul, and not every flight sells it, so its cheapest day
+        // is a different number from economy's -- and on some days a different
+        // day entirely.
+        $this->prices->build(self::FROM, self::TO, CabinClass::Economy, $this->since, $this->until);
+        $this->prices->build(self::FROM, self::TO, CabinClass::Business, $this->since, $this->until);
+
+        $economy = $this->prices->read(self::FROM, self::TO, CabinClass::Economy, $this->since, $this->until);
+        $business = $this->prices->read(self::FROM, self::TO, CabinClass::Business, $this->since, $this->until);
+
+        self::assertNotSame([], $economy);
+        self::assertNotSame([], $business);
+        self::assertNotEquals($economy, $business, 'business should not be priced as economy');
+
+        // Every day business is sold on, it costs more than the economy seat.
+        foreach ($business as $date => $price) {
+            self::assertArrayHasKey($date, $economy, $date . ' has business but no economy fare');
+            self::assertGreaterThan($economy[$date], $price, 'business should cost more on ' . $date);
+        }
+    }
+
+    public function testTheTwoCabinsAreCachedApart(): void
+    {
+        $this->prices->build(self::FROM, self::TO, CabinClass::Economy, $this->since, $this->until);
+
+        // Building one must not answer for the other.
+        self::assertNotNull($this->prices->builtAt(self::FROM, self::TO, CabinClass::Economy));
+        self::assertNull($this->prices->builtAt(self::FROM, self::TO, CabinClass::First));
+        self::assertTrue($this->prices->isStale(self::FROM, self::TO, CabinClass::First, 24));
     }
 
     private function forget(string $from, string $to): void

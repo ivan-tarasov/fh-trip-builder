@@ -61,6 +61,8 @@
             // one that appears at once and fills in.
             const asked = new Set();
 
+            const cabinNow = () => document.querySelector('.js-party-cabin:checked')?.value ?? 'economy';
+
             const pricesFor = (picker, fromField, toField, legName) => {
                 const from = document.getElementById(fromField)?.value;
                 const to = document.getElementById(toField)?.value;
@@ -69,7 +71,12 @@
                     return;
                 }
 
-                const route = legName + ':' + from + '-' + to;
+                // The cabin is part of what is being asked. The cheapest
+                // business day on a route is not the cheapest economy day, so
+                // changing cabin asks again rather than leaving economy fares
+                // under a business search.
+                const cabin = cabinNow();
+                const route = legName + ':' + from + '-' + to + ':' + cabin;
 
                 // Once per route per page, and only once it has answered with
                 // something. An empty answer means somebody else is working the
@@ -85,6 +92,7 @@
 
                 body.append('from', from);
                 body.append('to', to);
+                body.append('class', cabin);
                 body.append('csrf_token', csrfToken());
 
                 fetch('/ajax/day-prices', {method: 'POST', body: body})
@@ -149,6 +157,23 @@
             });
 
             const legOf = (name) => picker.legs.find((leg) => leg.name === name);
+
+            // Fares follow the cabin. The panel can be open while it changes --
+            // the party dropdown sits in the same bar -- so the cells are
+            // refilled rather than waiting for the calendar to be reopened.
+            document.querySelectorAll('.js-party-cabin').forEach((radio) => {
+                radio.addEventListener('change', () => {
+                    picker.legs.forEach((leg) => { leg.prices = null; });
+                    // And forget what has been asked for. Switching back to a
+                    // cabin already seen would otherwise be skipped as a repeat
+                    // and leave the calendar with no fares at all.
+                    asked.clear();
+                    picker.paintPrices();
+                    picker.paint();
+                    pricesFor(picker, 'departing_airport-native', 'arrival_airport-native', 'out');
+                    pricesFor(picker, 'arrival_airport-native', 'departing_airport-native', 'back');
+                });
+            });
 
             // The way back to a one-way trip, now that no tab does it.
             clearReturn?.addEventListener('click', function () {

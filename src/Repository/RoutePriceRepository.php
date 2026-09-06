@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Repository;
 
+use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
@@ -37,12 +38,18 @@ final readonly class RoutePriceRepository
      *
      * @return array<string, float> "YYYY-MM-DD" => cheapest fare
      */
-    public function read(string $from, string $to, string $since, string $until): array
-    {
+    public function read(
+        string $from,
+        string $to,
+        CabinClass $cabin,
+        string $since,
+        string $until,
+    ): array {
         $rows = $this->connection->fetchAll(
             'SELECT depart_date, price FROM ' . Table::RouteDayPrice->value
-            . ' WHERE from_code = ? AND to_code = ? AND depart_date >= ? AND depart_date < ?',
-            [$from, $to, $since, $until],
+            . ' WHERE from_code = ? AND to_code = ? AND cabin = ?'
+            . ' AND depart_date >= ? AND depart_date < ?',
+            [$from, $to, $cabin->value, $since, $until],
         );
 
         $prices = [];
@@ -61,12 +68,12 @@ final readonly class RoutePriceRepository
      * route nobody has asked for both have no rows, and only one of them is
      * worth the cost of asking again.
      */
-    public function builtAt(string $from, string $to): ?string
+    public function builtAt(string $from, string $to, CabinClass $cabin): ?string
     {
         $row = $this->connection->fetchOne(
             'SELECT built_at FROM ' . Table::RoutePriceBuild->value
-            . ' WHERE from_code = ? AND to_code = ? LIMIT 1',
-            [$from, $to],
+            . ' WHERE from_code = ? AND to_code = ? AND cabin = ? LIMIT 1',
+            [$from, $to, $cabin->value],
         );
 
         return $row === null ? null : (string) $row['built_at'];
@@ -75,9 +82,9 @@ final readonly class RoutePriceRepository
     /**
      * Whether the route needs working out, given how old an answer is allowed.
      */
-    public function isStale(string $from, string $to, int $maxAgeHours): bool
+    public function isStale(string $from, string $to, CabinClass $cabin, int $maxAgeHours): bool
     {
-        $built = $this->builtAt($from, $to);
+        $built = $this->builtAt($from, $to, $cabin);
 
         return $built === null || strtotime($built) < time() - $maxAgeHours * 3600;
     }
@@ -94,27 +101,34 @@ final readonly class RoutePriceRepository
      * expanded the way the search expands it -- a price filed under LON has to
      * be the price a search for LON would find.
      */
-    public function build(string $from, string $to, string $since, string $until): void
-    {
+    public function build(
+        string $from,
+        string $to,
+        CabinClass $cabin,
+        string $since,
+        string $until,
+    ): void {
         $fromCodes = $this->airportsFor($from);
         $toCodes = $this->airportsFor($to);
 
         $this->connection->execute(
-            'DELETE FROM ' . Table::RouteDayPrice->value . ' WHERE from_code = ? AND to_code = ?',
-            [$from, $to],
+            'DELETE FROM ' . Table::RouteDayPrice->value
+            . ' WHERE from_code = ? AND to_code = ? AND cabin = ?',
+            [$from, $to, $cabin->value],
         );
 
         if ($fromCodes !== [] && $toCodes !== []) {
-            $this->store($from, $to, $this->cheapestPerDay($fromCodes, $toCodes, $since, $until));
+            $this->store($from, $to, $cabin, $this->cheapestPerDay($fromCodes, $toCodes, $cabin, $since, $until));
         }
 
         // Recorded even when nothing was found, so an empty route is not
         // rebuilt by every visitor who opens its calendar.
         $this->connection->execute(
-            'INSERT INTO ' . Table::RoutePriceBuild->value . ' (from_code, to_code, built_at, covers_until)'
-            . ' VALUES (?, ?, NOW(), ?)'
+            'INSERT INTO ' . Table::RoutePriceBuild->value
+            . ' (from_code, to_code, cabin, built_at, covers_until)'
+            . ' VALUES (?, ?, ?, NOW(), ?)'
             . ' ON DUPLICATE KEY UPDATE built_at = NOW(), covers_until = VALUES(covers_until)',
-            [$from, $to, $until],
+            [$from, $to, $cabin->value, $until],
         );
     }
 
@@ -124,8 +138,13 @@ final readonly class RoutePriceRepository
      *
      * @return array<string, float>
      */
-    private function cheapestPerDay(array $fromCodes, array $toCodes, string $since, string $until): array
-    {
+    private function cheapestPerDay(
+        array $fromCodes,
+        array $toCodes,
+        CabinClass $cabin,
+        string $since,
+        string $until,
+    ): array {
         $fromIn = $this->placeholders($fromCodes);
         $toIn = $this->placeholders($toCodes);
 
@@ -136,21 +155,24 @@ final readonly class RoutePriceRepository
 
         $rows = $this->connection->fetchAll(
             'SELECT d, MIN(p) AS price FROM ('
-            . " SELECT DATE(departure_time) AS d, price_base + price_tax AS p"
-            . ' FROM ' . Table::Flights->value
-            . " WHERE departure_airport IN ($fromIn) AND arrival_airport IN ($toIn)"
-            . ' AND departure_time >= ? AND departure_time < ?'
+            . ' SELECT DATE(f.departure_time) AS d, ' . $this->fare('f', $cabin) . ' AS p'
+            . ' FROM ' . Table::Flights->value . ' f'
+            . " WHERE f.departure_airport IN ($fromIn) AND f.arrival_airport IN ($toIn)"
+            . ' AND f.departure_time >= ? AND f.departure_time < ?'
+            . $this->offers('f', $cabin)
             . ' UNION ALL'
             . ' SELECT DATE(a.departure_time) AS d,'
-            . ' a.price_base + a.price_tax + b.price_base + b.price_tax AS p'
+            . ' ' . $this->fare('a', $cabin) . ' + ' . $this->fare('b', $cabin) . ' AS p'
             . ' FROM ' . Table::Flights->value . ' a'
             . ' JOIN ' . Table::Flights->value . ' b'
             . ' ON b.departure_airport = a.arrival_airport'
             . " AND b.arrival_airport IN ($toIn)"
             . " AND b.departure_time >= a.arrival_time + INTERVAL $minConnect MINUTE"
             . " AND b.departure_time <= a.arrival_time + INTERVAL $maxConnect MINUTE"
+            . $this->offers('b', $cabin)
             . " WHERE a.departure_airport IN ($fromIn) AND a.arrival_airport NOT IN ($toIn)"
             . ' AND a.departure_time >= ? AND a.departure_time < ?'
+            . $this->offers('a', $cabin)
             . ') AS legs GROUP BY d',
             [...$fromCodes, ...$toCodes, $since, $until, ...$toCodes, ...$fromCodes, ...$toCodes, $since, $until],
         );
@@ -164,8 +186,38 @@ final readonly class RoutePriceRepository
         return $prices;
     }
 
+    /**
+     * One leg's fare in a cabin.
+     *
+     * The uplift is not flat -- short-haul business is a wider seat and
+     * long-haul business is a bed -- so CabinClass scales it by distance, and
+     * the same expression it gives the search is used here. Economy has no
+     * uplift at any distance, and there the column is left alone rather than
+     * multiplied by one.
+     */
+    private function fare(string $alias, CabinClass $cabin): string
+    {
+        $sum = sprintf('(%s.price_base + %s.price_tax)', $alias, $alias);
+        $multiplier = $cabin->sqlPriceMultiplier($alias);
+
+        return $multiplier === null ? $sum : $sum . ' * ' . $multiplier;
+    }
+
+    /**
+     * "and this flight sells that cabin", where that means anything.
+     *
+     * Every flight sells economy, so the test is left off there -- it would
+     * exclude nothing while denying the optimiser an index.
+     */
+    private function offers(string $alias, CabinClass $cabin): string
+    {
+        $predicate = $cabin->sqlOffers($alias);
+
+        return $predicate === null ? '' : ' AND ' . $predicate;
+    }
+
     /** @param array<string, float> $prices */
-    private function store(string $from, string $to, array $prices): void
+    private function store(string $from, string $to, CabinClass $cabin, array $prices): void
     {
         if ($prices === []) {
             return;
@@ -175,14 +227,14 @@ final readonly class RoutePriceRepository
         $args = [];
 
         foreach ($prices as $date => $price) {
-            $values[] = '(?, ?, ?, ?)';
-            array_push($args, $from, $to, $date, $price);
+            $values[] = '(?, ?, ?, ?, ?)';
+            array_push($args, $from, $to, $cabin->value, $date, $price);
         }
 
         // One statement: ninety single-row inserts inside a request is the sort
         // of thing that makes a background job look slow for no reason.
         $this->connection->execute(
-            'INSERT INTO ' . Table::RouteDayPrice->value . ' (from_code, to_code, depart_date, price)'
+            'INSERT INTO ' . Table::RouteDayPrice->value . ' (from_code, to_code, cabin, depart_date, price)'
             . ' VALUES ' . implode(', ', $values)
             . ' ON DUPLICATE KEY UPDATE price = VALUES(price)',
             $args,

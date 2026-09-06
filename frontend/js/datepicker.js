@@ -415,7 +415,25 @@
         // different routes and the cells show whichever is being chosen.
         const prices = this.leg.prices ?? this.prices;
 
-        if (!prices || !this.cells) {
+        if (!this.cells) {
+            return;
+        }
+
+        // Nothing to show yet, so nothing is shown. Cleared rather than left
+        // alone: the fares are dropped when the cabin changes, and economy
+        // figures sitting under a business search until the new ones arrive
+        // would be wrong for as long as that took.
+        if (!prices) {
+            this.cells.forEach((cell) => {
+                const label = cell.querySelector('.datepicker__price');
+
+                if (label) {
+                    label.textContent = '';
+                }
+
+                cell.classList.remove('is-cheap');
+            });
+
             return;
         }
 
@@ -1077,8 +1095,29 @@
      * above the backdrop instead of behind it, and there the offsets are the
      * modal's own.
      */
+    /**
+     * What the panel hangs from: every field it serves, taken together.
+     *
+     * Not the field being edited. Anchoring to that moved the whole calendar
+     * sideways each time the visitor crossed from the departure to the return,
+     * which is the opposite of what it should feel like -- one calendar the two
+     * fields share, not one that follows the cursor around.
+     */
+    DatePicker.prototype.anchor = function () {
+        const rects = this.legs.map((leg) => leg.input.getBoundingClientRect());
+
+        const left = Math.min(...rects.map((rect) => rect.left));
+        const right = Math.max(...rects.map((rect) => rect.right));
+
+        return {
+            left: left,
+            width: right - left,
+            bottom: Math.max(...rects.map((rect) => rect.bottom))
+        };
+    };
+
     DatePicker.prototype.place = function () {
-        const anchor = this.input.getBoundingClientRect();
+        const anchor = this.anchor();
         const root = this.root;
         const host = root.offsetParent;
         const base = host && host !== document.body

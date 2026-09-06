@@ -172,17 +172,23 @@ class AjaxController extends AbstractController
             return;
         }
 
+        // The cabin belongs in the answer: the cheapest business day is not the
+        // cheapest economy day, because the uplift scales with haul and not
+        // every flight sells every cabin.
+        $cabin = CabinClass::fromRequest($this->request->body->nullableStr('class'));
+
         $prices = new RoutePriceRepository($this->connection());
         $since = date('Y-m-d');
         $until = date('Y-m-d', strtotime('+' . self::PRICE_WINDOW_DAYS . ' day'));
 
-        if ($prices->isStale($from, $to, self::PRICE_MAX_AGE_HOURS)) {
-            $this->buildOnce($from, $to, $since, $until, $prices);
+        if ($prices->isStale($from, $to, $cabin, self::PRICE_MAX_AGE_HOURS)) {
+            $this->buildOnce($from, $to, $cabin, $since, $until, $prices);
         }
 
         echo json_encode([
             'status' => 'ok',
-            'prices' => $prices->read($from, $to, $since, $until),
+            'cabin' => $cabin->value,
+            'prices' => $prices->read($from, $to, $cabin, $since, $until),
         ]);
     }
 
@@ -196,11 +202,12 @@ class AjaxController extends AbstractController
     private function buildOnce(
         string $from,
         string $to,
+        CabinClass $cabin,
         string $since,
         string $until,
         RoutePriceRepository $prices,
     ): void {
-        $name = 'route_prices_' . $from . '_' . $to;
+        $name = 'route_prices_' . $from . '_' . $to . '_' . $cabin->value;
         $connection = $this->connection();
 
         if ((int) $connection->fetchValue('SELECT GET_LOCK(?, 0)', [$name], 0) !== 1) {
@@ -208,7 +215,7 @@ class AjaxController extends AbstractController
         }
 
         try {
-            $prices->build($from, $to, $since, $until);
+            $prices->build($from, $to, $cabin, $since, $until);
         } finally {
             $connection->fetchValue('SELECT RELEASE_LOCK(?)', [$name]);
         }
