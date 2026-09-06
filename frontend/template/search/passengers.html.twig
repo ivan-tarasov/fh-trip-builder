@@ -40,8 +40,15 @@
     <button type="button" class="party__trigger js-party-trigger"
             aria-expanded="false" aria-controls="{{ panel_id }}">
         <span class="searchbar__label">Passengers</span>
+        {# Two facts, two elements. The hero sets them on their own lines the
+           way the reference does -- it has no standing label, so these are what
+           names the field -- and everywhere else they stay on one, under the
+           label that is already there. #}
         <span class="party__summary js-party-summary"
-              data-one="passenger" data-many="passengers">{{ heads }} {{ heads == 1 ? 'passenger' : 'passengers' }}, {{ cabin_label }}</span>
+              data-one="passenger" data-many="passengers">
+            <span class="party__heads js-party-heads">{{ heads }} {{ heads == 1 ? 'passenger' : 'passengers' }}</span>
+            <span class="party__class js-party-class">{{ cabin_label }}</span>
+        </span>
     </button>
 
     {# The rules come from Party::fromCounts() as a number rather than being

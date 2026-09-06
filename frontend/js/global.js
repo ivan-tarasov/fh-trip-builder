@@ -344,9 +344,11 @@
                 const heads = counts.reduce((sum, select) => sum + value(select), 0);
                 const cabin = cabins.find(c => c.checked);
 
-                summary.textContent = heads + ' '
-                    + (heads === 1 ? summary.dataset.one : summary.dataset.many)
-                    + ', ' + (cabin ? cabin.closest('label').textContent.trim() : '');
+                summary.querySelector('.js-party-heads').textContent = heads + ' '
+                    + (heads === 1 ? summary.dataset.one : summary.dataset.many);
+                summary.querySelector('.js-party-class').textContent = cabin
+                    ? cabin.closest('label').textContent.trim()
+                    : '';
             };
 
             const open = (yes) => {
