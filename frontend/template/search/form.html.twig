@@ -16,6 +16,11 @@
    rather than depending on whatever the page happens to have in scope. #}
 
 {% set variant = variant|default('bar') %}
+{# The hero names a place the short way -- "Montreal", with YUL to one side --
+   the way the reference does. The two go together: on their own the city cannot
+   say which of a city's airports was chosen, and the compact bar has no room
+   for the code, so there it keeps the airport's own name. #}
+{% set short_places = variant == 'hero' %}
 {% set depart_code = depart_code|default('') %}
 {% set arrive_code = arrive_code|default('') %}
 {% set depart_city = depart_city|default('') %}
@@ -49,9 +54,16 @@
                         {{ recent is not empty ? 'data-recent="searchbar-recent"' : '' }} required>
                     <option value="">City or airport</option>
                     {% for row in places|default([]) %}
-                        <option value="{{ row.code }}" data-sub="{{ row.sub }}"{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
+                        <option value="{{ row.code }}" data-sub="{{ row.sub }}"{% if short_places %} data-short="{{ row.city|default(row.label) }}"{% endif %}{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
                     {% endfor %}
                 </select>
+                {# Filled by the combobox from whatever the select holds, and
+                   hidden until there is one. Only in the hero: the compact bar's
+                   fields are half as wide and its airport names already ellipse,
+                   so a code there would sit on top of the name. #}
+                {% if short_places %}
+                    <span class="searchbar__code" aria-hidden="true"></span>
+                {% endif %}
             </div>
         {% endfor %}
 

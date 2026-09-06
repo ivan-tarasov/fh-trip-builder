@@ -19,13 +19,6 @@ class HomeController extends AbstractController
      */
     public function index(): void
     {
-        $bgImageUrl = sprintf(
-            '%s/%s/background/%s.jpg',
-            Config::get('site.static.url'),
-            Config::get('site.static.endpoint.images'),
-            rand(1, 10),
-        );
-
         // Three random points of interest for the promo cards.
         $poi = Config::get('site.poi');
         shuffle($poi);
@@ -51,7 +44,6 @@ class HomeController extends AbstractController
         $places = new AirportRepository($this->connection())->pickable();
 
         echo new TwigRenderer()->renderPage('index/view.html.twig', [
-            'bg_image_url' => $bgImageUrl,
             'today_date' => date('Y-m-d'),
             'poi_cards' => $poi,
             'top_searches' => $topSearches,

@@ -594,6 +594,12 @@
         // laying all of it out is what made the dropdown slow to open.
         const SHOWN_AT_ONCE = 40;
 
+        // Past searches offered before the list of places. Two, because the
+        // history is there to catch the trip being repeated right now and the
+        // airports underneath are what the field is actually for -- six pills
+        // pushed them off the bottom of the panel. The rest are one click away.
+        const RECENT_AT_ONCE = 2;
+
         document.querySelectorAll('select[data-searchable]').forEach(function (select) {
             // The select stays: it is what the form submits, what autofill
             // writes to, and what the page is left with if this never runs.
@@ -672,6 +678,35 @@
                 input.setAttribute('aria-activedescendant', row.id);
             };
 
+            // Whether the whole history is showing. Per field, and reset when
+            // the panel closes, so it opens short every time.
+            let allRecent = false;
+
+            /** The control that reveals the rest. Not an option: it chooses nothing. */
+            const moreButton = function () {
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className = 'combo__pill combo__pill--more js-recent-more';
+                button.innerHTML = 'More <i class="fas fa-chevron-down" aria-hidden="true"></i>';
+
+                return button;
+            };
+
+            /**
+             * What to write in the box once an option has been chosen.
+             *
+             * Not the same string as the row in the list. The list is being read
+             * to pick from, so it spells the airport out; the box is a quarter
+             * as wide and is being read to confirm, where "Montreal" beside YUL
+             * says more than "Pierre Elliott Trudeau Internatio...". Absent the
+             * attribute -- the checkout's country field -- the row's own text is
+             * already short and stands in.
+             */
+            const labelFor = function (option) {
+                return option.dataset.short || option.textContent.trim();
+            };
+
             const render = function (query) {
                 const needle = query.trim().toLowerCase();
                 // Rank, do not just filter. Alphabetical order alone answered
@@ -718,6 +753,16 @@
                 // looking for a place, not for last week.
                 if (needle === '' && recentTpl) {
                     const block = recentTpl.content.cloneNode(true);
+                    const pills = [...block.querySelectorAll('[data-path]')];
+
+                    // Dropped from the DOM rather than hidden: the arrow keys
+                    // walk `[role="option"]`, and a row nobody can see is still
+                    // one the keyboard would stop on.
+                    if (!allRecent && pills.length > RECENT_AT_ONCE) {
+                        pills.slice(RECENT_AT_ONCE).forEach(pill => pill.remove());
+                        block.querySelector('.combo__pills')?.appendChild(moreButton());
+                    }
+
                     const recents = [...block.querySelectorAll('[data-path]')]
                         .map(el => ({ path: el.dataset.path }));
 
@@ -806,12 +851,15 @@
             };
 
             const open = function () {
-                render(input.value === select.selectedOptions[0]?.textContent.trim() ? '' : input.value);
+                const chosen = select.selectedOptions[0];
+
+                render(chosen && input.value === labelFor(chosen) ? '' : input.value);
                 list.hidden = false;
                 input.setAttribute('aria-expanded', 'true');
             };
 
             const close = function () {
+                allRecent = false;
                 list.hidden = true;
                 input.setAttribute('aria-expanded', 'false');
                 input.removeAttribute('aria-activedescendant');
@@ -830,7 +878,7 @@
                 }
 
                 select.value = entry.option.value;
-                input.value = entry.option.textContent.trim();
+                input.value = labelFor(entry.option);
                 // So validation, autofill and anything else see a real change.
                 select.dispatchEvent(new Event('change', { bubbles: true }));
                 close();
@@ -873,12 +921,21 @@
                     if (!list.hidden && entries[active]) { e.preventDefault(); choose(entries[active]); }
                 } else if (e.key === 'Escape') {
                     close();
-                    input.value = select.selectedOptions[0] ? select.selectedOptions[0].textContent.trim() : '';
+                    input.value = select.selectedOptions[0] ? labelFor(select.selectedOptions[0]) : '';
                 }
             });
 
             list.addEventListener('mousedown', function (e) {
                 // mousedown, not click: blur would close the list first.
+                if (e.target.closest('.js-recent-more')) {
+                    e.preventDefault();
+                    allRecent = true;
+                    active = -1;
+                    render('');
+
+                    return;
+                }
+
                 const li = e.target.closest('[role="option"]');
                 if (!li) { return; }
                 e.preventDefault();
@@ -893,22 +950,37 @@
                 // Whatever half-typed text is left is not a country; show what
                 // is actually selected rather than leaving a lie in the box.
                 input.value = select.value && select.selectedOptions[0]
-                    ? select.selectedOptions[0].textContent.trim()
+                    ? labelFor(select.selectedOptions[0])
                     : '';
             });
 
-            // Autofill and the server-rendered value both arrive this way.
+            // The airport code, shown to one side of the field. Driven off the
+            // select rather than the text box: the box holds whatever is being
+            // typed, and half a name is not a code.
+            const code = input.closest('.searchbar__field')?.querySelector('.searchbar__code') ?? null;
+            const showCode = function () {
+                if (code) {
+                    code.textContent = select.value;
+                }
+            };
+
+            // Autofill and the server-rendered value both arrive this way, and
+            // so does choose(), which dispatches change once it has written.
             select.addEventListener('change', function () {
                 if (document.activeElement !== input) {
                     input.value = select.selectedOptions[0] && select.value
-                        ? select.selectedOptions[0].textContent.trim()
+                        ? labelFor(select.selectedOptions[0])
                         : '';
                 }
+
+                showCode();
             });
 
             if (select.value) {
-                input.value = select.selectedOptions[0].textContent.trim();
+                input.value = labelFor(select.selectedOptions[0]);
             }
+
+            showCode();
         });
     } catch (er) {
         console.log(er);

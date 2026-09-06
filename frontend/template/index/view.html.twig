@@ -3,86 +3,48 @@
 {% block title %}Find flights{% endblock %}
 
 {% block content %}
-<style>
-    .bg-img {
-        background-image: url("{{ bg_image_url }}");
-        background-size: cover;
-        background-position: center;
-        position: relative; /* Make sure the container has a positioning context */
-    }
+{# The hero is a flat band, not a photograph.
 
-    #nav-tab {
-        padding-bottom: 1px;
-    }
+   It used to be one of ten background JPEGs picked at random per request, with
+   the form squeezed into five columns on top of it. That gave the page no
+   stable identity -- every visit looked like a different site -- put a large
+   image request above the fold, and left white text sitting on whatever the
+   photo happened to be behind it. A flat field means the white search bar is
+   the brightest thing on the screen, which is where the visitor is meant to
+   look. The photography moves down to the destination cards, where an image is
+   the content rather than a backdrop. #}
+<div class="hero">
+    <div class="container hero__inner">
+        <h1 class="hero__slogan">Build the trip, not&nbsp;just the ticket</h1>
 
-    #nav-tab,
-    #nav-tab button {
-        border: unset;
-    }
+        {# Where a visitor can go, as the two things this app actually does.
+           The current page is marked with aria-current rather than only a
+           colour, and Saved is a link because it is a different page. #}
+        <nav class="hero__modes" aria-label="Sections">
+            <span class="hero__mode is-current" aria-current="page">
+                <i class="fas fa-plane-departure" aria-hidden="true"></i>
+                Flights
+            </span>
+            <a class="hero__mode" href="{{ config('site.paths.saved') }}">
+                <i class="fas fa-heart" aria-hidden="true"></i>
+                Saved
+            </a>
+        </nav>
 
-    /* The emphasis used to run backwards: the unselected tab was solid black
-       -- the highest-contrast thing in the hero -- while the selected one was
-       near-white. The selected tab now carries the accent and the unselected
-       recedes into translucent ink over the photograph. */
-    #nav-tab .nav-link {
-        background-color: rgba(16, 36, 63, .7);
-        color: #fff;
-    }
-
-    #nav-tab .nav-link:hover {
-        background-color: rgba(16, 36, 63, .85);
-        color: #fff;
-    }
-
-    #nav-tab .active,
-    #nav-tab .nav-link.active:hover {
-        background-color: var(--brand-accent);
-        color: #fff;
-    }
-
-    .container-between {
-        padding-top: 3rem;
-    }
-
-    @media (min-width: 1200px) {
-        .container-up {
-            padding-bottom: 200px;
-        }
-
-        .container-between {
-            padding-top: 0;
-            position: relative;
-            top: -185px;
-            max-height: 200px;
-            margin-top: 0;
-        }
-    }
-</style>
-<div class="bg-primary">
-    <div class="container container-up mb-5">
-        <div class="row py-2 mb-0 pe-lg-0 pt-lg-0 align-items-center rounded-4 shadow-lg bg-light bg-img">
-            <div class="row align-items-center py-5">
-                <div class="col-lg-7 text-center text-lg-start"></div>
-                <div class="col-md-10 mx-auto col-lg-5">
-
-                    {# The whole form lives in search/form.html.twig now. The hero used
-                       to carry its own copy: a Round trip tab that shipped `disabled`, a
-                       cabin select comparing 'economy' to itself so it always rendered
-                       Economy, and the passenger partial included with no party so it
-                       always said one adult. #}
-                    {% include 'search/form.html.twig' with {
-                        'variant': 'hero',
+        {# The whole form lives in search/form.html.twig. The hero used to carry
+           its own copy: a Round trip tab that shipped `disabled`, a cabin select
+           comparing 'economy' to itself so it always rendered Economy, and the
+           passenger partial included with no party so it always said one adult. #}
+        {% include 'search/form.html.twig' with {
+            'variant': 'hero',
             'places': places,
             'recent': recent,
-                        'depart_date': today_date
-                    } only %}
-                </div>
-            </div>
-        </div>
+            'depart_date': today_date
+        } only %}
     </div>
 </div>
 
-<div class="container container-between">
+<div class="container py-5">
     <div class="row row-cols-1 row-cols-lg-3 align-items-stretch g-4">
         {% for poi in poi_cards %}
             {% include 'index/poi.html.twig' %}

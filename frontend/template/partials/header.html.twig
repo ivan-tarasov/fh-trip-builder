@@ -52,7 +52,9 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    {# Pushed right: the logo owns the left, and the menu is a
+                       set of places to go rather than the page's subject. #}
+                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                         {% for link, item in config('site.main-menu')|filter(item => item.enabled) %}
                         <li class="nav-item me-{{ item.spacer|default(2) }}">
                             {# Two different questions. The highlight marks the section you

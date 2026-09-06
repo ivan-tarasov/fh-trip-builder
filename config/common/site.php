@@ -73,6 +73,7 @@ return [
 
     'paths' => [
         'search' => '/search/',
+        'saved' => '/my/saved/',
     ],
 
     'main-menu' => [

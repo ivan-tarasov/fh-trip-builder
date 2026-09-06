@@ -929,6 +929,80 @@ button {
 
 
 /* ==========================================================================
+   #HOMEPAGE HERO
+   ==========================================================================
+
+   A flat band carrying the slogan, the two sections and the search bar. The
+   colour is the app's own ink rather than the reference's blue, and it is very
+   slightly graded so a full-width rectangle does not read as a dead block. */
+
+.hero {
+  background-color: var(--brand-ink);
+  background-image: linear-gradient(160deg, var(--brand-ink-700) 0%, var(--brand-ink) 55%);
+}
+
+.hero__inner {
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+}
+
+.hero__slogan {
+  max-width: 20ch;
+  text-align: center;
+  margin: 0 auto 2rem;
+  font-size: clamp(1.75rem, 4.5vw, 3rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  color: #fff;
+  text-wrap: balance;
+}
+
+/* The two things this app does. The current one is a solid card and the other
+   recedes into the band, which is the same figure/ground the results steps use. */
+.hero__modes {
+  display: flex;
+  justify-content: center;
+  gap: .5rem;
+  margin-bottom: 1.75rem;
+}
+
+.hero__mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .375rem;
+  min-width: 6.5rem;
+  padding: .75rem 1.25rem;
+  font-size: .875rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  background-color: rgba(255, 255, 255, .1);
+  border-radius: var(--bs-border-radius-lg);
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.hero__mode i { font-size: 1.125rem; }
+
+a.hero__mode:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, .18);
+}
+
+a.hero__mode:active { transform: scale(.97); }
+
+.hero__mode.is-current {
+  color: var(--brand-ink);
+  background-color: #fff;
+}
+
+@media (max-width: 575.98px) {
+  .hero__inner { padding-top: 2.25rem; padding-bottom: 2.25rem; }
+  .hero__mode { min-width: 0; flex: 1 1 0; padding: .625rem .75rem; }
+}
+
+/* ==========================================================================
    #SEARCHBAR
    ==========================================================================
 
@@ -1024,6 +1098,85 @@ button {
 }
 
 .searchbar__submit:hover { background-color: var(--brand-accent-700); }
+
+/* The hero's copy of the bar, sized for a page whose subject it is.
+
+   Two differences from the compact one on the results page, both taken from the
+   reference: the fields are taller and set larger, and the standing label above
+   each is dropped -- the placeholder says what the field is until a value says
+   it instead. The label stays in the markup for a screen reader, because a
+   placeholder disappears exactly when someone tabbing back needs it most.
+
+   The submit stays inside the white bar rather than detached on the band. That
+   is the one deliberate departure: the accent measures 2.86:1 against the ink
+   behind it, short of the 3:1 a control needs to be seen at all, and on white
+   it is unambiguous. */
+.searchbar--hero .searchbar__bar {
+  padding: .5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1.25rem 2.5rem rgba(5, 12, 24, .28);
+}
+
+.searchbar--hero .searchbar__field {
+  gap: 0;
+  min-height: 4rem;
+  padding: .5rem 1.125rem;
+}
+
+.searchbar--hero .searchbar__field:first-child { border-radius: .75rem 0 0 .75rem; }
+
+/* The two that hold the longest values -- a date is eight characters and an
+   airport name is forty. Without this every field took an equal share and
+   "Pierre Elliott Trudeau International" ellipsed while "Oct 15" sat in the
+   same width with room to spare. */
+.searchbar--hero .searchbar__field--place { flex: 1.6 1 0; }
+
+.searchbar--hero .searchbar__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.searchbar--hero .searchbar__input { font-size: 1.0625rem; }
+
+.searchbar--hero .searchbar__submit {
+  padding: 0 2.25rem;
+  font-size: 1.0625rem;
+  border-radius: .75rem;
+}
+
+/* The code for whatever place is chosen, set to one side of the field the way
+   the reference does. It is the least ambiguous name an airport has, and the
+   field itself is too narrow to spell most of them out. */
+.searchbar__code {
+  position: absolute;
+  top: 50%;
+  right: 1.125rem;
+  font-size: .8125rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ink-faint);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.searchbar__code:empty { display: none; }
+
+/* Room for it, so a long place name is ellipsed before it collides.
+
+   input, not the class on its own: the hidden native select carries the same
+   class, and padding on a 1px-wide absolutely positioned element is still 3rem
+   of box -- enough to push the page 9px wider than the phone showing it. */
+.searchbar--hero .searchbar__field--place input.searchbar__input { padding-right: 3rem; }
+
+/* Stacked rather than paired. Two of them side by side on a phone leaves each
+   about 140px, which is not enough for a placeholder, let alone a place. */
+@media (max-width: 767.98px) {
+  .searchbar--hero .searchbar__field--place { flex-basis: 100%; }
+}
 
 /* The band the results-page form sits in. Replaces .card-4, which was a
    translucent black panel over whatever the page had behind it. */
@@ -3789,6 +3942,24 @@ textarea {
 }
 
 .combo__pill i { flex: 0 0 auto; font-size: .75rem; color: var(--ink-muted); }
+
+/* The rest of the history, one click away. Outlined rather than filled, because
+   it is the one pill on the row that chooses nothing -- everything beside it
+   runs a search. */
+.combo__pill--more {
+  gap: .3125rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  background-color: transparent;
+  border: 1px solid var(--line-strong);
+}
+
+.combo__pill--more:hover {
+  color: var(--ink-body);
+  background-color: var(--surface);
+}
+
+.combo__pill--more i { font-size: .625rem; }
 .combo__pill span { overflow: hidden; text-overflow: ellipsis; }
 .combo__pill:hover,
 .combo__pill.is-active { background-color: var(--surface-sunken); }
