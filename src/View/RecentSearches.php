@@ -112,7 +112,25 @@ final readonly class RecentSearches
      * falls back to the code rather than to an empty row.
      *
      * @param list<array<string, mixed>> $places
-     * @return list<array<string, string>>
+     *
+     * @return list<array{
+     *     path: string,
+     *     from: string,
+     *     to: string,
+     *     when: string,
+     *     parts: array{
+     *         from: string,
+     *         to: string,
+     *         depart: string,
+     *         return: string,
+     *         depart_span: int,
+     *         return_span: int,
+     *         cabin: string,
+     *         adults: int,
+     *         children: int,
+     *         infants: int
+     *     }
+     * }>
      */
     public static function rows(Input $cookies, array $places): array
     {
@@ -130,6 +148,23 @@ final readonly class RecentSearches
                 'from' => $names[$search->from] ?? $search->from,
                 'to' => $names[$search->to] ?? $search->to,
                 'when' => self::when($search->depart, $search->return),
+                // The search taken apart, so choosing one can fill the form
+                // rather than run it. Handed over in pieces because the browser
+                // has no parser for a search path -- SearchUrl is the only
+                // definition of that grammar, and a second one in JavaScript
+                // would be a copy to keep in step.
+                'parts' => [
+                    'from' => $search->from,
+                    'to' => $search->to,
+                    'depart' => $search->depart,
+                    'return' => $search->return ?? '',
+                    'depart_span' => $search->departSpan,
+                    'return_span' => $search->returnSpan,
+                    'cabin' => $search->cabin->value,
+                    'adults' => $search->adults,
+                    'children' => $search->children,
+                    'infants' => $search->infants,
+                ],
             ];
         }
 

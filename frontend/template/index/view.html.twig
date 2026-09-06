@@ -44,7 +44,10 @@
     </div>
 </div>
 
-<div class="container py-5">
+{# Lifted into the band so the cards straddle its edge, the way the reference
+   does. They stay where they were in the document -- the overlap is a margin,
+   not a position -- so the reading order is still hero, then destinations. #}
+<div class="container hero-cards">
     <div class="row row-cols-1 row-cols-lg-3 align-items-stretch g-4">
         {% for poi in poi_cards %}
             {% include 'index/poi.html.twig' %}

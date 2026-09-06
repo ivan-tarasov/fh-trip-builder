@@ -123,6 +123,37 @@ final class RecentSearchesTest extends TestCase
         self::assertSame(self::ROUND_TRIP, $rows[0]['path']);
     }
 
+    public function testARowCarriesTheSearchInPiecesSoTheFormCanBeFilled(): void
+    {
+        // Choosing a past search fills the form rather than running it, and the
+        // browser has no parser for a search path -- SearchUrl is the only
+        // definition of that grammar. So the row hands over the parts.
+        $rows = RecentSearches::rows(self::cookie(['/search/YYZ121026x3CDG201026x2C321']), []);
+
+        self::assertSame([
+            'from' => 'YYZ',
+            'to' => 'CDG',
+            'depart' => '2026-10-12',
+            'return' => '2026-10-20',
+            'depart_span' => 3,
+            'return_span' => 2,
+            'cabin' => 'business',
+            'adults' => 3,
+            'children' => 2,
+            'infants' => 1,
+        ], $rows[0]['parts']);
+    }
+
+    public function testAOneWayCarriesAnEmptyReturnRatherThanNothing(): void
+    {
+        // The template writes every part into an attribute, and a null there
+        // would render the word "null" into the form's return field.
+        $parts = RecentSearches::rows(self::cookie([self::ONE_WAY]), [])[0]['parts'];
+
+        self::assertSame('', $parts['return']);
+        self::assertSame(1, $parts['return_span']);
+    }
+
     public function testACodeTheNetworkNoLongerNamesStillDrawsARow(): void
     {
         // An airport disabled since the search was run. Showing the code is

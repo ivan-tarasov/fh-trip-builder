@@ -66,10 +66,12 @@
             // Reopening is a fresh decision.
             $input.on('show.daterangepicker', () => touched.delete(picker));
             pickers.push(picker);
+
+            return picker;
         };
 
-        pickerFor(departInput, departValue.val(), spanOf(departFlex));
-        pickerFor(returnInput, returnValue.val() || departValue.val(), spanOf(returnFlex));
+        const departPicker = pickerFor(departInput, departValue.val(), spanOf(departFlex));
+        const returnPicker = pickerFor(returnInput, returnValue.val() || departValue.val(), spanOf(returnFlex));
 
         // autoUpdateInput is off so a field can stay empty until it is picked:
         // left to itself the plugin writes today's date in on load, which would
@@ -131,6 +133,37 @@
 
         redraw(departInput, departValue, departFlex);
         redraw(returnInput, returnValue, returnFlex);
+
+        // Set from outside the picker -- a past search being put back into the
+        // form. The hidden field is what carries the date, so it is what to
+        // watch; the visible text and the calendar's own month both follow it.
+        const follow = ($input, $hidden, $flex, picker, $clear) => {
+            // Both, because the date and the width of its window arrive as two
+            // separate writes and either order leaves the first redraw reading a
+            // value the second is about to change. Listening to each means the
+            // last write settles it whichever way round they come.
+            $hidden.add($flex).on('change', function () {
+                if (!$hidden.val()) {
+                    $input.val('');
+                    $flex.val('');
+                    $clear?.prop('hidden', true);
+
+                    return;
+                }
+
+                redraw($input, $hidden, $flex);
+                $clear?.prop('hidden', false);
+
+                const start = moment($hidden.val());
+
+                picker.setStartDate(start);
+                picker.setEndDate(start.clone().add(spanOf($flex) - 1, 'day'));
+                picker.updateView();
+            });
+        };
+
+        follow(departInput, departValue, departFlex, departPicker);
+        follow(returnInput, returnValue, returnFlex, returnPicker, clearReturn);
 
         // Pick by dragging. Pressing either end of the window and pulling moves
         // that end and leaves the other where it is -- which is what the arrows
@@ -764,7 +797,7 @@
                     }
 
                     const recents = [...block.querySelectorAll('[data-path]')]
-                        .map(el => ({ path: el.dataset.path }));
+                        .map(el => ({ recent: { ...el.dataset } }));
 
                     list.appendChild(block);
                     entries = [...recents, ...entries];
@@ -866,14 +899,74 @@
                 active = -1;
             };
 
+            /**
+             * Put a past search back into the form.
+             *
+             * Every control here is the one that submits -- the two selects, the
+             * hidden dates, the party's selects and its cabin radio -- and each
+             * has something already listening for its change: the combobox
+             * repaints its box and its code, the date fields redraw and re-seed
+             * their calendars, the party panel recounts its summary. So this
+             * writes values and says so, and the form puts itself right.
+             *
+             * The pieces come from the server. A search path has one parser and
+             * it is SearchUrl; a second one written in JavaScript would be a
+             * copy of that grammar to keep in step.
+             */
+            const refill = function (parts) {
+                const set = function (id, value) {
+                    const field = document.getElementById(id);
+
+                    if (!field) { return; }
+
+                    field.value = value;
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                };
+
+                set('departing_airport-native', parts.from);
+                set('arrival_airport-native', parts.to);
+
+                // A span of one is no span at all, which is what an ordinary
+                // search sends and what the field shows as a single day.
+                set('depart_date_value', parts.depart);
+                set('depart_flex_value', Number(parts.departSpan) > 1 ? parts.departSpan : '');
+                set('return_date_value', parts.return);
+                set('return_flex_value', Number(parts.returnSpan) > 1 ? parts.returnSpan : '');
+
+                // "No children" is the absence of a number rather than a zero,
+                // the same way the panel's own stepper writes it.
+                set('passengers_adults', parts.adults);
+                set('passengers_children', Number(parts.children) > 0 ? parts.children : '');
+                set('passengers_infants', Number(parts.infants) > 0 ? parts.infants : '');
+
+                const cabin = document.querySelector('.js-party-cabin[value="' + parts.cabin + '"]');
+
+                if (cabin) {
+                    cabin.checked = true;
+                    cabin.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            };
+
             const choose = function (entry) {
                 if (!entry) { return; }
 
-                // A recent search is a whole search, not a place: it carries its
-                // own dates, cabin and party, so it reopens rather than filling
-                // one field with half of itself.
-                if (entry.path) {
-                    window.location.assign(entry.path);
+                // A past search fills the form and stops there. It used to go
+                // straight to the results, which took the decision away: the
+                // whole reason to offer the trip again is usually to change one
+                // thing about it.
+                if (entry.recent) {
+                    refill(entry.recent);
+
+                    // This field is the one holding focus, and the change
+                    // handler leaves a focused box alone so that it never
+                    // overwrites what is being typed. Here the value is
+                    // deliberate, so it is written directly rather than left to
+                    // a blur that only fires if the window has focus at all.
+                    input.value = select.value && select.selectedOptions[0]
+                        ? labelFor(select.selectedOptions[0])
+                        : '';
+                    close();
+
                     return;
                 }
 
@@ -941,7 +1034,7 @@
                 e.preventDefault();
 
                 choose(li.dataset.path
-                    ? { path: li.dataset.path }
+                    ? { recent: { ...li.dataset } }
                     : { option: options.find(o => o.value === li.dataset.value) });
             });
 

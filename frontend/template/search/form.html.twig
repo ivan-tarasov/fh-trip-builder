@@ -81,8 +81,19 @@
                    pill needing to be an <li>. #}
                 <li class="combo__pills" role="group" aria-label="You searched earlier">
                     {% for row in recent %}
+                        {# The parts, not the path: choosing one fills the form
+                           and leaves the visitor to press Search, so what is
+                           needed here is the pieces rather than the address. #}
                         <span class="combo__pill" role="option" aria-selected="false"
-                              data-path="{{ row.path }}">
+                              data-path="{{ row.path }}"
+                              data-from="{{ row.parts.from }}" data-to="{{ row.parts.to }}"
+                              data-depart="{{ row.parts.depart }}" data-return="{{ row.parts.return }}"
+                              data-depart-span="{{ row.parts.depart_span }}"
+                              data-return-span="{{ row.parts.return_span }}"
+                              data-cabin="{{ row.parts.cabin }}"
+                              data-adults="{{ row.parts.adults }}"
+                              data-children="{{ row.parts.children }}"
+                              data-infants="{{ row.parts.infants }}">
                             <span class="combo__icon combo__icon--recent" aria-hidden="true"></span>
                             {# One span, not a bare text node beside the strong:
                                in a flex row each text node becomes its own item

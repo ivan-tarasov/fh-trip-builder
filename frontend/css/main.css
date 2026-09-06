@@ -943,7 +943,30 @@ button {
 
 .hero__inner {
   padding-top: 3.5rem;
-  padding-bottom: 3.5rem;
+  /* Deep, because the cards below are pulled up into it. What is left between
+     the search bar and the top of a card is this less the overlap. */
+  padding-bottom: 8.75rem;
+}
+
+/* The destination cards, starting inside the band and finishing outside it.
+
+   Positioned so the overlap is unambiguous rather than relying on paint order,
+   and at a z-index the place dropdown still clears -- that panel opens downward
+   past the edge of the band and has to stay on top of the cards it crosses. */
+.hero-cards {
+  position: relative;
+  z-index: 1;
+  /* A sixth of a card, roughly -- enough for the band to cut across it rather
+     than sit behind it. Deeper read as the cards being half-swallowed. */
+  margin-top: -3.75rem;
+  padding-bottom: 3rem;
+}
+
+@media (max-width: 767.98px) {
+  /* Less of both: the band is already tall once the fields stack, and a card
+     is most of the screen, so a deep overlap buries its own heading. */
+  .hero__inner { padding-bottom: 6.5rem; }
+  .hero-cards { margin-top: -2.5rem; }
 }
 
 .hero__slogan {
@@ -998,7 +1021,10 @@ a.hero__mode:active { transform: scale(.97); }
 }
 
 @media (max-width: 575.98px) {
-  .hero__inner { padding-top: 2.25rem; padding-bottom: 2.25rem; }
+  /* Top only. The bottom belongs to the pair above -- what separates the search
+     button from the first card is that padding less the cards' overlap, so
+     cutting one here on its own draws a card across the button. */
+  .hero__inner { padding-top: 2.25rem; }
   .hero__mode { min-width: 0; flex: 1 1 0; padding: .625rem .75rem; }
 }
 
@@ -1125,11 +1151,13 @@ a.hero__mode:active { transform: scale(.97); }
 
 .searchbar--hero .searchbar__field:first-child { border-radius: .75rem 0 0 .75rem; }
 
-/* The two that hold the longest values -- a date is eight characters and an
-   airport name is forty. Without this every field took an equal share and
-   "Pierre Elliott Trudeau International" ellipsed while "Oct 15" sat in the
-   same width with room to spare. */
-.searchbar--hero .searchbar__field--place { flex: 1.6 1 0; }
+/* The row shared out by what each field actually has to say. A place is a city
+   name with a code beside it, a date is "Oct 12 - Oct 14" once a window is
+   chosen, and the party runs to "6 passengers, Business". An equal share left
+   the last three ellipsing while the places sat on room they did not need. */
+.searchbar--hero .searchbar__field--place { flex: 1.4 1 0; }
+.searchbar--hero .searchbar__field--date { flex: 1.15 1 0; }
+.searchbar--hero .searchbar__field--party { flex: 1.5 1 0; }
 
 .searchbar--hero .searchbar__label {
   position: absolute;
