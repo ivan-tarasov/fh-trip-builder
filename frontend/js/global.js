@@ -108,6 +108,9 @@
                 start: hidden.value || null,
                 span: spanOf(flex),
                 maxSpan: MAX_SPAN,
+                // Sized for fares from the first paint, so the grid does not
+                // grow a line under the pointer when they arrive.
+                showPrices: true,
                 // The window here is not "depart to return" -- that is what the
                 // two fields are for -- but how flexible one end of the trip is,
                 // so it is dragged rather than clicked out over two days.

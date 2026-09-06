@@ -772,12 +772,21 @@ a:active {
   text-align: center;
 }
 
-/* Roomier once fares are in the cells -- a four-figure price does not fit the
-   width a two-digit day needs. */
-.datepicker--priced .datepicker__grid th,
-.datepicker--priced .datepicker__grid td { min-width: 3.375rem; }
+/* Roomier where fares belong -- a four-figure price does not fit the width a
+   two-digit day needs.
 
-.datepicker--priced .datepicker__grid td { line-height: 1; padding: .3125rem 0; }
+   Fixed, not fitted. The height is set whether or not that day has a fare and
+   whether or not any have arrived yet, because a grid that grows a line when
+   the prices land moves every day out from under the pointer. */
+.datepicker--priced .datepicker__grid th,
+.datepicker--priced .datepicker__grid td { min-width: 3.5rem; }
+
+.datepicker--priced .datepicker__grid td {
+  height: 3rem;
+  padding: .25rem 0;
+  line-height: 1;
+  vertical-align: middle;
+}
 
 .datepicker__grid th {
   font-size: .75rem;
@@ -826,15 +835,40 @@ a:active {
   cursor: default;
 }
 
-.datepicker__grid td.is-today .datepicker__day { font-weight: 700; }
+/* Today, ringed. It was an underline, which -- on a span that fills its cell --
+   drew a rule the width of the whole column and read as an artefact rather than
+   as a mark on a date. Not on a day that is already chosen: there the accent
+   fill says everything, and a ring inside it is noise. */
+.datepicker__grid td.is-today:not(.is-start):not(.is-end) {
+  /* ink-faint, not a rule colour: this says which day is today, and the rule
+     tier measures 1.4:1 on white -- under the 3:1 a mark carrying meaning has
+     to clear before it is worth drawing at all. */
+  box-shadow: inset 0 0 0 1px var(--ink-faint);
+  border-radius: .5rem;
+}
 
-.datepicker__day { display: block; line-height: 1.35; }
+/* The day is what is being chosen, so it is what the eye lands on. */
+.datepicker__day {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
 
-/* Quiet by default: the day is what is being chosen and the fare is what helps
-   choose it, so it must not out-shout the number above it. */
+.datepicker--priced .datepicker__grid td.is-outside .datepicker__day { font-weight: 400; }
+
+/* And the fare is what helps choose it, so it stays underneath in every sense:
+   smaller, lighter, and a tier quieter in colour.
+
+   The line is kept whether or not there is a fare to put on it. An empty block
+   generates no line box at all, so a day without a price used to sit lower than
+   its neighbours -- the numbers along a row stopped lining up wherever the route
+   had nothing to sell. */
 .datepicker__price {
   display: block;
+  min-height: .825rem;
   font-size: .6875rem;
+  font-weight: 400;
   line-height: 1.2;
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
@@ -884,8 +918,12 @@ a:active {
 }
 
 .datepicker__apply {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .0625rem;
   width: 100%;
-  padding: .5625rem 1rem;
+  padding: .5rem 1rem;
   font-size: .9375rem;
   font-weight: 600;
   color: #fff;
@@ -894,6 +932,16 @@ a:active {
   border-radius: .625rem;
   transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
+
+/* What the chosen days cost, under what the button does. Empty until the fares
+   arrive, and it takes no room while it is. */
+.datepicker__apply-price {
+  font-size: .75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, .85);
+}
+
+.datepicker__apply-price:empty { display: none; }
 
 .datepicker__apply:hover:not(:disabled) { background-color: var(--brand-accent-700); }
 .datepicker__apply:active:not(:disabled) { transform: scale(.98); }
@@ -950,7 +998,9 @@ a:active {
   .datepicker__grid th,
   .datepicker__grid td { min-width: 2rem; line-height: 2rem; }
   .datepicker--priced .datepicker__grid th,
-  .datepicker--priced .datepicker__grid td { min-width: 2.75rem; }
+  .datepicker--priced .datepicker__grid td { min-width: 2.875rem; }
+  .datepicker--priced .datepicker__grid td { height: 2.75rem; }
+  .datepicker__day { font-size: .9375rem; }
 }
 
 

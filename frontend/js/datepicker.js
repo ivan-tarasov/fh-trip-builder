@@ -114,6 +114,11 @@
             min: Day.today(),
             start: null,
             span: 1,
+            // Whether this calendar will carry fares. Declared up front rather
+            // than inferred when they arrive, so the cells are the right size
+            // from the first paint: a grid that grows a line when the prices
+            // land moves every day under the pointer.
+            showPrices: false,
             // What a seat costs on each day, as {"YYYY-MM-DD": number}. Arrives
             // after the calendar is open -- see setPrices.
             prices: null,
@@ -149,7 +154,10 @@
 
         // The modifier the drag handles are drawn under: only a window that can
         // actually be pulled wider advertises that it can.
-        root.className = 'datepicker' + (this.settings.drag ? ' datepicker--drag' : '');
+        root.className = 'datepicker'
+            + (this.settings.drag ? ' datepicker--drag' : '')
+            // Sized for fares whether or not any have arrived yet.
+            + (this.settings.showPrices ? ' datepicker--priced' : '');
         root.id = this.id;
         root.hidden = true;
         // A dialog rather than a listbox: it is a grid of days with its own
@@ -209,10 +217,24 @@
             foot.className = 'datepicker__foot';
             apply.type = 'button';
             apply.className = 'datepicker__apply';
-            apply.textContent = this.settings.applyLabel;
+
+            // Two lines, as the reference has: what the button does, and what
+            // the days now chosen would cost. The fare is the cheapest inside
+            // the window rather than the one under the first day -- the window
+            // is an offer to leave on any of them, so its price is the best of
+            // them.
+            const label = document.createElement('span');
+            const price = document.createElement('span');
+
+            label.className = 'datepicker__apply-label';
+            label.textContent = this.settings.applyLabel;
+            price.className = 'datepicker__apply-price';
+
+            apply.append(label, price);
             foot.appendChild(apply);
             root.appendChild(foot);
             this.applyButton = apply;
+            this.applyPrice = price;
         }
 
         // What changed, for anyone who cannot see it change.
@@ -345,12 +367,18 @@
         const bar = known.length ? Math.min.apply(null, known) * 1.1 : 0;
 
         this.cells.forEach((cell) => {
-            const price = this.prices[cell.dataset.day];
             const label = cell.querySelector('.datepicker__price');
 
             if (!label) {
                 return;
             }
+
+            // Nothing on a day that cannot be chosen. A return calendar starts
+            // at the departure, and pricing the days before it offers a fare on
+            // a flight this trip cannot take.
+            const price = cell.classList.contains('is-disabled')
+                ? undefined
+                : this.prices[cell.dataset.day];
 
             label.textContent = price === undefined ? '' : this.settings.currency + Math.round(price);
             cell.classList.toggle('is-cheap', price !== undefined && price <= bar);
@@ -364,18 +392,13 @@
      * without prices has no elements to put them in.
      */
     DatePicker.prototype.setPrices = function (prices) {
-        const had = Boolean(this.prices);
-
         this.prices = prices;
-        // The wider cells come with the fares, so the modifier arrives with them.
-        this.root.classList.toggle('datepicker--priced', Boolean(prices));
 
-        if (had) {
-            this.paintPrices();
-        } else {
-            this.render();
-            this.place();
-        }
+        // No re-render and no repositioning: the cells were built with room for
+        // a fare, so filling them in changes nothing about the size or place of
+        // anything.
+        this.paintPrices();
+        this.paint();
     };
 
     DatePicker.prototype.cell = function (day, month) {
@@ -393,7 +416,7 @@
         number.textContent = String(day.getUTCDate());
         cell.appendChild(number);
 
-        if (this.prices) {
+        if (this.settings.showPrices) {
             const price = document.createElement('span');
 
             price.className = 'datepicker__price';
@@ -440,6 +463,41 @@
         if (this.applyButton) {
             this.applyButton.disabled = !this.start;
         }
+
+        this.paintApplyPrice();
+    };
+
+    /** What the chosen days cost, on the button that accepts them. */
+    DatePicker.prototype.paintApplyPrice = function () {
+        if (!this.applyPrice) {
+            return;
+        }
+
+        const best = this.cheapestInRange();
+
+        this.applyPrice.textContent = best === null
+            ? ''
+            : 'from ' + this.settings.currency + Math.round(best);
+    };
+
+    /** The lowest fare across the chosen window, or null when there is none. */
+    DatePicker.prototype.cheapestInRange = function () {
+        if (!this.prices || !this.start) {
+            return null;
+        }
+
+        const end = this.end ?? this.start;
+        let best = null;
+
+        for (let day = this.start; day.getTime() <= end.getTime(); day = Day.add(day, 1)) {
+            const price = this.prices[Day.iso(day)];
+
+            if (price !== undefined && (best === null || price < best)) {
+                best = price;
+            }
+        }
+
+        return best;
     };
 
     DatePicker.prototype.selectable = function (day) {
