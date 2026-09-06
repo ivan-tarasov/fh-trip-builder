@@ -36,7 +36,12 @@ final readonly class RoutePriceRepository
     /**
      * Prices by date, for a window.
      *
-     * @return array<string, float> "YYYY-MM-DD" => cheapest fare
+     * Base and tax apart, because a party cannot be applied to their sum: a
+     * child pays three quarters of the fare but a whole adult's tax, and a lap
+     * infant a tenth of the fare and no tax. Whoever shows these multiplies
+     * them by the two shares and adds after, the way Party::apply() does.
+     *
+     * @return array<string, array{base: float, tax: float}>
      */
     public function read(
         string $from,
@@ -46,7 +51,7 @@ final readonly class RoutePriceRepository
         string $until,
     ): array {
         $rows = $this->connection->fetchAll(
-            'SELECT depart_date, price FROM ' . Table::RouteDayPrice->value
+            'SELECT depart_date, price_base, price_tax FROM ' . Table::RouteDayPrice->value
             . ' WHERE from_code = ? AND to_code = ? AND cabin = ?'
             . ' AND depart_date >= ? AND depart_date < ?',
             [$from, $to, $cabin->value, $since, $until],
@@ -55,7 +60,10 @@ final readonly class RoutePriceRepository
         $prices = [];
 
         foreach ($rows as $row) {
-            $prices[(string) $row['depart_date']] = (float) $row['price'];
+            $prices[(string) $row['depart_date']] = [
+                'base' => (float) $row['price_base'],
+                'tax' => (float) $row['price_tax'],
+            ];
         }
 
         return $prices;
@@ -136,7 +144,7 @@ final readonly class RoutePriceRepository
      * @param list<string> $fromCodes
      * @param list<string> $toCodes
      *
-     * @return array<string, float>
+     * @return array<string, array{base: float, tax: float}>
      */
     private function cheapestPerDay(
         array $fromCodes,
@@ -153,16 +161,27 @@ final readonly class RoutePriceRepository
         $minConnect = (int) $connections['min_connect_minutes'];
         $maxConnect = (int) $connections['max_connect_minutes'];
 
+        // The cheapest itinerary of each day, and its own two parts -- not the
+        // smallest base beside the smallest tax, which would belong to two
+        // different flights and price a trip nobody can buy. Ranked rather than
+        // grouped, because MIN() over the sum cannot hand back the row it came
+        // from.
         $rows = $this->connection->fetchAll(
-            'SELECT d, MIN(p) AS price FROM ('
-            . ' SELECT DATE(f.departure_time) AS d, ' . $this->fare('f', $cabin) . ' AS p'
+            'SELECT d, base, tax FROM ('
+            . ' SELECT d, base, tax,'
+            . ' ROW_NUMBER() OVER (PARTITION BY d ORDER BY base + tax) AS rank_in_day'
+            . ' FROM ('
+            . ' SELECT DATE(f.departure_time) AS d,'
+            . ' ' . $this->fare('f', 'price_base', $cabin) . ' AS base,'
+            . ' ' . $this->fare('f', 'price_tax', $cabin) . ' AS tax'
             . ' FROM ' . Table::Flights->value . ' f'
             . " WHERE f.departure_airport IN ($fromIn) AND f.arrival_airport IN ($toIn)"
             . ' AND f.departure_time >= ? AND f.departure_time < ?'
             . $this->offers('f', $cabin)
             . ' UNION ALL'
             . ' SELECT DATE(a.departure_time) AS d,'
-            . ' ' . $this->fare('a', $cabin) . ' + ' . $this->fare('b', $cabin) . ' AS p'
+            . ' ' . $this->fare('a', 'price_base', $cabin) . ' + ' . $this->fare('b', 'price_base', $cabin) . ' AS base,'
+            . ' ' . $this->fare('a', 'price_tax', $cabin) . ' + ' . $this->fare('b', 'price_tax', $cabin) . ' AS tax'
             . ' FROM ' . Table::Flights->value . ' a'
             . ' JOIN ' . Table::Flights->value . ' b'
             . ' ON b.departure_airport = a.arrival_airport'
@@ -173,14 +192,18 @@ final readonly class RoutePriceRepository
             . " WHERE a.departure_airport IN ($fromIn) AND a.arrival_airport NOT IN ($toIn)"
             . ' AND a.departure_time >= ? AND a.departure_time < ?'
             . $this->offers('a', $cabin)
-            . ') AS legs GROUP BY d',
+            . ' ) AS legs'
+            . ') AS ranked WHERE rank_in_day = 1',
             [...$fromCodes, ...$toCodes, $since, $until, ...$toCodes, ...$fromCodes, ...$toCodes, $since, $until],
         );
 
         $prices = [];
 
         foreach ($rows as $row) {
-            $prices[(string) $row['d']] = (float) $row['price'];
+            $prices[(string) $row['d']] = [
+                'base' => (float) $row['base'],
+                'tax' => (float) $row['tax'],
+            ];
         }
 
         return $prices;
@@ -195,12 +218,12 @@ final readonly class RoutePriceRepository
      * uplift at any distance, and there the column is left alone rather than
      * multiplied by one.
      */
-    private function fare(string $alias, CabinClass $cabin): string
+    private function fare(string $alias, string $column, CabinClass $cabin): string
     {
-        $sum = sprintf('(%s.price_base + %s.price_tax)', $alias, $alias);
+        $value = sprintf('%s.%s', $alias, $column);
         $multiplier = $cabin->sqlPriceMultiplier($alias);
 
-        return $multiplier === null ? $sum : $sum . ' * ' . $multiplier;
+        return $multiplier === null ? $value : $value . ' * ' . $multiplier;
     }
 
     /**
@@ -216,7 +239,7 @@ final readonly class RoutePriceRepository
         return $predicate === null ? '' : ' AND ' . $predicate;
     }
 
-    /** @param array<string, float> $prices */
+    /** @param array<string, array{base: float, tax: float}> $prices */
     private function store(string $from, string $to, CabinClass $cabin, array $prices): void
     {
         if ($prices === []) {
@@ -227,16 +250,17 @@ final readonly class RoutePriceRepository
         $args = [];
 
         foreach ($prices as $date => $price) {
-            $values[] = '(?, ?, ?, ?, ?)';
-            array_push($args, $from, $to, $cabin->value, $date, $price);
+            $values[] = '(?, ?, ?, ?, ?, ?)';
+            array_push($args, $from, $to, $cabin->value, $date, $price['base'], $price['tax']);
         }
 
         // One statement: ninety single-row inserts inside a request is the sort
         // of thing that makes a background job look slow for no reason.
         $this->connection->execute(
-            'INSERT INTO ' . Table::RouteDayPrice->value . ' (from_code, to_code, cabin, depart_date, price)'
+            'INSERT INTO ' . Table::RouteDayPrice->value
+            . ' (from_code, to_code, cabin, depart_date, price_base, price_tax)'
             . ' VALUES ' . implode(', ', $values)
-            . ' ON DUPLICATE KEY UPDATE price = VALUES(price)',
+            . ' ON DUPLICATE KEY UPDATE price_base = VALUES(price_base), price_tax = VALUES(price_tax)',
             $args,
         );
     }

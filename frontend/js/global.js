@@ -63,6 +63,32 @@
 
             const cabinNow = () => document.querySelector('.js-party-cabin:checked')?.value ?? 'economy';
 
+            /**
+             * How many adult fares and how many adult taxes the party costs.
+             *
+             * The rates come from Party as data attributes rather than being
+             * retyped here -- there is one definition of what a child costs and
+             * it is in PHP -- and the counts come from the selects that submit.
+             */
+            const sharesNow = () => {
+                const panel = document.querySelector('.party__panel');
+
+                if (!panel) {
+                    return {fare: 1, tax: 1};
+                }
+
+                const count = (key) => Number(document.getElementById('passengers_' + key)?.value) || 0;
+                const rate = (key) => Number(panel.dataset[key]);
+                const adults = count('adults');
+                const children = count('children');
+                const infants = count('infants');
+
+                return {
+                    fare: adults + children * rate('childFare') + infants * rate('infantFare'),
+                    tax: adults + children * rate('childTax') + infants * rate('infantTax')
+                };
+            };
+
             const pricesFor = (picker, fromField, toField, legName) => {
                 const from = document.getElementById(fromField)?.value;
                 const to = document.getElementById(toField)?.value;
@@ -125,6 +151,7 @@
                 // Sized for fares from the first paint, so the grid does not
                 // grow a line under the pointer when they arrive.
                 showPrices: true,
+                shares: sharesNow(),
                 // The window here is not "depart to return" -- that is what the
                 // two legs are for -- but how flexible one end of the trip is,
                 // so it is dragged rather than clicked out over two days.
@@ -161,6 +188,13 @@
             // Fares follow the cabin. The panel can be open while it changes --
             // the party dropdown sits in the same bar -- so the cells are
             // refilled rather than waiting for the calendar to be reopened.
+            // A different party is the same fares multiplied differently, so
+            // this is arithmetic on what is already loaded rather than another
+            // request.
+            document.querySelectorAll('.js-party-count').forEach((select) => {
+                select.addEventListener('change', () => picker.setShares(sharesNow()));
+            });
+
             document.querySelectorAll('.js-party-cabin').forEach((radio) => {
                 radio.addEventListener('change', () => {
                     picker.legs.forEach((leg) => { leg.prices = null; });

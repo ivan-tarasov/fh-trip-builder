@@ -123,6 +123,11 @@
             // after the calendar is open -- see setPrices.
             prices: null,
             currency: '$',
+            // How many adult fares and how many adult taxes this party costs.
+            // Two numbers, not one: a child pays three quarters of the fare but
+            // a whole adult's tax, so the halves of a price scale apart and are
+            // added after -- which is exactly what Party::apply() does in PHP.
+            shares: {fare: 1, tax: 1},
             onApply: null,
             onOpen: null
         }, options || {});
@@ -134,6 +139,7 @@
         this.touched = false;
         this.drag = null;
         this.prices = settings.prices;
+        this.shares = settings.shares;
 
         // One calendar, one leg per date field. The reference works this way:
         // whichever field is focused owns the clicks, and the other leg stays on
@@ -432,6 +438,27 @@
      * being dragged: prices do not change as the pointer does, and rewriting
      * seventy of them per frame to say the same thing is work for nothing.
      */
+    /** A stored fare as what the party in the form would pay for it. */
+    DatePicker.prototype.forParty = function (price) {
+        if (price === undefined || price === null) {
+            return undefined;
+        }
+
+        return price.base * this.shares.fare + price.tax * this.shares.tax;
+    };
+
+    /**
+     * Reprice for a different party, without asking the server again.
+     *
+     * The fares are held as base and tax, so a change of passengers is
+     * arithmetic on what is already here rather than another round trip.
+     */
+    DatePicker.prototype.setShares = function (shares) {
+        this.shares = shares;
+        this.paintPrices();
+        this.paint();
+    };
+
     DatePicker.prototype.paintPrices = function () {
         // The active leg's own fares: the outbound flies from origin to
         // destination and the return flies back, so the two legs are priced on
@@ -460,7 +487,7 @@
             return;
         }
 
-        const known = Object.values(prices);
+        const known = Object.values(prices).map((price) => this.forParty(price));
         // A day worth crossing the calendar for. Within a tenth of the cheapest
         // fare on the route rather than only the single lowest, because two
         // days that differ by a pound are the same answer.
@@ -478,7 +505,7 @@
             // a flight this trip cannot take.
             const price = cell.classList.contains('is-disabled')
                 ? undefined
-                : prices[cell.dataset.day];
+                : this.forParty(prices[cell.dataset.day]);
 
             label.textContent = price === undefined ? '' : this.settings.currency + Math.round(price);
             cell.classList.toggle('is-cheap', price !== undefined && price <= bar);
@@ -646,7 +673,7 @@
         let best = null;
 
         for (let day = leg.start; day.getTime() <= end.getTime(); day = Day.add(day, 1)) {
-            const price = prices[Day.iso(day)];
+            const price = this.forParty(prices[Day.iso(day)]);
 
             if (price !== undefined && (best === null || price < best)) {
                 best = price;

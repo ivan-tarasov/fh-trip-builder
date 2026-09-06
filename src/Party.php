@@ -102,6 +102,28 @@ final readonly class Party
     }
 
     /**
+     * The shares themselves, for anything that has to price a party without
+     * asking PHP -- the calendar recomputes its fares the moment the party
+     * changes, and a round trip to the server for arithmetic this small would
+     * be felt.
+     *
+     * Handed over rather than retyped in JavaScript, the same reason
+     * Party::fromCounts()'s seat limit reaches the browser as a number: there
+     * is one definition of what a child costs, and it is here.
+     *
+     * @return array{child_fare: float, infant_fare: float, child_tax: float, infant_tax: float}
+     */
+    public static function shares(): array
+    {
+        return [
+            'child_fare' => self::CHILD_FARE,
+            'infant_fare' => self::INFANT_FARE,
+            'child_tax' => self::CHILD_TAX,
+            'infant_tax' => self::INFANT_TAX,
+        ];
+    }
+
+    /**
      * "2 adults, 1 child" -- what the price is for, in the words the form used.
      */
     public function label(): string

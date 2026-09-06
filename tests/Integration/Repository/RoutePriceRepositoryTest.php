@@ -6,6 +6,7 @@ namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
+use TripBuilder\Party;
 use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
@@ -83,7 +84,10 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
 
         foreach ($prices as $date => $price) {
             self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', $date);
-            self::assertGreaterThan(0, $price);
+            self::assertArrayHasKey('base', $price);
+            self::assertArrayHasKey('tax', $price);
+            self::assertGreaterThan(0, $price['base']);
+            self::assertGreaterThanOrEqual(0, $price['tax']);
             self::assertGreaterThanOrEqual($this->since, $date);
             self::assertLessThan($this->until, $date);
         }
@@ -130,7 +134,11 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         // cheaply -- it is choosing from a superset of the same flights.
         foreach ($single as $date => $price) {
             self::assertArrayHasKey($date, $city, $date . ' is priced LHR-JFK but not LON-NYC');
-            self::assertLessThanOrEqual($price, $city[$date], 'the city should never be dearer on ' . $date);
+            self::assertLessThanOrEqual(
+                self::total($price),
+                self::total($city[$date]),
+                'the city should never be dearer on ' . $date,
+            );
         }
     }
 
@@ -153,7 +161,11 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         // Every day business is sold on, it costs more than the economy seat.
         foreach ($business as $date => $price) {
             self::assertArrayHasKey($date, $economy, $date . ' has business but no economy fare');
-            self::assertGreaterThan($economy[$date], $price, 'business should cost more on ' . $date);
+            self::assertGreaterThan(
+                self::total($economy[$date]),
+                self::total($price),
+                'business should cost more on ' . $date,
+            );
         }
     }
 
@@ -165,6 +177,37 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         self::assertNotNull($this->prices->builtAt(self::FROM, self::TO, CabinClass::Economy));
         self::assertNull($this->prices->builtAt(self::FROM, self::TO, CabinClass::First));
         self::assertTrue($this->prices->isStale(self::FROM, self::TO, CabinClass::First, 24));
+    }
+
+    public function testTheTwoPartsPriceAPartyTheWayPartyDoes(): void
+    {
+        // Why they are stored apart at all. A child pays three quarters of the
+        // fare but a whole adult's tax and an infant a tenth and none, so the
+        // halves scale differently -- a single stored total could not be turned
+        // into what a family pays, which is how one adult and nine came to show
+        // the same figure.
+        $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
+        $prices = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
+        $day = $prices[array_key_first($prices)];
+
+        $alone = new Party(adults: 1);
+        $family = new Party(adults: 2, children: 1, infants: 1);
+
+        $forOne = $alone->apply($day['base'], $day['tax']);
+        $forFamily = $family->apply($day['base'], $day['tax']);
+
+        self::assertEqualsWithDelta($day['base'] + $day['tax'], $forOne['base'] + $forOne['tax'], 0.01);
+
+        // Two adults, a child at three quarters and an infant at a tenth.
+        self::assertEqualsWithDelta($day['base'] * 2.85, $forFamily['base'], 0.01);
+        // And three taxed seats, the lap infant paying none.
+        self::assertEqualsWithDelta($day['tax'] * 3.0, $forFamily['tax'], 0.01);
+    }
+
+    /** @param array{base: float, tax: float} $price */
+    private static function total(array $price): float
+    {
+        return $price['base'] + $price['tax'];
     }
 
     private function forget(string $from, string $to): void

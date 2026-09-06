@@ -44,6 +44,9 @@ final readonly class TwigRenderer
         // Helpers the templates need (CDN asset URLs and config lookups)...
         $this->twig->addFunction(new TwigFunction('cdn', Cdn::getUrl(...)));
         $this->twig->addFunction(new TwigFunction('config', Config::get(...)));
+        // What each passenger type pays, so the calendar can price a party in
+        // the browser without a second definition of it living there.
+        $this->twig->addFunction(new TwigFunction('party_shares', Party::shares(...)));
 
         // ...and the dynamic header/footer data (see LayoutData).
         // A global, so it reaches the passenger partial through the `only`

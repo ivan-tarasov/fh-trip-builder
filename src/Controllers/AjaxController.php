@@ -153,6 +153,12 @@ class AjaxController extends AbstractController
      * The answer is whatever is cached. A route nobody has opened before is
      * built here, which is why the browser asks for this after the calendar is
      * already on screen rather than before.
+     *
+     * Fares come back as base and tax rather than as one number, and the party
+     * is applied in the browser. A child pays three quarters of the fare but a
+     * whole adult's tax, so the two scale apart -- and keeping them apart means
+     * changing the passengers is arithmetic on what is already there instead of
+     * another ten builds of the same route.
      */
     public function dayPrices(): void
     {
