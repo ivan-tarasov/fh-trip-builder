@@ -981,13 +981,23 @@ button {
   text-wrap: balance;
 }
 
-/* The two things this app does. The current one is a solid card and the other
-   recedes into the band, which is the same figure/ground the results steps use. */
+/* What this app does, and what it is going to do. The sections sit in one
+   tinted tray with the current one lifted out of it as a solid card -- the same
+   figure/ground the results steps use. Business travel sits outside the tray,
+   because it is a different audience rather than another thing to book. */
 .hero__modes {
   display: flex;
   justify-content: center;
   gap: .5rem;
   margin-bottom: 1.75rem;
+}
+
+.hero__modes-group {
+  display: flex;
+  gap: .25rem;
+  padding: .25rem;
+  background-color: rgba(255, 255, 255, .1);
+  border-radius: 1rem;
 }
 
 .hero__mode {
@@ -1001,10 +1011,26 @@ button {
   font-weight: 600;
   color: #fff;
   text-decoration: none;
-  background-color: rgba(255, 255, 255, .1);
-  border-radius: var(--bs-border-radius-lg);
+  white-space: nowrap;
+  background-color: transparent;
+  border-radius: .75rem;
   transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
+
+/* Somewhere this app will go but has not yet. Dimmed rather than greyed out:
+   60% white measures 5.2:1 on the tray, which is a section that is legibly
+   there and legibly not ready -- not one nobody can read. */
+.hero__mode.is-soon {
+  color: rgba(255, 255, 255, .6);
+  cursor: default;
+}
+
+.hero__mode.is-soon i { opacity: .8; }
+
+/* A shade lighter than the group's, so the break between the two reads as two
+   trays rather than as one with a gap torn in it. The muted label still
+   measures 4.6:1 against it. */
+.hero__modes-group--aside { background-color: rgba(255, 255, 255, .16); }
 
 .hero__mode i { font-size: 1.125rem; }
 
@@ -1020,12 +1046,32 @@ a.hero__mode:active { transform: scale(.97); }
   background-color: #fff;
 }
 
+/* Six sections do not fit a phone. Scrolled rather than wrapped -- wrapping
+   costs two more rows of a band that is already tall once the fields stack --
+   and rather than squashed, because "For business" cannot be read at a sixth of
+   375px.
+
+   flex-start, not the centre the wider layout uses: content centred inside a
+   scroller overflows both ways, and whatever ends up left of the origin cannot
+   be scrolled back to. Here that was Flights, the current page. */
+@media (max-width: 767.98px) {
+  .hero__modes {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hero__modes::-webkit-scrollbar { display: none; }
+
+  .hero__modes-group { flex: 0 0 auto; }
+  .hero__mode { min-width: 5rem; padding: .625rem .75rem; font-size: .8125rem; }
+}
+
 @media (max-width: 575.98px) {
   /* Top only. The bottom belongs to the pair above -- what separates the search
      button from the first card is that padding less the cards' overlap, so
      cutting one here on its own draws a card across the button. */
   .hero__inner { padding-top: 2.25rem; }
-  .hero__mode { min-width: 0; flex: 1 1 0; padding: .625rem .75rem; }
 }
 
 /* ==========================================================================

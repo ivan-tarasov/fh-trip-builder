@@ -17,18 +17,52 @@
     <div class="container hero__inner">
         <h1 class="hero__slogan">Build the trip, not&nbsp;just the ticket</h1>
 
-        {# Where a visitor can go, as the two things this app actually does.
+        {# Where a visitor can go, and what this is going to grow into.
+
+           The ones with nowhere to lead are spans, not links. This codebase has
+           twice removed an <a> with no href -- the point-of-interest cards and
+           the old profile item -- because it is styled as a link, skipped by the
+           keyboard, and on a click it apologises for doing nothing. A section
+           that does not exist yet says so instead, out loud for a screen reader
+           as well as in the colour.
+
            The current page is marked with aria-current rather than only a
            colour, and Saved is a link because it is a different page. #}
         <nav class="hero__modes" aria-label="Sections">
-            <span class="hero__mode is-current" aria-current="page">
-                <i class="fas fa-plane-departure" aria-hidden="true"></i>
-                Flights
-            </span>
-            <a class="hero__mode" href="{{ config('site.paths.saved') }}">
-                <i class="fas fa-heart" aria-hidden="true"></i>
-                Saved
-            </a>
+            <div class="hero__modes-group">
+                <span class="hero__mode is-current" aria-current="page">
+                    <i class="fas fa-plane-departure" aria-hidden="true"></i>
+                    Flights
+                </span>
+
+                {% for soon in [
+                    { 'icon': 'fa-bed', 'text': 'Stays' },
+                    { 'icon': 'fa-car', 'text': 'Cars' },
+                    { 'icon': 'fa-compass', 'text': 'Impressions' }
+                ] %}
+                    <span class="hero__mode is-soon">
+                        <i class="fas {{ soon.icon }}" aria-hidden="true"></i>
+                        {{ soon.text }}<span class="visually-hidden"> — coming soon</span>
+                    </span>
+                {% endfor %}
+
+                <a class="hero__mode" href="{{ config('site.paths.saved') }}">
+                    <i class="fas fa-heart" aria-hidden="true"></i>
+                    Saved
+                </a>
+            </div>
+
+            {# Set apart, because it is a different audience rather than another
+               thing to book. Its own tray rather than a section wearing one: a
+               tray holds items inset from its edge, and one element doing both
+               jobs sat flush against its own while every label beside it did
+               not. #}
+            <div class="hero__modes-group hero__modes-group--aside">
+                <span class="hero__mode is-soon">
+                    <i class="fas fa-briefcase" aria-hidden="true"></i>
+                    For business<span class="visually-hidden"> — coming soon</span>
+                </span>
+            </div>
         </nav>
 
         {# The whole form lives in search/form.html.twig. The hero used to carry
