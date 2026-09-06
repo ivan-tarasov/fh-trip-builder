@@ -1004,12 +1004,19 @@ a:active {
 .datepicker--drag .datepicker__grid td.is-start,
 .datepicker--drag .datepicker__grid td.is-end { cursor: ew-resize; }
 
-/* One month under the other in the rebook dialog: side by side they are wider
-   than the dialog itself, and a calendar that hangs out of its own modal reads
-   as broken however well it works. */
-.modal-content .datepicker__months { flex-direction: column; }
+/* Lifted out of the dialog's flow, though not out of the dialog.
 
-/* Same again on a phone, for the same reason. */
+   A scrollable modal clips its own content -- Bootstrap gives `.modal-content`
+   overflow:hidden so the body can scroll -- which cut the calendar off at the
+   dialog's edge. Fixed to the viewport, it is clipped by nothing and has the
+   whole screen to open in. 1060 draws it over the dialog it still belongs to,
+   which Bootstrap puts at 1055. */
+.datepicker--overlay {
+  position: fixed;
+  z-index: 1060;
+}
+
+/* One month under the other on a phone: side by side they do not fit. */
 @media (max-width: 575.98px) {
   .datepicker__months { flex-direction: column; }
   .datepicker__month { padding: .5rem .25rem; }

@@ -110,6 +110,14 @@
             // departure-to-return.
             drag: false,
             applyLabel: 'Done',
+            // Float above everything instead of sitting inside the page.
+            //
+            // For a calendar opened from a dialog: a scrollable modal clips its
+            // own content -- Bootstrap gives `.modal-content` overflow:hidden so
+            // the body can scroll -- and a calendar rendered in there is cut off
+            // at the dialog's edge. Fixed to the viewport and above the modal,
+            // it is not clipped by anything and has the whole screen to open in.
+            overlay: false,
             parent: document.body,
             min: Day.today(),
             start: null,
@@ -214,6 +222,7 @@
         // The modifier the drag handles are drawn under: only a window that can
         // actually be pulled wider advertises that it can.
         root.className = 'datepicker'
+            + (this.settings.overlay ? ' datepicker--overlay' : '')
             + (this.settings.drag ? ' datepicker--drag' : '')
             // Sized for fares whether or not any have arrived yet.
             + (this.settings.showPrices ? ' datepicker--priced' : '');
@@ -910,7 +919,11 @@
                     event.preventDefault();
                     this.show(leg);
                     this.focusOn(this.start || this.focused);
-                } else if (event.key === 'Escape') {
+                } else if (event.key === 'Escape' && this.isOpen) {
+                    // Closing the calendar is the whole of it. Inside a dialog
+                    // the same key would carry on and close the dialog too,
+                    // throwing away the trip the visitor was picking dates for.
+                    event.stopPropagation();
                     this.hide(false);
                 }
             });
@@ -1094,6 +1107,9 @@
 
         if (event.key === 'Escape') {
             event.preventDefault();
+            // Stopped here for the same reason as on the field: inside a dialog
+            // this key would go on to close the dialog as well.
+            event.stopPropagation();
             this.hide(false);
             this.input.focus();
         }
@@ -1197,18 +1213,34 @@
     DatePicker.prototype.place = function () {
         const anchor = this.anchor();
         const root = this.root;
-        const host = root.offsetParent;
-        const base = host && host !== document.body
-            ? host.getBoundingClientRect()
-            : {left: -window.scrollX, top: -window.scrollY};
 
-        root.style.top = (anchor.bottom - base.top + 8) + 'px';
+        // Fixed to the viewport, so the offsets are the ones getBoundingClientRect
+        // already gives; otherwise measured against whatever the panel is
+        // positioned within, which on the search form is the page.
+        const host = this.settings.overlay ? null : root.offsetParent;
+        const base = this.settings.overlay
+            ? {left: 0, top: 0}
+            : (host && host !== document.body
+                ? host.getBoundingClientRect()
+                : {left: -window.scrollX, top: -window.scrollY});
 
         const width = root.offsetWidth;
         const centred = anchor.left + anchor.width / 2 - width / 2;
         const room = document.documentElement.clientWidth - width - 8;
+        const left = Math.max(8, Math.min(centred, room));
 
-        root.style.left = (Math.max(8, Math.min(centred, room)) - base.left) + 'px';
+        // Above the field where there is room, below it where there is not: a
+        // dialog sits in the middle of the screen and its fields are as likely
+        // to have the space above them.
+        const below = anchor.bottom + 8;
+        const height = root.offsetHeight;
+        const fitsBelow = below + height <= document.documentElement.clientHeight - 8;
+        const top = fitsBelow || anchor.top - height - 8 < 8
+            ? below
+            : anchor.top - height - 8;
+
+        root.style.top = (top - base.top) + 'px';
+        root.style.left = (left - base.left) + 'px';
     };
 
     window.TripDatePicker = DatePicker;

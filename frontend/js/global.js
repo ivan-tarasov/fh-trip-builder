@@ -1291,6 +1291,8 @@
     // field to place its calendar and a field inside a hidden modal has no
     // position to measure. It is rendered into the dialog, where it stacks
     // above the backdrop instead of behind it.
+    const rebookPickers = new WeakMap();
+
     document.addEventListener('show.bs.modal', function (event) {
         const modal = event.target;
         const input = modal.querySelector('.js-rebook-date');
@@ -1305,13 +1307,23 @@
         const form = input.closest('.js-rebook');
         const roundtrip = input.dataset.triptype === 'roundtrip';
 
-        new window.TripDatePicker(input, {
+        const picker = new window.TripDatePicker(input, {
             // A one-way is one day; a round trip is a departure and a return,
             // clicked out over two days with nothing capping how far apart they
             // are. Neither is the flexible window the search bar drags.
             single: !roundtrip,
             autoApply: true,
-            parent: modal.querySelector('.modal-content'),
+            // Above the dialog rather than inside it: a scrollable modal hides
+            // its own overflow, and a calendar in the body of one is cut off at
+            // the dialog's edge.
+            //
+            // Still a child of the modal, though, and not of the page. The
+            // dialog holds focus inside itself, and a calendar parked in the
+            // body is somewhere focus is not allowed to go -- arrowing onto a
+            // day threw focus straight back to the close button. Being a child
+            // of the modal also means it goes away with it.
+            overlay: true,
+            parent: modal,
             onApply: (start, end) => {
                 form.querySelector('.js-rebook-depart').value = Day.iso(start);
 
@@ -1325,6 +1337,16 @@
                 input.value = Day.full(start) + ' \u2013 ' + Day.full(end);
             }
         });
+
+        rebookPickers.set(modal, picker);
+    });
+
+    // Closing the dialog puts the calendar away with it. Hiding the modal
+    // already hides the panel -- it is a child of it -- but the picker would go
+    // on thinking it was open, and the field would still be marked as the one
+    // being filled in when the dialog came back.
+    document.addEventListener('hidden.bs.modal', function (event) {
+        rebookPickers.get(event.target)?.hide(false);
     });
 
     // "No children" is the absence of a number, not an empty one. A disabled
