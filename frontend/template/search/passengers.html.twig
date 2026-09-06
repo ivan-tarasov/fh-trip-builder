@@ -20,9 +20,9 @@
 {% set prefix = prefix|default('passengers') %}
 {% set panel_id = prefix ~ '-panel' %}
 {% set types = [
-    { 'key': 'adults', 'label': 'Adults', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
-    { 'key': 'children', 'label': 'Children', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
-    { 'key': 'infants', 'label': 'Infants', 'hint': 'on a lap, no seat', 'from': 0, 'value': party.infants|default(0) }
+    { 'key': 'adults', 'label': 'Adults', 'one': 'adult', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
+    { 'key': 'children', 'label': 'Children', 'one': 'child', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
+    { 'key': 'infants', 'label': 'Infants', 'one': 'infant', 'hint': 'on a lap, no seat', 'from': 0, 'value': party.infants|default(0) }
 ] %}
 {% set cabin_value = cabin_value|default('economy') %}
 {% set fare_shares = party_shares() %}
@@ -79,9 +79,13 @@
                             aria-label="More {{ type.label|lower }}">+</button>
                 </div>
 
+                {# The two spellings, so anything naming this party -- the
+                   calendar's caption -- can say "1 child" and "2 children"
+                   without a second list of words to keep in step. #}
                 <select class="party__native js-party-count" id="{{ id }}"
                         name="{{ config('search.form.input.' ~ type.key) }}"
-                        data-floor="{{ type.from }}" aria-labelledby="{{ id }}-label"
+                        data-floor="{{ type.from }}" data-one="{{ type.one }}"
+                        data-many="{{ type.label|lower }}" aria-labelledby="{{ id }}-label"
                         tabindex="-1" aria-hidden="true">
                     {# "No children" is the absence of a number, not a zero. #}
                     {% if type.from == 0 %}

@@ -185,6 +185,31 @@
 
             const legOf = (name) => picker.legs.find((leg) => leg.name === name);
 
+            /**
+             * Who the price on the button is for.
+             *
+             * The words come from the selects themselves, so "1 child" and
+             * "2 children" are not a second list to keep in step with the panel.
+             */
+            const captionNow = () => {
+                const parts = [...document.querySelectorAll('.js-party-count')]
+                    .map((select) => {
+                        const count = Number(select.value) || 0;
+
+                        return count === 0
+                            ? null
+                            : count + ' ' + (count === 1 ? select.dataset.one : select.dataset.many);
+                    })
+                    .filter(Boolean);
+
+                return parts.join(', ');
+            };
+
+            const repriceForParty = () => {
+                picker.setShares(sharesNow());
+                picker.setCaption(captionNow());
+            };
+
             // Fares follow the cabin. The panel can be open while it changes --
             // the party dropdown sits in the same bar -- so the cells are
             // refilled rather than waiting for the calendar to be reopened.
@@ -192,8 +217,10 @@
             // this is arithmetic on what is already loaded rather than another
             // request.
             document.querySelectorAll('.js-party-count').forEach((select) => {
-                select.addEventListener('change', () => picker.setShares(sharesNow()));
+                select.addEventListener('change', repriceForParty);
             });
+
+            picker.setCaption(captionNow());
 
             document.querySelectorAll('.js-party-cabin').forEach((radio) => {
                 radio.addEventListener('change', () => {

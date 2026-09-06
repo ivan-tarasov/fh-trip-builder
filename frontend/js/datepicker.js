@@ -439,6 +439,19 @@
      * seventy of them per frame to say the same thing is work for nothing.
      */
     /** A stored fare as what the party in the form would pay for it. */
+    /**
+     * A stored fare as one adult's ticket -- what the days themselves show.
+     *
+     * One seat, not the party's total. It stays put as passengers are added, so
+     * the days remain comparable to each other and to the fares elsewhere on the
+     * site, and it is a price somebody actually pays -- unlike an average across
+     * passenger types, which is nobody's fare. What the party owes is on the
+     * button, where there is room to say who it covers.
+     */
+    DatePicker.prototype.perAdult = function (price) {
+        return price === undefined || price === null ? undefined : price.base + price.tax;
+    };
+
     DatePicker.prototype.forParty = function (price) {
         if (price === undefined || price === null) {
             return undefined;
@@ -455,8 +468,20 @@
      */
     DatePicker.prototype.setShares = function (shares) {
         this.shares = shares;
-        this.paintPrices();
-        this.paint();
+        // Only the button moves: the days are one seat whoever is travelling.
+        this.paintApplyPrice();
+    };
+
+    /**
+     * Say who the price is for.
+     *
+     * It rides on the button rather than sitting over the grid: the figure it
+     * qualifies is the one on the button, and a caption of its own was a second
+     * line of small grey type explaining a third.
+     */
+    DatePicker.prototype.setCaption = function (text) {
+        this.captionText = text;
+        this.paintApplyPrice();
     };
 
     DatePicker.prototype.paintPrices = function () {
@@ -487,7 +512,7 @@
             return;
         }
 
-        const known = Object.values(prices).map((price) => this.forParty(price));
+        const known = Object.values(prices).map((price) => this.perAdult(price));
         // A day worth crossing the calendar for. Within a tenth of the cheapest
         // fare on the route rather than only the single lowest, because two
         // days that differ by a pound are the same answer.
@@ -505,7 +530,7 @@
             // a flight this trip cannot take.
             const price = cell.classList.contains('is-disabled')
                 ? undefined
-                : this.forParty(prices[cell.dataset.day]);
+                : this.perAdult(prices[cell.dataset.day]);
 
             label.textContent = price === undefined ? '' : this.settings.currency + Math.round(price);
             cell.classList.toggle('is-cheap', price !== undefined && price <= bar);
@@ -656,9 +681,11 @@
             total += best;
         }
 
+        const who = this.captionText ? ' for ' + this.captionText : '';
+
         this.applyPrice.textContent = set.length === 0
             ? ''
-            : 'from ' + this.settings.currency + Math.round(total);
+            : 'from ' + this.settings.currency + Math.round(total) + who;
     };
 
     /** The lowest fare across one leg's window, or null when there is none. */
