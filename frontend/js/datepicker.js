@@ -444,6 +444,11 @@
     /** Classes only, so this is safe to call on every mouse move. */
     DatePicker.prototype.paint = function () {
         const today = Day.today();
+        // Exactly one cell is tabbable, which is what a roving tabindex means.
+        // A day at the seam between the two months is drawn twice, so marking
+        // "the focused day" would leave two stops on the same date -- and the
+        // second of them greyed out as another month's spare copy.
+        const roving = this.cellFor(this.focused);
 
         this.cells.forEach((cell) => {
             const day = Day.parse(cell.dataset.day);
@@ -457,7 +462,7 @@
             cell.classList.toggle('is-in-range', Boolean(inRange));
             cell.classList.toggle('is-focused', Day.same(day, this.focused));
             cell.setAttribute('aria-selected', inRange ? 'true' : 'false');
-            cell.tabIndex = Day.same(day, this.focused) ? 0 : -1;
+            cell.tabIndex = cell === roving ? 0 : -1;
         });
 
         if (this.applyButton) {
@@ -745,6 +750,19 @@
 
         root.addEventListener('keydown', (event) => this.onGridKey(event));
 
+        // Focus can reach a day without going through focusOn -- a Tab into the
+        // grid, or anything that calls focus() on a cell. `focused` is what the
+        // roving tabindex and Enter both read, so it follows the document
+        // rather than only its own moves.
+        root.addEventListener('focusin', (event) => {
+            const day = this.dayAt(event.target);
+
+            if (day && !Day.same(day, this.focused)) {
+                this.focused = day;
+                this.paint();
+            }
+        });
+
         // Outside, and not on the field that owns it.
         document.addEventListener('mousedown', (event) => {
             if (!this.isOpen || root.contains(event.target) || event.target === this.input) {
@@ -808,7 +826,9 @@
 
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            this.select(this.focused);
+            // The day under the key, not the one this thinks is focused: they
+            // agree, and the one the visitor is actually on is the truth.
+            this.select(this.dayAt(event.target) ?? this.focused);
 
             return;
         }
