@@ -23,15 +23,74 @@ class MyController extends AbstractController
     private const int SAVED_LIMIT = 50;
 
     /**
-     * Every booking made in this browser, split by whether the trip is over.
+     * Trips still on: the ones ahead, then the ones already flown.
      *
      * @throws Exception|\Twig\Error\Error
      */
     public function bookings(): void
     {
+        $sorted = $this->sortedBookings();
+
+        $this->renderBookings('active', [
+            ['key' => 'upcoming', 'title' => 'Upcoming', 'bookings' => $sorted['upcoming']],
+            ['key' => 'past', 'title' => 'Past', 'bookings' => $sorted['past']],
+        ], $sorted);
+    }
+
+    /**
+     * Trips that were called off.
+     *
+     * Their own page rather than a third pile under the others. A cancelled
+     * booking is not a trip any more, and mixing it in means every glance at
+     * the list has to re-read the status of everything on it.
+     *
+     * @throws Exception|\Twig\Error\Error
+     */
+    public function cancelled(): void
+    {
+        $sorted = $this->sortedBookings();
+
+        $this->renderBookings('cancelled', [
+            ['key' => 'cancelled', 'title' => 'Cancelled', 'bookings' => $sorted['cancelled']],
+        ], $sorted);
+    }
+
+    /**
+     * @param list<array{key: string, title: string, bookings: list<array<string, mixed>>}> $groups
+     * @param array{upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>, cancelled: list<array<string, mixed>>} $sorted
+     *
+     * @throws \Twig\Error\Error
+     */
+    private function renderBookings(string $tab, array $groups, array $sorted): void
+    {
+        $shown = array_sum(array_map(static fn(array $group): int => count($group['bookings']), $groups));
+
+        echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
+            'tab' => $tab,
+            'groups' => $groups,
+            // Both counts on both pages: the tab strip names them whichever
+            // side it is drawn from.
+            'active_count' => count($sorted['upcoming']) + count($sorted['past']),
+            'cancelled_count' => count($sorted['cancelled']),
+            // From what was built, not from what was read: a page whose every
+            // row was skipped has nothing to show and needs the empty state.
+            'has_rows' => $shown > 0,
+        ]);
+    }
+
+    /**
+     * Every booking made in this browser, in three piles and in reading order.
+     *
+     * @return array{upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>, cancelled: list<array<string, mixed>>}
+     *
+     * @throws Exception
+     */
+    private function sortedBookings(): array
+    {
         $presenter = new BookingPresenter();
         $upcoming = [];
         $past = [];
+        $cancelled = [];
 
         $rows = new BookingRepository($this->connection())->forSession(session_id());
 
@@ -50,7 +109,11 @@ class MyController extends AbstractController
                 continue;
             }
 
-            if ($booking['is_past']) {
+            // Cancelled first, whether or not the dates have passed: a trip
+            // that was called off never became a past trip.
+            if ($booking['is_cancelled']) {
+                $cancelled[] = $booking;
+            } elseif ($booking['is_past']) {
                 $past[] = $booking;
             } else {
                 $upcoming[] = $booking;
@@ -64,14 +127,14 @@ class MyController extends AbstractController
             <=> ($b['starts_at']?->getTimestamp() ?? PHP_INT_MAX));
         usort($past, static fn(array $a, array $b): int => ($b['ends_at']?->getTimestamp() ?? 0)
             <=> ($a['ends_at']?->getTimestamp() ?? 0));
+        // Most recently booked first: a cancelled trip is looked up by when it
+        // was bought, not by when it would have flown.
+        usort($cancelled, static fn(array $a, array $b): int => strcmp(
+            (string) ($b['created'] ?? ''),
+            (string) ($a['created'] ?? ''),
+        ));
 
-        echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
-            'upcoming' => $upcoming,
-            'past' => $past,
-            // From what was built, not from what was read: a page whose every
-            // row was skipped has nothing to show and needs the empty state.
-            'has_rows' => $upcoming !== [] || $past !== [],
-        ]);
+        return ['upcoming' => $upcoming, 'past' => $past, 'cancelled' => $cancelled];
     }
 
     /**

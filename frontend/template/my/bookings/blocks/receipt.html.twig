@@ -1,0 +1,99 @@
+{# What was bought, who for, and what it cost.
+
+   The old version was one <dl> with every value pushed to the right edge. That
+   works for a row of amounts and nothing else: the fare rules are six lines and
+   the passenger list is one line per traveller, and right-aligned they read as
+   a ragged column with no left edge to come back to. Labels sit in their own
+   column now and values are flush left under each other.
+
+   Amounts keep the right edge, in a panel of their own -- a column of figures
+   is read by its last digit. #}
+<div class="receipt">
+    <dl class="receipt__facts">
+        <div class="receipt__row">
+            <dt>{{ booking.passengers|length > 1 ? 'Travellers' : 'Traveller' }}</dt>
+            <dd>
+                {% for traveller in booking.passengers %}
+                    <span class="receipt__person">
+                        <span class="receipt__person-name">{{ traveller.name }}</span>
+                        <span class="receipt__person-type">{{ traveller.type }}{% if traveller.dob %} &middot; born {{ traveller.dob|date('j M Y') }}{% endif %}</span>
+                    </span>
+                {% else %}
+                    <span class="receipt__person">
+                        <span class="receipt__person-name">{{ booking.passenger }}</span>
+                    </span>
+                {% endfor %}
+            </dd>
+        </div>
+
+        {% if booking.contact_email or booking.contact_phone %}
+            <div class="receipt__row">
+                <dt>Contact</dt>
+                <dd>
+                    {% if booking.contact_email %}<span class="receipt__line">{{ booking.contact_email }}</span>{% endif %}
+                    {% if booking.contact_phone %}<span class="receipt__line">{{ booking.contact_phone }}</span>{% endif %}
+                </dd>
+            </div>
+        {% endif %}
+
+        {% if booking.fare_brand %}
+            <div class="receipt__row">
+                <dt>Fare</dt>
+                <dd>
+                    <span class="receipt__fare-name">{{ booking.fare_brand }}</span>
+                    {# The terms as they were sold, marked the same way checkout
+                       marked them, so what was agreed to and what is shown back
+                       read identically. Older bookings kept only the brand name. #}
+                    {% if booking.fare_rules %}
+                        <ul class="receipt__rules">
+                            {% for line in booking.fare_rules %}
+                                <li class="rules__item{{ line.allowed ? '' : ' rules__item--restricted' }}">
+                                    <i class="fas {{ line.allowed ? 'fa-check' : 'fa-xmark' }} rules__icon"></i>
+                                    {{ line.text }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </dd>
+            </div>
+        {% endif %}
+
+        {% if booking.card_last4 %}
+            <div class="receipt__row">
+                <dt>Paid with</dt>
+                <dd>
+                    <span class="receipt__line">{{ booking.card_brand }} ending {{ booking.card_last4 }}</span>
+                </dd>
+            </div>
+        {% endif %}
+
+        {% if booking.created %}
+            <div class="receipt__row">
+                <dt>Booked</dt>
+                <dd><span class="receipt__line">{{ booking.created|date('j M Y') }}</span></dd>
+            </div>
+        {% endif %}
+    </dl>
+
+    {% if booking.price_total %}
+        <dl class="receipt__amounts">
+            <div class="receipt__amount">
+                <dt>Base</dt>
+                <dd>${{ booking.price_base.whole }}.{{ booking.price_base.cents }}</dd>
+            </div>
+            <div class="receipt__amount">
+                <dt>Taxes &amp; fees</dt>
+                <dd>${{ booking.price_tax.whole }}.{{ booking.price_tax.cents }}</dd>
+            </div>
+            <div class="receipt__amount receipt__amount--total">
+                <dt>{{ booking.is_cancelled ? 'Total charged' : 'Total paid' }}</dt>
+                <dd>${{ booking.price_total.whole }}.{{ booking.price_total.cents }} <span class="receipt__currency">CAD</span></dd>
+            </div>
+        </dl>
+    {% else %}
+        {# Booked before the price columns existed. The per-leg prices in the
+           stored JSON are a search price nobody was charged, so no total is
+           shown rather than a wrong one. #}
+        <p class="receipt__no-price">Price not recorded for this booking.</p>
+    {% endif %}
+</div>

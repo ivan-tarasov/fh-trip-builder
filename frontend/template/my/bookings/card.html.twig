@@ -16,6 +16,17 @@
 
 <div class="card mb-3{{ booking.is_past or booking.is_cancelled ? '' : ' shadow-sm' }} flight-card booking-card{{ booking.is_past ? ' booking-card--past' : '' }}{{ booking.is_cancelled ? ' booking-card--cancelled' : '' }}"
      data-booking-card="{{ booking.id }}">
+
+    {# Said across the whole card, not in a pill in the corner. Whether a trip
+       is still on is the one thing this page exists to answer, and it should be
+       readable before any of the times and airports underneath it are. #}
+    {% if booking.is_cancelled %}
+        <p class="booking-void js-booking-void">
+            <i class="fas fa-ban" aria-hidden="true"></i>
+            <span><strong>Cancelled</strong> &middot; these flights are no longer booked</span>
+        </p>
+    {% endif %}
+
     <div class="card-body">
 
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">

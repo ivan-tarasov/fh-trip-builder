@@ -26,6 +26,10 @@ class Routes
         */
 
         '/my/bookings' => 'My@bookings',
+        // Cancelled bookings keep their own address rather than a tab the URL
+        // cannot describe: a booking somebody is arguing with an airline about
+        // is one they want to be able to link to.
+        '/my/bookings/cancelled' => 'My@cancelled',
         '/my/saved' => 'My@saved',
 
         /*

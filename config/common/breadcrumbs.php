@@ -30,6 +30,7 @@ return [
 
     'pages' => [
         '/my/bookings' => 'My bookings',
+        '/my/bookings/cancelled' => 'Cancelled',
         '/my/saved' => 'Saved flights',
         '/airlines' => 'Airlines',
         '/airports' => 'Airports',

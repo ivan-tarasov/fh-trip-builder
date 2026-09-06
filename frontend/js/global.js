@@ -1164,7 +1164,7 @@
         Swal.fire({
             title: 'Cancel this booking?',
             // text, not html: a reference is data and Swal escapes this one.
-            text: named + ' will be marked cancelled. It stays in your list.',
+            text: named + ' will be cancelled. You will find it under Cancelled.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Cancel booking',
@@ -1206,15 +1206,16 @@
                 return;
             }
 
-            markCancelled(card, button, reference);
+            moveToCancelled(card, button, reference);
         });
     });
 
-    // The row survives a cancel, so the card is restyled where it stands
-    // rather than removed and the page reloaded. No success dialog: the card
-    // changing in front of you is the confirmation, and the live region
-    // carries it for anyone who cannot see that.
-    function markCancelled(card, button, reference) {
+    // Cancelled bookings live on their own page now, so the card leaves this
+    // one instead of being restyled where it stands. It is faded out rather
+    // than cut: something vanishing from under the pointer with no transition
+    // reads as a bug, and the half second is where the confirmation lives.
+    // The live region carries it for anyone who cannot see that.
+    function moveToCancelled(card, button, reference) {
         // The tooltip outlives its trigger otherwise, and hangs over the card.
         const tip = bootstrap.Tooltip.getInstance(button);
 
@@ -1224,32 +1225,54 @@
 
         button.remove();
 
+        const live = document.querySelector('.js-bookings-live');
+
+        if (live) {
+            live.textContent = (reference ? 'Booking ' + reference : 'Booking')
+                + ' cancelled, and moved to your cancelled bookings.';
+        }
+
         if (!card) {
             return;
         }
 
-        card.classList.add('booking-card--cancelled');
-        card.classList.remove('shadow-sm');
+        const section = card.closest('section');
 
-        const status = card.querySelector('.js-booking-status');
+        card.classList.add('booking-card--leaving');
+        setTimeout(function () {
+            card.remove();
+            retally(section);
+        }, 400);
+    }
 
-        if (status) {
-            status.className = 'booking-status js-booking-status booking-status--cancelled';
-            status.textContent = 'Cancelled';
+    // Every count the cancelled card was in: its own group's badge, the tab it
+    // sat under, and the tab it has gone to. A group with nothing left in it
+    // goes as well, heading and all, rather than standing over a gap.
+    function retally(section) {
+        if (section && !section.querySelector('[data-booking-card]')) {
+            section.remove();
+        } else if (section) {
+            bump(section.querySelector('.badge'), -1);
         }
 
-        // How near the departure is stops being the point once it is cancelled.
-        const when = card.querySelector('.booking-when');
+        const tabs = document.querySelectorAll('.bookings-tabs__tab');
 
-        if (when) {
-            when.remove();
+        bump(tabs[0] && tabs[0].querySelector('.bookings-tabs__count'), -1);
+        bump(tabs[1] && tabs[1].querySelector('.bookings-tabs__count'), 1);
+
+        // Nothing left to show. The empty state is rendered by the server, so
+        // the page is asked for again rather than rebuilt here.
+        if (!document.querySelector('[data-booking-card]')) {
+            window.location.reload();
+        }
+    }
+
+    function bump(node, by) {
+        if (!node) {
+            return;
         }
 
-        const live = document.querySelector('.js-bookings-live');
-
-        if (live) {
-            live.textContent = (reference ? 'Booking ' + reference : 'Booking') + ' cancelled.';
-        }
+        node.textContent = String(Math.max(0, (parseInt(node.textContent, 10) || 0) + by));
     }
 
     /*[ Copy to clipboard ]

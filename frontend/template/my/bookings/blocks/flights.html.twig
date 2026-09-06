@@ -1,0 +1,16 @@
+{# Every flight in the booking, one direction after another: the summary line
+   each direction shows on a card, then the leg-by-leg timeline underneath it.
+
+   Both halves used to be split across a card body and its footer, which put the
+   summary and the detail of the same flight in two different places. #}
+{% for half in halves %}
+    {% if half.direction %}
+        <div class="bkflights__half{{ not loop.first ? ' bkflights__half--next' : '' }}">
+            <p class="booking-card__label">
+                <i class="fas {{ half.icon }}" aria-hidden="true"></i> {{ half.label }}
+            </p>
+            {% include 'search/cards/itinerary.html.twig' with { 'direction': half.direction } only %}
+            {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}
+        </div>
+    {% endif %}
+{% endfor %}
