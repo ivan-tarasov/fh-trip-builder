@@ -127,25 +127,78 @@
             onOpen: null
         }, options || {});
 
-        this.input = input;
         this.settings = settings;
         this.id = 'datepicker-' + (++sequence);
-        this.min = Day.parse(settings.min) || Day.today();
+        this.floor = Day.parse(settings.min) || Day.today();
         this.isOpen = false;
         this.touched = false;
         this.drag = null;
         this.prices = settings.prices;
 
-        const start = Day.parse(settings.start);
+        // One calendar, one leg per date field. The reference works this way:
+        // whichever field is focused owns the clicks, and the other leg stays on
+        // screen dimmed so the trip reads as a whole while either end of it is
+        // being changed. A single-leg picker -- the rebook dialog -- is just the
+        // list with one entry in it.
+        const legs = settings.legs ?? [{name: 'main', input: input, start: settings.start, span: settings.span}];
 
-        this.start = start;
-        this.end = start ? Day.add(start, Math.max(0, settings.span - 1)) : null;
-        this.view = Day.startOfMonth(start || this.min);
-        this.focused = start || this.min;
+        this.legs = legs.map((leg) => {
+            const start = Day.parse(leg.start);
+
+            return {
+                name: leg.name,
+                input: leg.input,
+                start: start,
+                end: start ? Day.add(start, Math.max(0, (leg.span ?? 1) - 1)) : null
+            };
+        });
+
+        this.leg = this.legs[0];
+        this.view = Day.startOfMonth(this.leg.start || this.floor);
+        this.focused = this.leg.start || this.floor;
 
         this.build();
         this.listen();
     }
+
+    /**
+     * The active leg's window, reachable as if there were only one.
+     *
+     * Everything that picks and drags was written against a single range, and
+     * it still is: switching legs switches what these two point at rather than
+     * asking every one of those places to know which leg it is working on.
+     */
+    Object.defineProperty(DatePicker.prototype, 'start', {
+        get: function () { return this.leg.start; },
+        set: function (day) { this.leg.start = day; }
+    });
+
+    Object.defineProperty(DatePicker.prototype, 'end', {
+        get: function () { return this.leg.end; },
+        set: function (day) { this.leg.end = day; }
+    });
+
+    /** The field the panel is anchored to: the one being edited. */
+    Object.defineProperty(DatePicker.prototype, 'input', {
+        get: function () { return this.leg.input; }
+    });
+
+    /**
+     * The earliest day the active leg may take.
+     *
+     * A return cannot be taken before the outbound leaves, so the leg after the
+     * first starts where the one before it does.
+     */
+    Object.defineProperty(DatePicker.prototype, 'min', {
+        get: function () {
+            const index = this.legs.indexOf(this.leg);
+            const before = index > 0 ? this.legs[index - 1] : null;
+
+            return before?.start && before.start.getTime() > this.floor.getTime()
+                ? before.start
+                : this.floor;
+        }
+    });
 
     DatePicker.Day = Day;
 
@@ -229,6 +282,7 @@
             label.className = 'datepicker__apply-label';
             label.textContent = this.settings.applyLabel;
             price.className = 'datepicker__apply-price';
+            this.applyLabel = label;
 
             apply.append(label, price);
             foot.appendChild(apply);
@@ -356,11 +410,16 @@
      * seventy of them per frame to say the same thing is work for nothing.
      */
     DatePicker.prototype.paintPrices = function () {
-        if (!this.prices || !this.cells) {
+        // The active leg's own fares: the outbound flies from origin to
+        // destination and the return flies back, so the two legs are priced on
+        // different routes and the cells show whichever is being chosen.
+        const prices = this.leg.prices ?? this.prices;
+
+        if (!prices || !this.cells) {
             return;
         }
 
-        const known = Object.values(this.prices);
+        const known = Object.values(prices);
         // A day worth crossing the calendar for. Within a tenth of the cheapest
         // fare on the route rather than only the single lowest, because two
         // days that differ by a pound are the same answer.
@@ -378,7 +437,7 @@
             // a flight this trip cannot take.
             const price = cell.classList.contains('is-disabled')
                 ? undefined
-                : this.prices[cell.dataset.day];
+                : prices[cell.dataset.day];
 
             label.textContent = price === undefined ? '' : this.settings.currency + Math.round(price);
             cell.classList.toggle('is-cheap', price !== undefined && price <= bar);
@@ -391,8 +450,14 @@
      * The grid is rebuilt rather than repainted, because a calendar that opened
      * without prices has no elements to put them in.
      */
-    DatePicker.prototype.setPrices = function (prices) {
-        this.prices = prices;
+    DatePicker.prototype.setPrices = function (prices, legName) {
+        const leg = legName ? this.legs.find((one) => one.name === legName) : null;
+
+        if (leg) {
+            leg.prices = prices;
+        } else {
+            this.prices = prices;
+        }
 
         // No re-render and no repositioning: the cells were built with room for
         // a fare, so filling them in changes nothing about the size or place of
@@ -450,17 +515,32 @@
         // second of them greyed out as another month's spare copy.
         const roving = this.cellFor(this.focused);
 
+        const others = this.legs.filter((leg) => leg !== this.leg && leg.start);
+        const trip = this.tripSpan();
+
         this.cells.forEach((cell) => {
             const day = Day.parse(cell.dataset.day);
-            const inRange = this.start && this.end
-                && day.getTime() >= this.start.getTime()
-                && day.getTime() <= this.end.getTime();
+            const inRange = this.covers(this.leg, day);
+            const inOther = others.some((leg) => this.covers(leg, day));
 
             cell.classList.toggle('is-today', Day.same(day, today));
             cell.classList.toggle('is-start', Day.same(day, this.start));
             cell.classList.toggle('is-end', Day.same(day, this.end));
-            cell.classList.toggle('is-in-range', Boolean(inRange));
+            cell.classList.toggle('is-in-range', inRange);
             cell.classList.toggle('is-focused', Day.same(day, this.focused));
+
+            // The leg not being edited, dimmed, and the days the trip covers
+            // between the two of them. Both are there to show the shape of the
+            // trip while one end of it is being changed.
+            cell.classList.toggle('is-other', inOther);
+            cell.classList.toggle('is-other-start', others.some((leg) => Day.same(day, leg.start)));
+            cell.classList.toggle('is-other-end', others.some((leg) => Day.same(day, leg.end)));
+            cell.classList.toggle(
+                'is-between',
+                Boolean(trip) && !inRange && !inOther
+                    && day.getTime() > trip.from.getTime() && day.getTime() < trip.to.getTime(),
+            );
+
             cell.setAttribute('aria-selected', inRange ? 'true' : 'false');
             cell.tabIndex = cell === roving ? 0 : -1;
         });
@@ -472,30 +552,60 @@
         this.paintApplyPrice();
     };
 
-    /** What the chosen days cost, on the button that accepts them. */
+    /**
+     * What the button says, and what the days chosen would cost.
+     *
+     * The label follows the trip rather than the field: a return set makes it a
+     * round trip whichever end is being edited, which is what the reference
+     * does. The fare is the cheapest inside each window added together -- a
+     * window is an offer to fly on any of its days, so its price is the best of
+     * them.
+     */
     DatePicker.prototype.paintApplyPrice = function () {
         if (!this.applyPrice) {
             return;
         }
 
-        const best = this.cheapestInRange();
+        const set = this.legs.filter((leg) => leg.start);
 
-        this.applyPrice.textContent = best === null
+        if (this.applyLabel && this.settings.legLabels) {
+            this.applyLabel.textContent = set.length > 1
+                ? this.settings.legLabels.round
+                : this.settings.legLabels.one;
+        }
+
+        let total = 0;
+
+        for (const leg of set) {
+            const best = this.cheapestIn(leg);
+
+            if (best === null) {
+                this.applyPrice.textContent = '';
+
+                return;
+            }
+
+            total += best;
+        }
+
+        this.applyPrice.textContent = set.length === 0
             ? ''
-            : 'from ' + this.settings.currency + Math.round(best);
+            : 'from ' + this.settings.currency + Math.round(total);
     };
 
-    /** The lowest fare across the chosen window, or null when there is none. */
-    DatePicker.prototype.cheapestInRange = function () {
-        if (!this.prices || !this.start) {
+    /** The lowest fare across one leg's window, or null when there is none. */
+    DatePicker.prototype.cheapestIn = function (leg) {
+        const prices = leg.prices ?? this.prices;
+
+        if (!prices || !leg.start) {
             return null;
         }
 
-        const end = this.end ?? this.start;
+        const end = leg.end ?? leg.start;
         let best = null;
 
-        for (let day = this.start; day.getTime() <= end.getTime(); day = Day.add(day, 1)) {
-            const price = this.prices[Day.iso(day)];
+        for (let day = leg.start; day.getTime() <= end.getTime(); day = Day.add(day, 1)) {
+            const price = prices[Day.iso(day)];
 
             if (price !== undefined && (best === null || price < best)) {
                 best = price;
@@ -503,6 +613,31 @@
         }
 
         return best;
+    };
+
+    /** Whether a leg's window covers a day. */
+    DatePicker.prototype.covers = function (leg, day) {
+        if (!leg.start) {
+            return false;
+        }
+
+        const end = leg.end ?? leg.start;
+
+        return day.getTime() >= leg.start.getTime() && day.getTime() <= end.getTime();
+    };
+
+    /** The whole trip, first day to last, when there is more than one leg set. */
+    DatePicker.prototype.tripSpan = function () {
+        const set = this.legs.filter((leg) => leg.start);
+
+        if (set.length < 2) {
+            return null;
+        }
+
+        return {
+            from: set.reduce((a, leg) => Day.min(a, leg.start), set[0].start),
+            to: set.reduce((a, leg) => Day.max(a, leg.end ?? leg.start), set[0].end ?? set[0].start)
+        };
     };
 
     DatePicker.prototype.selectable = function (day) {
@@ -536,7 +671,32 @@
         this.start = start;
         this.end = end;
         this.focused = start || this.focused;
+        this.enforceOrder();
         this.paint();
+    };
+
+    /**
+     * Keep the legs in the order they are flown.
+     *
+     * A return cannot be taken before the outbound leaves, so moving the
+     * departure past it takes it along rather than leaving a trip nobody could
+     * fly. The window keeps its width -- what moved was when it starts, not how
+     * flexible it is.
+     */
+    DatePicker.prototype.enforceOrder = function () {
+        for (let i = 1; i < this.legs.length; i++) {
+            const before = this.legs[i - 1];
+            const leg = this.legs[i];
+
+            if (!leg.start || !before.start || leg.start.getTime() >= before.start.getTime()) {
+                continue;
+            }
+
+            const span = Day.diff(leg.end ?? leg.start, leg.start);
+
+            leg.start = before.start;
+            leg.end = Day.add(before.start, span);
+        }
     };
 
     /**
@@ -648,15 +808,17 @@
     DatePicker.prototype.listen = function () {
         const root = this.root;
 
-        this.input.addEventListener('click', () => this.show());
-        this.input.addEventListener('keydown', (event) => {
-            if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                this.show();
-                this.focusOn(this.start || this.focused);
-            } else if (event.key === 'Escape') {
-                this.hide(false);
-            }
+        this.legs.forEach((leg) => {
+            leg.input.addEventListener('click', () => this.show(leg));
+            leg.input.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.show(leg);
+                    this.focusOn(this.start || this.focused);
+                } else if (event.key === 'Escape') {
+                    this.hide(false);
+                }
+            });
         });
 
         root.addEventListener('click', (event) => {
@@ -765,7 +927,9 @@
 
         // Outside, and not on the field that owns it.
         document.addEventListener('mousedown', (event) => {
-            if (!this.isOpen || root.contains(event.target) || event.target === this.input) {
+            const ownField = this.legs.some((leg) => leg.input === event.target);
+
+            if (!this.isOpen || root.contains(event.target) || ownField) {
                 return;
             }
 
@@ -840,10 +1004,34 @@
         }
     };
 
-    DatePicker.prototype.show = function () {
+    DatePicker.prototype.show = function (leg) {
+        const next = leg ?? this.leg;
+        const swapping = this.isOpen && next !== this.leg;
+
+        // Moving between the two fields is not a fresh open: the panel stays
+        // where it is and changes which leg the clicks land on.
+        if (swapping) {
+            this.leg = next;
+            this.touched = false;
+            this.focused = this.start || this.min;
+            // Rebuilt, not repainted: which days are out of reach belongs to
+            // the leg, and it is decided as the cells are made. A return cannot
+            // be taken before the outbound leaves, so the floor moves with it.
+            this.render();
+            this.place();
+
+            if (this.settings.onOpen) {
+                this.settings.onOpen(this);
+            }
+
+            return;
+        }
+
         if (this.isOpen) {
             return;
         }
+
+        this.leg = next;
 
         // Reopening is a fresh decision: a picker opens seeded whether or not
         // the field has a date, so one that is opened and dismissed must close
@@ -873,6 +1061,10 @@
 
         if (commit && this.touched && this.start && this.settings.onApply) {
             this.settings.onApply(this.start, this.end || this.start, this);
+        }
+
+        if (commit && this.settings.onCommit) {
+            this.settings.onCommit(this.legs, this);
         }
     };
 

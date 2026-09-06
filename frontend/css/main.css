@@ -907,6 +907,25 @@ a:active {
   background-color: var(--brand-accent);
 }
 
+/* The leg not being edited, and the days the trip covers between the two.
+
+   Both are behind the active window in every sense -- paler fill, no white
+   text -- because they are context for the choice being made rather than the
+   choice itself. Declared before the active rules so those win outright on a
+   day that happens to be in both. */
+.datepicker__grid td.is-between { background-color: var(--surface); }
+
+.datepicker__grid td.is-other {
+  color: var(--ink-body);
+  background-color: var(--brand-tint);
+}
+
+.datepicker__grid td.is-other-start { border-radius: .75rem 0 0 .75rem; }
+.datepicker__grid td.is-other-end { border-radius: 0 .75rem .75rem 0; }
+.datepicker__grid td.is-other-start.is-other-end { border-radius: .75rem; }
+
+.datepicker__grid td.is-other .datepicker__price { color: var(--ink-secondary); }
+
 .datepicker__grid td.is-start { border-radius: .75rem 0 0 .75rem; }
 .datepicker__grid td.is-end { border-radius: 0 .75rem .75rem 0; }
 .datepicker__grid td.is-start.is-end { border-radius: .75rem; }

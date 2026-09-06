@@ -59,9 +59,9 @@
             // out, which runs to seconds on a busy one. Asking first would mean
             // a calendar that takes five seconds to appear; asking after means
             // one that appears at once and fills in.
-            const asked = new Map();
+            const asked = new Set();
 
-            const pricesFor = (picker, fromField, toField) => {
+            const pricesFor = (picker, fromField, toField, legName) => {
                 const from = document.getElementById(fromField)?.value;
                 const to = document.getElementById(toField)?.value;
 
@@ -69,17 +69,17 @@
                     return;
                 }
 
-                const route = from + '-' + to;
+                const route = legName + ':' + from + '-' + to;
 
                 // Once per route per page, and only once it has answered with
                 // something. An empty answer means somebody else is working the
                 // route out right now, so the next open should ask again rather
                 // than leave this calendar priceless for the rest of the visit.
-                if (asked.get(picker) === route) {
+                if (asked.has(route)) {
                     return;
                 }
 
-                asked.set(picker, route);
+                asked.add(route);
 
                 const body = new FormData();
 
@@ -91,65 +91,75 @@
                     .then((response) => response.ok ? response.json() : null)
                     .then((data) => {
                         if (data && data.prices && Object.keys(data.prices).length) {
-                            picker.setPrices(data.prices);
+                            picker.setPrices(data.prices, legName);
 
                             return;
                         }
 
-                        asked.delete(picker);
+                        asked.delete(route);
                     })
                     // A calendar without fares still picks dates, so a route
                     // that cannot be priced is not worth an error in anyone's
                     // console -- but it is worth asking again next time.
-                    .catch(() => asked.delete(picker));
+                    .catch(() => asked.delete(route));
             };
 
-            const pickerFor = (input, hidden, flex, onPicked, onOpened) => new window.TripDatePicker(input, {
-                start: hidden.value || null,
-                span: spanOf(flex),
+            // One calendar for both fields, the way the reference works: the
+            // field being edited owns the clicks and the other leg stays on
+            // screen dimmed, so the trip reads as a whole while either end of
+            // it is being changed.
+            const picker = new window.TripDatePicker(departInput, {
+                legs: [
+                    {name: 'out', input: departInput, start: departValue.value || null, span: spanOf(departFlex)},
+                    {name: 'back', input: returnInput, start: returnValue.value || null, span: spanOf(returnFlex)}
+                ],
                 maxSpan: MAX_SPAN,
                 // Sized for fares from the first paint, so the grid does not
                 // grow a line under the pointer when they arrive.
                 showPrices: true,
                 // The window here is not "depart to return" -- that is what the
-                // two fields are for -- but how flexible one end of the trip is,
+                // two legs are for -- but how flexible one end of the trip is,
                 // so it is dragged rather than clicked out over two days.
                 drag: true,
-                onApply: onPicked,
-                onOpen: onOpened
+                legLabels: {one: 'Choose one way', round: 'Choose round trip'},
+                // Both legs, whichever one is being edited. The button totals
+                // the trip, and a total needs the fare on the way back as well
+                // as the fare out -- asking for it only when the return field
+                // is opened would leave the button blank until it was.
+                onOpen: (self) => {
+                    pricesFor(self, 'departing_airport-native', 'arrival_airport-native', 'out');
+                    pricesFor(self, 'arrival_airport-native', 'departing_airport-native', 'back');
+                },
+                // Both legs at once. Either can have moved while the calendar
+                // was open -- choosing a departure after a return drags the
+                // return along with it -- so both are written back.
+                onCommit: (legs) => {
+                    const out = legs.find((leg) => leg.name === 'out');
+                    const back = legs.find((leg) => leg.name === 'back');
+
+                    if (out.start) {
+                        show(departInput, departValue, departFlex, out.start, out.end ?? out.start);
+                    }
+
+                    if (back.start) {
+                        show(returnInput, returnValue, returnFlex, back.start, back.end ?? back.start);
+                        clearReturn?.removeAttribute('hidden');
+                    }
+                }
             });
 
-            // The return leg flies the other way, so it is priced the other way.
-            const departPicker = pickerFor(departInput, departValue, departFlex, (start, end) => {
-                show(departInput, departValue, departFlex, start, end);
-
-                // The return can never precede the departure. Nothing enforced
-                // this before -- a return a year earlier rendered a results page.
-                const back = Day.parse(returnValue.value);
-
-                if (back && back.getTime() < start.getTime()) {
-                    show(returnInput, returnValue, returnFlex, start, start);
-                    returnPicker.setRange(start, start);
-                }
-
-                returnPicker.min = start;
-            }, (picker) => pricesFor(picker, 'departing_airport-native', 'arrival_airport-native'));
-
-            const returnPicker = pickerFor(returnInput, returnValue, returnFlex, (start, end) => {
-                show(returnInput, returnValue, returnFlex, start, end);
-                clearReturn?.removeAttribute('hidden');
-            }, (picker) => pricesFor(picker, 'arrival_airport-native', 'departing_airport-native'));
-
-            // A return cannot be taken before the outbound leaves, so the
-            // calendar does not offer one.
-            returnPicker.min = Day.parse(departValue.value) || returnPicker.min;
+            const legOf = (name) => picker.legs.find((leg) => leg.name === name);
 
             // The way back to a one-way trip, now that no tab does it.
             clearReturn?.addEventListener('click', function () {
+                const back = legOf('back');
+
                 returnValue.value = '';
                 returnFlex.value = '';
                 returnInput.value = '';
-                returnPicker.setRange(null, null);
+                back.start = null;
+                back.end = null;
+                picker.paint();
                 this.hidden = true;
             });
 
@@ -160,30 +170,36 @@
             // the form. The hidden field carries the date and the flex field its
             // width, and either can arrive first, so both are watched: whichever
             // writes last settles what the field reads.
-            const follow = (input, hidden, flex, picker, clear) => {
+            const follow = (input, hidden, flex, name, clear) => {
                 const update = () => {
+                    const leg = legOf(name);
                     const start = Day.parse(hidden.value);
 
                     if (!start) {
                         input.value = '';
                         flex.value = '';
                         clear?.setAttribute('hidden', '');
-                        picker.setRange(null, null);
+                        leg.start = null;
+                        leg.end = null;
+                        picker.paint();
 
                         return;
                     }
 
                     redraw(input, hidden, flex);
                     clear?.removeAttribute('hidden');
-                    picker.setRange(start, Day.add(start, spanOf(flex) - 1));
+                    leg.start = start;
+                    leg.end = Day.add(start, spanOf(flex) - 1);
+                    picker.enforceOrder();
+                    picker.paint();
                 };
 
                 hidden.addEventListener('change', update);
                 flex.addEventListener('change', update);
             };
 
-            follow(departInput, departValue, departFlex, departPicker);
-            follow(returnInput, returnValue, returnFlex, returnPicker, clearReturn);
+            follow(departInput, departValue, departFlex, 'out');
+            follow(returnInput, returnValue, returnFlex, 'back', clearReturn);
         }
     } catch (er) {
         console.log(er);
