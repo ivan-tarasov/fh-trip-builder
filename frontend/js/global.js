@@ -6,287 +6,128 @@
     /*[ Search form: the two date fields ]
     ===========================================================*/
     try {
-        const inputDateFormat = 'YYYY-MM-DD';
-        const showDateFormat = 'MMM D';
-
         // Days a window may cover, itself included. SearchUrl::MAX_SPAN is the
         // definition; this is the picker's own limit and the two must agree.
         const MAX_SPAN = 3;
 
-        const departInput = $('#depart_date');
-        const returnInput = $('#return_date');
-        const departValue = $('#depart_date_value');
-        const returnValue = $('#return_date_value');
-        const departFlex = $('#depart_flex_value');
-        const returnFlex = $('#return_flex_value');
-        const clearReturn = $('.js-clear-return');
+        const Day = window.TripDatePicker.Day;
+        const at = (id) => document.getElementById(id);
 
-        const spanOf = ($flex) => Math.max(1, parseInt($flex.val(), 10) || 1);
+        const departInput = at('depart_date');
+        const returnInput = at('return_date');
 
-        // A range picker per field, where each used to pick a single day. The
-        // range here is not "depart to return" -- that is what the two fields
-        // are for -- but how flexible one end of the trip is.
-        const pickers = [];
+        if (departInput && returnInput) {
+            const departValue = at('depart_date_value');
+            const returnValue = at('return_date_value');
+            const departFlex = at('depart_flex_value');
+            const returnFlex = at('return_flex_value');
+            const clearReturn = document.querySelector('.js-clear-return');
 
-        // Which pickers the visitor has actually picked a day in. A picker opens
-        // seeded with a date whether or not it is the one on the field, so an
-        // empty return field that is opened and dismissed must close having done
-        // nothing -- otherwise looking at the return dates would book a return.
-        const touched = new Set();
+            const spanOf = (field) => Math.max(1, parseInt(field.value, 10) || 1);
 
-        const pickerFor = ($input, seed, span) => {
-            $input.daterangepicker({
-                // Off, so the calendar stays open once a day is chosen and the
-                // window can still be widened. It closes on Done or on a click
-                // outside, both of which the plugin already routes through hide.
-                autoApply: false,
-                showCustomRangeLabel: false,
-                autoUpdateInput: false,
-                startDate: seed ? moment(seed) : moment(),
-                endDate: seed ? moment(seed).add(span - 1, 'day') : moment(),
-                minDate: moment(),
-                maxSpan: {days: MAX_SPAN - 1},
-                opens: 'center',
-                drops: 'auto',
-                locale: {
-                    format: showDateFormat,
-                    separator: ' – ',
-                    firstDay: 1,
-                    applyLabel: 'Done'
-                }
-            });
+            // The picker never writes the field itself: a field has to be able
+            // to stay empty until it is picked, and one that filled itself on
+            // load would turn every one-way search into a round trip nobody
+            // asked for.
+            const show = (input, hidden, flex, start, end) => {
+                const days = Math.min(MAX_SPAN, Day.diff(end, start) + 1);
 
-            const picker = $input.data('daterangepicker');
+                hidden.value = Day.iso(start);
+                // Blank rather than 1: a plain search should send no flex at all.
+                flex.value = days > 1 ? String(days) : '';
+                input.value = days > 1
+                    ? Day.short(start) + ' \u2013 ' + Day.short(end)
+                    : Day.short(start);
+            };
 
-            // The rebook dialog puts a second picker on the page, and that one
-            // still picks a departure and a return with two clicks. Only these
-            // two can be dragged wider, so only these two say so.
-            picker.container.addClass('daterangepicker--flex');
+            const redraw = (input, hidden, flex) => {
+                const start = Day.parse(hidden.value);
 
-            // Reopening is a fresh decision.
-            $input.on('show.daterangepicker', () => touched.delete(picker));
-            pickers.push(picker);
-
-            return picker;
-        };
-
-        const departPicker = pickerFor(departInput, departValue.val(), spanOf(departFlex));
-        const returnPicker = pickerFor(returnInput, returnValue.val() || departValue.val(), spanOf(returnFlex));
-
-        // autoUpdateInput is off so a field can stay empty until it is picked:
-        // left to itself the plugin writes today's date in on load, which would
-        // turn every one-way search into a round trip nobody asked for.
-        const show = ($input, $hidden, $flex, start, end) => {
-            const days = Math.min(MAX_SPAN, end.diff(start, 'days') + 1);
-
-            $hidden.val(start.format(inputDateFormat));
-            // Blank rather than 1: a plain search should send no flex at all.
-            $flex.val(days > 1 ? String(days) : '');
-            $input.val(days > 1
-                ? start.format(showDateFormat) + ' – ' + end.format(showDateFormat)
-                : start.format(showDateFormat));
-        };
-
-        // hide, not apply: apply fires only for the Done button, and a click
-        // outside the calendar closes it just as deliberately.
-        departInput.on('hide.daterangepicker', function (ev, picker) {
-            if (!touched.has(picker)) {
-                return;
-            }
-
-            show(departInput, departValue, departFlex, picker.startDate, picker.endDate);
-
-            // The return can never precede the departure. Nothing enforced this
-            // before -- a return a year earlier rendered a results page.
-            if (returnValue.val() && moment(returnValue.val()).isBefore(picker.startDate, 'day')) {
-                show(returnInput, returnValue, returnFlex, picker.startDate, picker.startDate);
-            }
-        });
-
-        returnInput.on('hide.daterangepicker', function (ev, picker) {
-            if (!touched.has(picker)) {
-                return;
-            }
-
-            const departed = departValue.val() ? moment(departValue.val()) : null;
-            const from = departed && picker.startDate.isBefore(departed, 'day') ? departed : picker.startDate;
-            const to = picker.endDate.isBefore(from, 'day') ? from : picker.endDate;
-
-            show(returnInput, returnValue, returnFlex, from, to);
-            clearReturn.prop('hidden', false);
-        });
-
-        // The way back to a one-way trip, now that no tab does it.
-        clearReturn.on('click', function () {
-            returnValue.val('');
-            returnFlex.val('');
-            returnInput.val('');
-            $(this).prop('hidden', true);
-        });
-
-        const redraw = ($input, $hidden, $flex) => {
-            if (!$hidden.val()) { return; }
-
-            const start = moment($hidden.val());
-            show($input, $hidden, $flex, start, start.clone().add(spanOf($flex) - 1, 'day'));
-        };
-
-        redraw(departInput, departValue, departFlex);
-        redraw(returnInput, returnValue, returnFlex);
-
-        // Set from outside the picker -- a past search being put back into the
-        // form. The hidden field is what carries the date, so it is what to
-        // watch; the visible text and the calendar's own month both follow it.
-        const follow = ($input, $hidden, $flex, picker, $clear) => {
-            // Both, because the date and the width of its window arrive as two
-            // separate writes and either order leaves the first redraw reading a
-            // value the second is about to change. Listening to each means the
-            // last write settles it whichever way round they come.
-            $hidden.add($flex).on('change', function () {
-                if (!$hidden.val()) {
-                    $input.val('');
-                    $flex.val('');
-                    $clear?.prop('hidden', true);
+                if (!start) {
+                    input.value = '';
 
                     return;
                 }
 
-                redraw($input, $hidden, $flex);
-                $clear?.prop('hidden', false);
+                show(input, hidden, flex, start, Day.add(start, spanOf(flex) - 1));
+            };
 
-                const start = moment($hidden.val());
-
-                picker.setStartDate(start);
-                picker.setEndDate(start.clone().add(spanOf($flex) - 1, 'day'));
-                picker.updateView();
+            const pickerFor = (input, hidden, flex, onPicked) => new window.TripDatePicker(input, {
+                start: hidden.value || null,
+                span: spanOf(flex),
+                maxSpan: MAX_SPAN,
+                // The window here is not "depart to return" -- that is what the
+                // two fields are for -- but how flexible one end of the trip is,
+                // so it is dragged rather than clicked out over two days.
+                drag: true,
+                onApply: onPicked
             });
-        };
 
-        follow(departInput, departValue, departFlex, departPicker);
-        follow(returnInput, returnValue, returnFlex, returnPicker, clearReturn);
+            const departPicker = pickerFor(departInput, departValue, departFlex, (start, end) => {
+                show(departInput, departValue, departFlex, start, end);
 
-        // Pick by dragging. Pressing either end of the window and pulling moves
-        // that end and leaves the other where it is -- which is what the arrows
-        // drawn on those two cells advertise. Pressing anywhere else starts a
-        // new window, and a press with no drag picks that one day.
-        //
-        // The plugin's own click-to-pick is intercepted rather than extended. It
-        // binds `mousedown` on `td.available`, delegated on the container, so a
-        // capture-phase listener on the document sees the press first and can
-        // stop it going any further. Driving the selection ourselves is what
-        // makes a drag possible at all: left alone, the plugin answers the first
-        // press by redrawing the calendar, detaching the very cell the release
-        // would have landed on.
-        let drag = null;
+                // The return can never precede the departure. Nothing enforced
+                // this before -- a return a year earlier rendered a results page.
+                const back = Day.parse(returnValue.value);
 
-        const pickerAt = (node) => pickers.find((picker) => picker.container[0].contains(node)) ?? null;
+                if (back && back.getTime() < start.getTime()) {
+                    show(returnInput, returnValue, returnFlex, start, start);
+                    returnPicker.setRange(start, start);
+                }
 
-        /** The day a cell stands for, read the way the plugin reads it itself. */
-        const dayAt = (picker, cell) => {
-            const spot = /^r(\d+)c(\d+)$/.exec(cell.dataset.title ?? '');
-            const month = cell.closest('.drp-calendar').classList.contains('left')
-                ? picker.leftCalendar
-                : picker.rightCalendar;
+                returnPicker.min = start;
+            });
 
-            return spot ? month.calendar[Number(spot[1])][Number(spot[2])].clone() : null;
-        };
+            const returnPicker = pickerFor(returnInput, returnValue, returnFlex, (start, end) => {
+                show(returnInput, returnValue, returnFlex, start, end);
+                clearReturn?.removeAttribute('hidden');
+            });
 
-        const dayUnder = (node) => {
-            const cell = node instanceof Element ? node.closest('td.available') : null;
-            const picker = cell ? pickerAt(cell) : null;
-            const day = picker ? dayAt(picker, cell) : null;
+            // A return cannot be taken before the outbound leaves, so the
+            // calendar does not offer one.
+            returnPicker.min = Day.parse(departValue.value) || returnPicker.min;
 
-            return day ? {picker: picker, day: day} : null;
-        };
+            // The way back to a one-way trip, now that no tab does it.
+            clearReturn?.addEventListener('click', function () {
+                returnValue.value = '';
+                returnFlex.value = '';
+                returnInput.value = '';
+                returnPicker.setRange(null, null);
+                this.hidden = true;
+            });
 
-        /**
-         * A day pulled back inside what the search will run. setStartDate does
-         * not police maxSpan the way setEndDate does, so widening from the far
-         * end has to be caught here or a window wider than MAX_SPAN gets drawn.
-         */
-        const reachable = (picker, fixed, day) => {
-            const reach = MAX_SPAN - 1;
-            let capped = day;
+            redraw(departInput, departValue, departFlex);
+            redraw(returnInput, returnValue, returnFlex);
 
-            if (day.diff(fixed, 'days') > reach) {
-                capped = fixed.clone().add(reach, 'day');
-            } else if (fixed.diff(day, 'days') > reach) {
-                capped = fixed.clone().subtract(reach, 'day');
-            }
+            // Set from outside the picker -- a past search being put back into
+            // the form. The hidden field carries the date and the flex field its
+            // width, and either can arrive first, so both are watched: whichever
+            // writes last settles what the field reads.
+            const follow = (input, hidden, flex, picker, clear) => {
+                const update = () => {
+                    const start = Day.parse(hidden.value);
 
-            return capped.isBefore(picker.minDate, 'day') ? picker.minDate.clone() : capped;
-        };
+                    if (!start) {
+                        input.value = '';
+                        flex.value = '';
+                        clear?.setAttribute('hidden', '');
+                        picker.setRange(null, null);
 
-        const paint = (picker, fixed, day) => {
-            const to = reachable(picker, fixed, day);
+                        return;
+                    }
 
-            picker.setStartDate(moment.min(fixed, to));
-            picker.setEndDate(moment.max(fixed, to));
-            picker.updateView();
-        };
+                    redraw(input, hidden, flex);
+                    clear?.removeAttribute('hidden');
+                    picker.setRange(start, Day.add(start, spanOf(flex) - 1));
+                };
 
-        document.addEventListener('mousedown', function (event) {
-            const spot = dayUnder(event.target);
+                hidden.addEventListener('change', update);
+                flex.addEventListener('change', update);
+            };
 
-            if (spot === null) {
-                return;
-            }
-
-            // Ours to handle, and not the plugin's. preventDefault also keeps
-            // the drag from selecting the day numbers as text.
-            event.preventDefault();
-            event.stopPropagation();
-
-            const picker = spot.picker;
-            const wide = picker.endDate && !picker.startDate.isSame(picker.endDate, 'day');
-            let fixed = spot.day;
-
-            // Grabbing one end pivots on the other.
-            if (wide && spot.day.isSame(picker.startDate, 'day')) {
-                fixed = picker.endDate.clone();
-            } else if (wide && spot.day.isSame(picker.endDate, 'day')) {
-                fixed = picker.startDate.clone();
-            }
-
-            drag = {picker: picker, fixed: fixed, held: spot.day, moved: false};
-        }, true);
-
-        document.addEventListener('mousemove', function (event) {
-            if (drag === null) {
-                return;
-            }
-
-            // The target is hit-tested as the event is dispatched, so a repaint
-            // mid-drag cannot hand back a cell that has since been replaced.
-            // The point is the fallback, for a pointer over the gap between two
-            // cells rather than over either of them.
-            const spot = dayUnder(event.target)
-                ?? dayUnder(document.elementFromPoint(event.clientX, event.clientY));
-
-            if (spot === null || spot.picker !== drag.picker) {
-                return;
-            }
-
-            if (!drag.moved && spot.day.isSame(drag.held, 'day')) {
-                return;
-            }
-
-            drag.moved = true;
-            paint(drag.picker, drag.fixed, spot.day);
-        }, true);
-
-        document.addEventListener('mouseup', function () {
-            if (drag === null) {
-                return;
-            }
-
-            if (!drag.moved) {
-                paint(drag.picker, drag.held, drag.held);
-            }
-
-            touched.add(drag.picker);
-            drag = null;
-        }, true);
+            follow(departInput, departValue, departFlex, departPicker);
+            follow(returnInput, returnValue, returnFlex, returnPicker, clearReturn);
+        }
     } catch (er) {
         console.log(er);
     }
@@ -1287,10 +1128,10 @@
     // writes the chosen date into those globals, so a second copy on the page
     // would fight it. This one only ever touches its own form.
     //
-    // Built on first open rather than on load, because daterangepicker measures
-    // the field to place its calendar and a field inside a hidden modal has no
-    // position to measure. parentEl keeps the calendar inside the dialog, where
-    // it stacks above the backdrop instead of behind it.
+    // Built on first open rather than on load, because the picker measures the
+    // field to place its calendar and a field inside a hidden modal has no
+    // position to measure. It is rendered into the dialog, where it stacks
+    // above the backdrop instead of behind it.
     document.addEventListener('show.bs.modal', function (event) {
         const modal = event.target;
         const input = modal.querySelector('.js-rebook-date');
@@ -1301,31 +1142,28 @@
 
         input.dataset.pickerReady = '1';
 
-        const $input = $(input);
-        const $form = $input.closest('.js-rebook');
-        const roundtrip = $input.data('triptype') === 'roundtrip';
-        const display = 'MMMM D, YYYY';
+        const Day = window.TripDatePicker.Day;
+        const form = input.closest('.js-rebook');
+        const roundtrip = input.dataset.triptype === 'roundtrip';
 
-        $input.daterangepicker({
+        new window.TripDatePicker(input, {
+            // A one-way is one day; a round trip is a departure and a return,
+            // clicked out over two days with nothing capping how far apart they
+            // are. Neither is the flexible window the search bar drags.
+            single: !roundtrip,
             autoApply: true,
-            showCustomRangeLabel: false,
-            autoUpdateInput: false,
-            singleDatePicker: !roundtrip,
-            minDate: moment().format(display),
-            parentEl: '#' + modal.id + ' .modal-content',
-            opens: 'center',
-            drops: 'auto',
-            locale: {format: display, separator: ' – ', firstDay: 1}
-        });
+            parent: modal.querySelector('.modal-content'),
+            onApply: (start, end) => {
+                form.querySelector('.js-rebook-depart').value = Day.iso(start);
 
-        $input.on('apply.daterangepicker', function (ev, picker) {
-            $form.find('.js-rebook-depart').val(picker.startDate.format('YYYY-MM-DD'));
+                if (!roundtrip) {
+                    input.value = Day.full(start);
 
-            if (roundtrip) {
-                $form.find('.js-rebook-return').val(picker.endDate.format('YYYY-MM-DD'));
-                $input.val(picker.startDate.format(display) + ' – ' + picker.endDate.format(display));
-            } else {
-                $input.val(picker.startDate.format(display));
+                    return;
+                }
+
+                form.querySelector('.js-rebook-return').value = Day.iso(end);
+                input.value = Day.full(start) + ' \u2013 ' + Day.full(end);
             }
         });
     });
