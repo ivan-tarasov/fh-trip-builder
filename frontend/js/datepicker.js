@@ -302,11 +302,34 @@
         this.root = root;
         this.settings.parent.appendChild(root);
 
-        this.input.setAttribute('aria-haspopup', 'dialog');
-        this.input.setAttribute('aria-expanded', 'false');
-        this.input.setAttribute('aria-controls', this.id);
+        this.legs.forEach((leg) => {
+            leg.input.setAttribute('aria-haspopup', 'dialog');
+            leg.input.setAttribute('aria-expanded', 'false');
+            leg.input.setAttribute('aria-controls', this.id);
+        });
 
         this.render();
+    };
+
+    /**
+     * Say which field the calendar is currently working on.
+     *
+     * Marked on the field rather than only in the calendar, because the panel
+     * looks the same either way and the two dates sit side by side -- without
+     * this there is nothing on screen saying which of them a click will move.
+     *
+     * aria-expanded goes with it, on every field rather than the active one:
+     * left alone, the field last edited would go on claiming to have the
+     * calendar open after the visitor had crossed to the other one.
+     */
+    DatePicker.prototype.markActive = function () {
+        this.legs.forEach((leg) => {
+            const on = this.isOpen && leg === this.leg;
+
+            leg.input.setAttribute('aria-expanded', on ? 'true' : 'false');
+            leg.input.classList.toggle('is-picking', on);
+            leg.input.closest('.searchbar__field')?.classList.toggle('is-picking', on);
+        });
     };
 
     DatePicker.prototype.navButton = function (way, label) {
@@ -1037,6 +1060,7 @@
             // be taken before the outbound leaves, so the floor moves with it.
             this.render();
             this.place();
+            this.markActive();
 
             if (this.settings.onOpen) {
                 this.settings.onOpen(this);
@@ -1057,7 +1081,7 @@
         this.touched = false;
         this.isOpen = true;
         this.root.hidden = false;
-        this.input.setAttribute('aria-expanded', 'true');
+        this.markActive();
         this.view = Day.startOfMonth(this.start || this.min);
         this.focused = this.start || this.min;
         this.render();
@@ -1075,7 +1099,7 @@
 
         this.isOpen = false;
         this.root.hidden = true;
-        this.input.setAttribute('aria-expanded', 'false');
+        this.markActive();
 
         if (commit && this.touched && this.start && this.settings.onApply) {
             this.settings.onApply(this.start, this.end || this.start, this);

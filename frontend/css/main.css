@@ -1276,6 +1276,23 @@ a.hero__mode:active { transform: scale(.97); }
 .searchbar__input::placeholder { color: var(--ink-faint); }
 .searchbar__input:read-only { cursor: pointer; }
 
+/* The field the calendar is currently working on.
+
+   A ring rather than a fill: the field still has to read as a field, and the
+   two dates sit next to each other, so what is needed is a mark saying which of
+   them a click in the calendar will move -- not a second selected-looking
+   thing. Drawn inside, because the fields are butted together with a one-pixel
+   rule between them and an outline would sit on top of its neighbour. */
+.searchbar__field.is-picking {
+  box-shadow: inset 0 0 0 2px var(--brand-accent);
+  border-radius: .5rem;
+}
+
+/* Outside the search bar -- the rebook dialog -- there is no field wrapper to
+   mark, so the control itself carries it. */
+.is-picking:not(.searchbar__field) { outline: 2px solid var(--brand-accent); outline-offset: 1px; }
+.searchbar__field .is-picking { outline: none; }
+
 /* The way back to a one-way trip, now that no tab does it. */
 .searchbar__clear {
   position: absolute;
