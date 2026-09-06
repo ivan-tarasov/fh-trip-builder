@@ -114,6 +114,10 @@
             min: Day.today(),
             start: null,
             span: 1,
+            // What a seat costs on each day, as {"YYYY-MM-DD": number}. Arrives
+            // after the calendar is open -- see setPrices.
+            prices: null,
+            currency: '$',
             onApply: null,
             onOpen: null
         }, options || {});
@@ -125,6 +129,7 @@
         this.isOpen = false;
         this.touched = false;
         this.drag = null;
+        this.prices = settings.prices;
 
         const start = Day.parse(settings.start);
 
@@ -278,7 +283,13 @@
      * and leaves the cells where they are.
      */
     DatePicker.prototype.render = function () {
-        this.cells = new Map();
+        // A list, not a map keyed by date. Two months side by side share days:
+        // November 2026 begins on a Sunday, so its grid opens with 26 to 31
+        // October -- the same six days October's own grid ends with. Keyed by
+        // date, the second copy replaced the first, and everything that follows
+        // -- the fare, the selection, the focus ring -- was written to whichever
+        // grid happened to register last.
+        this.cells = [];
 
         this.months.forEach((month, index) => {
             const first = Day.addMonths(this.view, index);
@@ -311,7 +322,60 @@
             }
         });
 
+        this.paintPrices();
         this.paint();
+    };
+
+    /**
+     * The fares under the days.
+     *
+     * Separate from paint(), which runs on every mouse move while a window is
+     * being dragged: prices do not change as the pointer does, and rewriting
+     * seventy of them per frame to say the same thing is work for nothing.
+     */
+    DatePicker.prototype.paintPrices = function () {
+        if (!this.prices || !this.cells) {
+            return;
+        }
+
+        const known = Object.values(this.prices);
+        // A day worth crossing the calendar for. Within a tenth of the cheapest
+        // fare on the route rather than only the single lowest, because two
+        // days that differ by a pound are the same answer.
+        const bar = known.length ? Math.min.apply(null, known) * 1.1 : 0;
+
+        this.cells.forEach((cell) => {
+            const price = this.prices[cell.dataset.day];
+            const label = cell.querySelector('.datepicker__price');
+
+            if (!label) {
+                return;
+            }
+
+            label.textContent = price === undefined ? '' : this.settings.currency + Math.round(price);
+            cell.classList.toggle('is-cheap', price !== undefined && price <= bar);
+        });
+    };
+
+    /**
+     * Hand the calendar its prices, once they arrive.
+     *
+     * The grid is rebuilt rather than repainted, because a calendar that opened
+     * without prices has no elements to put them in.
+     */
+    DatePicker.prototype.setPrices = function (prices) {
+        const had = Boolean(this.prices);
+
+        this.prices = prices;
+        // The wider cells come with the fares, so the modifier arrives with them.
+        this.root.classList.toggle('datepicker--priced', Boolean(prices));
+
+        if (had) {
+            this.paintPrices();
+        } else {
+            this.render();
+            this.place();
+        }
     };
 
     DatePicker.prototype.cell = function (day, month) {
@@ -321,8 +385,20 @@
         cell.setAttribute('role', 'gridcell');
         cell.id = this.id + '-' + key;
         cell.dataset.day = key;
-        cell.textContent = String(day.getUTCDate());
         cell.tabIndex = -1;
+
+        const number = document.createElement('span');
+
+        number.className = 'datepicker__day';
+        number.textContent = String(day.getUTCDate());
+        cell.appendChild(number);
+
+        if (this.prices) {
+            const price = document.createElement('span');
+
+            price.className = 'datepicker__price';
+            cell.appendChild(price);
+        }
 
         // The full date, because "15" on its own says nothing once focus is
         // moving around a grid.
@@ -337,7 +413,7 @@
             cell.setAttribute('aria-disabled', 'true');
         }
 
-        this.cells.set(key, cell);
+        this.cells.push(cell);
 
         return cell;
     };
@@ -346,8 +422,8 @@
     DatePicker.prototype.paint = function () {
         const today = Day.today();
 
-        this.cells.forEach((cell, key) => {
-            const day = Day.parse(key);
+        this.cells.forEach((cell) => {
+            const day = Day.parse(cell.dataset.day);
             const inRange = this.start && this.end
                 && day.getTime() >= this.start.getTime()
                 && day.getTime() <= this.end.getTime();
@@ -479,11 +555,25 @@
             this.paint();
         }
 
-        const cell = this.cells.get(Day.iso(day));
+        const cell = this.cellFor(day);
 
         if (cell) {
             cell.focus();
         }
+    };
+
+    /**
+     * The cell for a day, preferring the month it belongs to.
+     *
+     * A day at the seam between two months is drawn twice, and the copy in the
+     * neighbouring grid is greyed out -- focusing that one would move the ring
+     * to a day that reads as unavailable.
+     */
+    DatePicker.prototype.cellFor = function (day) {
+        const key = Day.iso(day);
+        const matches = this.cells.filter((cell) => cell.dataset.day === key);
+
+        return matches.find((cell) => !cell.classList.contains('is-outside')) ?? matches[0] ?? null;
     };
 
     DatePicker.prototype.dayAt = function (node) {
@@ -612,8 +702,8 @@
         const start = Day.min(this.start, day);
         const end = Day.max(this.start, day);
 
-        this.cells.forEach((cell, key) => {
-            const at = Day.parse(key);
+        this.cells.forEach((cell) => {
+            const at = Day.parse(cell.dataset.day);
             const inside = at.getTime() >= start.getTime() && at.getTime() <= end.getTime();
 
             cell.classList.toggle('is-in-range', inside);

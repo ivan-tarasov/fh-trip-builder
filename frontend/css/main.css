@@ -772,6 +772,13 @@ a:active {
   text-align: center;
 }
 
+/* Roomier once fares are in the cells -- a four-figure price does not fit the
+   width a two-digit day needs. */
+.datepicker--priced .datepicker__grid th,
+.datepicker--priced .datepicker__grid td { min-width: 3.375rem; }
+
+.datepicker--priced .datepicker__grid td { line-height: 1; padding: .3125rem 0; }
+
 .datepicker__grid th {
   font-size: .75rem;
   font-weight: 600;
@@ -786,8 +793,12 @@ a:active {
 
 .datepicker__grid th.is-weekend { color: var(--ink-faint); }
 
+/* Two lines once there are prices: the day, and what a seat costs that day.
+   The cell has to grow to hold them, which is most of why the reference's
+   calendar is so much wider than a plain one. */
 .datepicker__grid td {
   position: relative;
+  padding: .125rem 0;
   font-size: .875rem;
   color: var(--ink-body);
   cursor: pointer;
@@ -815,7 +826,39 @@ a:active {
   cursor: default;
 }
 
-.datepicker__grid td.is-today { font-weight: 700; }
+.datepicker__grid td.is-today .datepicker__day { font-weight: 700; }
+
+.datepicker__day { display: block; line-height: 1.35; }
+
+/* Quiet by default: the day is what is being chosen and the fare is what helps
+   choose it, so it must not out-shout the number above it. */
+.datepicker__price {
+  display: block;
+  font-size: .6875rem;
+  line-height: 1.2;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Within a tenth of the cheapest fare on the route. Green carries the meaning
+   here, so the weight carries it too -- colour alone would say nothing to
+   anyone who cannot separate these two greens. */
+.datepicker__grid td.is-cheap .datepicker__price {
+  font-weight: 700;
+  color: var(--brand-success);
+}
+
+/* On the chosen days the pill is already accent-filled, so the fare has to sit
+   on that rather than on the page. */
+/* The ends are accent-filled and the middle is tinted, so the fare needs a
+   different colour on each. Excluded rather than ordered: both rules match the
+   ends of a one-day window, and whichever came last would win by accident. */
+.datepicker__grid td.is-in-range:not(.is-start):not(.is-end) .datepicker__price {
+  color: var(--ink-secondary);
+}
+
+.datepicker__grid td.is-start .datepicker__price,
+.datepicker__grid td.is-end .datepicker__price { color: rgba(255, 255, 255, .85); }
 
 /* The middle of the range: square, so consecutive days join up. */
 .datepicker__grid td.is-in-range {
@@ -906,6 +949,8 @@ a:active {
   .datepicker__grid { width: 100%; }
   .datepicker__grid th,
   .datepicker__grid td { min-width: 2rem; line-height: 2rem; }
+  .datepicker--priced .datepicker__grid th,
+  .datepicker--priced .datepicker__grid td { min-width: 2.75rem; }
 }
 
 

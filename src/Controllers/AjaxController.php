@@ -8,6 +8,7 @@ use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Service\FlightFinder;
 
 class AjaxController extends AbstractController
@@ -135,6 +136,89 @@ class AjaxController extends AbstractController
     /**
      * Reject anything that is not a same-origin POST carrying a valid CSRF token.
      */
+    /** How far ahead the calendar can be paged, and so how far a build looks. */
+    private const int PRICE_WINDOW_DAYS = 90;
+
+    /** How old a route's prices may be before they are worked out again. */
+    private const int PRICE_MAX_AGE_HOURS = 24;
+
+    /**
+     * The cheapest fare on each day of a route, for the calendar.
+     *
+     * POST and CSRF like the rest of /ajax, even though this only reads: a
+     * cold route costs up to five seconds to work out, and an endpoint that
+     * spends that much on behalf of any page that cares to ask is a cheap way
+     * to load the machine.
+     *
+     * The answer is whatever is cached. A route nobody has opened before is
+     * built here, which is why the browser asks for this after the calendar is
+     * already on screen rather than before.
+     */
+    public function dayPrices(): void
+    {
+        header('Content-type: application/json; charset=utf-8');
+
+        if (!$this->guardRequest()) {
+            return;
+        }
+
+        $from = strtoupper($this->request->body->str('from'));
+        $to = strtoupper($this->request->body->str('to'));
+
+        if (!self::isCode($from) || !self::isCode($to) || $from === $to) {
+            http_response_code(400);
+            echo json_encode(['status' => 'error', 'message' => 'Wrong format']);
+
+            return;
+        }
+
+        $prices = new RoutePriceRepository($this->connection());
+        $since = date('Y-m-d');
+        $until = date('Y-m-d', strtotime('+' . self::PRICE_WINDOW_DAYS . ' day'));
+
+        if ($prices->isStale($from, $to, self::PRICE_MAX_AGE_HOURS)) {
+            $this->buildOnce($from, $to, $since, $until, $prices);
+        }
+
+        echo json_encode([
+            'status' => 'ok',
+            'prices' => $prices->read($from, $to, $since, $until),
+        ]);
+    }
+
+    /**
+     * Work the route out, unless somebody else already is.
+     *
+     * Two people opening the same cold calendar would otherwise each spend the
+     * same five seconds on the same answer. The one who gets the lock pays; the
+     * other is served whatever is already there and picks the rest up next time.
+     */
+    private function buildOnce(
+        string $from,
+        string $to,
+        string $since,
+        string $until,
+        RoutePriceRepository $prices,
+    ): void {
+        $name = 'route_prices_' . $from . '_' . $to;
+        $connection = $this->connection();
+
+        if ((int) $connection->fetchValue('SELECT GET_LOCK(?, 0)', [$name], 0) !== 1) {
+            return;
+        }
+
+        try {
+            $prices->build($from, $to, $since, $until);
+        } finally {
+            $connection->fetchValue('SELECT RELEASE_LOCK(?)', [$name]);
+        }
+    }
+
+    private static function isCode(string $code): bool
+    {
+        return preg_match('/^[A-Z0-9]{3}$/', $code) === 1;
+    }
+
     private function guardRequest(): bool
     {
         if (!$this->request->isPost()) {

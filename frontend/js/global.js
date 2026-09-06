@@ -52,7 +52,59 @@
                 show(input, hidden, flex, start, Day.add(start, spanOf(flex) - 1));
             };
 
-            const pickerFor = (input, hidden, flex, onPicked) => new window.TripDatePicker(input, {
+            // What a seat costs on each day of the route, fetched once the
+            // calendar is already on screen.
+            //
+            // Never before it: a route nobody has opened yet has to be worked
+            // out, which runs to seconds on a busy one. Asking first would mean
+            // a calendar that takes five seconds to appear; asking after means
+            // one that appears at once and fills in.
+            const asked = new Map();
+
+            const pricesFor = (picker, fromField, toField) => {
+                const from = document.getElementById(fromField)?.value;
+                const to = document.getElementById(toField)?.value;
+
+                if (!from || !to || from === to) {
+                    return;
+                }
+
+                const route = from + '-' + to;
+
+                // Once per route per page, and only once it has answered with
+                // something. An empty answer means somebody else is working the
+                // route out right now, so the next open should ask again rather
+                // than leave this calendar priceless for the rest of the visit.
+                if (asked.get(picker) === route) {
+                    return;
+                }
+
+                asked.set(picker, route);
+
+                const body = new FormData();
+
+                body.append('from', from);
+                body.append('to', to);
+                body.append('csrf_token', csrfToken());
+
+                fetch('/ajax/day-prices', {method: 'POST', body: body})
+                    .then((response) => response.ok ? response.json() : null)
+                    .then((data) => {
+                        if (data && data.prices && Object.keys(data.prices).length) {
+                            picker.setPrices(data.prices);
+
+                            return;
+                        }
+
+                        asked.delete(picker);
+                    })
+                    // A calendar without fares still picks dates, so a route
+                    // that cannot be priced is not worth an error in anyone's
+                    // console -- but it is worth asking again next time.
+                    .catch(() => asked.delete(picker));
+            };
+
+            const pickerFor = (input, hidden, flex, onPicked, onOpened) => new window.TripDatePicker(input, {
                 start: hidden.value || null,
                 span: spanOf(flex),
                 maxSpan: MAX_SPAN,
@@ -60,9 +112,11 @@
                 // two fields are for -- but how flexible one end of the trip is,
                 // so it is dragged rather than clicked out over two days.
                 drag: true,
-                onApply: onPicked
+                onApply: onPicked,
+                onOpen: onOpened
             });
 
+            // The return leg flies the other way, so it is priced the other way.
             const departPicker = pickerFor(departInput, departValue, departFlex, (start, end) => {
                 show(departInput, departValue, departFlex, start, end);
 
@@ -76,12 +130,12 @@
                 }
 
                 returnPicker.min = start;
-            });
+            }, (picker) => pricesFor(picker, 'departing_airport-native', 'arrival_airport-native'));
 
             const returnPicker = pickerFor(returnInput, returnValue, returnFlex, (start, end) => {
                 show(returnInput, returnValue, returnFlex, start, end);
                 clearReturn?.removeAttribute('hidden');
-            });
+            }, (picker) => pricesFor(picker, 'arrival_airport-native', 'departing_airport-native'));
 
             // A return cannot be taken before the outbound leaves, so the
             // calendar does not offer one.

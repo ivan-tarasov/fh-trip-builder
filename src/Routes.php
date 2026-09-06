@@ -64,6 +64,7 @@ class Routes
 
         '/ajax/add-trip' => 'Ajax@addTrip',
         '/ajax/cancel-booking' => 'Ajax@cancelBooking',
+        '/ajax/day-prices' => 'Ajax@dayPrices',
 
     ];
 
