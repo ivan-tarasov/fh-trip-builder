@@ -148,6 +148,10 @@
             // it is not clipped by anything and has the whole screen to open in.
             overlay: false,
             parent: document.body,
+            // An element the panel must open clear of, where the field is part
+            // of something larger than itself. Nothing by default: a field in a
+            // dialog is the whole of what it belongs to.
+            clears: null,
             min: Day.today(),
             start: null,
             span: 1,
@@ -1231,11 +1235,26 @@
 
         const left = Math.min(...rects.map((rect) => rect.left));
         const right = Math.max(...rects.map((rect) => rect.right));
+        const bottoms = rects.map((rect) => rect.bottom);
+
+        // The panel clears the whole control it belongs to, not only the fields
+        // it serves. The search bar wraps to two rows on a narrow window, and a
+        // panel hung from the dates alone opened straight through the row that
+        // had gone underneath them.
+        if (this.settings.clears) {
+            bottoms.push(this.settings.clears.getBoundingClientRect().bottom);
+        }
 
         return {
             left: left,
             width: right - left,
-            bottom: Math.max(...rects.map((rect) => rect.bottom))
+            // Both edges. Without the top, place() had nothing to subtract a
+            // height from and wrote NaN for the panel's own top, which the
+            // style is right to refuse -- so a calendar that did not fit below
+            // its field was left wherever the flow had put it, and on a bar
+            // that sticks it sat a bar's padding too low.
+            top: Math.min(...rects.map((rect) => rect.top)),
+            bottom: Math.max(...bottoms)
         };
     };
 
@@ -1261,10 +1280,16 @@
         // Above the field where there is room, below it where there is not: a
         // dialog sits in the middle of the screen and its fields are as likely
         // to have the space above them.
+        //
+        // Only a dialog, though. The search bar lives at the top of the page
+        // and sticks to the header as it scrolls, so what is above it is the
+        // menu -- room by the measurement, and the wrong place by every other
+        // reading. It opens downwards there whether or not the whole calendar
+        // fits, and the page scrolls to the rest.
         const below = anchor.bottom + 8;
         const height = root.offsetHeight;
         const fitsBelow = below + height <= document.documentElement.clientHeight - 8;
-        const top = fitsBelow || anchor.top - height - 8 < 8
+        const top = !this.settings.overlay || fitsBelow || anchor.top - height - 8 < 8
             ? below
             : anchor.top - height - 8;
 

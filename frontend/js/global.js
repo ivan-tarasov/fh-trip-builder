@@ -138,11 +138,33 @@
                     .catch(() => asked.delete(route));
             };
 
+            // The calendar hangs from whatever carries the search bar, so a bar
+            // that sticks to the header takes its calendar with it. Parented to
+            // the body it was positioned once, when it opened, and then sat
+            // where the page had been rather than where the field now is.
+            //
+            // Found by asking rather than by naming the two bands that do this:
+            // the homepage and the results page stick different elements, and a
+            // third would have to be remembered here.
+            const carrier = (node) => {
+                for (let el = node.parentElement; el && el !== document.body; el = el.parentElement) {
+                    if (getComputedStyle(el).position === 'sticky') {
+                        return el;
+                    }
+                }
+
+                return document.body;
+            };
+
             // One calendar for both fields, the way the reference works: the
             // field being edited owns the clicks and the other leg stays on
             // screen dimmed, so the trip reads as a whole while either end of
             // it is being changed.
             const picker = new window.TripDatePicker(departInput, {
+                parent: carrier(departInput),
+                // The bar wraps on a narrow window, putting the party and the
+                // submit on a row of their own under the dates.
+                clears: departInput.closest('.searchbar'),
                 legs: [
                     {name: 'out', input: departInput, start: departValue.value || null, span: spanOf(departFlex)},
                     {name: 'back', input: returnInput, start: returnValue.value || null, span: spanOf(returnFlex)}
