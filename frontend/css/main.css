@@ -4340,28 +4340,65 @@ textarea {
   color: var(--brand-accent-700);
 }
 
-/* "Cancelled", said across the card rather than in the corner of it.
+/* A cancelled booking is stamped, not badged and not banded.
 
-   The pill alone was the whole answer to the one question this page exists to
-   answer, at 13px, beside a 18px reference -- the least prominent thing on a
-   card whose every other line it invalidates. This is a solid bar because a
-   tint at this width reads as decoration.
+   A tint the size of the word "Confirmed" was the quietest thing on a card
+   whose every other line it invalidates. A bar of solid red across the top
+   fixed that and overcorrected: it shouted before the reader had reached
+   anything to shout about, and three of them down a page was all the page was.
 
-   #FFFFFF on #B02A37 measures 6.50, and the page banner carries the same pair
-   one step wider. */
-.booking-void {
-  display: flex;
+   A stamp is what a travel document actually carries when it stops being
+   valid -- outlined, off-square, sitting on top of the thing it voids rather
+   than replacing it. It takes the badge's place, so nothing moves.
+
+   #B02A37 on white measures 6.50, and the outline is the same colour at full
+   strength rather than a tint, so the text clears AA at this size. */
+.booking-stamp {
+  display: inline-flex;
   align-items: center;
-  gap: .625rem;
-  margin: 0;
-  padding: .625rem 1.25rem;
-  border-radius: .75rem .75rem 0 0;
-  background-color: var(--brand-danger);
-  color: #FFFFFF;
-  font-size: .875rem;
-  line-height: 1.4;
+  padding: .25rem .625rem;
+  border: 2px solid var(--brand-danger);
+  border-radius: .25rem;
+  color: var(--brand-danger);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: rotate(-3deg);
+  /* The double rule is the stamp's whole tell; without it this is a red
+     button. Drawn as a shadow so it costs no extra element. */
+  box-shadow: 0 0 0 1px #FFFFFF, 0 0 0 3px rgba(176, 42, 55, .28);
 }
-.booking-void strong { font-weight: 700; }
+.booking-stamp--lg {
+  padding: .375rem 1rem;
+  font-size: 1rem;
+  letter-spacing: .16em;
+  transform: rotate(-4deg);
+}
+
+/* The card keeps every bit of its text contrast -- it is still a receipt
+   somebody may need -- and loses the colour that says "live": the carrier
+   marks go grey, which is the difference you see before you have read a word. */
+.booking-card--cancelled .airline-logo { filter: grayscale(1); opacity: .65; }
+
+/* The sentence under the stamp on the booking's own page. It explains what the
+   stamp means once; the stamp does not repeat it on every block below. */
+.booking-note {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin: 1.5rem 0 0;
+  padding: .75rem 1rem;
+  border: 1px solid #F3C7CC;
+  border-left: 3px solid var(--brand-danger);
+  border-radius: .5rem;
+  background-color: #FDF4F5;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+}
+.booking-note i { color: var(--brand-danger); margin-top: .1875rem; }
 
 /* On its way to the cancelled page. Opacity and a collapse, both cheap to
    composite; `ease-out` because the card is leaving and the movement should be
@@ -4375,12 +4412,6 @@ textarea {
 }
 @media (prefers-reduced-motion: reduce) {
   .booking-card--leaving { transition: none; }
-}
-.booking-void--page {
-  margin: 1.5rem 0 0;
-  border-radius: .75rem;
-  align-items: flex-start;
-  padding: .875rem 1.25rem;
 }
 
 /* The reference, the name on it, and the date it was paid for -- what somebody
@@ -4436,19 +4467,38 @@ textarea {
    seats, check-in -- is a template plus a line in the list at the top of
    detail.html.twig. The heading sits outside the panel so the stack can be
    read by its headings alone. */
-.bkblock { margin-bottom: 1.5rem; }
+/* Blocks sit in a grid so two short ones can share a row rather than each
+   taking the full width for four lines. */
+.bkblocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.25rem;
+  align-items: start;
+}
+.bkblock { grid-column: 1 / -1; margin-bottom: 1.5rem; }
+.bkblock--half { grid-column: span 1; }
+
+/* These were 13px uppercase grey -- the same treatment as the "DEPARTING"
+   label inside a card, which made the name of a whole section look like an
+   annotation on the thing above it. A section heading is set as a heading:
+   sentence case, dark, and larger than the body it introduces. */
 .bkblock__title {
   display: flex;
   align-items: center;
   gap: .5rem;
-  margin: 0 0 .625rem;
-  font-size: .8125rem;
+  margin: 0 0 .75rem;
+  font-size: 1.125rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  color: var(--ink-secondary);
+  line-height: 1.3;
+  letter-spacing: -.01em;
+  color: var(--ink-body);
 }
-.bkblock__icon { color: var(--ink-faint); font-size: .875rem; }
+.bkblock__icon { color: var(--brand-accent); font-size: 1rem; }
+
+@media (max-width: 767.98px) {
+  .bkblocks { grid-template-columns: minmax(0, 1fr); }
+  .bkblock--half { grid-column: 1 / -1; }
+}
 .bkblock__body {
   padding: 1.25rem;
   border: 1px solid var(--line);
@@ -4460,47 +4510,59 @@ textarea {
    panel: they are one journey. */
 .bkflights__half--next { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
 
-/* Labels in their own column, values flush left beneath each other.
-
-   The receipt was a <dl> that pushed every value to the right edge, which is
-   right for a column of figures and wrong for everything else on it: six lines
-   of fare rules and one line per traveller, right-aligned, have no left edge to
-   return to. The figures keep the right edge, further down, on their own. */
-.receipt__facts { margin: 0; }
-.receipt__row {
-  display: grid;
-  grid-template-columns: minmax(6rem, 9rem) 1fr;
-  gap: .25rem 1.5rem;
-  padding: .625rem 0;
+/* Who is on the booking. One row each, name first: a manifest is scanned down
+   its left edge. */
+.people { margin: 0; padding: 0; list-style: none; }
+.people__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: .5rem 0;
   border-bottom: 1px solid var(--line);
 }
-.receipt__row dt { font-size: .8125rem; font-weight: 600; color: var(--ink-muted); }
-.receipt__row dd { margin: 0; color: var(--ink-body); font-size: .9375rem; }
-.receipt__line { display: block; }
-.receipt__person { display: block; margin-bottom: .25rem; }
-.receipt__person:last-child { margin-bottom: 0; }
-.receipt__person-name { font-weight: 600; }
-.receipt__person-type { color: var(--ink-muted); font-size: .8125rem; margin-left: .375rem; }
-.receipt__fare-name { display: block; font-weight: 600; }
+.people__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.people__name { font-weight: 600; color: var(--ink-body); }
+.people__type { font-size: .8125rem; color: var(--ink-muted); }
 
-/* Six terms in one column is a tall thin list beside a wide empty space. Two
-   columns where there is room, and never mid-item. */
-.receipt__rules {
-  margin: .5rem 0 0;
-  padding: 0;
-  list-style: none;
-  columns: 2;
-  column-gap: 1.5rem;
+/* Label and value, both left-aligned. Used by contact and by the receipt's
+   payment lines -- anywhere a short label introduces a short value. */
+.facts { margin: 0; }
+.facts__row {
+  display: grid;
+  grid-template-columns: minmax(5rem, 7rem) 1fr;
+  gap: .25rem 1rem;
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--line);
 }
-.receipt__rules .rules__item { break-inside: avoid; }
+.facts__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.facts__row dt { font-size: .8125rem; font-weight: 600; color: var(--ink-muted); }
+.facts__row dd { margin: 0; color: var(--ink-body); font-size: .9375rem; word-break: break-word; }
 
-/* Amounts, right-aligned and apart from the facts: a column of figures is
-   compared by its last digit. */
-.receipt__amounts {
-  margin: 1.25rem 0 0;
-  margin-left: auto;
-  max-width: 22rem;
+/* What the ticket allows. */
+.fare__name { margin: 0 0 .5rem; font-size: 1rem; font-weight: 600; color: var(--ink-body); }
+.fare__rules { margin: 0; padding: 0; list-style: none; }
+.fare__rules .rules__item { break-inside: avoid; }
+
+/* Whether a direction is behind you. Quiet: it qualifies the heading it sits
+   beside rather than competing with the booking's own status. */
+.leg-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .3125rem;
+  padding: .125rem .5rem;
+  border-radius: 999px;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: none;
 }
+.leg-state--flown { background-color: var(--surface-sunken); color: var(--ink-secondary); }
+.leg-state--ahead { background-color: var(--brand-tint); color: var(--brand-accent-700); }
+.bkflights__label { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+/* Amounts, right-aligned: a column of figures is compared by its last digit. */
+.receipt__amounts { margin: 0; }
 .receipt__amount { display: flex; justify-content: space-between; gap: 1.5rem; padding: .3125rem 0; }
 .receipt__amount dt { font-weight: 400; color: var(--ink-secondary); font-size: .9375rem; }
 .receipt__amount dd { margin: 0; color: var(--ink-body); font-size: .9375rem; font-variant-numeric: tabular-nums; }
@@ -4508,12 +4570,14 @@ textarea {
 .receipt__amount--total dt,
 .receipt__amount--total dd { font-size: 1.25rem; font-weight: 700; color: var(--ink-body); }
 .receipt__currency { font-size: .8125rem; font-weight: 600; color: var(--ink-muted); }
-.receipt__no-price { margin: 1rem 0 0; font-size: .875rem; color: var(--ink-muted); }
+.receipt__method { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--line); }
+.receipt__no-price { margin: 0; font-size: .875rem; color: var(--ink-muted); }
+
+/* Inside a week, the countdown is the reason the card is being looked at. */
+.booking-when--soon { color: var(--brand-accent-700); font-weight: 600; }
 
 @media (max-width: 575.98px) {
-  .receipt__row { grid-template-columns: 1fr; gap: .125rem; }
-  .receipt__rules { columns: 1; }
-  .receipt__amounts { max-width: none; }
+  .facts__row { grid-template-columns: 1fr; gap: .125rem; }
 }
 
 

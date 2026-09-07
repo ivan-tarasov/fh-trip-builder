@@ -2,12 +2,26 @@
    each direction shows on a card, then the leg-by-leg timeline underneath it.
 
    Both halves used to be split across a card body and its footer, which put the
-   summary and the detail of the same flight in two different places. #}
+   summary and the detail of the same flight in two different places.
+
+   Each direction says whether it has been flown. Per direction and not per
+   booking, because on a round trip the outbound is usually behind you while the
+   return is still to come, and "this booking is in the past" cannot say that.
+   A cancelled booking is not marked flown at all -- nobody was on it. #}
 {% for half in halves %}
     {% if half.direction %}
         <div class="bkflights__half{{ not loop.first ? ' bkflights__half--next' : '' }}">
-            <p class="booking-card__label">
-                <i class="fas {{ half.icon }}" aria-hidden="true"></i> {{ half.label }}
+            <p class="booking-card__label bkflights__label">
+                <span>
+                    <i class="fas {{ half.icon }}" aria-hidden="true"></i> {{ half.label }}
+                </span>
+                {% if half.direction.flown and not booking.is_cancelled %}
+                    <span class="leg-state leg-state--flown">
+                        <i class="fas fa-check" aria-hidden="true"></i> Flown
+                    </span>
+                {% elseif not booking.is_cancelled %}
+                    <span class="leg-state leg-state--ahead">To come</span>
+                {% endif %}
             </p>
             {% include 'search/cards/itinerary.html.twig' with { 'direction': half.direction } only %}
             {% include 'search/cards/itinerary-detail.html.twig' with { 'direction': half.direction } only %}

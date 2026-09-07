@@ -18,12 +18,24 @@ use TripBuilder\View\TwigRenderer;
 
 class MyController extends AbstractController
 {
+    // Where the upcoming list is cut. A week is what somebody is packing for;
+    // a month is what they are planning around. Past that the distinction stops
+    // meaning anything, so there is only one more pile.
+    private const int DAYS_THIS_WEEK = 7;
+    private const int DAYS_THIS_MONTH = 30;
+
     // Written by the browser; global.js owns the other half of this contract.
     private const string SAVED_COOKIE = 'tb_saved_flights';
     private const int SAVED_LIMIT = 50;
 
     /**
-     * Trips still on: the ones ahead, then the ones already flown.
+     * Trips still ahead, grouped by how soon they are.
+     *
+     * Grouped by nearness rather than by calendar month. A month heading says
+     * where a trip sits in the year, which is not a question anybody opens this
+     * page with -- "is there anything I need to get ready for?" is, and a trip
+     * four days out and one four months out want different attention. The
+     * bounds do not overlap, so nothing has to be read twice to be placed.
      *
      * @throws Exception|\Twig\Error\Error
      */
@@ -32,7 +44,22 @@ class MyController extends AbstractController
         $sorted = $this->sortedBookings();
 
         $this->renderBookings('active', [
-            ['key' => 'upcoming', 'title' => 'Upcoming', 'bookings' => $sorted['upcoming']],
+            ['key' => 'week', 'title' => 'This week', 'bookings' => $sorted['week']],
+            ['key' => 'month', 'title' => 'Within a month', 'bookings' => $sorted['month']],
+            ['key' => 'later', 'title' => 'Later', 'bookings' => $sorted['later']],
+        ], $sorted);
+    }
+
+    /**
+     * Trips already flown.
+     *
+     * @throws Exception|\Twig\Error\Error
+     */
+    public function past(): void
+    {
+        $sorted = $this->sortedBookings();
+
+        $this->renderBookings('past', [
             ['key' => 'past', 'title' => 'Past', 'bookings' => $sorted['past']],
         ], $sorted);
     }
@@ -57,7 +84,7 @@ class MyController extends AbstractController
 
     /**
      * @param list<array{key: string, title: string, bookings: list<array<string, mixed>>}> $groups
-     * @param array{upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>, cancelled: list<array<string, mixed>>} $sorted
+     * @param array<string, list<array<string, mixed>>> $sorted
      *
      * @throws \Twig\Error\Error
      */
@@ -68,10 +95,13 @@ class MyController extends AbstractController
         echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
             'tab' => $tab,
             'groups' => $groups,
-            // Both counts on both pages: the tab strip names them whichever
+            // Every count on every page: the tab strip names them all whichever
             // side it is drawn from.
-            'active_count' => count($sorted['upcoming']) + count($sorted['past']),
-            'cancelled_count' => count($sorted['cancelled']),
+            'counts' => [
+                'active' => count($sorted['week']) + count($sorted['month']) + count($sorted['later']),
+                'past' => count($sorted['past']),
+                'cancelled' => count($sorted['cancelled']),
+            ],
             // From what was built, not from what was read: a page whose every
             // row was skipped has nothing to show and needs the empty state.
             'has_rows' => $shown > 0,
@@ -79,9 +109,9 @@ class MyController extends AbstractController
     }
 
     /**
-     * Every booking made in this browser, in three piles and in reading order.
+     * Every booking made in this browser, in piles and in reading order.
      *
-     * @return array{upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>, cancelled: list<array<string, mixed>>}
+     * @return array<string, list<array<string, mixed>>>
      *
      * @throws Exception
      */
@@ -134,7 +164,35 @@ class MyController extends AbstractController
             (string) ($a['created'] ?? ''),
         ));
 
-        return ['upcoming' => $upcoming, 'past' => $past, 'cancelled' => $cancelled];
+        return self::byNearness($upcoming) + ['past' => $past, 'cancelled' => $cancelled];
+    }
+
+    /**
+     * Trips ahead, split into this week, this month and later.
+     *
+     * A row whose dates would not parse has no `days_until` and lands in
+     * "Later" -- the one pile where being wrong about the order costs nothing.
+     *
+     * @param list<array<string, mixed>> $upcoming
+     *
+     * @return array{week: list<array<string, mixed>>, month: list<array<string, mixed>>, later: list<array<string, mixed>>}
+     */
+    private static function byNearness(array $upcoming): array
+    {
+        $piles = ['week' => [], 'month' => [], 'later' => []];
+
+        foreach ($upcoming as $booking) {
+            $days = $booking['days_until'] ?? null;
+
+            $piles[match (true) {
+                $days === null => 'later',
+                $days <= self::DAYS_THIS_WEEK => 'week',
+                $days <= self::DAYS_THIS_MONTH => 'month',
+                default => 'later',
+            }][] = $booking;
+        }
+
+        return $piles;
     }
 
     /**

@@ -18,8 +18,10 @@
    plus a line here -- baggage, seats, check-in, whatever comes next.
 
    `when` keeps a block that has nothing to say from drawing an empty shell.
-   The template path is written out rather than built from the key, so a block
-   can be found by searching for where it is used. #}
+   `half` lets two short blocks share a row instead of each taking the full
+   width for four lines of content. The template path is written out rather
+   than built from the key, so a block can be found by searching for where it
+   is used. #}
 {% set blocks = [
     {
         'key': 'flights',
@@ -29,11 +31,36 @@
         'when': booking.outbound or booking.return
     },
     {
+        'key': 'travellers',
+        'title': 'Travellers',
+        'icon': 'fa-user-group',
+        'template': 'my/bookings/blocks/travellers.html.twig',
+        'when': true,
+        'half': true
+    },
+    {
+        'key': 'contact',
+        'title': 'Contact',
+        'icon': 'fa-envelope',
+        'template': 'my/bookings/blocks/contact.html.twig',
+        'when': booking.contact_email or booking.contact_phone,
+        'half': true
+    },
+    {
+        'key': 'fare',
+        'title': 'Fare',
+        'icon': 'fa-ticket',
+        'template': 'my/bookings/blocks/fare.html.twig',
+        'when': booking.fare_brand,
+        'half': true
+    },
+    {
         'key': 'receipt',
         'title': 'Receipt',
         'icon': 'fa-receipt',
         'template': 'my/bookings/blocks/receipt.html.twig',
-        'when': true
+        'when': true,
+        'half': true
     }
 ] %}
 
@@ -41,17 +68,14 @@
 <main role="main" class="flex-shrink-0 mb-5">
     <div class="container bookings">
 
-        {# Said first and said plainly. A pill in the corner of a header is not
-           enough for the one fact that changes what every other fact on this
-           page means. #}
+        {# Said once, in a sentence, before anything it invalidates. The stamp
+           beside the reference carries it visually; this says what it means.
+           There is no cancelled-on date stored, so none is claimed. #}
         {% if booking.is_cancelled %}
-            <div class="booking-void booking-void--page" role="status">
-                <i class="fas fa-ban" aria-hidden="true"></i>
-                <span>
-                    <strong>This booking was cancelled.</strong>
-                    The flights below are no longer held and the reference will not check in.
-                </span>
-            </div>
+            <p class="booking-note" role="status">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                These flights are no longer held, and the reference will not check in.
+            </p>
         {% endif %}
 
         {# Who this belongs to and what to quote down a phone. It leads the page
@@ -90,9 +114,13 @@
             </div>
 
             <div class="booking-head__state">
-                <span class="booking-status booking-status--{{ booking.is_cancelled ? 'cancelled' : (booking.is_past ? 'flown' : 'confirmed') }}">
-                    {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
-                </span>
+                {% if booking.is_cancelled %}
+                    <span class="booking-stamp booking-stamp--lg">{{ booking.status_label }}</span>
+                {% else %}
+                    <span class="booking-status booking-status--{{ booking.is_past ? 'flown' : 'confirmed' }}">
+                        {{ booking.is_past ? 'Flown' : booking.status_label }}
+                    </span>
+                {% endif %}
                 {% if booking.departs_in and not booking.is_cancelled %}
                     <span class="booking-when">
                         <i class="fas fa-clock" aria-hidden="true"></i> {{ booking.departs_in }}
@@ -119,19 +147,22 @@
             </button>
         </div>
 
-        {% for block in blocks %}
-            {% if block.when %}
-                <section class="bkblock" aria-labelledby="bkblock-{{ block.key }}">
-                    <h2 class="bkblock__title" id="bkblock-{{ block.key }}">
-                        <i class="fas {{ block.icon }} bkblock__icon" aria-hidden="true"></i>
-                        {{ block.title }}
-                    </h2>
-                    <div class="bkblock__body">
-                        {% include block.template with { 'booking': booking, 'halves': halves } only %}
-                    </div>
-                </section>
-            {% endif %}
-        {% endfor %}
+        <div class="bkblocks">
+            {% for block in blocks %}
+                {% if block.when %}
+                    <section class="bkblock{{ block.half|default(false) ? ' bkblock--half' : '' }}"
+                             aria-labelledby="bkblock-{{ block.key }}">
+                        <h2 class="bkblock__title" id="bkblock-{{ block.key }}">
+                            <i class="fas {{ block.icon }} bkblock__icon" aria-hidden="true"></i>
+                            {{ block.title }}
+                        </h2>
+                        <div class="bkblock__body">
+                            {% include block.template with { 'booking': booking, 'halves': halves } only %}
+                        </div>
+                    </section>
+                {% endif %}
+            {% endfor %}
+        </div>
     </div>
 </main>
 

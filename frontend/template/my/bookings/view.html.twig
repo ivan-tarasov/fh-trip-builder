@@ -1,20 +1,23 @@
 {% extends 'layout.html.twig' %}
 
-{% block title %}{{ tab == 'cancelled' ? 'Cancelled bookings' : 'My bookings' }}{% endblock %}
+{% set titles = { 'active': 'My bookings', 'past': 'Past bookings', 'cancelled': 'Cancelled bookings' } %}
 
-{# Two addresses, drawn as a tab strip.
+{% block title %}{{ titles[tab] }}{% endblock %}
 
-   Cancelled trips are off on their own page rather than filed under the rest.
-   Mixed in, every glance at the list meant re-reading the status of everything
-   on it, and the one question the page exists to answer -- is this trip still
-   on? -- was the slowest one to get to.
+{# Three addresses, drawn as a tab strip.
+
+   Flown and cancelled trips are off on their own pages rather than filed under
+   the ones still to come. Mixed in, every glance at the list meant re-reading
+   the status of everything on it, and the one question the page exists to
+   answer -- what is coming up? -- was the slowest one to get to.
 
    Real links, not a JS tab widget: this app renders on the server, and a
    cancelled booking is exactly the kind of thing somebody wants to send to an
    airline. Back and bookmark both work because there is nothing to work around. #}
 {% set tabs = [
-    { 'key': 'active', 'title': 'Active', 'href': '/my/bookings', 'count': active_count },
-    { 'key': 'cancelled', 'title': 'Cancelled', 'href': '/my/bookings/cancelled', 'count': cancelled_count }
+    { 'key': 'active', 'title': 'Active', 'href': '/my/bookings' },
+    { 'key': 'past', 'title': 'Past', 'href': '/my/bookings/past' },
+    { 'key': 'cancelled', 'title': 'Cancelled', 'href': '/my/bookings/cancelled' }
 ] %}
 
 {% block content %}
@@ -27,17 +30,21 @@
 
         <nav class="bookings-tabs" aria-label="Booking status">
             {% for item in tabs %}
+                {# The attribute is written by the template rather than
+                   printed from an expression: autoescaping is on, and a quoted
+                   attribute built inside {{ }} is one Twig version away from
+                   arriving as &quot;. #}
                 <a href="{{ item.href }}"
                    class="bookings-tabs__tab{{ item.key == tab ? ' is-current' : '' }}"
-                   {{ item.key == tab ? 'aria-current="page"' : '' }}>
+                   {% if item.key == tab %}aria-current="page"{% endif %}>
                     {{ item.title }}
-                    <span class="bookings-tabs__count">{{ item.count }}</span>
+                    <span class="bookings-tabs__count">{{ counts[item.key] }}</span>
                 </a>
             {% endfor %}
         </nav>
 
-        {# Cancelling changes a card in place rather than moving it, which gives
-           a screen reader no cue on its own. #}
+        {# A cancelled card leaves this page for the cancelled one. Something
+           disappearing is not an event a screen reader announces on its own. #}
         <p class="visually-hidden js-bookings-live" role="status" aria-live="polite"></p>
 
         {% for group in groups %}

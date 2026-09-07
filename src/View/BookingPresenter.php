@@ -55,6 +55,15 @@ final readonly class BookingPresenter
         $storedReturn = StoredItinerary::fromJson($row['flight_return'] ?? null);
         $return = $storedReturn === null ? null : $this->itinerary->direction($storedReturn)['direction'];
 
+        // Per direction, not per booking: on a round trip the outbound is
+        // usually behind you while the return is still ahead, and a page that
+        // can only say "past" for the whole booking cannot show that.
+        $outbound['flown'] = $this->hasFlown($stored);
+
+        if ($return !== null && $storedReturn !== null) {
+            $return['flown'] = $this->hasFlown($storedReturn);
+        }
+
         $status = BookingStatus::fromRow($row['status'] ?? null);
         $reference = trim((string) ($row['reference'] ?? ''));
 
@@ -120,6 +129,10 @@ final readonly class BookingPresenter
             // under "past" hides the half the traveller still needs.
             'is_past' => $endsAt !== null && $endsAt < $this->now,
             'departs_in' => $this->departsIn($startsAt),
+            // Whole days to departure, for grouping and for marking a trip
+            // that is close enough to need packing for. Null once it has gone,
+            // and on a row whose dates would not parse.
+            'days_until' => $this->daysUntil($startsAt),
             'rebook' => $this->rebook($stored, $storedReturn),
         ];
     }
@@ -192,6 +205,31 @@ final readonly class BookingPresenter
         $segments = $itinerary->segments;
 
         return $this->time($segments[count($segments) - 1]->arrive->date_time ?? null);
+    }
+
+    /**
+     * Whole days from today to the departure, or null if there is no departure
+     * still ahead to count to.
+     */
+    private function daysUntil(?DateTimeImmutable $startsAt): ?int
+    {
+        if ($startsAt === null || $startsAt <= $this->now) {
+            return null;
+        }
+
+        // From midnight to midnight: a flight tomorrow morning is "1 day away"
+        // however late tonight the page is being read.
+        return (int) $this->now->setTime(0, 0)->diff($startsAt->setTime(0, 0))->days;
+    }
+
+    /**
+     * Whether this direction is behind us -- its last arrival has passed.
+     */
+    private function hasFlown(object $itinerary): bool
+    {
+        $endsAt = $this->endsAt($itinerary);
+
+        return $endsAt !== null && $endsAt < $this->now;
     }
 
     /**

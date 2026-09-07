@@ -1,0 +1,16 @@
+{# Where the airline writes and rings. Kept apart from the traveller list
+   because it is one address for the booking, not one per person. #}
+<dl class="facts">
+    {% if booking.contact_email %}
+        <div class="facts__row">
+            <dt>Email</dt>
+            <dd><a href="mailto:{{ booking.contact_email }}">{{ booking.contact_email }}</a></dd>
+        </div>
+    {% endif %}
+    {% if booking.contact_phone %}
+        <div class="facts__row">
+            <dt>Phone</dt>
+            <dd><a href="tel:{{ booking.contact_phone|replace({' ': ''}) }}">{{ booking.contact_phone }}</a></dd>
+        </div>
+    {% endif %}
+</dl>
