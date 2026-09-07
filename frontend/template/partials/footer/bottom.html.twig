@@ -59,9 +59,19 @@
        in a tooltip that vanishes and is not announced. The field is still
        type="email", so the right keyboard comes up on a phone; the message is
        ours to place and to keep on screen. #}
-    <form class="footer__subscribe js-subscribe" action="/ajax/subscribe" method="post" novalidate>
+    {% set notice = subscribe_notice() %}
+
+    <form class="footer__subscribe js-subscribe" id="fare-alerts"
+          action="/ajax/subscribe" method="post" novalidate>
         <h2 class="footer__title">Fare alerts</h2>
         <p class="footer__subscribe-text">A note when a fare on a route you searched drops.</p>
+
+        {# Both carried in the form, because without scripting there is no
+           fetch to put the token in a header and no way to know afterwards
+           which page the visitor was on. The endpoint refuses a return_to that
+           is not one of our own paths. #}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ current_page() }}">
 
         <div class="footer__subscribe-row">
             <label class="visually-hidden" for="subscribe-email">Email address</label>
@@ -71,10 +81,12 @@
             <button class="footer__subscribe-submit" type="submit">Subscribe</button>
         </div>
 
-        {# aria-live, because the answer arrives after the button has been
-           pressed and focus has not moved: without it a screen reader is never
-           told whether anything happened. #}
-        <p class="footer__subscribe-note js-subscribe-note" role="status" aria-live="polite"></p>
+        {# aria-live, because with the script running the answer arrives after
+           the button has been pressed and focus has not moved: without it a
+           screen reader is never told whether anything happened. Rendered full
+           only for a browser that posted the form and was sent back here. #}
+        <p class="footer__subscribe-note js-subscribe-note" role="status" aria-live="polite"
+           {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>{{ notice ? notice.message : '' }}</p>
         <p class="footer__subscribe-consent">We store the address to send those alerts, nothing else.</p>
     </form>
 </div>

@@ -17,6 +17,9 @@ class AjaxController extends AbstractController
     /** The longest address SMTP will carry, so anything longer was never deliverable. */
     private const int EMAIL_MAX = 254;
 
+    /** Where a form post leaves its answer for the page it is sent back to. */
+    private const string SUBSCRIBE_NOTICE = 'subscribe_notice';
+
     private array $get;
 
     public function addTrip(): void
@@ -137,9 +140,6 @@ class AjaxController extends AbstractController
         $this->get = $params;
     }
 
-    /**
-     * Reject anything that is not a same-origin POST carrying a valid CSRF token.
-     */
     /** How far ahead the calendar can be paged, and so how far a build looks. */
     private const int PRICE_WINDOW_DAYS = 90;
 
@@ -238,15 +238,24 @@ class AjaxController extends AbstractController
      * what somebody typed and dropped it -- there was nowhere to put an
      * address. There is now, and this is the other half.
      *
+     * Reachable two ways. The footer's script sends fetch and asks for JSON;
+     * with scripting off the same form posts itself and the browser wants a
+     * page. Answering JSON to a browser that has navigated puts a wall of
+     * braces on screen where the site used to be, so that case is sent back to
+     * the page it came from carrying the message in the session.
+     *
      * Every answer says what actually happened. "Already on the list" is not an
      * error and is not dressed up as success either: somebody who cannot
      * remember whether they subscribed is precisely who needs telling.
      */
     public function subscribe(): void
     {
-        header('Content-type: application/json; charset=utf-8');
+        $asJson = str_contains((string) $this->request->header('Accept'), 'application/json');
 
-        if (!$this->guardRequest()) {
+        if ($failure = $this->guardFailure()) {
+            [$code, $message] = $failure;
+            $this->answerSubscribe($asJson, $code, ['status' => 'error', 'message' => $message], 'bad');
+
             return;
         }
 
@@ -255,8 +264,10 @@ class AjaxController extends AbstractController
         // Checked here and not only in the browser: the form is one way to
         // reach this, not the only one.
         if ($email === '' || mb_strlen($email) > self::EMAIL_MAX || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            http_response_code(422);
-            echo json_encode(['status' => 'error', 'message' => 'That does not look like an email address.']);
+            $this->answerSubscribe($asJson, 422, [
+                'status' => 'error',
+                'message' => 'That does not look like an email address.',
+            ], 'bad');
 
             return;
         }
@@ -267,19 +278,73 @@ class AjaxController extends AbstractController
             // The reason goes to the log, not to the page: a visitor cannot act
             // on it and a database error is not theirs to read.
             error_log('Subscribe failed: ' . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['status' => 'error', 'message' => 'That did not work. Try again in a moment.']);
+            $this->answerSubscribe($asJson, 500, [
+                'status' => 'error',
+                'message' => 'That did not work. Try again in a moment.',
+            ], 'bad');
 
             return;
         }
 
-        echo json_encode([
+        $this->answerSubscribe($asJson, 200, [
             'status' => 'ok',
             'added' => $added,
             'message' => $added
                 ? 'Done. We will write when a fare drops.'
                 : 'That address is already on the list.',
-        ]);
+        ], $added ? 'good' : 'quiet');
+    }
+
+    /**
+     * JSON to a script, the page back to a browser.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function answerSubscribe(bool $asJson, int $code, array $payload, string $tone): void
+    {
+        if ($asJson) {
+            header('Content-type: application/json; charset=utf-8');
+            http_response_code($code);
+            echo json_encode($payload);
+
+            return;
+        }
+
+        // Carried in the session rather than in the URL: a query string would
+        // survive a refresh and go on announcing a sign-up that happened once,
+        // and it would be there to be shared by anybody copying the address.
+        $_SESSION[self::SUBSCRIBE_NOTICE] = [
+            'tone' => $tone,
+            'message' => (string) $payload['message'],
+        ];
+
+        // Redirect rather than render: a POST left in history is a POST the
+        // browser offers to send again on every back button.
+        $this->bounce($this->subscribeReturn() . '#fare-alerts', 303);
+    }
+
+    /**
+     * Where to send a browser back to after a form post.
+     *
+     * The form names its own page in a hidden field. Whatever comes back is
+     * treated as hostile until it looks like one of our paths: it has to begin
+     * with a single slash, which rules out `//evil.example` and any absolute
+     * URL, or this endpoint would forward anybody anywhere.
+     */
+    private function subscribeReturn(): string
+    {
+        $to = (string) $this->request->body->nullableStr('return_to');
+
+        // Spelled out rather than pattern-matched. The regex this replaced read
+        // `[^\\\s]`, which single-quoting collapsed into "not a backslash and
+        // not the letter s" -- so it turned away every path with an s in it and
+        // waved through one with a space.
+        $ours = str_starts_with($to, '/')
+            // `//host` and `/\host` are both absolute to a browser.
+            && !str_starts_with($to, '//')
+            && strpbrk($to, "\\\r\n\t ") === false;
+
+        return $ours ? $to : '/';
     }
 
     private static function isCode(string $code): bool
@@ -287,26 +352,48 @@ class AjaxController extends AbstractController
         return preg_match('/^[A-Z0-9]{3}$/', $code) === 1;
     }
 
-    private function guardRequest(): bool
+    /**
+     * Why this request may not proceed, or null when it may.
+     *
+     * Separate from guardRequest() because /ajax/subscribe can be reached by a
+     * plain form as well as by fetch, and a browser that has followed a form
+     * wants a page back rather than the JSON every other endpoint here answers
+     * with. The checks belong in one place; only the way they are reported
+     * differs.
+     *
+     * @return array{int, string}|null
+     */
+    private function guardFailure(): ?array
     {
         if (!$this->request->isPost()) {
-            http_response_code(405);
-            echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
-
-            return false;
+            return [405, 'Method not allowed'];
         }
 
         $token = $this->request->body->nullableStr('csrf_token')
             ?? $this->request->header('X-CSRF-Token');
 
         if (!Csrf::isValid($token)) {
-            http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'Invalid or missing CSRF token']);
-
-            return false;
+            return [403, 'Invalid or missing CSRF token'];
         }
 
-        return true;
+        return null;
+    }
+
+    /** Reject anything that is not a same-origin POST carrying a valid CSRF token. */
+    private function guardRequest(): bool
+    {
+        $failure = $this->guardFailure();
+
+        if ($failure === null) {
+            return true;
+        }
+
+        [$code, $message] = $failure;
+
+        http_response_code($code);
+        echo json_encode(['status' => 'error', 'message' => $message]);
+
+        return false;
     }
 
 }

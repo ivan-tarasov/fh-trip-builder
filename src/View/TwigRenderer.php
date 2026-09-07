@@ -67,6 +67,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));
         $this->twig->addFunction(new TwigFunction('git_repo', $this->layout->gitRepo(...)));
         $this->twig->addFunction(new TwigFunction('copyright_years', $this->layout->copyrightYears(...)));
+        $this->twig->addFunction(new TwigFunction('subscribe_notice', $this->layout->subscribeNotice(...)));
     }
 
     /**

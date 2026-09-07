@@ -148,6 +148,32 @@ final class LayoutData
      * To the nearest thousand, so the digits that are shown are ones the
      * estimate can stand behind.
      */
+    /**
+     * The answer to a form post, once, from whoever left it in the session.
+     *
+     * Read and cleared in the same breath. A notice that stayed would be shown
+     * again on the next page and on every refresh, which is how a sign-up from
+     * ten minutes ago ends up announcing itself over somebody's search results.
+     *
+     * Only a browser that posted the form without scripting ever sees this --
+     * with the script running, the answer never leaves the page it was asked
+     * on. See AjaxController::answerSubscribe().
+     *
+     * @return array{tone: string, message: string}|null
+     */
+    public function subscribeNotice(): ?array
+    {
+        $notice = $_SESSION['subscribe_notice'] ?? null;
+
+        unset($_SESSION['subscribe_notice']);
+
+        if (!is_array($notice) || !isset($notice['tone'], $notice['message'])) {
+            return null;
+        }
+
+        return ['tone' => (string) $notice['tone'], 'message' => (string) $notice['message']];
+    }
+
     private static function roundToThousand(int $rows): int
     {
         return (int) round($rows, -3);

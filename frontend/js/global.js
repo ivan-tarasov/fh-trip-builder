@@ -2664,7 +2664,11 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRF-Token': csrfToken()
+                    'X-CSRF-Token': csrfToken(),
+                    // What tells the endpoint to answer in JSON. Without it the
+                    // same form posts itself and is sent back to the page, which
+                    // is what happens when this script is not running.
+                    'Accept': 'application/json'
                 },
                 body: new URLSearchParams({email: email})
             })
