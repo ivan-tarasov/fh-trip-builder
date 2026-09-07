@@ -1832,9 +1832,11 @@
             return;
         }
 
-        // The navbar's own breakpoint. Below it the menu is behind a toggler,
-        // so there is no header row for the tray to dock into.
-        const DOCKS_ABOVE = 992;
+        // The width the docked tray needs to clear the menu beside it, and the
+        // same number as the media query that hides the dock. Below it the tray
+        // would be moved into something display:none and disappear on scroll
+        // instead of staying in the hero, so the two have to agree.
+        const DOCKS_ABOVE = 1280;
 
         // Nothing in the world arrives instantly. The tray appears in a place
         // it was not a frame ago, and without this it reads as a glitch rather

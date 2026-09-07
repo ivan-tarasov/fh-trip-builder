@@ -3609,9 +3609,16 @@ body:has(.hero) header#top {
   align-items: center;
 }
 
-/* Below the navbar's own breakpoint the menu is behind a toggler and there is
-   no header row to dock into. The tray stays in the hero and scrolls away. */
-@media (max-width: 991.98px) {
+/* Only where the tray fits between the brand and the menu. It is centred on the
+   header rather than laid out between them, so it does not push what it runs
+   into -- it draws straight over it, and between the navbar's own breakpoint and
+   this one it did: 640px of tray against a 210px menu sitting 92px off the right
+   edge needs about 1276px of window, and at 1096px it covered My bookings by 77.
+
+   Below this the tray stays in the hero and scrolls away, and on the pages that
+   have no hero it is not shown. Nothing becomes unreachable: Saved is in the
+   footer, Flights is the page you are on, and the rest are placeholders. */
+@media (max-width: 1279.98px) {
   .navbar-dock { display: none; }
 }
 
