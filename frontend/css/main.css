@@ -475,7 +475,27 @@ a {
   min-height: 100vh;
 }
 
+/* What a rubber-band scroll reveals past either end of the page.
+
+   The canvas was white, so overscrolling at the foot showed a white strip under
+   the footer, and at the top the sticky header rode up with the document while
+   the pinned search bar stayed at the viewport -- opening a white gap between
+   two things that are meant to read as one band. The header's own colour closes
+   that: the gap fills with the colour on both sides of it. Under the footer it
+   is navy against #212529, which is a seam between two dark greys rather than a
+   flash of white. */
+html { background-color: var(--brand-ink); }
+
 body {
+  /* Tall enough to push the footer down on a short page, and no taller.
+     Bootstrap's .h-100 was doing the first half and breaking the second: it
+     gives the body a box exactly one viewport tall whatever it holds, and a
+     sticky child only sticks within its parent's box -- so the header came
+     unstuck a screen down and the page ended with a pinned search bar and
+     nothing above it. min-height grows with the content; the sticky footer
+     still works, because that is `d-flex flex-column` here and `mt-auto` on
+     the footer, neither of which needed the fixed height. */
+  min-height: 100vh;
   /* Falls back to the platform UI face rather than Arial, so a failed webfont
      lands somewhere deliberate. */
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
@@ -936,16 +956,19 @@ button {
    colour is the app's own ink rather than the reference's blue, and it is very
    slightly graded so a full-width rectangle does not read as a dead block. */
 
-.hero {
-  background-color: var(--brand-ink);
-  background-image: linear-gradient(160deg, var(--brand-ink-700) 0%, var(--brand-ink) 55%);
-}
+/* One flat colour, the header's own. The band was very slightly graded so that
+   a full-width rectangle would not read as a dead block; with the header stuck
+   above it and the search bar pinned into it, all three are the same surface
+   now, and a gradient meeting a flat colour at two seams looked like three
+   panels rather than one. */
+.hero { background-color: var(--brand-ink); }
 
 .hero__inner {
-  padding-top: 3.5rem;
-  /* Deep, because the cards below are pulled up into it. What is left between
-     the search bar and the top of a card is this less the overlap. */
-  padding-bottom: 8.75rem;
+  padding-top: 5.5rem;
+  /* Half the gap to the search bar. The other half is the bar's own top
+     padding, and the split is what lets the gap differ at rest and pinned: all
+     of this scrolls away, and only the bar's half is left under the header. */
+  padding-bottom: 1.25rem;
 }
 
 /* The destination cards, starting inside the band and finishing outside it.
@@ -965,8 +988,99 @@ button {
 @media (max-width: 767.98px) {
   /* Less of both: the band is already tall once the fields stack, and a card
      is most of the screen, so a deep overlap buries its own heading. */
-  .hero__inner { padding-bottom: 6.5rem; }
+  .hero__inner { padding-top: 3rem; padding-bottom: 7.5rem; }
   .hero-cards { margin-top: -2.5rem; }
+}
+
+/* Holds the tray's height while the tray is up in the header, so nothing below
+   it moves when it leaves. The height itself is written by global.js from the
+   tray's own.
+
+   The gap to the search bar belongs here rather than on the tray. A child's
+   bottom margin only escapes a parent whose height is `auto`, and this one's is
+   pinned by that min-height -- so on the tray the 1.75rem was swallowed by the
+   slot's own box the moment the height was written, and the bar jumped up to
+   sit against the tray. On the slot it is outside the pinned box and cannot be
+   eaten. */
+.hero__modes-slot { position: relative; }
+
+/* The slot's bottom edge, which is where the tray finishes going under the
+   header. Taken out of the flow and pinned there: as a flow child it would ride
+   up to the top of the slot the moment the tray left, moving the very line that
+   decides whether the tray should have left -- which is a switch that flips
+   itself back and forth for as long as you hold still. */
+.hero__modes-sentinel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+}
+
+/* The tray, docked into the header.
+
+   Laid out along the row rather than down it: in the hero each section is a
+   tile with its icon above its name and room to breathe, and in a 88px header
+   that is a tile too tall to fit and too loud beside a logo. Same tray, same
+   order, one line. */
+.hero__modes.is-docked { margin: 0; gap: .25rem; }
+.hero__modes.is-docked .hero__modes-group { padding: .1875rem; border-radius: .625rem; }
+.hero__modes.is-docked .hero__mode {
+  flex-direction: row;
+  gap: .5rem;
+  min-width: 0;
+  padding: .4375rem .75rem;
+  font-size: .8125rem;
+}
+.hero__modes.is-docked .hero__mode i { font-size: .875rem; }
+
+/* The band, condensed.
+
+   Scrolling the homepage leaves the menu and the search bar behind and takes
+   the rest of the hero with it -- the slogan and the sections have said what
+   they had to say by the time a visitor is reading destinations, and the one
+   thing they may still want is the field they were typing in.
+
+   The bar is pinned rather than copied. The form is wired to literal element
+   ids (see search/form.html.twig), so a second copy on the page would fight the
+   first over every one of them; and it is pinned rather than moved in the DOM,
+   because moving a field that has an open dropdown attached to it loses the
+   dropdown. The header above is sticky, so the two sit together.
+
+   --header-h is written by global.js, which measures the header rather than
+   guessing: it is a navbar that wraps at some widths and not others. */
+/* Sticky, not pinned by script. A scroll is run on the compositor and a scroll
+   handler on the main thread, so anything driven from JS is a frame behind the
+   page it is reacting to -- on a flick the bar appeared where the scroll had
+   got to and then dropped into place. Sticky is resolved where the scrolling
+   happens and cannot lag it.
+
+   Its own band, in the hero's colour, so at rest it reads as the foot of the
+   hero and pinned it reads as the underside of the header. */
+.hero__bar {
+  position: sticky;
+  top: var(--header-h, 4.5rem);
+  z-index: 1020;
+  /* Tight to the menu once it is against it: the two are one band there, and a
+     gap between them reads as the bar having come loose. The rest of the gap it
+     has at rest is the hero's bottom padding, which scrolls away. */
+  padding: .5rem 0 .75rem;
+  background-color: var(--brand-ink);
+}
+
+/* The band's remaining depth, below the bar, out of which the cards are pulled.
+   Padding on the bar would make the sticky strip this tall. */
+.hero__tail { height: 10.25rem; background-color: var(--brand-ink); }
+
+/* Nothing here resizes the form. It was compacted to the results page's
+   metrics when pinned, which made the fields jump the moment they stuck -- the
+   thing somebody may be part-way through typing into should not change shape
+   underneath them. It keeps its own size, and only the band behind it changes. */
+
+@media (max-width: 767.98px) {
+  /* The fields stack here, so a pinned bar would be most of the screen. It
+     scrolls away with the rest of the band. */
+  .hero__bar { position: static; }
 }
 
 .hero__slogan {
@@ -989,7 +1103,6 @@ button {
   display: flex;
   justify-content: center;
   gap: .5rem;
-  margin-bottom: 1.75rem;
 }
 
 .hero__modes-group {
@@ -3303,6 +3416,46 @@ textarea {
 .filter-slider__clear[hidden] { display: none; }
 
 /* --- Apply --------------------------------------------------------------- */
+/* The menu stays put while the page moves under it.
+
+   The homepage condenses its hero into this plus the search bar, and the two
+   have to sit together for that to read as one band rather than as a bar that
+   has come loose. Every other page gets a menu that is always reachable, which
+   is the same thing said less dramatically.
+
+   Above the pinned search bar at 1020, below Bootstrap's modal at 1055. */
+header#top {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+/* Where the homepage's section tray lands once the slogan has gone.
+
+   Centred on the header rather than placed between the logo and the menu: the
+   tray is the page's own subject and belongs on the page's axis, and a flex
+   slot between two lists of different widths would put it wherever those two
+   happened to leave room. That is also why the header menu is two items -- see
+   site.main-menu -- a full one leaves nothing for this to land in. */
+.navbar > .container-fluid { position: relative; }
+
+.navbar-dock {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
+
+/* Below the navbar's own breakpoint the menu is behind a toggler and there is
+   no header row to dock into. The tray stays in the hero and scrolls away. */
+@media (max-width: 991.98px) {
+  .navbar-dock { display: none; }
+}
+
+/* A placeholder in the header: not a link, and saying so quietly. */
+.nav-link--soon { opacity: .65; cursor: default; }
+
 /* Pinned to the bottom of the screen so Apply is reachable without scrolling
    back down a long sidebar. It needs an opaque background and a shadow: the
    controls above scroll underneath it, and without those the two would blur

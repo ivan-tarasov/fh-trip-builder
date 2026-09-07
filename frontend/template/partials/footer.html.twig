@@ -58,7 +58,7 @@
                            /about/ and /software-tests/, neither of which is in
                            Routes::ENABLED_ROUTES -- shipped as a 404 link on
                            every page of the site. #}
-                        {% for url, item in config('site.main-menu')|filter(item => item.enabled) %}
+                        {% for url, item in config('site.main-menu')|filter(item => item.enabled and (item.footer ?? true)) %}
                         <li class="mb-2"><a href="{{ url }}" class="link-light">{{ item.text }}</a></li>
                         {% endfor %}
                     </ul>

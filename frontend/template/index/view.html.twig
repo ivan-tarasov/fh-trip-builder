@@ -17,66 +17,62 @@
     <div class="container hero__inner">
         <h1 class="hero__slogan">Build the trip, not&nbsp;just the ticket</h1>
 
-        {# Where a visitor can go, and what this is going to grow into.
+        {# The tray at rest. global.js lifts it into the header once it has
+           gone under, and puts it back on the way up. #}
+        <div class="hero__modes-slot js-modes-slot">
+            {% include 'partials/sections.html.twig' only %}
 
-           The ones with nowhere to lead are spans, not links. This codebase has
-           twice removed an <a> with no href -- the point-of-interest cards and
-           the old profile item -- because it is styled as a link, skipped by the
-           keyboard, and on a click it apologises for doing nothing. A section
-           that does not exist yet says so instead, out loud for a screen reader
-           as well as in the colour.
+        {# The line the tray crosses on the way out.
 
-           The current page is marked with aria-current rather than only a
-           colour, and Saved is a link because it is a different page. #}
-        <nav class="hero__modes" aria-label="Sections">
-            <div class="hero__modes-group">
-                <span class="hero__mode is-current" aria-current="page">
-                    <i class="fas fa-plane-departure" aria-hidden="true"></i>
-                    Flights
-                </span>
+           At the foot of the slot, not the head of it: the tray moves up to the
+           header only once it has gone under it completely, and it is the
+           bottom edge that says when that is. Put above, it docked while the
+           tray was still half in view and two copies of the same thing appeared
+           to be on screen at once.
 
-                {% for soon in [
-                    { 'icon': 'fa-bed', 'text': 'Stays' },
-                    { 'icon': 'fa-car', 'text': 'Cars' },
-                    { 'icon': 'fa-compass', 'text': 'Impressions' }
-                ] %}
-                    <span class="hero__mode is-soon">
-                        <i class="fas {{ soon.icon }}" aria-hidden="true"></i>
-                        {{ soon.text }}<span class="visually-hidden"> — coming soon</span>
-                    </span>
-                {% endfor %}
+           Inside the slot rather than on the tray, because the tray is lifted
+           away and something that has moved can no longer say where it used to
+           be. The slot keeps its height while the tray is gone, so this stays
+           where it is. #}
+        <div class="hero__modes-sentinel js-modes-sentinel" aria-hidden="true"></div>
+        </div>
 
-                <a class="hero__mode" href="{{ config('site.paths.saved') }}">
-                    <i class="fas fa-heart" aria-hidden="true"></i>
-                    Saved
-                </a>
-            </div>
+    </div>
+</div>
 
-            {# Set apart, because it is a different audience rather than another
-               thing to book. Its own tray rather than a section wearing one: a
-               tray holds items inset from its edge, and one element doing both
-               jobs sat flush against its own while every label beside it did
-               not. #}
-            <div class="hero__modes-group hero__modes-group--aside">
-                <span class="hero__mode is-soon">
-                    <i class="fas fa-briefcase" aria-hidden="true"></i>
-                    For business<span class="visually-hidden"> — coming soon</span>
-                </span>
-            </div>
-        </nav>
+{# The search bar, and the band it sits in.
 
-        {# The whole form lives in search/form.html.twig. The hero used to carry
-           its own copy: a Round trip tab that shipped `disabled`, a cabin select
-           comparing 'economy' to itself so it always rendered Economy, and the
-           passenger partial included with no party so it always said one adult. #}
+   Its own block rather than part of the hero above, which is what lets it be
+   `position: sticky`. Sticky is bounded by its parent, and inside the hero it
+   would have come unstuck the moment the hero ended; as a child of the body it
+   is bounded by the page. That is worth the extra element, because the
+   alternative -- pinning it from JS -- cannot be made not to jump: a scroll runs
+   on the compositor and a scroll handler runs on the main thread, so on a flick
+   the page has already moved by the time the class lands, and the bar arrives
+   where the scroll got to and drops into place. Sticky is handled where the
+   scrolling is, and never lags it.
+
+   The band is the hero's own colour, so at rest this reads as the foot of the
+   hero rather than as a strip of its own.
+
+   The whole form lives in search/form.html.twig. The hero used to carry its own
+   copy: a Round trip tab that shipped `disabled`, a cabin select comparing
+   'economy' to itself so it always rendered Economy, and the passenger partial
+   included with no party so it always said one adult. #}
+<div class="hero__bar js-hero-bar">
+    <div class="container">
         {% include 'search/form.html.twig' with {
-            'variant': 'hero',
             'places': places,
             'recent': recent,
             'depart_date': today_date
         } only %}
     </div>
 </div>
+
+{# The rest of the band's depth, below the bar. It cannot be padding on the bar,
+   which would make the sticky strip that tall and pin a band most of a screen
+   deep; and it cannot be padding on the hero, which stops above the bar. #}
+<div class="hero__tail" aria-hidden="true"></div>
 
 {# Lifted into the band so the cards straddle its edge, the way the reference
    does. They stay where they were in the document -- the overlap is a margin,
