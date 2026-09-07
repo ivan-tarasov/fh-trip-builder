@@ -44,6 +44,10 @@ final readonly class TwigRenderer
         // Helpers the templates need (CDN asset URLs and config lookups)...
         $this->twig->addFunction(new TwigFunction('cdn', Cdn::getUrl(...)));
         $this->twig->addFunction(new TwigFunction('config', Config::get(...)));
+        // A date that carries its year only when that year is not this one, so
+        // a trip crossing New Year cannot print two dates eleven months apart
+        // as though they were days.
+        $this->twig->addFunction(new TwigFunction('date_label', Helper::dateLabel(...)));
 
         // ...and the dynamic header/footer data (see LayoutData).
         // A global, so it reaches the passenger partial through the `only`

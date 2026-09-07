@@ -81,4 +81,25 @@ final class StepHeaderRenderTest extends TestCase
 
         self::assertStringContainsString('Thu, 22 Oct – Sat, 24 Oct 2026', $line);
     }
+
+    public function testAWindowAcrossNewYearNamesBothYears(): void
+    {
+        // The year is normally said once, at the end of the range, because both
+        // ends share it. Across New Year they do not, and the near end read as
+        // though it belonged to the far end's year -- 30 December 2027 rather
+        // than 2026.
+        $line = $this->render('/search/YUL301226x3LHRY1');
+
+        self::assertStringContainsString('Wed, 30 Dec 2026 – Fri, 1 Jan 2027', $line);
+    }
+
+    public function testAWindowInsideOneYearStillSaysItOnlyOnce(): void
+    {
+        // The other half of the rule: naming both years every time would put
+        // "2026" twice on every line the page draws.
+        self::assertSame(
+            1,
+            substr_count($this->render('/search/YUL151026x3LHRY1'), '2026'),
+        );
+    }
 }

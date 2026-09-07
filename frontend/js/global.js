@@ -8,6 +8,15 @@
     try {
         const inputDateFormat = 'YYYY-MM-DD';
         const showDateFormat = 'MMM D';
+        const showDateFormatWithYear = 'MMM D, YYYY';
+
+        // A date carries its year only when that year is not this one. Inside
+        // one year "Dec 29" says everything; across a new year it says nothing
+        // useful, and a December search for a January flight showed both ends
+        // as though they were days apart in the same year.
+        const shown = (date) => date.format(
+            date.year() === moment().year() ? showDateFormat : showDateFormatWithYear
+        );
 
         // Days a window may cover, itself included. SearchUrl::MAX_SPAN is the
         // definition; this is the picker's own limit and the two must agree.
@@ -83,8 +92,8 @@
             // Blank rather than 1: a plain search should send no flex at all.
             $flex.val(days > 1 ? String(days) : '');
             $input.val(days > 1
-                ? start.format(showDateFormat) + ' – ' + end.format(showDateFormat)
-                : start.format(showDateFormat));
+                ? shown(start) + ' – ' + shown(end)
+                : shown(start));
         };
 
         // hide, not apply: apply fires only for the Done button, and a click
