@@ -1396,13 +1396,6 @@ a.hero__mode:active { transform: scale(.97); }
   background-color: var(--brand-ink);
 }
 
-/* The header scrolls away on the results page, and only there.
-
-   Matched on the band rather than on a class the page would have to carry: the
-   band is what makes this page the one where something else owns the top, and
-   it is rendered nowhere else. */
-body:has(.searchbar-band) header#top { position: static; }
-
 @media (max-width: 991.98px) {
   /* The fields stack below the navbar's breakpoint, and a band that tall
      against the top of the screen leaves no room for the results. */
@@ -3411,15 +3404,21 @@ textarea {
 .filter-slider__clear[hidden] { display: none; }
 
 /* --- Apply --------------------------------------------------------------- */
-/* The menu stays put while the page moves under it.
+/* The menu stays put on the homepage, and only there.
 
-   The homepage condenses its hero into this plus the search bar, and the two
-   have to sit together for that to read as one band rather than as a bar that
-   has come loose. Every other page gets a menu that is always reachable, which
-   is the same thing said less dramatically.
+   That page folds its hero into the header -- the section tray moves up into it
+   and the search bar sticks beneath -- and the two have to sit together for
+   that to read as one band rather than as a bar that has come loose. Nowhere
+   else is anything depending on it, and a menu holding the top of every page is
+   a strip of chrome taken off the content for the rest of the visit.
 
-   Above the pinned search bar at 1020, below Bootstrap's modal at 1055. */
-header#top {
+   Matched on the hero rather than on a class the page would have to carry: the
+   hero is what makes this the page the header has a job in, and it is rendered
+   nowhere else. `.hero__modes` and `.hero-cards` are their own classes and do
+   not match.
+
+   Above the sticky search bar at 1020, below Bootstrap's modal at 1055. */
+body:has(.hero) header#top {
   position: sticky;
   top: 0;
   z-index: 1030;
