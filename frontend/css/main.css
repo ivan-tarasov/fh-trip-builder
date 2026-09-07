@@ -1421,9 +1421,37 @@ a.hero__mode:active { transform: scale(.97); }
 
 /* The band the results-page form sits in. Replaces .card-4, which was a
    translucent black panel over whatever the page had behind it. */
+/* The results page's own band, and the only thing held on this page.
+
+   The search is what you are adjusting here -- scrolling a list of flights is
+   exactly when you want to change a date -- and the menu is not. So the band
+   takes the top of the screen for itself and the header goes with the page,
+   which is why this sticks at 0 rather than under a header that is no longer
+   there. See the rule below, which is what lets the header scroll.
+
+   Sticky rather than pinned from script, for the reason the homepage's bar is:
+   scrolling runs on the compositor and a scroll handler does not, so anything
+   driven from JS arrives a frame late and drops into place. A direct child of
+   the body, so the page is what bounds it. */
 .searchbar-band {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
   padding: 1rem 0 1.25rem;
   background-color: var(--brand-ink);
+}
+
+/* The header scrolls away on the results page, and only there.
+
+   Matched on the band rather than on a class the page would have to carry: the
+   band is what makes this page the one where something else owns the top, and
+   it is rendered nowhere else. */
+body:has(.searchbar-band) header#top { position: static; }
+
+@media (max-width: 991.98px) {
+  /* The fields stack below the navbar's breakpoint, and a band that tall
+     against the top of the screen leaves no room for the results. */
+  .searchbar-band { position: static; }
 }
 
 /* Who is flying: one trigger, and a panel holding the controls that submit.
