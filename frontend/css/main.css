@@ -5174,7 +5174,10 @@ body:has(.hero) header#top {
 
 .footer__bottom {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, .8fr);
+  /* Brand, two short columns, and the card. The card is given a fixed share
+     rather than a fraction so the field inside it does not shrink to a stub on
+     a middling window while the brand block, which is only text, keeps growing. */
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, .8fr) 20rem;
   gap: 2rem 1.5rem;
   padding-bottom: 2rem;
   align-items: start;
@@ -5225,6 +5228,95 @@ body:has(.hero) header#top {
   }
 }
 
+/* ---------- Fare alerts ---------- */
+
+/* Every property here is restated rather than inherited. The reset at the top
+   of this file strips borders and margins from inputs and buttons and sets a
+   global 18px on fields, and none of Bootstrap's .form-control is in play --
+   so anything not written here is not what it looks like it is. */
+.footer__subscribe {
+  padding: 1.25rem;
+  background-color: var(--brand-ink-700);
+  border-radius: .75rem;
+}
+
+.footer__subscribe-text {
+  margin: 0 0 .875rem;
+  color: var(--ink-on-dark);
+  font-size: .875rem;
+}
+
+.footer__subscribe-row {
+  display: flex;
+  gap: .5rem;
+}
+
+.footer__subscribe-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.5rem;
+  padding: 0 .75rem;
+  color: var(--brand-ink);
+  font-size: .875rem;
+  background-color: #fff;
+  border: 1px solid transparent;
+  border-radius: .5rem;
+}
+
+.footer__subscribe-input::placeholder { color: var(--ink-faint); }
+
+.footer__subscribe-input:focus-visible {
+  outline: 2px solid var(--ink-on-dark-lead);
+  outline-offset: 2px;
+}
+
+.footer__subscribe-submit {
+  flex: 0 0 auto;
+  height: 2.5rem;
+  padding: 0 1rem;
+  color: #fff;
+  font-size: .875rem;
+  font-weight: 600;
+  background-color: var(--brand-accent);
+  border-radius: .5rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .footer__subscribe-submit:hover { background-color: var(--brand-accent-700); }
+}
+
+.footer__subscribe-submit:active { transform: scale(.97); }
+
+/* Disabled while the request is out. Without this the button still looks
+   pressable and a second click sends a second address. */
+.footer__subscribe-submit:disabled {
+  opacity: .6;
+  cursor: default;
+  transform: none;
+}
+
+/* The answer. Empty until there is one, so it takes no room on a form nobody
+   has used yet -- but it is in the flow, not absolute, so the card grows to
+   hold it rather than the text landing on top of the consent line. */
+.footer__subscribe-note {
+  margin: .625rem 0 0;
+  font-size: .8125rem;
+}
+
+.footer__subscribe-note:empty { display: none; }
+
+.footer__subscribe-note[data-tone="good"]  { color: #6EE7B7; }
+.footer__subscribe-note[data-tone="bad"]   { color: #FCA5A5; }
+.footer__subscribe-note[data-tone="quiet"] { color: var(--ink-on-dark); }
+
+.footer__subscribe-consent {
+  margin: .625rem 0 0;
+  color: var(--ink-on-dark);
+  font-size: .75rem;
+  opacity: .8;
+}
+
 /* ---------- Legal, and what the page cost to draw ---------- */
 
 .footer__legal {
@@ -5249,6 +5341,13 @@ body:has(.hero) header#top {
 
 @media (max-width: 1279.98px) {
   .footer__columns { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1279.98px) {
+  /* The card drops to a row of its own before the columns do. It is the widest
+     thing in the band and the first to make the other three too narrow to read. */
+  .footer__bottom { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, .8fr); }
+  .footer__subscribe { grid-column: 1 / -1; max-width: 28rem; }
 }
 
 @media (max-width: 991.98px) {

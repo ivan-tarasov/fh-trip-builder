@@ -48,6 +48,35 @@
         'external': true
     } only %}
 
+    {# A real form, posting to a real endpoint, writing to a real table.
+
+       There was one here before and it was taken out, because it accepted an
+       address and dropped it. The comment that recorded its removal said what
+       it would take to bring it back -- somewhere to put an address -- and that
+       is what `subscribers` is.
+
+       novalidate: the browser's own bubble says "Please enter an email address"
+       in a tooltip that vanishes and is not announced. The field is still
+       type="email", so the right keyboard comes up on a phone; the message is
+       ours to place and to keep on screen. #}
+    <form class="footer__subscribe js-subscribe" action="/ajax/subscribe" method="post" novalidate>
+        <h2 class="footer__title">Fare alerts</h2>
+        <p class="footer__subscribe-text">A note when a fare on a route you searched drops.</p>
+
+        <div class="footer__subscribe-row">
+            <label class="visually-hidden" for="subscribe-email">Email address</label>
+            <input class="footer__subscribe-input js-subscribe-email"
+                   id="subscribe-email" type="email" name="email" required
+                   autocomplete="email" placeholder="you@example.com">
+            <button class="footer__subscribe-submit" type="submit">Subscribe</button>
+        </div>
+
+        {# aria-live, because the answer arrives after the button has been
+           pressed and focus has not moved: without it a screen reader is never
+           told whether anything happened. #}
+        <p class="footer__subscribe-note js-subscribe-note" role="status" aria-live="polite"></p>
+        <p class="footer__subscribe-consent">We store the address to send those alerts, nothing else.</p>
+    </form>
 </div>
 
 <div class="footer__legal">

@@ -2621,5 +2621,75 @@
         }
     });
 
-})(jQuery);
+    /*[ Footer: fare alerts ]
+    ===========================================================*/
+    (function () {
+        const form = document.querySelector('.js-subscribe');
 
+        if (!form) {
+            return;
+        }
+
+        const field = form.querySelector('.js-subscribe-email');
+        const note = form.querySelector('.js-subscribe-note');
+        const submit = form.querySelector('[type="submit"]');
+
+        // Every answer says what actually happened. The form this replaced took
+        // an address and dropped it without a word, which is the one outcome
+        // ruled out here -- including the failures: a request that did not
+        // arrive says so rather than looking like a success.
+        const say = (message, tone) => {
+            note.textContent = message;
+            note.dataset.tone = tone;
+        };
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const email = field.value.trim();
+
+            // Checked again on the server. This one is only here to save a
+            // round trip on an obvious typo.
+            if (!field.checkValidity() || email === '') {
+                say('That does not look like an email address.', 'bad');
+                field.focus();
+
+                return;
+            }
+
+            submit.disabled = true;
+            say('Sending…', 'quiet');
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-Token': csrfToken()
+                },
+                body: new URLSearchParams({email: email})
+            })
+                .then((response) => response.json().then((data) => ({ok: response.ok, data: data})))
+                .then(({ok, data}) => {
+                    if (!ok) {
+                        say(data.message || 'That did not work. Try again in a moment.', 'bad');
+
+                        return;
+                    }
+
+                    // Two different things, and the difference is worth saying:
+                    // somebody who cannot remember whether they subscribed is
+                    // exactly who needs telling that they already have.
+                    say(data.message, data.added ? 'good' : 'quiet');
+
+                    if (data.added) {
+                        form.reset();
+                    }
+                })
+                .catch(() => say('That did not work. Try again in a moment.', 'bad'))
+                .finally(() => {
+                    submit.disabled = false;
+                });
+        });
+    }());
+
+})(jQuery);
