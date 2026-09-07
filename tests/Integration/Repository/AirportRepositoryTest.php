@@ -44,42 +44,58 @@ final class AirportRepositoryTest extends IntegrationTestCase
         self::assertSame($canonical, $titles);
     }
 
-    public function testAutofillMatchesCityAndReturnsJoinColumns(): void
+    public function testEveryPlaceOfferedIsOneTheNetworkActuallyServes(): void
     {
-        $airports = $this->repository()->autofill('mon');
+        // The form ships this list instead of asking the server per keystroke,
+        // so anything in it is a search someone can run. Flights are generated
+        // only between major airports, and offering any other would lead to a
+        // guaranteed empty result.
+        $places = $this->repository()->pickable();
 
-        self::assertNotEmpty($airports);
-        self::assertSame(self::EXPECTED_COLUMNS, array_keys($airports[0]));
-        // 'mon' should surface Montreal.
-        self::assertContains('YUL', array_column($airports, 'code'));
-    }
+        self::assertNotEmpty($places);
 
-    public function testAutofillReturnsMajorAirportsOnly(): void
-    {
-        $codes = array_column($this->repository()->autofill('mon'), 'code');
-
-        // YUL (Montreal) is major and should appear.
-        self::assertContains('YUL', $codes);
-
-        // Every suggestion must be a major, enabled airport: flights are only
-        // generated between those, so offering any other would always lead to
-        // an empty search. Which airports are major is data that changes, so
-        // the excluded example is read from the database rather than hardcoded.
-        $majorCodes = array_column(
-            $this->connection()->fetchAll('SELECT code FROM airports WHERE enabled = 1 AND is_major = 1'),
+        $served = array_column(
+            $this->connection()->fetchAll(
+                'SELECT code FROM airports WHERE enabled = 1 AND is_major = 1'
+                . ' UNION SELECT DISTINCT city_code FROM airports WHERE enabled = 1 AND is_major = 1',
+            ),
             'code',
         );
-        self::assertNotEmpty($codes);
-        self::assertEmpty(array_diff($codes, $majorCodes));
 
-        $minorMatch = $this->connection()->fetchValue(
-            'SELECT code FROM airports WHERE enabled = 1 AND is_major = 0'
-            . ' AND (code LIKE ? OR title LIKE ? OR city_code LIKE ? OR city LIKE ?) LIMIT 1',
-            ['%mon%', '%mon%', '%mon%', '%mon%'],
-        );
+        self::assertEmpty(array_diff(array_column($places, 'code'), $served));
+    }
 
-        if ($minorMatch !== null) {
-            self::assertNotContains((string) $minorMatch, $codes);
+    public function testNoTwoPlacesOfferTheSameCode(): void
+    {
+        // A city with one airport shares that airport's code, and in a
+        // multi-airport city one airport often carries the city's code too.
+        // Either way two rows with one value is a list that looks like it
+        // offers a choice it cannot make -- resolveAirportCodes() expands both
+        // to exactly the same set.
+        $codes = array_column($this->repository()->pickable(), 'code');
+
+        self::assertSame(count($codes), count(array_unique($codes)));
+    }
+
+    public function testACityLeadsTheAirportsItExpandsTo(): void
+    {
+        // Picking the city searches all of them, so it belongs with them rather
+        // than somewhere else alphabetically.
+        $places = $this->repository()->pickable();
+        $cities = array_values(array_filter($places, static fn(array $p): bool => (int) $p['is_city'] === 1));
+
+        self::assertNotEmpty($cities, 'no multi-airport city in the data');
+
+        foreach ($cities as $city) {
+            $at = array_search($city['code'], array_column($places, 'code'), true);
+
+            self::assertIsInt($at);
+            self::assertArrayHasKey($at + 1, $places, $city['label'] . ' leads nothing');
+            self::assertSame(
+                0,
+                (int) $places[$at + 1]['is_city'],
+                $city['label'] . ' is followed by another city rather than its airports',
+            );
         }
     }
 

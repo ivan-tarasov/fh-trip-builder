@@ -289,6 +289,12 @@
      - hover and colour     -> plain `ease` is right; it is not movement
      - constant motion      -> linear (the spinner, and only the spinner) */
 :root {
+  /* Row icons for the place dropdown, as masks so they inherit their colour.
+     Inline here rather than as <i> elements: see .combo__icon. */
+  --icon-plane: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/%3E%3C/svg%3E");
+  --icon-pin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E");
+  --icon-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5v4l5-4.5L13 0z'/%3E%3Cpath d='M12.5 8v5l4 2 .75-1.23-3.25-1.77V8z'/%3E%3C/svg%3E");
+
   --dur-fast: .12s;   /* hover feedback, press, small reveals */
   --dur-base: .2s;    /* chevrons and anything that rotates or slides */
   --dur-slow: .5s;    /* the card flip -- deliberately unhurried */
@@ -469,7 +475,27 @@ a {
   min-height: 100vh;
 }
 
+/* What a rubber-band scroll reveals past either end of the page.
+
+   The canvas was white, so overscrolling at the foot showed a white strip under
+   the footer, and at the top the sticky header rode up with the document while
+   the pinned search bar stayed at the viewport -- opening a white gap between
+   two things that are meant to read as one band. The header's own colour closes
+   that: the gap fills with the colour on both sides of it. Under the footer it
+   is navy against #212529, which is a seam between two dark greys rather than a
+   flash of white. */
+html { background-color: var(--brand-ink); }
+
 body {
+  /* Tall enough to push the footer down on a short page, and no taller.
+     Bootstrap's .h-100 was doing the first half and breaking the second: it
+     gives the body a box exactly one viewport tall whatever it holds, and a
+     sticky child only sticks within its parent's box -- so the header came
+     unstuck a screen down and the page ended with a pinned search bar and
+     nothing above it. min-height grows with the content; the sticky footer
+     still works, because that is `d-flex flex-column` here and `mt-auto` on
+     the footer, neither of which needed the fixed height. */
+  min-height: 100vh;
   /* Falls back to the platform UI face rather than Arial, so a failed webfont
      lands somewhere deliberate. */
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
@@ -676,187 +702,207 @@ a:active {
 
 /* ==========================================================================
    #DATEPICKER
-   ========================================================================== */
-/*.daterangepicker {*/
-/*  display: none;*/
-/*  width: 790px;*/
-/*  -webkit-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);*/
-/*  -moz-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);*/
-/*  box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);*/
-/*  -webkit-border-radius: 10px;*/
-/*  -moz-border-radius: 10px;*/
-/*  border-radius: 10px;*/
-/*  padding: 20px 35px;*/
-/*  padding-top: 27px;*/
-/*  padding-bottom: 25px;*/
-/*  margin-top: 2px;*/
-/*  margin-left: -127px;*/
-/*}*/
+   ==========================================================================
 
-/*@media (max-width: 767px) {*/
-/*  .daterangepicker {*/
-/*    width: -webkit-calc(100% - 60px);*/
-/*    width: -moz-calc(100% - 60px);*/
-/*    width: calc(100% - 60px);*/
-/*    padding: 25px 0px;*/
-/*  }*/
-/*}*/
+   Dan Grossman's daterangepicker, restyled. This whole section was commented
+   out, so the picker rendered on the vendor stylesheet alone -- a dense little
+   grid in someone else's colours, next to a form that had just been rebuilt.
 
-/*.daterangepicker:before, .daterangepicker:after {*/
-/*  display: none;*/
-/*}*/
+   The range reads as one pill: the days between are tinted and square-edged so
+   they run together, and only the two ends are round. A single day is both ends
+   at once, so it is a circle. */
 
-/*.daterangepicker .calendar {*/
-/*  margin: 0;*/
-/*  width: 325px;*/
-/*  max-width: 325px;*/
-/*}*/
+.daterangepicker {
+  padding: .5rem;
+  font-family: inherit;
+  background-color: #fff;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.5rem rgba(21, 26, 33, .16);
+}
 
-/*.daterangepicker .calendar th {*/
-/*  font-size: 14px;*/
-/*  color: #aaa;*/
-/*  cursor: default;*/
-/*}*/
+/* The little pointer the vendor draws at the top. The panel sits under a field
+   that is already visually attached to it. */
+.daterangepicker:after,
+.daterangepicker:before { display: none; }
 
-/*.daterangepicker .calendar th.month {*/
-/*  font-size: 16px;*/
-/*  color: #555;*/
-/*  font-weight: 700;*/
-/*}*/
+.daterangepicker .drp-calendar {
+  max-width: none;
+  padding: .5rem .75rem;
+}
 
-/*.daterangepicker .calendar th.next, .daterangepicker .calendar th.prev {*/
-/*  font-size: 20px;*/
-/*  color: #ccc;*/
-/*  text-align: center;*/
-/*}*/
+.daterangepicker .drp-calendar.left,
+.daterangepicker .drp-calendar.right { padding: .5rem .75rem; }
 
-/*.daterangepicker .calendar.right {*/
-/*  float: right;*/
-/*}*/
+.daterangepicker .calendar-table { border: none; }
 
-/*@media (max-width: 767px) {*/
-/*  .daterangepicker .calendar {*/
-/*    width: 235px;*/
-/*    max-width: 270px;*/
-/*  }*/
-/*  .daterangepicker .calendar.right, .daterangepicker .calendar.left {*/
-/*    float: none !important;*/
-/*    clear: none !important;*/
-/*    margin: 0 auto !important;*/
-/*  }*/
-/*  .daterangepicker .calendar.left {*/
-/*    margin-bottom: 30px !important;*/
-/*  }*/
-/*}*/
+.daterangepicker th.month {
+  padding-bottom: .5rem;
+  font-size: .9375rem;
+  font-weight: 700;
+  color: var(--ink-body);
+}
 
-/*.daterangepicker .calendar-table {*/
-/*  padding: 0;*/
-/*}*/
+/* Round, quiet, and out of the way until wanted -- the months are the heading,
+   not the arrows. */
+.daterangepicker th.prev,
+.daterangepicker th.next {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  transition: background-color var(--dur-fast) ease;
+}
 
-/*.daterangepicker .calendar-table .table-condensed thead tr:nth-child(2) th {*/
-/*  padding-top: 27px;*/
-/*  padding-bottom: 17px;*/
-/*}*/
+.daterangepicker th.prev:hover,
+.daterangepicker th.next:hover { background-color: var(--surface); }
+.daterangepicker th.prev span,
+.daterangepicker th.next span { border-color: var(--ink-secondary); border-width: 0 2px 2px 0; }
 
-/*.daterangepicker.ltr .calendar.left .calendar-table {*/
-/*  padding: 0;*/
-/*}*/
+/* Day-of-week headings. The weekend pair is greyed, which is most of what makes
+   a calendar scannable at a glance. */
+.daterangepicker th:not(.month):not(.prev):not(.next) {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
 
-/*.daterangepicker_input {*/
-/*  display: none;*/
-/*}*/
+.daterangepicker .calendar-table th.weekend-head { color: var(--ink-faint); }
 
-/*.daterangepicker td {*/
-/*  -webkit-border-radius: 50%;*/
-/*  -moz-border-radius: 50%;*/
-/*  border-radius: 50%;*/
-/*  height: 46px;*/
-/*  width: 32px;*/
-/*  font-family: "Poppins", "Arial", "Helvetica Neue", sans-serif;*/
-/*  text-align: center;*/
-/*  font-size: 14px;*/
-/*  color: #555;*/
-/*}*/
+/* min-width and line-height, not width and height: on a table cell those two
+   are hints the layout algorithm is free to ignore, and it did -- the cells
+   stayed the vendor's size. The line height is what actually gives a day its
+   room. */
+/* Through .calendar-table, because the vendor reaches its cells that way too
+   and a bare `.daterangepicker td` loses to it. */
+.daterangepicker .calendar-table td,
+.daterangepicker .calendar-table th {
+  min-width: 2.375rem;
+  padding: 0;
+  line-height: 2.375rem;
+  text-align: center;
+}
 
-/*@media (max-width: 767px) {*/
-/*  .daterangepicker td {*/
-/*    height: 32px;*/
-/*    width: 32px;*/
-/*  }*/
-/*}*/
+.daterangepicker td {
+  position: relative;
+  font-size: .875rem;
+  color: var(--ink-body);
+  border-radius: 0;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
 
-/*.daterangepicker td.start-date, .daterangepicker td.end-date {*/
-/*  -webkit-border-radius: 50%;*/
-/*  -moz-border-radius: 50%;*/
-/*  border-radius: 50%;*/
-/*  background: #00ad5f;*/
-/*}*/
+.daterangepicker td.available:hover {
+  background-color: var(--surface);
+  border-radius: .5rem;
+}
 
-/*.daterangepicker td.start-date.end-date {*/
-/*  -webkit-border-radius: 50%;*/
-/*  -moz-border-radius: 50%;*/
-/*  border-radius: 50%;*/
-/*}*/
+/* A day in another month, or one already gone. */
+.daterangepicker td.off,
+.daterangepicker td.off.in-range,
+.daterangepicker td.off.start-date,
+.daterangepicker td.off.end-date {
+  color: var(--ink-faint);
+  background-color: #fff;
+}
 
-/*.daterangepicker td.in-range {*/
-/*  background: #ececff;*/
-/*}*/
+.daterangepicker td.disabled { color: var(--ink-faint); text-decoration: none; }
 
-/*.daterangepicker td.today {*/
-/*  -webkit-border-radius: 50% !important;*/
-/*  -moz-border-radius: 50% !important;*/
-/*  border-radius: 50% !important;*/
-/*  background: #c9c9c9;*/
-/*}*/
+/* The middle of the range: square, so consecutive days join up. */
+.daterangepicker td.in-range {
+  color: var(--ink-body);
+  background-color: var(--brand-tint);
+  border-radius: 0;
+}
 
-/*.daterangepicker td.today.in-range {*/
-/*  -webkit-border-radius: 0 !important;*/
-/*  -moz-border-radius: 0 !important;*/
-/*  border-radius: 0 !important;*/
-/*  background: #6c7ae0;*/
-/*}*/
+/* The ends, which are the only round corners. */
+.daterangepicker td.active,
+.daterangepicker td.active:hover {
+  color: #fff;
+  background-color: var(--brand-accent);
+}
 
-/*.daterangepicker td.off, .daterangepicker td.off.in-range, .daterangepicker td.off.start-date, .daterangepicker td.off.end-date {*/
-/*  background: transparent;*/
-/*  color: #aaa;*/
-/*}*/
+.daterangepicker td.start-date { border-radius: .75rem 0 0 .75rem; }
+.daterangepicker td.end-date { border-radius: 0 .75rem .75rem 0; }
+.daterangepicker td.start-date.end-date { border-radius: .75rem; }
 
-/*.daterangepicker select {*/
-/*  outline: none;*/
-/*  font-family: inherit;*/
-/*}*/
+/* The two arrows that say the window can be pulled wider. They sit just
+   outside the ends of the range rather than on them, where they read as
+   something to grab instead of decoration on a chosen day -- there is room,
+   because the calendar is padded past its last column.
 
-/*.daterangepicker select.monthselect, .daterangepicker select.yearselect {*/
-/*  font-size: 16px;*/
-/*  padding: 8px 4px;*/
-/*}*/
+   Drawn rather than inserted: the plugin rebuilds the whole table on every
+   repaint, and a repaint is exactly what dragging causes several times a
+   second. A pseudo-element survives that; an appended node would not.
 
-/*.daterangepicker td.active,*/
-/*.daterangepicker td.active:hover {*/
-/*  background: #6c7ae0;*/
-/*}*/
+   Only on the search form's two pickers. The rebook dialog's calendar spans a
+   departure and a return, which is a different thing that these arrows cannot
+   move. */
+.daterangepicker--flex td.start-date::before,
+.daterangepicker--flex td.end-date::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: .3125rem;
+  height: .3125rem;
+  border: solid var(--brand-accent);
+  border-width: 2px 2px 0 0;
+  pointer-events: none;
+}
 
-/*.dropdown-datepicker {*/
-/*  position: relative;*/
-/*}*/
+.daterangepicker--flex td.start-date::before {
+  left: -.4375rem;
+  transform: translateY(-50%) rotate(-135deg);
+}
 
-/*.dropdown-datepicker .daterangepicker {*/
-/*  width: 385px;*/
-/*  padding: 20px;*/
-/*  max-width: 385px;*/
-/*  margin-left: 0;*/
-/*  margin-right: -20px;*/
-/*}*/
+.daterangepicker--flex td.end-date::after {
+  right: -.4375rem;
+  transform: translateY(-50%) rotate(45deg);
+}
 
-/*.dropdown-datepicker .daterangepicker .calendar {*/
-/*  width: 100%;*/
-/*  max-width: 100%;*/
-/*}*/
+.daterangepicker td.available { cursor: pointer; }
+.daterangepicker--flex td.start-date,
+.daterangepicker--flex td.end-date { cursor: ew-resize; }
 
-/*.dropdown-datepicker .daterangepicker .calendar td {*/
-/*  width: 32px;*/
-/*  height: 32px;*/
-/*}*/
+/* Dragging: the browser would otherwise select the numbers as text. */
+.daterangepicker .calendar-table,
+.daterangepicker td { user-select: none; }
+
+/* One button, because there is only one decision left to make. The plugin's
+   Cancel would discard a window that has been on screen since the first
+   click, and its running total already reads on the field behind. */
+.daterangepicker .drp-buttons {
+  padding: .5rem .75rem .25rem;
+  text-align: center;
+  border-top-color: var(--line);
+}
+
+.daterangepicker .drp-buttons .drp-selected,
+.daterangepicker .drp-buttons .cancelBtn { display: none; }
+
+.daterangepicker .drp-buttons .applyBtn {
+  width: 100%;
+  padding: .5625rem 1rem;
+  font-size: .9375rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: var(--brand-accent);
+  border: none;
+  border-radius: .625rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+.daterangepicker .drp-buttons .applyBtn:hover { background-color: var(--brand-accent-700); }
+.daterangepicker .drp-buttons .applyBtn:active { transform: scale(.98); }
+
+.daterangepicker .drp-buttons .applyBtn:focus-visible {
+  outline: 2px solid var(--brand-accent-700);
+  outline-offset: 2px;
+}
+
+@media (max-width: 575.98px) {
+  .daterangepicker .calendar-table td,
+  .daterangepicker .calendar-table th { min-width: 2rem; line-height: 2rem; }
+  .daterangepicker .drp-calendar { padding: .5rem .25rem; }
+}
 
 /* ==========================================================================
    #FORM
@@ -897,32 +943,679 @@ button {
   margin-right: 30px;
 }
 
-.hidden {
-  position: absolute;
-  z-index: 9999;
-  color: rgba(0,0,0,0);
-  min-width: 100%;
-  min-height: 3em;
-  /*background-color: rgba(255,0,0,0.5);*/
-}
 
 /* CHECKBOX */
 /* Radio button */
 
-.search.dropdown-menu {
-  /* position: absolute !important; */
-  width: 100%;
-  margin-top: -15px !important;
-  -webkit-box-shadow: 0 10px 6px -6px #777;
-     -moz-box-shadow: 0 10px 6px -6px #777;
-          box-shadow: 0 10px 6px -6px #777;
-  border-top: none;
-  border-left-color: #fff;
-  border-right-color: #fff;
+
+/* ==========================================================================
+   #HOMEPAGE HERO
+   ==========================================================================
+
+   A flat band carrying the slogan, the two sections and the search bar. The
+   colour is the app's own ink rather than the reference's blue, and it is very
+   slightly graded so a full-width rectangle does not read as a dead block. */
+
+/* One flat colour, the header's own. The band was very slightly graded so that
+   a full-width rectangle would not read as a dead block; with the header stuck
+   above it and the search bar pinned into it, all three are the same surface
+   now, and a gradient meeting a flat colour at two seams looked like three
+   panels rather than one. */
+.hero { background-color: var(--brand-ink); }
+
+.hero__inner {
+  padding-top: 5.5rem;
+  /* Half the gap to the search bar. The other half is the bar's own top
+     padding, and the split is what lets the gap differ at rest and pinned: all
+     of this scrolls away, and only the bar's half is left under the header. */
+  padding-bottom: 1.25rem;
 }
 
-.search.dropdown-menu li {
+/* The destination cards, starting inside the band and finishing outside it.
+
+   Positioned so the overlap is unambiguous rather than relying on paint order,
+   and at a z-index the place dropdown still clears -- that panel opens downward
+   past the edge of the band and has to stay on top of the cards it crosses. */
+.hero-cards {
+  position: relative;
+  z-index: 1;
+  /* A sixth of a card, roughly -- enough for the band to cut across it rather
+     than sit behind it. Deeper read as the cards being half-swallowed. */
+  margin-top: -3.75rem;
+  padding-bottom: 3rem;
+}
+
+@media (max-width: 767.98px) {
+  /* Less of both: the band is already tall once the fields stack, and a card
+     is most of the screen, so a deep overlap buries its own heading. */
+  .hero__inner { padding-top: 3rem; padding-bottom: 7.5rem; }
+  .hero-cards { margin-top: -2.5rem; }
+}
+
+/* Holds the tray's height while the tray is up in the header, so nothing below
+   it moves when it leaves. The height itself is written by global.js from the
+   tray's own.
+
+   The gap to the search bar belongs here rather than on the tray. A child's
+   bottom margin only escapes a parent whose height is `auto`, and this one's is
+   pinned by that min-height -- so on the tray the 1.75rem was swallowed by the
+   slot's own box the moment the height was written, and the bar jumped up to
+   sit against the tray. On the slot it is outside the pinned box and cannot be
+   eaten. */
+.hero__modes-slot { position: relative; }
+
+/* The slot's bottom edge, which is where the tray finishes going under the
+   header. Taken out of the flow and pinned there: as a flow child it would ride
+   up to the top of the slot the moment the tray left, moving the very line that
+   decides whether the tray should have left -- which is a switch that flips
+   itself back and forth for as long as you hold still. */
+.hero__modes-sentinel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+}
+
+/* The tray, docked into the header.
+
+   Laid out along the row rather than down it: in the hero each section is a
+   tile with its icon above its name and room to breathe, and in a 88px header
+   that is a tile too tall to fit and too loud beside a logo. Same tray, same
+   order, one line. */
+.hero__modes.is-docked { margin: 0; gap: .25rem; }
+.hero__modes.is-docked .hero__modes-group { padding: .1875rem; border-radius: .625rem; }
+.hero__modes.is-docked .hero__mode {
+  flex-direction: row;
+  gap: .5rem;
+  min-width: 0;
+  padding: .4375rem .75rem;
+  font-size: .8125rem;
+}
+.hero__modes.is-docked .hero__mode i { font-size: .875rem; }
+
+/* The band, condensed.
+
+   Scrolling the homepage leaves the menu and the search bar behind and takes
+   the rest of the hero with it -- the slogan and the sections have said what
+   they had to say by the time a visitor is reading destinations, and the one
+   thing they may still want is the field they were typing in.
+
+   The bar is pinned rather than copied. The form is wired to literal element
+   ids (see search/form.html.twig), so a second copy on the page would fight the
+   first over every one of them; and it is pinned rather than moved in the DOM,
+   because moving a field that has an open dropdown attached to it loses the
+   dropdown. The header above is sticky, so the two sit together.
+
+   --header-h is written by global.js, which measures the header rather than
+   guessing: it is a navbar that wraps at some widths and not others. */
+/* Sticky, not pinned by script. A scroll is run on the compositor and a scroll
+   handler on the main thread, so anything driven from JS is a frame behind the
+   page it is reacting to -- on a flick the bar appeared where the scroll had
+   got to and then dropped into place. Sticky is resolved where the scrolling
+   happens and cannot lag it.
+
+   Its own band, in the hero's colour, so at rest it reads as the foot of the
+   hero and pinned it reads as the underside of the header. */
+.hero__bar {
+  position: sticky;
+  top: var(--header-h, 4.5rem);
+  z-index: 1020;
+  /* Tight to the menu once it is against it: the two are one band there, and a
+     gap between them reads as the bar having come loose. The rest of the gap it
+     has at rest is the hero's bottom padding, which scrolls away. */
+  padding: .5rem 0 .75rem;
+  background-color: var(--brand-ink);
+}
+
+/* The band's remaining depth, below the bar, out of which the cards are pulled.
+   Padding on the bar would make the sticky strip this tall. */
+.hero__tail { height: 10.25rem; background-color: var(--brand-ink); }
+
+/* Nothing here resizes the form. It was compacted to the results page's
+   metrics when pinned, which made the fields jump the moment they stuck -- the
+   thing somebody may be part-way through typing into should not change shape
+   underneath them. It keeps its own size, and only the band behind it changes. */
+
+@media (max-width: 767.98px) {
+  /* The fields stack here, so a pinned bar would be most of the screen. It
+     scrolls away with the rest of the band. */
+  .hero__bar { position: static; }
+}
+
+.hero__slogan {
+  max-width: 20ch;
+  text-align: center;
+  margin: 0 auto 2rem;
+  font-size: clamp(1.75rem, 4.5vw, 3rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -.02em;
+  color: #fff;
+  text-wrap: balance;
+}
+
+/* What this app does, and what it is going to do. The sections sit in one
+   tinted tray with the current one lifted out of it as a solid card -- the same
+   figure/ground the results steps use. Business travel sits outside the tray,
+   because it is a different audience rather than another thing to book. */
+.hero__modes {
+  display: flex;
+  justify-content: center;
+  gap: .5rem;
+}
+
+.hero__modes-group {
+  display: flex;
+  gap: .25rem;
+  padding: .25rem;
+  background-color: rgba(255, 255, 255, .1);
+  border-radius: 1rem;
+}
+
+.hero__mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .375rem;
+  min-width: 6.5rem;
+  padding: .75rem 1.25rem;
+  font-size: .875rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border-radius: .75rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+/* Somewhere this app will go but has not yet. Dimmed rather than greyed out:
+   60% white measures 5.2:1 on the tray, which is a section that is legibly
+   there and legibly not ready -- not one nobody can read. */
+.hero__mode.is-soon {
+  color: rgba(255, 255, 255, .6);
+  cursor: default;
+}
+
+.hero__mode.is-soon i { opacity: .8; }
+
+/* A shade lighter than the group's, so the break between the two reads as two
+   trays rather than as one with a gap torn in it. The muted label still
+   measures 4.6:1 against it. */
+.hero__modes-group--aside { background-color: rgba(255, 255, 255, .16); }
+
+.hero__mode i { font-size: 1.125rem; }
+
+a.hero__mode:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, .18);
+}
+
+a.hero__mode:active { transform: scale(.97); }
+
+.hero__mode.is-current {
+  color: var(--brand-ink);
+  background-color: #fff;
+}
+
+/* Six sections do not fit a phone. Scrolled rather than wrapped -- wrapping
+   costs two more rows of a band that is already tall once the fields stack --
+   and rather than squashed, because "For business" cannot be read at a sixth of
+   375px.
+
+   flex-start, not the centre the wider layout uses: content centred inside a
+   scroller overflows both ways, and whatever ends up left of the origin cannot
+   be scrolled back to. Here that was Flights, the current page. */
+@media (max-width: 767.98px) {
+  .hero__modes {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hero__modes::-webkit-scrollbar { display: none; }
+
+  .hero__modes-group { flex: 0 0 auto; }
+  .hero__mode { min-width: 5rem; padding: .625rem .75rem; font-size: .8125rem; }
+}
+
+@media (max-width: 575.98px) {
+  /* Top only. The bottom belongs to the pair above -- what separates the search
+     button from the first card is that padding less the cards' overlap, so
+     cutting one here on its own draws a card across the button. */
+  .hero__inner { padding-top: 2.25rem; }
+}
+
+/* ==========================================================================
+   #SEARCHBAR
+   ==========================================================================
+
+   The search form, which never had a block of its own -- it was Bootstrap
+   utilities stacked in a column, in a codebase where every other area has one.
+   One horizontal bar: origin, destination, depart, return, who is flying, go.
+
+   The fields sit in a single white surface divided by rules rather than as
+   separate boxes, so the row reads as one control. Below 992px they stack, and
+   the dividers become the gaps between them. */
+
+.searchbar__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  /* The bar draws nothing. It used to have a white gutter running round the
+     whole row -- which read as a border about the form, and tied the button
+     into the same object as the fields. The dividers it drew as 1px gaps are
+     borders on the fields now, for want of anything behind them. */
+  gap: 0;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+}
+
+.searchbar__field {
+  position: relative;             /* the autocomplete panel anchors to this */
+  display: flex;
+  /* Basis 0, not a width: the fields share what is left after the button, so
+     the row always fits on one line instead of wrapping the submit off the end
+     the moment an airport name gets long. */
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  min-width: 9rem;
+  min-height: 4rem;
+  padding: .5rem 1.125rem;
+  background-color: #fff;
+  /* The hairline between fields, drawn here because the bar behind them is
+     transparent and has no colour to show through a gap. */
+  border-left: 1px solid var(--line);
+}
+
+.searchbar__field:first-child {
+  border-left: 0;
+  border-radius: .75rem 0 0 .75rem;
+}
+
+/* Whichever field ends the white block, rather than counting to it: the row has
+   been reordered twice already. */
+.searchbar__field:has(+ .searchbar__submit) { border-radius: 0 .75rem .75rem 0; }
+
+/* The row shared out by what each field actually has to say. A place is a city
+   name with a code beside it, a date is "Oct 12 - Oct 14" once a window is
+   chosen, and the party runs to "6 passengers, Business". An equal share left
+   the last three ellipsing while the places sat on room they did not need. */
+.searchbar__field--place { flex: 1.4 1 0; }
+.searchbar__field--date { flex: 1.15 1 0; }
+/* No `padding: 0` here. The field's own padding used to be outranked by the
+   hero rule and never applied; folded together they tie, and the later one --
+   this -- would start winning and flatten the party field against its edges. */
+.searchbar__field--party { flex: 1.5 1 0; min-width: 12rem; }
+
+/* Named for a screen reader and nothing else: the placeholder says what the
+   field is until a value says it instead, and a placeholder disappears exactly
+   when somebody tabbing back needs it most. */
+.searchbar__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.searchbar__input {
+  width: 100%;
+  padding: 0;
+  font-size: 1.0625rem;
+  color: var(--ink-body);
+  background: none;
+  border: none;
+  outline: none;
+  text-overflow: ellipsis;        /* "Montréal-Trudeau, Montreal, Canada" in 12rem */
+}
+
+.searchbar__input::placeholder { color: var(--ink-faint); }
+.searchbar__input:read-only { cursor: pointer; }
+
+/* The way back to a one-way trip, now that no tab does it. */
+.searchbar__clear {
+  position: absolute;
+  top: 50%;
+  right: .5rem;
+  padding: .25rem .375rem;
+  font-size: .75rem;
+  line-height: 1;
+  color: var(--ink-muted);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.searchbar__clear:hover {
+  color: var(--ink-body);
+  background-color: var(--surface);
+}
+
+/* Set apart from the fields, which is what makes it read as the thing that
+   acts rather than the last thing to fill in.
+
+   It carries no edge of its own, by choice. The accent measures 2.85:1 against
+   the ink band behind it, under the 3:1 that would let its boundary be found by
+   contrast alone -- what identifies it here is its label, set in white on the
+   fill at 10.3:1, and its position at the end of the row. */
+.searchbar__submit {
+  flex: 0 0 auto;
+  margin-left: .5rem;
+  padding: 0 2.25rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: var(--brand-accent);
+  border: none;
+  border-radius: .75rem;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.searchbar__submit:hover { background-color: var(--brand-accent-700); }
+
+/* Stacked, the row's parts stop being a row. Each field is a card of its own,
+   so the divider between them, the radii that opened and closed the white
+   block, and the gap that set the button apart all have nothing left to do --
+   and left alone they show up as a stray edge down one side of every card and
+   an indent on a full-width button. */
+@media (max-width: 991.98px) {
+  .searchbar__field,
+  .searchbar__field:first-child,
+  .searchbar__field:has(+ .searchbar__submit) {
+    border-left: 0;
+    border-radius: var(--bs-border-radius);
+  }
+
+  /* And it takes the row it has been pushed onto. */
+  .searchbar__submit { margin-left: 0; flex-basis: 100%; }
+}
+
+/* The code for whatever place is chosen, set to one side of the field the way
+   the reference does. It is the least ambiguous name an airport has, and the
+   field itself is too narrow to spell most of them out. */
+.searchbar__code {
+  position: absolute;
+  top: 50%;
+  right: 1.125rem;
+  font-size: .8125rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ink-faint);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.searchbar__code:empty { display: none; }
+
+/* Room for it, so a long place name is ellipsed before it collides.
+
+   input, not the class on its own: the hidden native select carries the same
+   class, and padding on a 1px-wide absolutely positioned element is still 3rem
+   of box -- enough to push the page 9px wider than the phone showing it. */
+.searchbar__field--place input.searchbar__input { padding-right: 3rem; }
+
+/* Stacked rather than paired. Two of them side by side on a phone leaves each
+   about 140px, which is not enough for a placeholder, let alone a place. */
+@media (max-width: 767.98px) {
+  .searchbar__field--place { flex-basis: 100%; }
+}
+
+/* The band the results-page form sits in. Replaces .card-4, which was a
+   translucent black panel over whatever the page had behind it. */
+/* The results page's own band, and the only thing held on this page.
+
+   The search is what you are adjusting here -- scrolling a list of flights is
+   exactly when you want to change a date -- and the menu is not. So the band
+   takes the top of the screen for itself and the header goes with the page,
+   which is why this sticks at 0 rather than under a header that is no longer
+   there. See the rule below, which is what lets the header scroll.
+
+   Sticky rather than pinned from script, for the reason the homepage's bar is:
+   scrolling runs on the compositor and a scroll handler does not, so anything
+   driven from JS arrives a frame late and drops into place. A direct child of
+   the body, so the page is what bounds it. */
+.searchbar-band {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  padding: 1rem 0 1.25rem;
+  background-color: var(--brand-ink);
+}
+
+@media (max-width: 991.98px) {
+  /* The fields stack below the navbar's breakpoint, and a band that tall
+     against the top of the screen leaves no room for the results. */
+  .searchbar-band { position: static; }
+}
+
+/* Who is flying: one trigger, and a panel holding the controls that submit.
+   Four selects side by side do not fit a single-row bar, which is why the
+   reference collapses them into one. */
+.party { position: relative; height: 100%; }
+
+.party__trigger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .125rem;
+  width: 100%;
+  height: 100%;
+  padding: .5rem .875rem;
+  text-align: left;
+  background: none;
+  border: none;
+}
+
+/* Who is flying, stacked. There is no standing label to say what the field is,
+   so the count and the cabin become the two lines that name it. It is also what
+   makes the longest party fit -- "9 passengers, Premium Economy" has no width at
+   which it sits on one line beside four other fields. */
+.party__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  font-size: .9375rem;
+  line-height: 1.3;
+  color: var(--ink-body);
+  white-space: nowrap;
+}
+
+.party__class { font-size: .875rem; color: var(--ink-muted); }
+
+.party__summary > span { overflow: hidden; text-overflow: ellipsis; }
+
+/* Nothing between the count and the cabin: they are on their own lines. The
+   comma this once carried was for the one-line layout the results page used to
+   have, and it is written here rather than into the element because the text is
+   rewritten on every change -- a separator in the markup would have to be
+   rebuilt each time by a paint that should only care about the two facts. */
+.party__heads::after { content: none; }
+
+.party__panel {
+  position: absolute;
+  top: calc(100% + .5rem);
+  right: 0;
+  z-index: 20;
+  width: 21rem;
+  padding: .5rem;
+  background-color: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: 0 .5rem 1.5rem rgba(21, 26, 33, .12);
+}
+
+/* In a dialog the panel opens in place rather than over the page. Floated, it
+   escaped the modal entirely -- there is nothing below a modal to hang a panel
+   in, so it hung across the backdrop instead. Expanding in flow lets the dialog
+   grow around it, which is what a dialog is for. */
+.modal .party { position: static; }
+
+.modal .party__panel {
+  position: static;
+  width: auto;
+  margin-top: .5rem;
+  border-radius: var(--bs-border-radius);
+  box-shadow: none;
+}
+
+/* The trigger is a field in here, not a slot in a bar. */
+.modal .party__trigger {
+  padding: .625rem .75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--bs-border-radius);
+}
+
+.party__row {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: .625rem .625rem;
+}
+
+.party__row + .party__row { border-top: 1px solid var(--line); }
+
+.party__name {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  font-size: .875rem;
+  color: var(--ink-body);
+}
+
+.party__name small { font-size: .75rem; color: var(--ink-muted); }
+
+/* The select still submits and still catches the empty-select disabler; the
+   stepper is what anyone actually touches. Not `display: none`, so it keeps a
+   label and stays reachable to anything reading the form. */
+.party__native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.party__stepper {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+
+.party__step {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--brand-accent);
+  background-color: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.party__step:hover:not(:disabled) { border-color: var(--brand-accent); }
+.party__step:active:not(:disabled) { transform: scale(.94); }
+
+/* Dimmed rather than hidden: a control that vanishes at the limit gives no clue
+   there was a limit. */
+.party__step:disabled {
+  color: var(--ink-faint);
+  border-color: var(--line);
+}
+
+.party__value {
+  min-width: 1.25rem;
+  font-size: .9375rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-body);
+  text-align: center;
+}
+
+.party__cabins {
+  margin: .25rem 0 0;
+  padding: .5rem .625rem .25rem;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+.party__cabins .party__name { padding: 0 0 .375rem; }
+
+.party__cabin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .375rem;
+}
+
+/* The tile is the label, so the whole thing is the hit area. The radio itself
+   is only visually gone -- it still submits, still takes focus, and still tells
+   a screen reader what this is. */
+.party__cabin {
+  position: relative;             /* holds its own hidden input */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem .375rem;
+  font-size: .8125rem;
+  color: var(--ink-secondary);
+  text-align: center;
+  background-color: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--bs-border-radius);
   cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.party__cabin input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.party__cabin:hover { background-color: var(--surface-sunken); }
+
+.party__cabin:has(input:checked) {
+  font-weight: 600;
+  color: var(--brand-accent-700);
+  background-color: var(--brand-tint);
+  border-color: var(--brand-accent);
+}
+
+/* Focus lands on the input, which is not visible -- so the tile wears it. */
+.party__cabin:has(input:focus-visible) { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+
+/* What is left of the compact bar's own small-screen rules. The rest of them --
+   a gap on the bar, a full-width basis on every field, a squarer button -- never
+   reached the page: the modifier that carried the tall form outranked this
+   block, and with the two folded together they would have started applying and
+   turned a row that wraps on its own into one field per line. The fields carry
+   `min-width: 9rem`, which is what wraps them, and the block above this one
+   squares off their corners and gives the button its own row. */
+@media (max-width: 991.98px) {
+  .party__panel { width: 100%; }
 }
 
 /* ==========================================================================
@@ -1028,27 +1721,6 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 /* ==========================================================================
-   #TAB
-   ========================================================================== */
-
-.tab-content > .tab-pane {
-  display: none;
-  padding: 15px;
-  padding-bottom: 20px;
-}
-
-.tab-content > .tab-pane.active {
-  display: block;
-}
-
-@media (max-width: 767px) {
-  .tab-content > .tab-pane {
-    padding: 30px;
-    padding-bottom: 45px;
-  }
-}
-
-/* ==========================================================================
    #SIDEBAR
    ========================================================================== */
 
@@ -1127,13 +1799,6 @@ input[type=number]::-webkit-outer-spin-button {
   text-transform: uppercase;
   color: #fff;
   margin-bottom: 24px;
-}
-
-/* ==========================================================================
-   #CARD
-   ========================================================================== */
-.card-4 {
-  background: rgba(0, 0, 0, 0.8);
 }
 
 /* ==========================================================================
@@ -2739,6 +3404,52 @@ textarea {
 .filter-slider__clear[hidden] { display: none; }
 
 /* --- Apply --------------------------------------------------------------- */
+/* The menu stays put on the homepage, and only there.
+
+   That page folds its hero into the header -- the section tray moves up into it
+   and the search bar sticks beneath -- and the two have to sit together for
+   that to read as one band rather than as a bar that has come loose. Nowhere
+   else is anything depending on it, and a menu holding the top of every page is
+   a strip of chrome taken off the content for the rest of the visit.
+
+   Matched on the hero rather than on a class the page would have to carry: the
+   hero is what makes this the page the header has a job in, and it is rendered
+   nowhere else. `.hero__modes` and `.hero-cards` are their own classes and do
+   not match.
+
+   Above the sticky search bar at 1020, below Bootstrap's modal at 1055. */
+body:has(.hero) header#top {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+/* Where the homepage's section tray lands once the slogan has gone.
+
+   Centred on the header rather than placed between the logo and the menu: the
+   tray is the page's own subject and belongs on the page's axis, and a flex
+   slot between two lists of different widths would put it wherever those two
+   happened to leave room. That is also why the header menu is two items -- see
+   site.main-menu -- a full one leaves nothing for this to land in. */
+.navbar > .container-fluid { position: relative; }
+
+.navbar-dock {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
+
+/* Below the navbar's own breakpoint the menu is behind a toggler and there is
+   no header row to dock into. The tray stays in the hero and scrolls away. */
+@media (max-width: 991.98px) {
+  .navbar-dock { display: none; }
+}
+
+/* A placeholder in the header: not a link, and saying so quietly. */
+.nav-link--soon { opacity: .65; cursor: default; }
+
 /* Pinned to the bottom of the screen so Apply is reachable without scrolling
    back down a long sidebar. It needs an opaque background and a shadow: the
    controls above scroll underneath it, and without those the two would blur
@@ -3454,6 +4165,154 @@ textarea {
   color: var(--brand-accent-700);
 }
 
+/* In the search bar a field is a fifth of the row, which is narrower than an
+   airport name. The list is allowed to be wider than the field it hangs off
+   rather than wrapping "London Gatwick Airport" over three lines. */
+.searchbar__field .combo__list {
+  right: auto;
+  min-width: 24rem;
+  max-width: 28rem;
+  /* Taller than the checkout's country list: this one opens with two sections
+     in it, and the airports should not start already scrolled. */
+  max-height: 26rem;
+  padding: 0 0 .25rem;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.5rem rgba(21, 26, 33, .16);
+}
+
+/* Except where the field is already full width, and a wider panel would run off
+   the screen. */
+@media (max-width: 991.98px) {
+  .searchbar__field .combo__list { right: 0; min-width: 0; max-width: none; }
+}
+
+/* A section heading inside the list -- "You searched earlier", "Cities and
+   airports". Bold and dark rather than a small grey caption: the panel is a
+   place with two parts, and the parts should read as parts. */
+.combo__group {
+  padding: .75rem .75rem .375rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink-body);
+}
+
+.combo__group:first-child { padding-top: .5rem; }
+
+/* Past searches, laid across the panel as chips. A chip is one thing to take or
+   leave, and wrapping them keeps the airports -- what the field is for -- from
+   being pushed off the bottom. */
+.combo__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+  padding: 0 .75rem .5rem;
+}
+
+.combo__pill {
+  display: inline-flex;
+  gap: .375rem;
+  align-items: center;
+  max-width: 100%;
+  padding: .4375rem .75rem;
+  overflow: hidden;
+  font-size: .8125rem;
+  color: var(--ink-body);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: var(--surface);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.combo__pill i { flex: 0 0 auto; font-size: .75rem; color: var(--ink-muted); }
+
+/* The rest of the history, one click away. Outlined rather than filled, because
+   it is the one pill on the row that chooses nothing -- everything beside it
+   runs a search. */
+.combo__pill--more {
+  gap: .3125rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  background-color: transparent;
+  border: 1px solid var(--line-strong);
+}
+
+.combo__pill--more:hover {
+  color: var(--ink-body);
+  background-color: var(--surface);
+}
+
+.combo__pill--more i { font-size: .625rem; }
+.combo__pill span { overflow: hidden; text-overflow: ellipsis; }
+.combo__pill:hover,
+.combo__pill.is-active { background-color: var(--surface-sunken); }
+
+/* A place: an icon, the name with its code, and the city and country under it.
+   The icon says which kind of row it is -- a city that stands for several
+   airports, or one airport. */
+.combo__option--stacked {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0 .625rem;
+  align-items: baseline;
+  padding: .5rem .75rem;
+}
+
+/* Ruled between rows the way the reference is, so a long list reads as a list
+   rather than as a wall. Not after the last one, and not under a city -- a city
+   and its airports are one group. */
+.combo__option--stacked + .combo__option--stacked { box-shadow: inset 0 1px 0 var(--line); }
+.combo__option--city + .combo__option--stacked { box-shadow: none; }
+
+/* Masked SVG rather than a Font Awesome <i>. Its script rewrites every <i> it
+   finds into an <svg>, and scanning a few hundred rows blocked the main thread
+   for most of two seconds -- the dropdown took seconds to open. A mask keeps
+   currentColor working, so these still take their colour from the row. */
+.combo__icon {
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--ink-muted);
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+}
+
+.combo__icon--airport {
+  -webkit-mask-image: var(--icon-plane);
+          mask-image: var(--icon-plane);
+}
+
+.combo__icon--city {
+  -webkit-mask-image: var(--icon-pin);
+          mask-image: var(--icon-pin);
+}
+
+.combo__icon--recent {
+  flex: 0 0 auto;
+  width: .875rem;
+  height: .875rem;
+  -webkit-mask-image: var(--icon-clock);
+          mask-image: var(--icon-clock);
+}
+
+.combo__name { grid-column: 2; font-size: .9375rem; color: var(--ink-body); }
+.combo__code { grid-column: 3; grid-row: 1; font-size: .8125rem; color: var(--ink-muted); }
+.combo__sub  { grid-column: 2 / -1; font-size: .8125rem; color: var(--ink-muted); }
+.combo__option--city .combo__name { font-weight: 600; }
+
+/* What was left out, said plainly rather than by a list that just stops. */
+.combo__more {
+  padding: .5rem .75rem .625rem;
+  font-size: .75rem;
+  color: var(--ink-muted);
+}
+
 .combo__empty {
   padding: .5rem .6rem;
   font-size: .875rem;
@@ -3630,6 +4489,320 @@ textarea {
 /* daterangepicker positions itself absolutely against parentEl; without a
    containing block it lands at the dialog's top-left corner on open. */
 .modal-content { position: relative; }
+
+
+/* Groups on the bookings list. They were separated by the card margin alone,
+   which is the same gap that sits between two cards inside one group -- so the
+   groups did not read as groups. */
+.bookings section { margin-bottom: 2.75rem; }
+.bookings section:last-of-type { margin-bottom: 0; }
+
+/* How many are in this group. Bootstrap's .badge is 11px grey-on-grey and was
+   losing to the heading beside it; this is the tab strip's count chip, which
+   is the same thing being said in the same place. */
+.bookings-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.625rem;
+  height: 1.625rem;
+  padding: 0 .5rem;
+  border-radius: 999px;
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Two addresses drawn as one strip. Underlined-when-current rather than a
+   filled pill, so it reads as "where am I in this page" and not as a pair of
+   buttons competing with the actions below it. */
+.bookings-tabs {
+  display: flex;
+  gap: .25rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.bookings-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .625rem .875rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--ink-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+.bookings-tabs__tab:hover { color: var(--ink-body); background-color: var(--surface); }
+.bookings-tabs__tab.is-current { color: var(--brand-accent-700); border-bottom-color: var(--brand-accent); }
+.bookings-tabs__count {
+  min-width: 1.5rem;
+  padding: 0 .375rem;
+  border-radius: 999px;
+  background-color: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: .75rem;
+  font-weight: 600;
+  text-align: center;
+}
+.bookings-tabs__tab.is-current .bookings-tabs__count {
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+}
+
+/* A cancelled booking is stamped, not badged and not banded.
+
+   A tint the size of the word "Confirmed" was the quietest thing on a card
+   whose every other line it invalidates. A bar of solid red across the top
+   fixed that and overcorrected: it shouted before the reader had reached
+   anything to shout about, and three of them down a page was all the page was.
+
+   A stamp is what a travel document actually carries when it stops being
+   valid -- outlined, off-square, sitting on top of the thing it voids rather
+   than replacing it. It takes the badge's place, so nothing moves.
+
+   #B02A37 on white measures 6.50, and the outline is the same colour at full
+   strength rather than a tint, so the text clears AA at this size. */
+.booking-stamp {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .625rem;
+  border: 2px solid var(--brand-danger);
+  border-radius: .25rem;
+  color: var(--brand-danger);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  /* Clockwise, sitting at the card's top right. Anticlockwise there dips the
+     outer end toward the card edge and reads as a badge set down crookedly;
+     turned the other way the stamp hinges off the reference it voids and the
+     outer end lifts clear. */
+  transform: rotate(3deg);
+  /* The double rule is the stamp's whole tell; without it this is a red
+     button. Drawn as a shadow so it costs no extra element. */
+  box-shadow: 0 0 0 1px #FFFFFF, 0 0 0 3px rgba(176, 42, 55, .28);
+}
+.booking-stamp--lg {
+  padding: .375rem 1rem;
+  font-size: 1rem;
+  letter-spacing: .16em;
+  transform: rotate(4deg);
+}
+
+/* The card keeps every bit of its text contrast -- it is still a receipt
+   somebody may need -- and loses the colour that says "live": the carrier
+   marks go grey, which is the difference you see before you have read a word. */
+.booking-card--cancelled .airline-logo { filter: grayscale(1); opacity: .65; }
+
+/* The sentence under the stamp on the booking's own page. It explains what the
+   stamp means once; the stamp does not repeat it on every block below. */
+.booking-note {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin: 1.5rem 0 0;
+  padding: .75rem 1rem;
+  border: 1px solid #F3C7CC;
+  border-left: 3px solid var(--brand-danger);
+  border-radius: .5rem;
+  background-color: #FDF4F5;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+}
+.booking-note i { color: var(--brand-danger); margin-top: .1875rem; }
+
+/* On its way to the cancelled page. Opacity and a collapse, both cheap to
+   composite; `ease-out` because the card is leaving and the movement should be
+   over before it is studied. Anyone who has asked for less motion gets the
+   removal with none of it. */
+.booking-card--leaving {
+  opacity: 0;
+  transform: scale(.98);
+  transition: opacity .35s ease-out, transform .35s ease-out;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .booking-card--leaving { transition: none; }
+}
+
+/* The reference, the name on it, and the date it was paid for -- what somebody
+   opens this page already holding. It used to be set at the same size as a
+   card in a list of twenty, on a page showing exactly one. */
+.booking-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.75rem 0 1.5rem;
+}
+.booking-head__label {
+  margin: 0 0 .25rem;
+  font-size: .6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink-muted);
+}
+.booking-head__code-row { display: flex; align-items: center; gap: .5rem; }
+.booking-head__code {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: .16em;
+  color: var(--ink-body);
+}
+/* No code to space out -- this is a sentence, not an identifier. */
+.booking-head__code--none { font-size: 1.75rem; letter-spacing: normal; }
+.booking-head__who {
+  margin: .625rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink-body);
+}
+.booking-head__meta { margin: .125rem 0 0; font-size: .875rem; color: var(--ink-muted); }
+.booking-head__state { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+/* The banner above already carries the news in white on red; repeating it at
+   full strength here would be the third time in 200px. */
+.booking-head--cancelled .booking-head__code { color: var(--ink-secondary); }
+
+@media (max-width: 575.98px) {
+  .booking-head__code { font-size: 1.75rem; }
+  .booking-head__state { order: -1; }
+}
+
+/* The footer is a dark band, and content ending a few pixels above it reads as
+   having been cut off rather than finished. */
+.bookings { padding-bottom: 4rem; }
+
+/* A block of the booking page.
+
+   The page is a stack of these and nothing else, so a new one -- baggage,
+   seats, check-in -- is a template plus a line in the list at the top of
+   detail.html.twig. The heading sits outside the panel so the stack can be
+   read by its headings alone. */
+/* Blocks sit in a grid so two short ones can share a row rather than each
+   taking the full width for four lines. */
+.bkblocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.25rem;
+  align-items: start;
+}
+.bkblock { grid-column: 1 / -1; margin-bottom: 1.5rem; }
+.bkblock--half { grid-column: span 1; }
+
+/* These were 13px uppercase grey -- the same treatment as the "DEPARTING"
+   label inside a card, which made the name of a whole section look like an
+   annotation on the thing above it. A section heading is set as a heading:
+   sentence case, dark, and larger than the body it introduces. */
+.bkblock__title {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0 0 .75rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+  color: var(--ink-body);
+}
+.bkblock__icon { color: var(--brand-accent); font-size: 1rem; }
+
+@media (max-width: 767.98px) {
+  .bkblocks { grid-template-columns: minmax(0, 1fr); }
+  .bkblock--half { grid-column: 1 / -1; }
+}
+.bkblock__body {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background-color: #FFFFFF;
+}
+
+/* Two directions in one block, told apart by a rule rather than by a second
+   panel: they are one journey. */
+.bkflights__half--next { margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+
+/* The summary line and the legs it summarises were touching, so the route bar
+   read as the top edge of the panel below it rather than as its own line. */
+.bkflights__half .legs { margin-top: 1rem; }
+
+/* Who is on the booking. One row each, name first: a manifest is scanned down
+   its left edge. */
+.people { margin: 0; padding: 0; list-style: none; }
+.people__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.people__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.people__name { font-weight: 600; color: var(--ink-body); }
+.people__type { font-size: .8125rem; color: var(--ink-muted); }
+
+/* Label and value, both left-aligned. Used by contact and by the receipt's
+   payment lines -- anywhere a short label introduces a short value. */
+.facts { margin: 0; }
+.facts__row {
+  display: grid;
+  grid-template-columns: minmax(5rem, 7rem) 1fr;
+  gap: .25rem 1rem;
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.facts__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.facts__row dt { font-size: .8125rem; font-weight: 600; color: var(--ink-muted); }
+.facts__row dd { margin: 0; color: var(--ink-body); font-size: .9375rem; word-break: break-word; }
+
+/* What the ticket allows. */
+.fare__name { margin: 0 0 .5rem; font-size: 1rem; font-weight: 600; color: var(--ink-body); }
+.fare__rules { margin: 0; padding: 0; list-style: none; }
+.fare__rules .rules__item { break-inside: avoid; }
+
+/* Whether a direction is behind you. Quiet: it qualifies the heading it sits
+   beside rather than competing with the booking's own status. */
+.leg-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .3125rem;
+  padding: .125rem .5rem;
+  border-radius: 999px;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: none;
+}
+.leg-state--flown { background-color: var(--surface-sunken); color: var(--ink-secondary); }
+.leg-state--ahead { background-color: var(--brand-tint); color: var(--brand-accent-700); }
+.bkflights__label { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+/* Amounts, right-aligned: a column of figures is compared by its last digit. */
+.receipt__amounts { margin: 0; }
+.receipt__amount { display: flex; justify-content: space-between; gap: 1.5rem; padding: .3125rem 0; }
+.receipt__amount dt { font-weight: 400; color: var(--ink-secondary); font-size: .9375rem; }
+.receipt__amount dd { margin: 0; color: var(--ink-body); font-size: .9375rem; font-variant-numeric: tabular-nums; }
+.receipt__amount--total { margin-top: .5rem; padding-top: .75rem; border-top: 1px solid var(--line-strong); }
+.receipt__amount--total dt,
+.receipt__amount--total dd { font-size: 1.25rem; font-weight: 700; color: var(--ink-body); }
+.receipt__currency { font-size: .8125rem; font-weight: 600; color: var(--ink-muted); }
+.receipt__method { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--line); }
+.receipt__no-price { margin: 0; font-size: .875rem; color: var(--ink-muted); }
+
+/* Inside a week, the countdown is the reason the card is being looked at. */
+.booking-when--soon { color: var(--brand-accent-700); font-weight: 600; }
+
+@media (max-width: 575.98px) {
+  .facts__row { grid-template-columns: 1fr; gap: .125rem; }
+}
 
 
 /* ==========================================================================

@@ -8,7 +8,6 @@ use Exception;
 use TripBuilder\Api\Airlines;
 use TripBuilder\Api\Airports;
 use TripBuilder\Api\Flights;
-use TripBuilder\Api\HttpMethod;
 
 class ApiController extends AbstractController
 {
@@ -20,16 +19,6 @@ class ApiController extends AbstractController
         $airports = new Airports\Response($this->request);
 
         $airports->get();
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function airportsAutofill(): void
-    {
-        $airports = new Airports\Response($this->request, HttpMethod::Get);
-
-        $airports->getAutofill();
     }
 
     /**

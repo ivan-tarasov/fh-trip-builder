@@ -7,7 +7,9 @@ namespace TripBuilder\Controllers;
 use Exception;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
+use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\SearchRepository;
+use TripBuilder\View\RecentSearches;
 use TripBuilder\View\TwigRenderer;
 
 class HomeController extends AbstractController
@@ -17,13 +19,6 @@ class HomeController extends AbstractController
      */
     public function index(): void
     {
-        $bgImageUrl = sprintf(
-            '%s/%s/background/%s.jpg',
-            Config::get('site.static.url'),
-            Config::get('site.static.endpoint.images'),
-            rand(1, 10),
-        );
-
         // Three random points of interest for the promo cards.
         $poi = Config::get('site.poi');
         shuffle($poi);
@@ -46,11 +41,16 @@ class HomeController extends AbstractController
             new SearchRepository($this->connection())->topSearches(5),
         );
 
+        $places = new AirportRepository($this->connection())->pickable();
+
         echo new TwigRenderer()->renderPage('index/view.html.twig', [
-            'bg_image_url' => $bgImageUrl,
             'today_date' => date('Y-m-d'),
             'poi_cards' => $poi,
             'top_searches' => $topSearches,
+            // Everywhere a search can start or end. Small enough to ship whole,
+            // which is what lets the form filter in the browser.
+            'places' => $places,
+            'recent' => RecentSearches::rows($this->request->cookies, $places),
         ]);
     }
 

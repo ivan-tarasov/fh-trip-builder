@@ -24,6 +24,7 @@ use TripBuilder\SearchUrl;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 use TripBuilder\View\ItineraryPresenter;
+use TripBuilder\View\RecentSearches;
 use TripBuilder\View\TwigRenderer;
 
 class SearchController extends AbstractController
@@ -132,15 +133,24 @@ class SearchController extends AbstractController
             ]);
 
             // Convert search hash to url and redirect
-            $this->checkHash();
+            if ($this->checkHash()) {
+                return;
+            }
 
             // The search itself comes from the path when there is one, and from
             // the query string when the link predates it.
             $this->searchUrl = SearchUrl::parse($this->request->path())
                 ?? SearchUrl::fromQuery($query);
 
+            // The route matched, so the URL is well formed; what it names is
+            // not. A date the calendar does not have, a window wider than the
+            // search will run, a return before its departure -- each is a page
+            // that cannot exist, and saying so in the status is what keeps it
+            // out of an index. The old answer was a 200 carrying an inline
+            // script, which only moved a visitor who ran JavaScript and whose
+            // content policy allowed it.
             if ($this->searchUrl === null) {
-                echo '<script>window.location.replace("/");</script>';
+                $this->notFound();
 
                 return;
             }
@@ -177,6 +187,8 @@ class SearchController extends AbstractController
                 departDate: $this->get[self::GET_DEPART],
                 returnDate: $this->get[self::GET_RETURN] ?? '',
                 party: $this->searchUrl->party(),
+                departSpan: $this->searchUrl->departSpan,
+                returnSpan: $this->searchUrl->returnSpan,
                 cabin: CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
                 filters: FlightFilters::fromQuery($this->get, party: $this->searchUrl->party()),
                 returnFilters: FlightFilters::fromQuery(
@@ -228,6 +240,8 @@ class SearchController extends AbstractController
                 return;
             }
 
+            $places = new AirportRepository($this->connection())->pickable();
+
             echo new TwigRenderer()->renderPage('search/view.html.twig', [
                 // So the form above the results shows the party that was
                 // searched for rather than resetting to one adult.
@@ -243,10 +257,14 @@ class SearchController extends AbstractController
                 // So the results page's own form comes back showing the cabin
                 // that produced these results.
                 'cabin' => $cabin,
+                'places' => $places,
+                'recent' => RecentSearches::rows($this->request->cookies, $places),
                 'depart_city' => $this->data->depart,
                 'arrive_city' => $this->data->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],
                 'return_date' => $this->get[self::GET_RETURN],
+                'depart_flex' => $this->searchUrl->departSpan,
+                'return_flex' => $this->searchUrl->returnSpan,
                 // Filter forms submit with GET, so they post to the search's
                 // own path and carry only the rest -- sort and filters -- as
                 // hidden fields. The search itself is in that path now.
@@ -278,6 +296,13 @@ class SearchController extends AbstractController
                 'step_date' => $this->data->step === 2
                     ? $this->get[self::GET_RETURN]
                     : $this->get[self::GET_DEPART],
+                // The last day the search covers. A flexible search draws its
+                // cards from up to three days, and the header named only the
+                // first of them -- so a page of results dated the 17th sat
+                // under a line that said the 15th.
+                'step_date_until' => $this->data->step === 2
+                    ? $this->searchUrl->returnUntil()
+                    : $this->searchUrl->departUntil(),
                 'price_mode' => $this->data->price_mode,
                 'selected' => $this->data->selected === null
                     ? null
@@ -336,9 +361,16 @@ class SearchController extends AbstractController
     }
 
     /**
+     * Answer a `?hash=` link, if this is one.
+     *
+     * True when the request has been answered and nothing after it should run.
+     * It used to redirect and then fall through, so a 302 left here carrying a
+     * whole page body behind it -- and, once an unreachable search started
+     * answering 404, a status that overwrote the redirect.
+     *
      * @throws Exception|\Twig\Error\Error
      */
-    private function checkHash(): void
+    private function checkHash(): bool
     {
         if ($this->get['hash']) {
             $search = new SearchRepository($this->connection())->findByHash($this->get['hash']);
@@ -348,7 +380,7 @@ class SearchController extends AbstractController
             if ($search === null) {
                 $this->bounce('/');
 
-                return;
+                return true;
             }
 
             // Straight to the short form, which is what migrates every
@@ -366,6 +398,10 @@ class SearchController extends AbstractController
                 cabin: CabinClass::fromRequest(
                     is_string($search[self::GET_CLASS] ?? null) ? $search[self::GET_CLASS] : null,
                 ),
+                // Rows written before flexible dates have no span columns to
+                // read, so they rebuild as the single-date searches they were.
+                departSpan: max(1, (int) ($search['depart_span'] ?? 1)),
+                returnSpan: max(1, (int) ($search['return_span'] ?? 1)),
             );
 
             echo new TwigRenderer()->render('search/redirect.html.twig', [
@@ -378,6 +414,8 @@ class SearchController extends AbstractController
 
             die();
         }
+
+        return false;
     }
 
     private function searchStat(): void
@@ -399,7 +437,14 @@ class SearchController extends AbstractController
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
+            $this->searchUrl->departSpan,
+            $this->searchUrl->returnSpan,
         );
+
+        // Offered back in the origin and destination fields next time. Kept in
+        // this browser rather than in the `search` table, which counts how
+        // popular a route is and has no column for who ran it.
+        RecentSearches::remember($this->request->cookies, $this->searchUrl, $this->request->isSecure());
 
         // Insert or update search
         new SearchRepository($this->connection())->record(
@@ -412,6 +457,8 @@ class SearchController extends AbstractController
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
+            $this->searchUrl->departSpan,
+            $this->searchUrl->returnSpan,
         );
     }
 

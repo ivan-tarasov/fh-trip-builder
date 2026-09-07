@@ -333,4 +333,43 @@ class Helper
             ? substr($title, strlen($prefix))
             : $title;
     }
+
+    /**
+     * A date, carrying its year only when that year is not the current one.
+     *
+     * Every date on a flight was printed as "Thu, 15 Oct". Inside one year that
+     * is the right amount to say; across a new year it is a guess. A trip
+     * booked in December 2026 that leaves in January 2027 showed a departure
+     * indistinguishable from one eleven months earlier, and the pages that
+     * show a whole itinerary -- search results, the booking card, the booking
+     * itself -- all read from here.
+     *
+     * The two formats are passed rather than a year appended, because where the
+     * year goes depends on the shape of the rest: "Thu, 15 Oct 2027" wants a
+     * space and "Wed, December 30, 2027" wants a comma.
+     *
+     * Against today by default: the question a reader is answering is "which
+     * year is this", and today is what they are standing in. A caller can pass
+     * something else to compare against -- the far end of a date range names
+     * its own year, so the near end only needs one when the two disagree.
+     */
+    public static function dateLabel(
+        string|int $when,
+        string $format,
+        string $formatWithYear,
+        string|int|null $reference = null,
+    ): string {
+        $timestamp = self::stamp($when);
+        $against = $reference === null ? time() : self::stamp($reference);
+
+        return date(
+            date('Y', $timestamp) === date('Y', $against) ? $format : $formatWithYear,
+            $timestamp,
+        );
+    }
+
+    private static function stamp(string|int $when): int
+    {
+        return is_int($when) ? $when : (int) strtotime($when);
+    }
 }

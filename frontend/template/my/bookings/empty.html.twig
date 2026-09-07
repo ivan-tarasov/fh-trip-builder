@@ -1,13 +1,44 @@
-{# Nothing booked yet. Built to the same shape as the saved page's empty
-   state: name the state, say what will fill it, and offer the one action that
-   does. What this replaced was a single "not found" image, which told a
-   visitor that something was missing without saying what, why, or what to do
-   about it -- and read as an error on a page that is working correctly. #}
+{# Nothing to show. Built to the same shape as the saved page's empty state:
+   name the state, say what will fill it, and offer the one action that does.
+   What this replaced was a single "not found" image, which told a visitor that
+   something was missing without saying what, why, or what to do about it --
+   and read as an error on a page that is working correctly.
+
+   One per tab. An empty cancelled page is good news rather than a gap to be
+   filled, so it is not sent to the search form the way an empty active list
+   is; an empty past page is simply somebody who has not flown yet. #}
+{% set states = {
+    'active': {
+        'icon': 'fa-plane-departure',
+        'title': 'Nothing coming up',
+        'body': 'Once you book a flight it will be listed here, with its reference and the full itinerary.',
+        'action': 'Search for flights',
+        'href': '/',
+        'style': 'btn-primary'
+    },
+    'past': {
+        'icon': 'fa-clock-rotate-left',
+        'title': 'No trips flown yet',
+        'body': 'Trips move here once the last flight has landed. Nothing has, so far.',
+        'action': 'Back to my bookings',
+        'href': '/my/bookings',
+        'style': 'btn-outline-secondary'
+    },
+    'cancelled': {
+        'icon': 'fa-circle-check',
+        'title': 'Nothing cancelled',
+        'body': 'Every trip you have booked is still on. Cancel one and it will be kept here.',
+        'action': 'Back to my bookings',
+        'href': '/my/bookings',
+        'style': 'btn-outline-secondary'
+    }
+} %}
+
+{% set state = states[tab]|default(states.active) %}
+
 <div class="text-center py-5">
-    <i class="fas fa-plane-departure empty-state__icon"></i>
-    <h2 class="h4 mt-3">No bookings yet</h2>
-    <p class="text-muted mb-4">
-        Once you book a flight it will be listed here, with its reference and the full itinerary.
-    </p>
-    <a href="/" class="btn btn-primary">Search for flights</a>
+    <i class="fas {{ state.icon }} empty-state__icon"></i>
+    <h2 class="h4 mt-3">{{ state.title }}</h2>
+    <p class="text-muted mb-4">{{ state.body }}</p>
+    <a href="{{ state.href }}" class="btn {{ state.style }}">{{ state.action }}</a>
 </div>

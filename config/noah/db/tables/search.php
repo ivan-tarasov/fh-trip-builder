@@ -72,6 +72,15 @@ return [
             'comment' => false,
         ],
         [
+            'name' => 'depart_span',
+            'type' => 'tinyint',
+            'length' => 2,
+            'default' => [1],
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => 'Days the departure could fall on, itself included',
+        ],
+        [
             'name' => 'return',
             'type' => 'date',
             'length' => null,
@@ -79,6 +88,15 @@ return [
             'nullable' => true,
             'auto_inc' => false,
             'comment' => false,
+        ],
+        [
+            'name' => 'return_span',
+            'type' => 'tinyint',
+            'length' => 2,
+            'default' => [1],
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => 'Days the return could fall on, itself included',
         ],
         [
             'name' => 'triptype',

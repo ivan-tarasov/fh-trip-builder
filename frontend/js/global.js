@@ -3,81 +3,407 @@
 
     const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
+    /*[ Search form: the two date fields ]
+    ===========================================================*/
     try {
-        const singleDatePickers = $('.js-single-datepicker');
         const inputDateFormat = 'YYYY-MM-DD';
-        const showDateFormat  = 'MMMM D, YYYY';
+        const showDateFormat = 'MMM D';
+        const showDateFormatWithYear = 'MMM D, YYYY';
 
-        let inputStart = $("#depart_date_value").val();
-        let startDate  = inputStart
-            ? moment(inputStart).format(showDateFormat)
-            : moment().format(showDateFormat);
+        // A date carries its year only when that year is not this one. Inside
+        // one year "Dec 29" says everything; across a new year it says nothing
+        // useful, and a December search for a January flight showed both ends
+        // as though they were days apart in the same year.
+        const shown = (date) => date.format(
+            date.year() === moment().year() ? showDateFormat : showDateFormatWithYear
+        );
 
-        let inputEnd   = $("#return_date_value").val();
-        let endDate    = inputEnd
-            ? moment(inputEnd).format(showDateFormat)
-            : moment(inputStart).add(1, 'day').format(showDateFormat);
+        // Days a window may cover, itself included. SearchUrl::MAX_SPAN is the
+        // definition; this is the picker's own limit and the two must agree.
+        const MAX_SPAN = 3;
 
-        singleDatePickers.each(function () {
-            const $this = $(this);
-            const elementID = $this.attr('id');
-            const dropId = $this.data('drop');
-            const today = moment().format(showDateFormat);
+        const departInput = $('#depart_date');
+        const returnInput = $('#return_date');
+        const departValue = $('#depart_date_value');
+        const returnValue = $('#return_date_value');
+        const departFlex = $('#depart_flex_value');
+        const returnFlex = $('#return_flex_value');
+        const clearReturn = $('.js-clear-return');
 
-            const commonConfig = {
-                autoApply: true,
+        const spanOf = ($flex) => Math.max(1, parseInt($flex.val(), 10) || 1);
+
+        // A range picker per field, where each used to pick a single day. The
+        // range here is not "depart to return" -- that is what the two fields
+        // are for -- but how flexible one end of the trip is.
+        const pickers = [];
+
+        // Which pickers the visitor has actually picked a day in. A picker opens
+        // seeded with a date whether or not it is the one on the field, so an
+        // empty return field that is opened and dismissed must close having done
+        // nothing -- otherwise looking at the return dates would book a return.
+        const touched = new Set();
+
+        const pickerFor = ($input, seed, span) => {
+            $input.daterangepicker({
+                // Off, so the calendar stays open once a day is chosen and the
+                // window can still be widened. It closes on Done or on a click
+                // outside, both of which the plugin already routes through hide.
+                autoApply: false,
                 showCustomRangeLabel: false,
-                autoUpdateInput: true,
-                startDate: startDate,
-                endDate: endDate,
-                minDate: today,
-                opens: "center",
-                drops: "auto",
+                autoUpdateInput: false,
+                startDate: seed ? moment(seed) : moment(),
+                endDate: seed ? moment(seed).add(span - 1, 'day') : moment(),
+                minDate: moment(),
+                maxSpan: {days: MAX_SPAN - 1},
+                opens: 'center',
+                drops: 'auto',
                 locale: {
                     format: showDateFormat,
-                    separator: " – ",
-                    firstDay: 1
+                    separator: ' – ',
+                    firstDay: 1,
+                    applyLabel: 'Done'
                 }
-            };
+            });
 
-            commonConfig.singleDatePicker = (elementID == 'oneway_depart_date');
+            const picker = $input.data('daterangepicker');
 
-            // Initialize the date range picker
-            $this.daterangepicker(commonConfig);
-        });
+            // The rebook dialog puts a second picker on the page, and that one
+            // still picks a departure and a return with two clicks. Only these
+            // two can be dragged wider, so only these two say so.
+            picker.container.addClass('daterangepicker--flex');
 
-        $(singleDatePickers).on('apply.daterangepicker', function (ev, picker) {
-            $("#depart_date_value").val(picker.startDate.format(inputDateFormat));
+            // Reopening is a fresh decision.
+            $input.on('show.daterangepicker', () => touched.delete(picker));
+            pickers.push(picker);
 
-            if (ev.target.id == 'roundtrip_dates') {
-                $("#return_date_value").val(picker.endDate.format(inputDateFormat));
+            return picker;
+        };
+
+        const departPicker = pickerFor(departInput, departValue.val(), spanOf(departFlex));
+        const returnPicker = pickerFor(returnInput, returnValue.val() || departValue.val(), spanOf(returnFlex));
+
+        // autoUpdateInput is off so a field can stay empty until it is picked:
+        // left to itself the plugin writes today's date in on load, which would
+        // turn every one-way search into a round trip nobody asked for.
+        const show = ($input, $hidden, $flex, start, end) => {
+            const days = Math.min(MAX_SPAN, end.diff(start, 'days') + 1);
+
+            $hidden.val(start.format(inputDateFormat));
+            // Blank rather than 1: a plain search should send no flex at all.
+            $flex.val(days > 1 ? String(days) : '');
+            $input.val(days > 1
+                ? shown(start) + ' – ' + shown(end)
+                : shown(start));
+        };
+
+        // hide, not apply: apply fires only for the Done button, and a click
+        // outside the calendar closes it just as deliberately.
+        departInput.on('hide.daterangepicker', function (ev, picker) {
+            if (!touched.has(picker)) {
+                return;
+            }
+
+            show(departInput, departValue, departFlex, picker.startDate, picker.endDate);
+
+            // The return can never precede the departure. Nothing enforced this
+            // before -- a return a year earlier rendered a results page.
+            if (returnValue.val() && moment(returnValue.val()).isBefore(picker.startDate, 'day')) {
+                show(returnInput, returnValue, returnFlex, picker.startDate, picker.startDate);
             }
         });
 
-        let departDate_roundtrip = $('#depart_date_value').val();
-        let departDate_oneway = $('#depart_date_value').val();
+        returnInput.on('hide.daterangepicker', function (ev, picker) {
+            if (!touched.has(picker)) {
+                return;
+            }
 
-        $('#tab-roundtrip').click(function () {
-            $('#tab-roundtrip').prop('disabled', true);
-            $('#tab-oneway').prop('disabled', false);
+            const departed = departValue.val() ? moment(departValue.val()) : null;
+            const from = departed && picker.startDate.isBefore(departed, 'day') ? departed : picker.startDate;
+            const to = picker.endDate.isBefore(from, 'day') ? from : picker.endDate;
 
-            departDate_oneway = $('#depart_date_value').val();
-            $('#depart_date_value').val(departDate_roundtrip);
-
-            $('#hidden_triptype').val('roundtrip');
-            $('#return_date_value').prop('disabled', false);
-        });
-        $('#tab-oneway').click(function () {
-            $('#tab-roundtrip').prop('disabled', false);
-            $('#tab-oneway').prop('disabled', true);
-
-            departDate_roundtrip = $('#depart_date_value').val();
-            $('#depart_date_value').val(departDate_oneway);
-
-            $('#hidden_triptype').val('oneway');
-            $('#return_date_value').prop('disabled', true);
+            show(returnInput, returnValue, returnFlex, from, to);
+            clearReturn.prop('hidden', false);
         });
 
+        // The way back to a one-way trip, now that no tab does it.
+        clearReturn.on('click', function () {
+            returnValue.val('');
+            returnFlex.val('');
+            returnInput.val('');
+            $(this).prop('hidden', true);
+        });
+
+        const redraw = ($input, $hidden, $flex) => {
+            if (!$hidden.val()) { return; }
+
+            const start = moment($hidden.val());
+            show($input, $hidden, $flex, start, start.clone().add(spanOf($flex) - 1, 'day'));
+        };
+
+        redraw(departInput, departValue, departFlex);
+        redraw(returnInput, returnValue, returnFlex);
+
+        // Set from outside the picker -- a past search being put back into the
+        // form. The hidden field is what carries the date, so it is what to
+        // watch; the visible text and the calendar's own month both follow it.
+        const follow = ($input, $hidden, $flex, picker, $clear) => {
+            // Both, because the date and the width of its window arrive as two
+            // separate writes and either order leaves the first redraw reading a
+            // value the second is about to change. Listening to each means the
+            // last write settles it whichever way round they come.
+            $hidden.add($flex).on('change', function () {
+                if (!$hidden.val()) {
+                    $input.val('');
+                    $flex.val('');
+                    $clear?.prop('hidden', true);
+
+                    return;
+                }
+
+                redraw($input, $hidden, $flex);
+                $clear?.prop('hidden', false);
+
+                const start = moment($hidden.val());
+
+                picker.setStartDate(start);
+                picker.setEndDate(start.clone().add(spanOf($flex) - 1, 'day'));
+                picker.updateView();
+            });
+        };
+
+        follow(departInput, departValue, departFlex, departPicker);
+        follow(returnInput, returnValue, returnFlex, returnPicker, clearReturn);
+
+        // Pick by dragging. Pressing either end of the window and pulling moves
+        // that end and leaves the other where it is -- which is what the arrows
+        // drawn on those two cells advertise. Pressing anywhere else starts a
+        // new window, and a press with no drag picks that one day.
+        //
+        // The plugin's own click-to-pick is intercepted rather than extended. It
+        // binds `mousedown` on `td.available`, delegated on the container, so a
+        // capture-phase listener on the document sees the press first and can
+        // stop it going any further. Driving the selection ourselves is what
+        // makes a drag possible at all: left alone, the plugin answers the first
+        // press by redrawing the calendar, detaching the very cell the release
+        // would have landed on.
+        let drag = null;
+
+        const pickerAt = (node) => pickers.find((picker) => picker.container[0].contains(node)) ?? null;
+
+        /** The day a cell stands for, read the way the plugin reads it itself. */
+        const dayAt = (picker, cell) => {
+            const spot = /^r(\d+)c(\d+)$/.exec(cell.dataset.title ?? '');
+            const month = cell.closest('.drp-calendar').classList.contains('left')
+                ? picker.leftCalendar
+                : picker.rightCalendar;
+
+            return spot ? month.calendar[Number(spot[1])][Number(spot[2])].clone() : null;
+        };
+
+        const dayUnder = (node) => {
+            const cell = node instanceof Element ? node.closest('td.available') : null;
+            const picker = cell ? pickerAt(cell) : null;
+            const day = picker ? dayAt(picker, cell) : null;
+
+            return day ? {picker: picker, day: day} : null;
+        };
+
+        /**
+         * A day pulled back inside what the search will run. setStartDate does
+         * not police maxSpan the way setEndDate does, so widening from the far
+         * end has to be caught here or a window wider than MAX_SPAN gets drawn.
+         */
+        const reachable = (picker, fixed, day) => {
+            const reach = MAX_SPAN - 1;
+            let capped = day;
+
+            if (day.diff(fixed, 'days') > reach) {
+                capped = fixed.clone().add(reach, 'day');
+            } else if (fixed.diff(day, 'days') > reach) {
+                capped = fixed.clone().subtract(reach, 'day');
+            }
+
+            return capped.isBefore(picker.minDate, 'day') ? picker.minDate.clone() : capped;
+        };
+
+        const paint = (picker, fixed, day) => {
+            const to = reachable(picker, fixed, day);
+
+            picker.setStartDate(moment.min(fixed, to));
+            picker.setEndDate(moment.max(fixed, to));
+            picker.updateView();
+        };
+
+        document.addEventListener('mousedown', function (event) {
+            const spot = dayUnder(event.target);
+
+            if (spot === null) {
+                return;
+            }
+
+            // Ours to handle, and not the plugin's. preventDefault also keeps
+            // the drag from selecting the day numbers as text.
+            event.preventDefault();
+            event.stopPropagation();
+
+            const picker = spot.picker;
+            const wide = picker.endDate && !picker.startDate.isSame(picker.endDate, 'day');
+            let fixed = spot.day;
+
+            // Grabbing one end pivots on the other.
+            if (wide && spot.day.isSame(picker.startDate, 'day')) {
+                fixed = picker.endDate.clone();
+            } else if (wide && spot.day.isSame(picker.endDate, 'day')) {
+                fixed = picker.startDate.clone();
+            }
+
+            drag = {picker: picker, fixed: fixed, held: spot.day, moved: false};
+        }, true);
+
+        document.addEventListener('mousemove', function (event) {
+            if (drag === null) {
+                return;
+            }
+
+            // The target is hit-tested as the event is dispatched, so a repaint
+            // mid-drag cannot hand back a cell that has since been replaced.
+            // The point is the fallback, for a pointer over the gap between two
+            // cells rather than over either of them.
+            const spot = dayUnder(event.target)
+                ?? dayUnder(document.elementFromPoint(event.clientX, event.clientY));
+
+            if (spot === null || spot.picker !== drag.picker) {
+                return;
+            }
+
+            if (!drag.moved && spot.day.isSame(drag.held, 'day')) {
+                return;
+            }
+
+            drag.moved = true;
+            paint(drag.picker, drag.fixed, spot.day);
+        }, true);
+
+        document.addEventListener('mouseup', function () {
+            if (drag === null) {
+                return;
+            }
+
+            if (!drag.moved) {
+                paint(drag.picker, drag.held, drag.held);
+            }
+
+            touched.add(drag.picker);
+            drag = null;
+        }, true);
+    } catch (er) {
+        console.log(er);
+    }
+
+    /*[ Search form: who is flying ]
+    ===========================================================*/
+    try {
+        // Every one on the page: the search bar has one, and a booking's rebook
+        // dialog now uses the same control rather than a third copy of it.
+        document.querySelectorAll('.js-party-trigger').forEach(function (trigger) {
+            const panel = document.getElementById(trigger.getAttribute('aria-controls'));
+
+            if (!panel) { return; }
+
+            const summary = trigger.querySelector('.js-party-summary');
+            const counts = [...panel.querySelectorAll('.js-party-count')];
+            const cabins = [...panel.querySelectorAll('.js-party-cabin')];
+            const maxSeats = parseInt(panel.dataset.maxSeats, 10) || 9;
+
+            const at = (key) => counts.find(c => c.id.endsWith(key));
+            const adults = at('adults');
+            const children = at('children');
+            const infants = at('infants');
+            const value = (select) => parseInt(select.value, 10) || 0;
+
+            // Party::fromCounts() in the browser, from its own number: somebody
+            // is responsible for the booking, a lap needs an adult attached to
+            // it, and the cabin has a limit that infants do not count against
+            // because they are not in a seat. Enforced here only so the panel
+            // cannot offer a search the server will refuse -- PHP still decides.
+            const ceiling = (select) => {
+                if (select === adults) { return maxSeats - value(children); }
+                if (select === children) { return maxSeats - value(adults); }
+
+                return value(adults);
+            };
+
+            const floor = (select) => parseInt(select.dataset.floor, 10) || 0;
+
+            const write = (select, next) => {
+                select.value = next === 0 ? (floor(select) === 0 ? '' : '0') : String(next);
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+
+            const paint = () => {
+                counts.forEach((select) => {
+                    const row = select.closest('.party__row');
+                    const now = value(select);
+
+                    row.querySelector('.party__value').textContent = String(now);
+                    row.querySelector('.js-party-less').disabled = now <= floor(select);
+                    row.querySelector('.js-party-more').disabled = now >= ceiling(select);
+                });
+
+                const heads = counts.reduce((sum, select) => sum + value(select), 0);
+                const cabin = cabins.find(c => c.checked);
+
+                summary.querySelector('.js-party-heads').textContent = heads + ' '
+                    + (heads === 1 ? summary.dataset.one : summary.dataset.many);
+                summary.querySelector('.js-party-class').textContent = cabin
+                    ? cabin.closest('label').textContent.trim()
+                    : '';
+            };
+
+            const open = (yes) => {
+                panel.hidden = !yes;
+                trigger.setAttribute('aria-expanded', yes ? 'true' : 'false');
+            };
+
+            panel.addEventListener('click', (event) => {
+                const step = event.target.closest('.js-party-less, .js-party-more');
+
+                if (!step) { return; }
+
+                const select = step.closest('.party__row').querySelector('.js-party-count');
+                const now = value(select);
+                const next = step.classList.contains('js-party-more') ? now + 1 : now - 1;
+
+                if (next < floor(select) || next > ceiling(select)) { return; }
+
+                write(select, next);
+
+                // Fewer adults can leave more infants than laps to hold them.
+                if (select === adults && value(infants) > next) {
+                    write(infants, next);
+                }
+
+                paint();
+            });
+
+            panel.addEventListener('change', paint);
+            trigger.addEventListener('click', () => open(panel.hidden));
+
+            document.addEventListener('click', (event) => {
+                if (!panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) {
+                    open(false);
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !panel.hidden) {
+                    open(false);
+                    trigger.focus();
+                }
+            });
+
+            paint();
+        });
     } catch (er) {
         console.log(er);
     }
@@ -305,14 +631,30 @@
         console.log(er);
     }
 
-    /*[ Searchable select (billing country) ]
+    /*[ Searchable select: billing country, and the search form's places ]
     ===========================================================*/
     try {
+        // Rows rendered per keystroke. The place list is a few hundred long and
+        // laying all of it out is what made the dropdown slow to open.
+        const SHOWN_AT_ONCE = 40;
+
+        // Past searches offered before the list of places. Two, because the
+        // history is there to catch the trip being repeated right now and the
+        // airports underneath are what the field is actually for -- six pills
+        // pushed them off the bottom of the panel. The rest are one click away.
+        const RECENT_AT_ONCE = 2;
+
         document.querySelectorAll('select[data-searchable]').forEach(function (select) {
             // The select stays: it is what the form submits, what autofill
             // writes to, and what the page is left with if this never runs.
             // Everything below is a layer on top of it.
             const options = [...select.options].filter(o => o.value !== '');
+            // Searches this browser has run, offered while nothing is typed.
+            // One template serves both fields -- it is the same history either
+            // way -- so it is cloned rather than moved.
+            const recentTpl = select.dataset.recent
+                ? document.getElementById(select.dataset.recent)
+                : null;
             const placeholder = (select.options[0] || {}).textContent || 'Search…';
             const listId = select.id + '-listbox';
 
@@ -350,7 +692,64 @@
             wrap.appendChild(select);
 
             let active = -1;
-            let matches = [];
+            // Both kinds of row live in one list so the arrow keys walk them
+            // together: a recent search the keyboard cannot reach is a row only
+            // a mouse can see.
+            let entries = [];
+
+            /**
+             * Point the box -- and with it the screen reader -- at one row.
+             *
+             * Every row is cleared first rather than just the one being left
+             * behind: a listbox may hold one selected option, and render marks
+             * whatever is already chosen, so without this the arrows would add
+             * a second.
+             */
+            const mark = function (rows, index) {
+                rows.forEach(function (row) {
+                    row.classList.remove('is-active');
+                    row.setAttribute('aria-selected', 'false');
+                });
+
+                const row = rows[index];
+
+                if (!row) {
+                    return;
+                }
+
+                row.classList.add('is-active');
+                row.setAttribute('aria-selected', 'true');
+                input.setAttribute('aria-activedescendant', row.id);
+            };
+
+            // Whether the whole history is showing. Per field, and reset when
+            // the panel closes, so it opens short every time.
+            let allRecent = false;
+
+            /** The control that reveals the rest. Not an option: it chooses nothing. */
+            const moreButton = function () {
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className = 'combo__pill combo__pill--more js-recent-more';
+                button.innerHTML = 'More <i class="fas fa-chevron-down" aria-hidden="true"></i>';
+
+                return button;
+            };
+
+            /**
+             * What to write in the box once an option has been chosen.
+             *
+             * Not the same string as the row in the list. The list is being read
+             * to pick from, so it spells the airport out; the box is a quarter
+             * as wide and is being read to confirm, where "Montreal" beside YUL
+             * says more than "Pierre Elliott Trudeau Internatio...". Absent the
+             * attribute -- the checkout's country field -- the row's own text is
+             * already short and stands in.
+             */
+            const labelFor = function (option) {
+                return option.dataset.short || option.textContent.trim();
+            };
 
             const render = function (query) {
                 const needle = query.trim().toLowerCase();
@@ -361,59 +760,229 @@
                 // then the country code, then anything containing it.
                 const rank = function (option) {
                     const name = option.textContent.trim().toLowerCase();
+                    // The second line counts too: an airport is looked up by its
+                    // city at least as often as by its own name, and "Montreal"
+                    // must find Trudeau.
+                    const sub = (option.dataset.sub || '').toLowerCase();
 
                     if (needle === '') { return 0; }
                     if (name.startsWith(needle)) { return 0; }
                     if (option.value.toLowerCase().startsWith(needle)) { return 1; }
-                    if (name.includes(needle)) { return 2; }
+                    if (sub.startsWith(needle)) { return 2; }
+                    if (name.includes(needle)) { return 3; }
+                    if (sub.includes(needle)) { return 4; }
 
                     return -1;
                 };
 
-                matches = options
+                const ranked = options
                     .map(o => ({ option: o, rank: rank(o) }))
                     .filter(m => m.rank >= 0)
                     // Stable within a rank, so each band stays alphabetical.
                     .sort((a, b) => a.rank - b.rank)
                     .map(m => m.option);
 
+                // Only the first screenful. Every row costs layout, and a few
+                // hundred of them held the thread long enough that the list
+                // took a noticeable moment to appear -- for a list nobody reads
+                // to the end, since typing one more letter is quicker than
+                // scrolling. What is cut is always the worst-ranked.
+                const found = ranked.slice(0, SHOWN_AT_ONCE);
+
+                entries = found.map(option => ({ option }));
+
                 list.innerHTML = '';
 
-                if (matches.length === 0) {
+                // Only with an empty box: once someone is typing they are
+                // looking for a place, not for last week.
+                if (needle === '' && recentTpl) {
+                    const block = recentTpl.content.cloneNode(true);
+                    const pills = [...block.querySelectorAll('[data-path]')];
+
+                    // Dropped from the DOM rather than hidden: the arrow keys
+                    // walk `[role="option"]`, and a row nobody can see is still
+                    // one the keyboard would stop on.
+                    if (!allRecent && pills.length > RECENT_AT_ONCE) {
+                        pills.slice(RECENT_AT_ONCE).forEach(pill => pill.remove());
+                        block.querySelector('.combo__pills')?.appendChild(moreButton());
+                    }
+
+                    const recents = [...block.querySelectorAll('[data-path]')]
+                        .map(el => ({ recent: { ...el.dataset } }));
+
+                    list.appendChild(block);
+                    entries = [...recents, ...entries];
+                }
+
+                if (found.length === 0) {
                     const empty = document.createElement('li');
                     empty.className = 'combo__empty';
-                    empty.textContent = 'No country matches that.';
+                    empty.textContent = select.dataset.empty || 'Nothing matches that.';
                     list.appendChild(empty);
                     return;
                 }
 
-                matches.forEach(function (option, i) {
+                found.forEach(function (option, i) {
                     const li = document.createElement('li');
                     li.className = 'combo__option';
                     li.setAttribute('role', 'option');
                     li.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
                     li.dataset.value = option.value;
-                    li.textContent = option.textContent.trim();
-                    if (i === active) { li.classList.add('is-active'); }
+
+                    // One line where there is only a name, two where the option
+                    // carries a place under it. The code sits at the end, which
+                    // is where a traveller who knows it looks.
+                    if (option.dataset.sub) {
+                        // A span drawn by CSS, not a Font Awesome <i>. Its
+                        // script rewrites every <i> into an <svg>, and with a
+                        // few hundred rows that scan blocks the main thread for
+                        // most of two seconds -- the list took seconds to
+                        // appear. Same trap the breadcrumb separator documents.
+                        const icon = document.createElement('span');
+                        icon.className = option.hasAttribute('data-city')
+                            ? 'combo__icon combo__icon--city'
+                            : 'combo__icon combo__icon--airport';
+                        icon.setAttribute('aria-hidden', 'true');
+
+                        const name = document.createElement('span');
+                        name.className = 'combo__name';
+                        name.textContent = option.textContent.trim();
+
+                        const sub = document.createElement('span');
+                        sub.className = 'combo__sub';
+                        sub.textContent = option.dataset.sub;
+
+                        const code = document.createElement('span');
+                        code.className = 'combo__code';
+                        code.textContent = option.value;
+
+                        li.classList.add('combo__option--stacked');
+                        if (option.hasAttribute('data-city')) { li.classList.add('combo__option--city'); }
+                        li.append(icon, name, code, sub);
+                    } else {
+                        li.textContent = option.textContent.trim();
+                    }
+
                     list.appendChild(li);
                 });
+
+                if (ranked.length > found.length) {
+                    const more = document.createElement('li');
+                    more.className = 'combo__more';
+                    more.textContent = (ranked.length - found.length) + ' more — keep typing to narrow';
+                    list.appendChild(more);
+                }
+
+                // After both kinds are in the DOM, so the index lines up with
+                // `entries` rather than with either half of it.
+                // By role, not by class: a recent search is a chip and a place
+                // is a row, and the arrow keys walk both.
+                const rows = list.querySelectorAll('[role="option"]');
+
+                // Focus stays in the text box while the arrows walk the list, so
+                // the only thing telling a screen reader which row is being read
+                // is aria-activedescendant. That is an id, which means every row
+                // has to carry one.
+                rows.forEach(function (row, i) {
+                    row.id = listId + '-option-' + i;
+                });
+
+                if (active >= 0 && rows[active]) {
+                    mark(rows, active);
+                } else {
+                    input.removeAttribute('aria-activedescendant');
+                }
             };
 
             const open = function () {
-                render(input.value === select.selectedOptions[0]?.textContent.trim() ? '' : input.value);
+                const chosen = select.selectedOptions[0];
+
+                render(chosen && input.value === labelFor(chosen) ? '' : input.value);
                 list.hidden = false;
                 input.setAttribute('aria-expanded', 'true');
             };
 
             const close = function () {
+                allRecent = false;
                 list.hidden = true;
                 input.setAttribute('aria-expanded', 'false');
+                input.removeAttribute('aria-activedescendant');
                 active = -1;
             };
 
-            const choose = function (option) {
-                select.value = option.value;
-                input.value = option.textContent.trim();
+            /**
+             * Put a past search back into the form.
+             *
+             * Every control here is the one that submits -- the two selects, the
+             * hidden dates, the party's selects and its cabin radio -- and each
+             * has something already listening for its change: the combobox
+             * repaints its box and its code, the date fields redraw and re-seed
+             * their calendars, the party panel recounts its summary. So this
+             * writes values and says so, and the form puts itself right.
+             *
+             * The pieces come from the server. A search path has one parser and
+             * it is SearchUrl; a second one written in JavaScript would be a
+             * copy of that grammar to keep in step.
+             */
+            const refill = function (parts) {
+                const set = function (id, value) {
+                    const field = document.getElementById(id);
+
+                    if (!field) { return; }
+
+                    field.value = value;
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                };
+
+                set('departing_airport-native', parts.from);
+                set('arrival_airport-native', parts.to);
+
+                // A span of one is no span at all, which is what an ordinary
+                // search sends and what the field shows as a single day.
+                set('depart_date_value', parts.depart);
+                set('depart_flex_value', Number(parts.departSpan) > 1 ? parts.departSpan : '');
+                set('return_date_value', parts.return);
+                set('return_flex_value', Number(parts.returnSpan) > 1 ? parts.returnSpan : '');
+
+                // "No children" is the absence of a number rather than a zero,
+                // the same way the panel's own stepper writes it.
+                set('passengers_adults', parts.adults);
+                set('passengers_children', Number(parts.children) > 0 ? parts.children : '');
+                set('passengers_infants', Number(parts.infants) > 0 ? parts.infants : '');
+
+                const cabin = document.querySelector('.js-party-cabin[value="' + parts.cabin + '"]');
+
+                if (cabin) {
+                    cabin.checked = true;
+                    cabin.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            };
+
+            const choose = function (entry) {
+                if (!entry) { return; }
+
+                // A past search fills the form and stops there. It used to go
+                // straight to the results, which took the decision away: the
+                // whole reason to offer the trip again is usually to change one
+                // thing about it.
+                if (entry.recent) {
+                    refill(entry.recent);
+
+                    // This field is the one holding focus, and the change
+                    // handler leaves a focused box alone so that it never
+                    // overwrites what is being typed. Here the value is
+                    // deliberate, so it is written directly rather than left to
+                    // a blur that only fires if the window has focus at all.
+                    input.value = select.value && select.selectedOptions[0]
+                        ? labelFor(select.selectedOptions[0])
+                        : '';
+                    close();
+
+                    return;
+                }
+
+                select.value = entry.option.value;
+                input.value = labelFor(entry.option);
                 // So validation, autofill and anything else see a real change.
                 select.dispatchEvent(new Event('change', { bubbles: true }));
                 close();
@@ -421,33 +990,63 @@
 
             const moveActive = function (step) {
                 if (list.hidden) { open(); }
-                if (matches.length === 0) { return; }
-                active = (active + step + matches.length) % matches.length;
-                render(input.value);
-                const el = list.children[active];
-                if (el && el.scrollIntoView) { el.scrollIntoView({ block: 'nearest' }); }
+                if (entries.length === 0) { return; }
+
+                const rows = list.querySelectorAll('[role="option"]');
+
+                active = (active + step + entries.length) % entries.length;
+
+                // Move the marker rather than rebuild the list: re-rendering on
+                // every arrow press meant holding the key down rebuilt hundreds
+                // of rows per second.
+                mark(rows, active);
+
+                const el = rows[active];
+
+                if (el && el.scrollIntoView) {
+                    el.scrollIntoView({ block: 'nearest' });
+                }
             };
 
-            input.addEventListener('focus', open);
+            input.addEventListener('focus', function () {
+                // Select what is there, so typing replaces the current choice
+                // instead of landing inside it. The text inputs this replaced
+                // carried a class for exactly this; a combobox that reopens on
+                // an already-filled field needs it more, not less.
+                input.select();
+                open();
+            });
             input.addEventListener('input', function () { active = -1; open(); });
 
             input.addEventListener('keydown', function (e) {
                 if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
                 else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
                 else if (e.key === 'Enter') {
-                    if (!list.hidden && matches[active]) { e.preventDefault(); choose(matches[active]); }
+                    if (!list.hidden && entries[active]) { e.preventDefault(); choose(entries[active]); }
                 } else if (e.key === 'Escape') {
                     close();
-                    input.value = select.selectedOptions[0] ? select.selectedOptions[0].textContent.trim() : '';
+                    input.value = select.selectedOptions[0] ? labelFor(select.selectedOptions[0]) : '';
                 }
             });
 
             list.addEventListener('mousedown', function (e) {
                 // mousedown, not click: blur would close the list first.
-                const li = e.target.closest('.combo__option');
+                if (e.target.closest('.js-recent-more')) {
+                    e.preventDefault();
+                    allRecent = true;
+                    active = -1;
+                    render('');
+
+                    return;
+                }
+
+                const li = e.target.closest('[role="option"]');
                 if (!li) { return; }
                 e.preventDefault();
-                choose(options.find(o => o.value === li.dataset.value));
+
+                choose(li.dataset.path
+                    ? { recent: { ...li.dataset } }
+                    : { option: options.find(o => o.value === li.dataset.value) });
             });
 
             input.addEventListener('blur', function () {
@@ -455,22 +1054,37 @@
                 // Whatever half-typed text is left is not a country; show what
                 // is actually selected rather than leaving a lie in the box.
                 input.value = select.value && select.selectedOptions[0]
-                    ? select.selectedOptions[0].textContent.trim()
+                    ? labelFor(select.selectedOptions[0])
                     : '';
             });
 
-            // Autofill and the server-rendered value both arrive this way.
+            // The airport code, shown to one side of the field. Driven off the
+            // select rather than the text box: the box holds whatever is being
+            // typed, and half a name is not a code.
+            const code = input.closest('.searchbar__field')?.querySelector('.searchbar__code') ?? null;
+            const showCode = function () {
+                if (code) {
+                    code.textContent = select.value;
+                }
+            };
+
+            // Autofill and the server-rendered value both arrive this way, and
+            // so does choose(), which dispatches change once it has written.
             select.addEventListener('change', function () {
                 if (document.activeElement !== input) {
                     input.value = select.selectedOptions[0] && select.value
-                        ? select.selectedOptions[0].textContent.trim()
+                        ? labelFor(select.selectedOptions[0])
                         : '';
                 }
+
+                showCode();
             });
 
             if (select.value) {
-                input.value = select.selectedOptions[0].textContent.trim();
+                input.value = labelFor(select.selectedOptions[0]);
             }
+
+            showCode();
         });
     } catch (er) {
         console.log(er);
@@ -559,7 +1173,7 @@
         Swal.fire({
             title: 'Cancel this booking?',
             // text, not html: a reference is data and Swal escapes this one.
-            text: named + ' will be marked cancelled. It stays in your list.',
+            text: named + ' will be cancelled. You will find it under Cancelled.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Cancel booking',
@@ -601,15 +1215,16 @@
                 return;
             }
 
-            markCancelled(card, button, reference);
+            moveToCancelled(card, button, reference);
         });
     });
 
-    // The row survives a cancel, so the card is restyled where it stands
-    // rather than removed and the page reloaded. No success dialog: the card
-    // changing in front of you is the confirmation, and the live region
-    // carries it for anyone who cannot see that.
-    function markCancelled(card, button, reference) {
+    // Cancelled bookings live on their own page now, so the card leaves this
+    // one instead of being restyled where it stands. It is faded out rather
+    // than cut: something vanishing from under the pointer with no transition
+    // reads as a bug, and the half second is where the confirmation lives.
+    // The live region carries it for anyone who cannot see that.
+    function moveToCancelled(card, button, reference) {
         // The tooltip outlives its trigger otherwise, and hangs over the card.
         const tip = bootstrap.Tooltip.getInstance(button);
 
@@ -619,32 +1234,54 @@
 
         button.remove();
 
+        const live = document.querySelector('.js-bookings-live');
+
+        if (live) {
+            live.textContent = (reference ? 'Booking ' + reference : 'Booking')
+                + ' cancelled, and moved to your cancelled bookings.';
+        }
+
         if (!card) {
             return;
         }
 
-        card.classList.add('booking-card--cancelled');
-        card.classList.remove('shadow-sm');
+        const section = card.closest('section');
 
-        const status = card.querySelector('.js-booking-status');
+        card.classList.add('booking-card--leaving');
+        setTimeout(function () {
+            card.remove();
+            retally(section);
+        }, 400);
+    }
 
-        if (status) {
-            status.className = 'booking-status js-booking-status booking-status--cancelled';
-            status.textContent = 'Cancelled';
+    // Every count the cancelled card was in: its own group's badge, the tab it
+    // sat under, and the tab it has gone to. A group with nothing left in it
+    // goes as well, heading and all, rather than standing over a gap.
+    function retally(section) {
+        if (section && !section.querySelector('[data-booking-card]')) {
+            section.remove();
+        } else if (section) {
+            bump(section.querySelector('.badge'), -1);
         }
 
-        // How near the departure is stops being the point once it is cancelled.
-        const when = card.querySelector('.booking-when');
+        const tabs = document.querySelectorAll('.bookings-tabs__tab');
 
-        if (when) {
-            when.remove();
+        bump(tabs[0] && tabs[0].querySelector('.bookings-tabs__count'), -1);
+        bump(tabs[1] && tabs[1].querySelector('.bookings-tabs__count'), 1);
+
+        // Nothing left to show. The empty state is rendered by the server, so
+        // the page is asked for again rather than rebuilt here.
+        if (!document.querySelector('[data-booking-card]')) {
+            window.location.reload();
+        }
+    }
+
+    function bump(node, by) {
+        if (!node) {
+            return;
         }
 
-        const live = document.querySelector('.js-bookings-live');
-
-        if (live) {
-            live.textContent = (reference ? 'Booking ' + reference : 'Booking') + ' cancelled.';
-        }
+        node.textContent = String(Math.max(0, (parseInt(node.textContent, 10) || 0) + by));
     }
 
     /*[ Copy to clipboard ]
@@ -1116,6 +1753,131 @@
         paintExpiry();
         paintCvv();
     })();
+
+    /*[ How tall the header is ]
+    ===========================================================*/
+    // Written for the CSS, which holds the search bars against the header's
+    // underside on the home and results pages. Measured rather than assumed:
+    // the navbar wraps at some widths and not others. This runs on every page,
+    // because every page has a header and the results page has a sticky bar
+    // whether or not it has a hero.
+    (function () {
+        const header = document.getElementById('top');
+
+        if (!header) {
+            return;
+        }
+
+        const measure = () => document.documentElement.style
+            .setProperty('--header-h', header.offsetHeight + 'px');
+
+        measure();
+        window.addEventListener('resize', measure);
+    }());
+
+    /*[ Homepage: dock the section tray into the header ]
+    ===========================================================*/
+    // Once the slogan and the tray have scrolled under the header, the tray
+    // leaves the hero and takes its place in the middle of the header, which is
+    // sticky -- so the sections stay reachable for the rest of the page.
+    //
+    // The search bar below it needs no script at all: it is `position: sticky`
+    // and the browser holds it against the header on its own. It used to be
+    // pinned from here, and could not be made not to jump -- a scroll runs on
+    // the compositor and this runs on the main thread, so on a flick the page
+    // had already moved by the time the class landed.
+    //
+    // The tray is moved rather than copied, and lands in a real slot in the
+    // header row, which centres it without any arithmetic.
+    (function () {
+        const header = document.getElementById('top');
+        const dock = document.querySelector('.js-header-dock');
+        const modes = document.querySelector('.js-hero-modes');
+        const slot = document.querySelector('.js-modes-slot');
+        const sentinel = document.querySelector('.js-modes-sentinel');
+
+        if (!header || !dock || !modes || !slot || !sentinel) {
+            return;
+        }
+
+        // The navbar's own breakpoint. Below it the menu is behind a toggler,
+        // so there is no header row for the tray to dock into.
+        const DOCKS_ABOVE = 992;
+
+        // Nothing in the world arrives instantly. The tray appears in a place
+        // it was not a frame ago, and without this it reads as a glitch rather
+        // than as the same tray having moved. Short, and on the way in only:
+        // going back to the hero it is landing where the visitor is already
+        // looking.
+        const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+        const fadeIn = () => {
+            if (REDUCED.matches || typeof modes.animate !== 'function') {
+                return;
+            }
+
+            modes.animate(
+                [{opacity: 0, transform: 'translateY(-.25rem)'}, {opacity: 1, transform: 'none'}],
+                {duration: 180, easing: 'cubic-bezier(0.23, 1, 0.32, 1)'}
+            );
+        };
+
+        const setDocked = (docked) => {
+            const wanted = docked && window.innerWidth >= DOCKS_ABOVE;
+
+            if (wanted === modes.classList.contains('is-docked')) {
+                return;
+            }
+
+            // Held open only while the tray is away, and measured at the moment
+            // it leaves rather than once at load: the tray is a few pixels
+            // shorter after its first trip to the header, and a height taken
+            // before that left the slot standing slightly too tall for the rest
+            // of the page's life.
+            slot.style.minHeight = wanted ? slot.offsetHeight + 'px' : '';
+
+            modes.classList.toggle('is-docked', wanted);
+            (wanted ? dock : slot).appendChild(modes);
+
+            if (wanted) {
+                fadeIn();
+            }
+        };
+
+        // An observer rather than a scroll handler: this fires a handful of
+        // times per page rather than on every frame of every scroll, and a
+        // callback a frame late costs nothing here -- the tray is out of sight
+        // when it docks. The sentinel sits at the foot of the slot, which holds
+        // its place open, so it cannot be moved by what it is watching for.
+        const watch = () => {
+            // The root's top edge, which the margin below has pushed down to
+            // the header's underside. Compared against that rather than against
+            // zero: with the margin in play a sentinel can be out of the root
+            // and still have a positive top, which is a sentinel that has gone
+            // under the header -- exactly the case being watched for.
+            const line = header.offsetHeight;
+            const observer = new IntersectionObserver(
+                (entries) => setDocked(!entries[0].isIntersecting && entries[0].boundingClientRect.top < line),
+                {rootMargin: '-' + line + 'px 0px 0px 0px', threshold: 0}
+            );
+
+            observer.observe(sentinel);
+
+            return observer;
+        };
+
+        let observer = watch();
+
+        window.addEventListener('resize', function () {
+            // Put the tray back before measuring: a docked one cannot report
+            // its resting height, and the observer is carrying the old header
+            // height until it is rebuilt.
+            setDocked(false);
+            observer.disconnect();
+            slot.style.minHeight = '';
+            observer = watch();
+        });
+    }());
 
     /*[ Back to top ]
     ===========================================================*/
@@ -1825,33 +2587,5 @@
         }
     });
 
-    $( ".auto-clear" ).on( "focus", function() {
-        $(this).select();
-    } );
-
 })(jQuery);
 
-document.addEventListener('DOMContentLoaded', () => {
-    const departingAirportInput = $('#departing_airport');
-    const arrivalAirportInput   = $('#arrival_airport');
-    const roundtripDatesInput   = $('#roundtrip_dates');
-    const onewayDatesInput      = $('#oneway_depart_date');
-
-    // Ugly as hell
-    let nextDateInput = roundtripDatesInput;
-    $('#tab-oneway, #tab-roundtrip').click(function () {
-        nextDateInput = $(this).attr('id') === 'tab-roundtrip' ? roundtripDatesInput : onewayDatesInput;
-    });
-
-    departingAirportInput.autocomplete({
-        onPick(el, item) {
-            arrivalAirportInput.focus();
-        }
-    });
-    arrivalAirportInput.autocomplete({
-        onPick(el, item) {
-            nextDateInput.focus();
-        }
-    });
-
-}, false);

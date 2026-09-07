@@ -10,15 +10,83 @@
     { 'label': 'Returning', 'icon': 'fa-plane-arrival', 'direction': booking.return }
 ] %}
 
+{# The page as a list of blocks.
+
+   It used to be one card holding everything, which meant the receipt lived in
+   the footer of the flights and there was nowhere to put a third thing. Each
+   block is now its own file behind its own heading, and adding one is a file
+   plus a line here -- baggage, seats, check-in, whatever comes next.
+
+   `when` keeps a block that has nothing to say from drawing an empty shell.
+   `half` lets two short blocks share a row instead of each taking the full
+   width for four lines of content. The template path is written out rather
+   than built from the key, so a block can be found by searching for where it
+   is used. #}
+{% set blocks = [
+    {
+        'key': 'flights',
+        'title': 'Flights',
+        'icon': 'fa-plane-up',
+        'template': 'my/bookings/blocks/flights.html.twig',
+        'when': booking.outbound or booking.return
+    },
+    {
+        'key': 'travellers',
+        'title': 'Travellers',
+        'icon': 'fa-user-group',
+        'template': 'my/bookings/blocks/travellers.html.twig',
+        'when': true,
+        'half': true
+    },
+    {
+        'key': 'contact',
+        'title': 'Contact',
+        'icon': 'fa-envelope',
+        'template': 'my/bookings/blocks/contact.html.twig',
+        'when': booking.contact_email or booking.contact_phone,
+        'half': true
+    },
+    {
+        'key': 'fare',
+        'title': 'Fare',
+        'icon': 'fa-ticket',
+        'template': 'my/bookings/blocks/fare.html.twig',
+        'when': booking.fare_brand,
+        'half': true
+    },
+    {
+        'key': 'receipt',
+        'title': 'Receipt',
+        'icon': 'fa-receipt',
+        'template': 'my/bookings/blocks/receipt.html.twig',
+        'when': true,
+        'half': true
+    }
+] %}
+
 {% block content %}
 <main role="main" class="flex-shrink-0 mb-5">
     <div class="container bookings">
-        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap pt-4 mb-4">
-            <div class="min-w-0">
+
+        {# Said once, in a sentence, before anything it invalidates. The stamp
+           beside the reference carries it visually; this says what it means.
+           There is no cancelled-on date stored, so none is claimed. #}
+        {% if booking.is_cancelled %}
+            <p class="booking-note" role="status">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                These flights are no longer held, and the reference will not check in.
+            </p>
+        {% endif %}
+
+        {# Who this belongs to and what to quote down a phone. It leads the page
+           because it is what somebody opens the page holding: a reference, a
+           name, and the date they paid. #}
+        <header class="booking-head{{ booking.is_cancelled ? ' booking-head--cancelled' : '' }}">
+            <div class="booking-head__identity">
                 {% if booking.reference %}
-                    <p class="booking-card__ref-label">Booking reference</p>
-                    <div class="d-flex align-items-center gap-2">
-                        <h1 class="done__reference-code mb-0">{{ booking.reference }}</h1>
+                    <p class="booking-head__label">Booking reference</p>
+                    <div class="booking-head__code-row">
+                        <h1 class="booking-head__code">{{ booking.reference }}</h1>
                         <button type="button" class="icon-btn js-copy"
                                 data-copy-text="{{ booking.reference }}"
                                 aria-label="Copy booking reference {{ booking.reference }}"
@@ -28,52 +96,72 @@
                         </button>
                     </div>
                 {% else %}
-                    <h1 class="h3 mb-0">Your booking</h1>
+                    {# Written before checkout issued references. The name leads
+                       instead of an empty box or a made-up code. #}
+                    <h1 class="booking-head__code booking-head__code--none">Your booking</h1>
                 {% endif %}
-                <p class="small text-muted mb-0 mt-2">
-                    {{ booking.passenger_summary }}{% if booking.created %} &middot; booked {{ booking.created|date('j M Y') }}{% endif %}
+
+                {# The lead traveller, then how many of them and when it was
+                   bought. `passenger_summary` is not used here: on a solo
+                   booking it is the lead's name again, which put the same name
+                   on two consecutive lines. #}
+                <p class="booking-head__who">{{ booking.passenger }}</p>
+                <p class="booking-head__meta">
+                    {%- set party = booking.passengers|length -%}
+                    {%- if party > 1 %}{{ party }} travellers{% if booking.created %} &middot; {% endif %}{% endif -%}
+                    {%- if booking.created %}booked {{ booking.created|date('j M Y') }}{% endif -%}
                 </p>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
+            <div class="booking-head__state">
+                {% if booking.is_cancelled %}
+                    <span class="booking-stamp booking-stamp--lg">{{ booking.status_label }}</span>
+                {% else %}
+                    <span class="booking-status booking-status--{{ booking.is_past ? 'flown' : 'confirmed' }}">
+                        {{ booking.is_past ? 'Flown' : booking.status_label }}
+                    </span>
+                {% endif %}
                 {% if booking.departs_in and not booking.is_cancelled %}
                     <span class="booking-when">
                         <i class="fas fa-clock" aria-hidden="true"></i> {{ booking.departs_in }}
                     </span>
                 {% endif %}
-                <span class="booking-status booking-status--{{ booking.is_cancelled ? 'cancelled' : (booking.is_past ? 'flown' : 'confirmed') }}">
-                    {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
-                </span>
             </div>
-        </div>
+        </header>
 
         {# What you can do with this booking. Kept as one row so the next thing
            added here sits beside these rather than somewhere else on the page. #}
         <div class="booking-actions mb-4">
-            <a class="btn btn-sm btn-outline-secondary" href="/my/bookings/{{ booking.id }}/calendar">
-                <i class="fas fa-calendar-plus pe-1"></i> Add to calendar
-            </a>
+            {# Not offered on a cancelled booking: the file would put flights
+               nobody is on into somebody's calendar. Flying the route again is
+               still worth offering -- it is the obvious next thing after a
+               trip falls through. #}
+            {% if not booking.is_cancelled %}
+                <a class="btn btn-sm btn-outline-secondary" href="/my/bookings/{{ booking.id }}/calendar">
+                    <i class="fas fa-calendar-plus pe-1"></i> Add to calendar
+                </a>
+            {% endif %}
             <button type="button" class="btn btn-sm btn-outline-secondary"
                     data-bs-toggle="modal" data-bs-target="#rebook-{{ booking.id }}">
                 <i class="fas fa-rotate-right pe-1"></i> Fly this route again
             </button>
         </div>
 
-        <div class="card mb-3 shadow-sm flight-card booking-card">
-            <div class="card-body">
-                {% for half in halves %}
-                    {% if half.direction %}
-                        <p class="booking-card__label">
-                            <i class="fas {{ half.icon }}" aria-hidden="true"></i> {{ half.label }}
-                        </p>
-                        {% include 'search/cards/itinerary.html.twig' with { 'direction': half.direction } only %}
-                    {% endif %}
-                {% endfor %}
-            </div>
-
-            <div class="card-footer flight-card__footer">
-                {% include 'my/bookings/detail-panel.html.twig' with { 'booking': booking, 'halves': halves } only %}
-            </div>
+        <div class="bkblocks">
+            {% for block in blocks %}
+                {% if block.when %}
+                    <section class="bkblock{{ block.half|default(false) ? ' bkblock--half' : '' }}"
+                             aria-labelledby="bkblock-{{ block.key }}">
+                        <h2 class="bkblock__title" id="bkblock-{{ block.key }}">
+                            <i class="fas {{ block.icon }} bkblock__icon" aria-hidden="true"></i>
+                            {{ block.title }}
+                        </h2>
+                        <div class="bkblock__body">
+                            {% include block.template with { 'booking': booking, 'halves': halves } only %}
+                        </div>
+                    </section>
+                {% endif %}
+            {% endfor %}
         </div>
     </div>
 </main>

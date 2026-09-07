@@ -6,19 +6,10 @@ namespace TripBuilder\Api;
 
 use TripBuilder\Database\Connection;
 use TripBuilder\Http\Request;
-use TripBuilder\Routes;
 
 abstract class AbstractApi
 {
     private const string HEADER_AUTH_KEY = 'Authorization';
-
-    private const array EXCLUDE_AUTH_CHECK_ENDPOINTS = [
-        '/api/airports/autofill',
-    ];
-
-    private const array RAW_RESPONSE_ENDPOINTS = [
-        '/api/airports/autofill',
-    ];
 
     // Parsed request payload: readable by the endpoint subclasses, but only
     // this base class may populate it (from setRequestData()).
@@ -47,9 +38,10 @@ abstract class AbstractApi
 
     private function guardUnauthorizedAccess(): void
     {
-        if (!in_array(Routes::getCurrentPage(), self::EXCLUDE_AUTH_CHECK_ENDPOINTS, true)
-            && !$this->isAuthorizedToken($this->getAuthToken())
-        ) {
+        // Every endpoint, with no exceptions list. The airport autofill was the
+        // only entry it ever held, and the search form no longer asks the server
+        // for places at all -- it ships them with the page.
+        if (!$this->isAuthorizedToken($this->getAuthToken())) {
             ApiResponder::unauthorizedAccess();
         }
     }
@@ -85,21 +77,16 @@ abstract class AbstractApi
 
         header_remove();
 
-        // For some endpoints we not using typical output and returning raw data
-        if (!in_array(Routes::getCurrentPage(), self::RAW_RESPONSE_ENDPOINTS)) {
-            // Building response array
-            $response = [
-                'status' => $status->value,
-                'endpoint' => $this->request->path(),
-                'method' => $this->getRequestMethod(),
-                'timestamp' => date('Y-m-d H:i:s'),
-                'data' => $data,
-            ];
-
-            $response = json_encode($response);
-        } else {
-            $response = json_encode($data);
-        }
+        // Every endpoint, in the same envelope. One used to be exempt -- the
+        // airport autofill, which returned a bare array of pre-rendered HTML --
+        // and the search form no longer asks the server for places at all.
+        $response = (string) json_encode([
+            'status' => $status->value,
+            'endpoint' => $this->request->path(),
+            'method' => $this->getRequestMethod(),
+            'timestamp' => date('Y-m-d H:i:s'),
+            'data' => $data,
+        ]);
 
         // Setting up response headers
         self::addHeader('Content-type', 'application/json; charset=utf-8');

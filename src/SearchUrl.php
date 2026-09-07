@@ -36,10 +36,39 @@ final readonly class SearchUrl
      * that airport unaddressable.
      */
     private const string PATTERN = '#^/?search/'
-        . '(?<from>[A-Z0-9]{3})(?<depart>\d{6})(?<to>[A-Z0-9]{3})(?<return>\d{6})?'
+        . '(?<from>[A-Z0-9]{3})(?<depart>\d{6})(?<departspan>x[2-9])?'
+        . '(?<to>[A-Z0-9]{3})(?<return>\d{6})?(?<returnspan>x[2-9])?'
         . '(?<cabin>[YWCF])(?<pax>\d{1,3})$#';
 
     private const int MAX_PASSENGERS = 9;
+
+    /**
+     * Days a flexible date may cover, itself included: `x3` is the named day
+     * and the two after it.
+     *
+     * Three, because the cost is measured and it climbs with the window. One
+     * 2-stop branch of one direction on a busy route goes 57 candidates and
+     * 50ms at a single date to 184 and 92ms at three, and the real search runs
+     * that shape once per destination airport and twice over for a round trip.
+     * Seven days measured 510 and 224ms, which is a multi-second search once
+     * multiplied out -- and enough rows to reach the 2,000 the candidate query
+     * caps at, where what survives is whatever is cheapest and a whole
+     * expensive day can vanish without saying so.
+     *
+     * Three lands where it was meant to. End to end on that route: a one-way
+     * goes 103ms to 157ms, and a round trip flexible at both ends 129ms to
+     * 238ms -- under twice the work for three times the days, because every
+     * date predicate was already a range and a wider one is the same seek.
+     */
+    public const int MAX_SPAN = 3;
+
+    /**
+     * The separator for a span. Lowercase because the rest of the segment is
+     * not: airport codes are `[A-Z0-9]` and the cabin is one of YWCF, so a
+     * lowercase letter cannot be mistaken for either. A bare digit could --
+     * `A39` is a real airport -- which is why a span cannot simply be appended.
+     */
+    private const string SPAN_MARK = 'x';
 
     /** Two digits is a century's worth, and this one is not running out. */
     private const int CENTURY = 2000;
@@ -53,7 +82,23 @@ final readonly class SearchUrl
         public int $adults = 1,
         public int $children = 0,
         public int $infants = 0,
+        // Days each date covers, itself included. One is a single day, which is
+        // what every search was before flexible dates and what most still are.
+        public int $departSpan = 1,
+        public int $returnSpan = 1,
     ) {}
+
+    /** The last day the outbound may leave. */
+    public function departUntil(): string
+    {
+        return self::plusDays($this->depart, $this->departSpan - 1);
+    }
+
+    /** The last day the return may leave, or null on a one-way. */
+    public function returnUntil(): ?string
+    {
+        return $this->return === null ? null : self::plusDays($this->return, $this->returnSpan - 1);
+    }
 
     /**
      * Read a path segment, or null when it is not one.
@@ -79,6 +124,20 @@ final readonly class SearchUrl
             return null;
         }
 
+        $departSpan = self::readSpan($match['departspan']);
+        $returnSpan = self::readSpan($match['returnspan']);
+
+        // A span the format can spell but the search will not run. Null rather
+        // than a quiet clamp: `x9` asks for something specific, and answering a
+        // three-day search instead would look like it worked.
+        if ($departSpan === null || $returnSpan === null) {
+            return null;
+        }
+
+        if (!self::returnsAfterDeparting($depart, $return)) {
+            return null;
+        }
+
         $pax = str_split($match['pax']);
 
         return new self(
@@ -90,6 +149,8 @@ final readonly class SearchUrl
             adults: max(1, (int) ($pax[0] ?? 1)),
             children: (int) ($pax[1] ?? 0),
             infants: (int) ($pax[2] ?? 0),
+            departSpan: $departSpan,
+            returnSpan: $returnSpan,
         );
     }
 
@@ -106,14 +167,27 @@ final readonly class SearchUrl
             return null;
         }
 
-        // A return date is what makes it a round trip, but an explicit one-way
-        // has to win: the form leaves a stale return date in place when the
-        // traveller switches the tab back.
-        $oneway = TripType::fromRequest($query->nullableStr((string) Config::get('search.form.input.triptype')))
-            === TripType::Oneway;
+        // A return date is what makes it a round trip. An explicit one-way still
+        // wins, because links shared from the old form carry `triptype=oneway`
+        // alongside whatever return date its tab had left behind.
+        //
+        // tryFrom, not fromRequest: fromRequest answers Oneway for anything it
+        // does not recognise, including nothing at all. That was safe while the
+        // form always stated a trip type, and became a bug the moment it
+        // stopped -- every round trip submitted arrived with no `triptype` and
+        // had its return date discarded on the way in.
+        $oneway = TripType::tryFrom((string) $query->nullableStr(
+            (string) Config::get('search.form.input.triptype'),
+        )) === TripType::Oneway;
         $return = $oneway
             ? null
             : self::validDate($query->str((string) Config::get('search.form.input.return_date')));
+
+        // The same rule the path form enforces: a trip cannot come back before
+        // it leaves. Unchecked here too until now.
+        if (!self::returnsAfterDeparting($depart, $return)) {
+            return null;
+        }
 
         return new self(
             from: $from,
@@ -124,17 +198,21 @@ final readonly class SearchUrl
             adults: self::paxFrom($query, 'adults', 1),
             children: self::paxFrom($query, 'children', 0),
             infants: self::paxFrom($query, 'infants', 0),
+            departSpan: self::spanFrom($query, 'depart_flex'),
+            returnSpan: $return === null ? 1 : self::spanFrom($query, 'return_flex'),
         );
     }
 
     public function path(): string
     {
         return sprintf(
-            '/search/%s%s%s%s%s%s',
+            '/search/%s%s%s%s%s%s%s%s',
             $this->from,
             self::shortDate($this->depart),
+            self::spanMark($this->departSpan),
             $this->to,
             $this->return === null ? '' : self::shortDate($this->return),
+            $this->return === null ? '' : self::spanMark($this->returnSpan),
             $this->cabin->code(),
             $this->passengers(),
         );
@@ -191,6 +269,61 @@ final readonly class SearchUrl
     private static function shortDate(string $date): string
     {
         return date('dmy', (int) strtotime($date));
+    }
+
+    /**
+     * A span as the URL spells it, which for a single day is nothing at all.
+     *
+     * That is what keeps every link written before flexible dates byte
+     * identical -- and the canonical redirect depends on it, since a path that
+     * renders differently from the one requested bounces.
+     */
+    private static function spanMark(int $span): string
+    {
+        return $span > 1 ? self::SPAN_MARK . $span : '';
+    }
+
+    /**
+     * A span from the query string, falling back to a single day.
+     *
+     * intWithin answers the default rather than the nearest bound, and that is
+     * the right direction here: a span the search will not run becomes no span
+     * at all, which searches fewer days and never more. The path form refuses
+     * such a URL outright instead, because there the span was written down.
+     */
+    private static function spanFrom(Input $query, string $key): int
+    {
+        return $query->intWithin((string) Config::get('search.form.input.' . $key), 1, 1, self::MAX_SPAN);
+    }
+
+    /** A span from its marker, null when it asks for more days than are on offer. */
+    private static function readSpan(string $mark): ?int
+    {
+        if ($mark === '') {
+            return 1;
+        }
+
+        $span = (int) substr($mark, 1);
+
+        return $span >= 2 && $span <= self::MAX_SPAN ? $span : null;
+    }
+
+    /**
+     * Whether a return is on or after its departure.
+     *
+     * Nothing checked this before: /search/YUL151026LHR011025Y1 -- a return a
+     * year before the outbound -- answered 200 and drew a results page. With
+     * windows on both ends it matters more, because the two can now overlap in
+     * ways a single pair of dates could not.
+     */
+    private static function returnsAfterDeparting(string $depart, ?string $return): bool
+    {
+        return $return === null || $return >= $depart;
+    }
+
+    private static function plusDays(string $date, int $days): string
+    {
+        return $days < 1 ? $date : date('Y-m-d', (int) strtotime($date . ' +' . $days . ' day'));
     }
 
     private static function validCode(string $code): bool

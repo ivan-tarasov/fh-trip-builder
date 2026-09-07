@@ -302,4 +302,65 @@ final class HelperTest extends TestCase
         ];
     }
 
+    /**
+     * A flight date carries its year only when that year is not the reader's.
+     *
+     * Every date on an itinerary was printed as "Thu, 15 Oct", which is right
+     * inside one year and a guess across a new one: a trip booked in December
+     * that leaves in January showed a departure indistinguishable from one
+     * eleven months earlier.
+     */
+    #[DataProvider('dateLabels')]
+    public function testADateCarriesItsYearOnlyWhenItIsNotTheReferenceYear(
+        string $expected,
+        string $when,
+        string $reference,
+    ): void {
+        self::assertSame(
+            $expected,
+            Helper::dateLabel($when, 'D, j M', 'D, j M Y', $reference),
+        );
+    }
+
+    /** @return array<string, array{string, string, string}> */
+    public static function dateLabels(): array
+    {
+        return [
+            'same year says nothing' => ['Thu, 15 Oct', '2026-10-15 21:18:00', '2026-09-06 12:00:00'],
+            'next year is named' => ['Fri, 15 Oct 2027', '2027-10-15 21:18:00', '2026-09-06 12:00:00'],
+            'last year is named' => ['Wed, 15 Oct 2025', '2025-10-15 21:18:00', '2026-09-06 12:00:00'],
+            // The case that started this: December to January, where the two
+            // dates are days apart and the years are not.
+            'new year eve' => ['Thu, 31 Dec', '2026-12-31 23:00:00', '2026-12-25 12:00:00'],
+            'new year day' => ['Fri, 1 Jan 2027', '2027-01-01 01:00:00', '2026-12-25 12:00:00'],
+            // A year boundary is a year boundary however few hours apart the
+            // two moments are.
+            'an hour either side of midnight' => ['Fri, 1 Jan 2027', '2027-01-01 00:30:00', '2026-12-31 23:30:00'],
+        ];
+    }
+
+    public function testTheReferenceDefaultsToNow(): void
+    {
+        $thisYear = date('Y');
+
+        self::assertSame(
+            date('D, j M', strtotime($thisYear . '-06-01')),
+            Helper::dateLabel($thisYear . '-06-01 09:00:00', 'D, j M', 'D, j M Y'),
+        );
+        self::assertStringEndsWith(
+            (string) ((int) $thisYear + 1),
+            Helper::dateLabel(((int) $thisYear + 1) . '-06-01 09:00:00', 'D, j M', 'D, j M Y'),
+        );
+    }
+
+    public function testATimestampIsAcceptedAsWellAsAString(): void
+    {
+        $when = strtotime('2027-03-09 08:00:00');
+
+        self::assertSame(
+            'Tue, 9 Mar 2027',
+            Helper::dateLabel($when, 'D, j M', 'D, j M Y', '2026-09-06 12:00:00'),
+        );
+    }
+
 }

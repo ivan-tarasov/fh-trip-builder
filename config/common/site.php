@@ -73,8 +73,22 @@ return [
 
     'paths' => [
         'search' => '/search/',
+        'saved' => '/my/saved/',
     ],
 
+    /*
+    | `enabled` is whether the page exists at all; `header` and `footer` are
+    | where it is listed, both defaulting to true.
+    |
+    | The header carries only what somebody needs while they are booking, because
+    | the homepage's section tray docks into the middle of it once the hero
+    | scrolls past and a full menu leaves it nowhere to land. Everything else is
+    | still one glance away in the footer, which lists the lot.
+    |
+    | `soon` marks a placeholder: rendered as text rather than a link, so it is
+    | not offered to the keyboard and does not apologise for doing nothing when
+    | clicked. The same rule the hero's own tray follows.
+    */
     'main-menu' => [
         '/my/bookings/' => [
             'text' => 'My bookings',
@@ -86,22 +100,35 @@ return [
             'icon' => 'fas fa-heart',
             'spacer' => 3,
             'enabled' => true,
+            'header' => false,
         ],
         '/airlines/' => [
             'text' => 'Airlines',
             'icon' => 'fas fa-plane',
             'enabled' => true,
+            'header' => false,
         ],
         '/airports/' => [
             'text' => 'Airports',
             'icon' => 'fas fa-map-marked-alt',
             'spacer' => 3,
             'enabled' => true,
+            'header' => false,
         ],
         '/about/' => [
             'text' => 'About project',
             'icon' => 'fas fa-circle-info',
             'enabled' => true,
+            'header' => false,
+        ],
+        // Nothing to link to yet: every price on the site is CAD. It holds the
+        // place the currency switch will take, and says so out loud.
+        '/currency/' => [
+            'text' => 'CAD',
+            'icon' => 'fas fa-globe',
+            'enabled' => true,
+            'footer' => false,
+            'soon' => true,
         ],
         '/software-tests/' => [
             'text' => 'Software tests',
@@ -156,21 +183,6 @@ return [
         'Report Bug' => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
         'Request Feature' => 'https://github.com/ivan-tarasov/fh-trip-builder/issues',
         'Pull requests' => 'https://github.com/ivan-tarasov/fh-trip-builder/pulls',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Tab settings
-    |--------------------------------------------------------------------------
-    |
-    | Search forms active tab settings
-    |
-    */
-
-    'tab_active' => [
-        'btn' => ' active',
-        'aria' => 'true',
-        'div' => ' show active',
     ],
 
     /*

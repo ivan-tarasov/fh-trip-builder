@@ -91,6 +91,8 @@ final readonly class FlightRepository
         CabinClass $cabin,
         ?FlightFilters $filters = null,
         float $priceOffset = 0.0,
+        // Days the departure may fall on, itself included.
+        int $span = 1,
     ): array {
         $filters ??= new FlightFilters();
         $empty = ['rows' => [], 'total' => 0, 'cheapest' => null, 'available' => [], 'option_prices' => [], 'bounds' => [], 'highlights' => []];
@@ -102,7 +104,7 @@ final readonly class FlightRepository
             return $empty;
         }
 
-        [$candidateSql, $params] = $this->candidateSql($fromCodes, $toCodes, $departDate, $cabin);
+        [$candidateSql, $params] = $this->candidateSql($fromCodes, $toCodes, $departDate, $cabin, $span);
 
         // One ranked pass over the candidates (lightweight rows), capped so a very
         // connective route can't sort an unbounded set. The page and total both
@@ -799,13 +801,25 @@ final readonly class FlightRepository
      * @param list<string> $toCodes
      * @return array{0: string, 1: list<string>, 2: list<string>, 3: list<list<string>>}
      */
-    private function candidateSql(array $fromCodes, array $toCodes, string $date, CabinClass $cabin): array
-    {
+    private function candidateSql(
+        array $fromCodes,
+        array $toCodes,
+        string $date,
+        CabinClass $cabin,
+        int $span = 1,
+    ): array {
         $flights = Table::Flights->value;
         $minc = (int) Config::get('search.connections.min_connect_minutes', 45);
         $maxc = (int) Config::get('search.connections.max_connect_minutes', 360);
         $maxStops = (int) Config::get('search.connections.max_stops', 2);
-        $buffer = self::CONNECT_DATE_BUFFER_DAYS;
+        // The outbound leg may now leave on any of `span` days, and every
+        // predicate here was already a half-open range rather than an equality
+        // -- so a window is the same single index seek on route_departure_time
+        // that one day was, just a wider one. Not N queries, and not N seeks.
+        $span = max(1, $span);
+        // The connecting legs are bounded relative to the first, so their buffer
+        // has to grow with it or a later departure loses its own connections.
+        $buffer = self::CONNECT_DATE_BUFFER_DAYS + $span - 1;
 
         $fromPh = $this->placeholders($fromCodes);
         $toPh = $this->placeholders($toCodes);
@@ -854,7 +868,7 @@ final readonly class FlightRepository
             NULL AS stop1_in, NULL AS stop1_out, NULL AS stop2_in, NULL AS stop2_out
             FROM {$flights} f1
             WHERE f1.departure_airport IN ({$fromPh}) AND f1.arrival_airport IN ({$toPh})
-              AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
+              AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL {$span} DAY
               {$sells1}";
         $partParams[] = [...$fromCodes, ...$toCodes, $date, $date];
 
@@ -884,7 +898,7 @@ final readonly class FlightRepository
                         AND f2.departure_time >= f1.arrival_time + INTERVAL {$minc} MINUTE
                         AND f2.departure_time <= f1.arrival_time + INTERVAL {$maxc} MINUTE
                     WHERE f1.departure_airport IN ({$fromPh})
-                      AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
+                      AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL {$span} DAY
                       AND f2.arrival_airport = ?
                       AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
                       AND f1.arrival_airport NOT IN ({$endPh})
@@ -930,7 +944,7 @@ final readonly class FlightRepository
                         AND f3.departure_time >= f2.arrival_time + INTERVAL {$minc} MINUTE
                         AND f3.departure_time <= f2.arrival_time + INTERVAL {$maxc} MINUTE
                     WHERE f1.departure_airport IN ({$fromPh})
-                      AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL 1 DAY
+                      AND f1.departure_time >= ? AND f1.departure_time < ? + INTERVAL {$span} DAY
                       AND f2.departure_time >= ? AND f2.departure_time < ? + INTERVAL {$buffer} DAY
                       AND f3.departure_time >= ? AND f3.departure_time < ? + INTERVAL {$buffer} DAY
                       AND f3.arrival_airport = ?
@@ -962,7 +976,7 @@ final readonly class FlightRepository
      * bound, and so must each running total, which prunes the join early. The
      * answer is exactly the same; it is only reached with far less work.
      */
-    public function cheapestTotal(string $from, string $to, string $date, CabinClass $cabin): ?float
+    public function cheapestTotal(string $from, string $to, string $date, CabinClass $cabin, int $span = 1): ?float
     {
         $fromCodes = $this->resolveAirportCodes($from);
         $toCodes = $this->resolveAirportCodes($to);
@@ -971,7 +985,7 @@ final readonly class FlightRepository
             return null;
         }
 
-        [, , $parts, $partParams] = $this->candidateSql($fromCodes, $toCodes, $date, $cabin);
+        [, , $parts, $partParams] = $this->candidateSql($fromCodes, $toCodes, $date, $cabin, $span);
 
         $cheap = [];
         $cheapParams = [];

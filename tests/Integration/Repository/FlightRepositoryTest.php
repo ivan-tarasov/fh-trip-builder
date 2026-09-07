@@ -480,6 +480,93 @@ final class FlightRepositoryTest extends IntegrationTestCase
         $this->danglingAirport = self::DANGLING_AIRPORT;
     }
 
+    public function testAWindowFindsTheNeighbouringDaysAndKeepsTheNamedOne(): void
+    {
+        // Three flights on three consecutive days, all cheaper than the network
+        // so they rank where the assertions can see them.
+        $day2 = date('Y-m-d', (int) strtotime(self::DEPART_DATE . ' +1 day'));
+        $day3 = date('Y-m-d', (int) strtotime(self::DEPART_DATE . ' +2 days'));
+
+        $this->extraIds[] = $this->insertFlight('AC', 'YUL', $day2 . ' 08:00:00', 'YYZ', $day2 . ' 09:15:00');
+        $this->extraIds[] = $this->insertFlight('AC', 'YUL', $day3 . ' 08:00:00', 'YYZ', $day3 . ' 09:15:00');
+
+        $onOneDay = $this->repository()->searchDirection(
+            'YUL',
+            'YYZ',
+            self::DEPART_DATE,
+            SortMethod::Price,
+            0,
+            210,
+            CabinClass::Economy,
+        );
+        $overThree = $this->repository()->searchDirection(
+            'YUL',
+            'YYZ',
+            self::DEPART_DATE,
+            SortMethod::Price,
+            0,
+            210,
+            CabinClass::Economy,
+            span: 3,
+        );
+
+        // A superset: widening the window may only ever add.
+        $single = array_map(self::keyOf(...), $onOneDay['rows']);
+        $window = array_map(self::keyOf(...), $overThree['rows']);
+
+        self::assertSame([], array_diff($single, $window), 'a window lost an itinerary the single date found');
+        self::assertGreaterThan(count($single), count($window), 'the two planted days were not picked up');
+
+        // And each result still says which day it leaves, or a three-day list is
+        // three lists nobody can tell apart.
+        $days = array_unique(array_map(
+            static fn(array $row): string => date('Y-m-d', (int) strtotime((string) $row['legs'][0]['dep_datetime'])),
+            $overThree['rows'],
+        ));
+
+        self::assertContains($day2, $days);
+        self::assertContains($day3, $days);
+    }
+
+    public function testAWindowOfOneIsTheSearchItAlwaysWas(): void
+    {
+        $plain = $this->repository()->searchDirection(
+            'YUL',
+            'YYZ',
+            self::DEPART_DATE,
+            SortMethod::Price,
+            0,
+            210,
+            CabinClass::Economy,
+        );
+        $explicit = $this->repository()->searchDirection(
+            'YUL',
+            'YYZ',
+            self::DEPART_DATE,
+            SortMethod::Price,
+            0,
+            210,
+            CabinClass::Economy,
+            span: 1,
+        );
+
+        self::assertSame($plain['total'], $explicit['total']);
+        self::assertSame(
+            array_map(self::keyOf(...), $plain['rows']),
+            array_map(self::keyOf(...), $explicit['rows']),
+        );
+    }
+
+    /**
+     * An itinerary's leg ids, which is what identifies it.
+     *
+     * @param array<string, mixed> $row
+     */
+    private static function keyOf(array $row): string
+    {
+        return implode('-', array_map(static fn(array $leg): string => (string) $leg['id'], $row['legs']));
+    }
+
     /**
      * @param array<string, mixed> $itin
      */

@@ -183,7 +183,7 @@
                                        is a lot to scroll, but a working lot. #}
                                     <select class="field__input{{ errors.billing_country is defined ? ' is-invalid' : '' }}"
                                             id="billing_country" name="billing_country" autocomplete="country"
-                                            data-searchable>
+                                            data-searchable data-empty="No country matches that.">
                                         <option value="">Choose…</option>
                                         {# Every country the app knows, from the
                                            countries table -- the same list the

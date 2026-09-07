@@ -16,6 +16,7 @@
 
 <div class="card mb-3{{ booking.is_past or booking.is_cancelled ? '' : ' shadow-sm' }} flight-card booking-card{{ booking.is_past ? ' booking-card--past' : '' }}{{ booking.is_cancelled ? ' booking-card--cancelled' : '' }}"
      data-booking-card="{{ booking.id }}">
+
     <div class="card-body">
 
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
@@ -42,14 +43,26 @@
 
             <div class="d-flex align-items-center card-actions">
                 {% if booking.departs_in and not booking.is_cancelled %}
-                    <span class="booking-when">
+                    {# Inside a week the countdown stops being a detail and
+                       becomes the reason the card is being looked at. #}
+                    <span class="booking-when{{ booking.days_until is not null and booking.days_until <= 7 ? ' booking-when--soon' : '' }}">
                         <i class="fas fa-clock" aria-hidden="true"></i> {{ booking.departs_in }}
                     </span>
                 {% endif %}
 
-                <span class="booking-status js-booking-status booking-status--{{ booking.is_cancelled ? 'cancelled' : (booking.is_past ? 'flown' : 'confirmed') }}">
-                    {{ booking.is_cancelled ? booking.status_label : (booking.is_past ? 'Flown' : booking.status_label) }}
-                </span>
+                {# A cancelled booking is stamped rather than badged. A tint the
+                   size of the word "Confirmed" was the quietest thing on a card
+                   whose every other line it invalidates; a stamp is the mark a
+                   travel document actually carries when it stops being valid,
+                   and it reads at a glance without a bar of solid red across
+                   the page. #}
+                {% if booking.is_cancelled %}
+                    <span class="booking-stamp js-booking-status">{{ booking.status_label }}</span>
+                {% else %}
+                    <span class="booking-status js-booking-status booking-status--{{ booking.is_past ? 'flown' : 'confirmed' }}">
+                        {{ booking.is_past ? 'Flown' : booking.status_label }}
+                    </span>
+                {% endif %}
 
                 {% if not booking.is_cancelled and not booking.is_past %}
                     <span class="card-actions__divider" aria-hidden="true"></span>

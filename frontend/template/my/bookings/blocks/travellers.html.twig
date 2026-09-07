@@ -1,0 +1,18 @@
+{# Who is on the booking. Its own block rather than a row of the receipt: a
+   receipt is what was charged, and a passenger manifest is not that. #}
+<ul class="people">
+    {% for traveller in booking.passengers %}
+        <li class="people__row">
+            <span class="people__name">{{ traveller.name }}</span>
+            <span class="people__type">
+                {{ traveller.type }}{% if traveller.dob %} &middot; born {{ traveller.dob|date('j M Y') }}{% endif %}
+            </span>
+        </li>
+    {% else %}
+        {# Booked before passengers were stored per row. The lead is all there
+           has ever been for these. #}
+        <li class="people__row">
+            <span class="people__name">{{ booking.passenger }}</span>
+        </li>
+    {% endfor %}
+</ul>

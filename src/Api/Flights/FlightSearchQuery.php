@@ -26,6 +26,11 @@ final readonly class FlightSearchQuery
         // read; there was no infant count at all, which is the tell that they
         // were not a model of anything.
         public Party $party,
+        // Days each date may fall on, itself included. Defaulted, and placed
+        // after the values that have none, so every call site that predates
+        // flexible dates still reads as a single-day search.
+        public int $departSpan = 1,
+        public int $returnSpan = 1,
         // The cabin the search asked for. Carried so the results can say which
         // cabin they describe; the flights table has no cabin column, so this
         // is the query's cabin and not the aircraft's.

@@ -18,11 +18,13 @@ return [
             'arrive_place' => 'to',
             'depart_date' => 'depart',
             'return_date' => 'return',
+            // How many days each date may cover, itself included. Absent means
+            // one, which is what a search was before flexible dates.
+            'depart_flex' => 'depart_flex',
+            'return_flex' => 'return_flex',
             'triptype' => 'triptype',
             'class' => 'class',
             'shown' => 'shown',
-            // Collected by the forms but not yet read anywhere: the search
-            // prices one seat and checkout books one traveller.
             'adults' => 'adults',
             'children' => 'children',
             'infants' => 'infants',

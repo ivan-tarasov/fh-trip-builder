@@ -26,6 +26,11 @@ class Routes
         */
 
         '/my/bookings' => 'My@bookings',
+        // Cancelled bookings keep their own address rather than a tab the URL
+        // cannot describe: a booking somebody is arguing with an airline about
+        // is one they want to be able to link to.
+        '/my/bookings/past' => 'My@past',
+        '/my/bookings/cancelled' => 'My@cancelled',
         '/my/saved' => 'My@saved',
 
         /*
@@ -52,7 +57,6 @@ class Routes
         */
 
         '/api/airports' => 'Api@airports',
-        '/api/airports/autofill' => 'Api@airportsAutofill',
         '/api/airlines' => 'Api@airlines',
         '/api/flights' => 'Api@flights',
         '/api/flights/one' => 'Api@flightsOne',
@@ -86,7 +90,7 @@ class Routes
         // A whole search in one segment -- see SearchUrl. The plain /search
         // route below still answers, because that is where the query-string
         // form lands before being redirected here.
-        '#^/search/[A-Z0-9]{3}\d{6}[A-Z0-9]{3}(?:\d{6})?[YWCF]\d{1,3}$#' => 'Search@index',
+        '#^/search/[A-Z0-9]{3}\d{6}(?:x[2-9])?[A-Z0-9]{3}(?:\d{6})?(?:x[2-9])?[YWCF]\d{1,3}$#' => 'Search@index',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [
