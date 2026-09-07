@@ -1179,23 +1179,39 @@ a.hero__mode:active { transform: scale(.97); }
    it instead. The label stays in the markup for a screen reader, because a
    placeholder disappears exactly when someone tabbing back needs it most.
 
-   The submit stays inside the white bar rather than detached on the band. That
-   is the one deliberate departure: the accent measures 2.86:1 against the ink
-   behind it, short of the 3:1 a control needs to be seen at all, and on white
-   it is unambiguous. */
+   The fields are one white block and the submit stands apart from it. The bar
+   itself draws nothing: no padding, no frame, no shadow. What it had was a
+   white gutter running round the whole row, which read as a border drawn about
+   the form and tied the button into the same object as the fields -- so the one
+   control that does something looked like a sixth thing to fill in. */
 .searchbar--hero .searchbar__bar {
-  padding: .5rem;
-  border-radius: 1rem;
-  box-shadow: 0 1.25rem 2.5rem rgba(5, 12, 24, .28);
+  gap: 0;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .searchbar--hero .searchbar__field {
   gap: 0;
   min-height: 4rem;
   padding: .5rem 1.125rem;
+  /* The hairline between fields. The compact bar draws these as 1px gaps with
+     the bar's own colour behind; with nothing behind them here, they have to be
+     drawn on the fields themselves. */
+  border-left: 1px solid var(--line);
 }
 
-.searchbar--hero .searchbar__field:first-child { border-radius: .75rem 0 0 .75rem; }
+.searchbar--hero .searchbar__field:first-child {
+  border-left: 0;
+  border-radius: .75rem 0 0 .75rem;
+}
+
+/* Whichever field ends the white block, rather than counting to it: the row has
+   been reordered twice already. */
+.searchbar--hero .searchbar__field:has(+ .searchbar__submit) {
+  border-radius: 0 .75rem .75rem 0;
+}
 
 /* The row shared out by what each field actually has to say. A place is a city
    name with a code beside it, a date is "Oct 12 - Oct 14" once a window is
@@ -1229,10 +1245,35 @@ a.hero__mode:active { transform: scale(.97); }
 .searchbar--hero .party__heads::after { content: none; }
 .searchbar--hero .party__class { font-size: .875rem; color: var(--ink-muted); }
 
+/* Set apart from the fields, which is what makes it read as the thing that
+   acts rather than the last thing to fill in.
+
+   It carries no edge of its own, by choice. The accent measures 2.85:1 against
+   the ink band, under the 3:1 that would let its boundary be found by contrast
+   alone -- what identifies it here is its label, set in white on the fill at
+   10.3:1, and its position at the end of the row. */
 .searchbar--hero .searchbar__submit {
+  margin-left: .5rem;
   padding: 0 2.25rem;
   font-size: 1.0625rem;
   border-radius: .75rem;
+}
+
+/* Stacked, the row's parts stop being a row. Each field is a card of its own,
+   so the divider between them, the radii that opened and closed the white
+   block, and the gap that set the button apart all have nothing left to do --
+   and left alone they show up as a stray edge down one side of every card and
+   an indent on a full-width button. (The one-sided first-child radius was doing
+   that before any of this; it is fixed here too.) */
+@media (max-width: 991.98px) {
+  .searchbar--hero .searchbar__field,
+  .searchbar--hero .searchbar__field:first-child,
+  .searchbar--hero .searchbar__field:has(+ .searchbar__submit) {
+    border-left: 0;
+    border-radius: var(--bs-border-radius);
+  }
+
+  .searchbar--hero .searchbar__submit { margin-left: 0; }
 }
 
 /* The code for whatever place is chosen, set to one side of the field the way
