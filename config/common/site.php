@@ -245,4 +245,126 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Footer link columns
+    |--------------------------------------------------------------------------
+    |
+    | The way into the site for somebody arriving from a search engine, and the
+    | way around it for somebody who has scrolled to the bottom looking for one.
+    |
+    | Every one of these leads to a page that does not exist yet and answers 404
+    | today. That is deliberate and it is the whole point of writing them down:
+    | the list is the specification for what gets built next, and the codes are
+    | real ones checked against the seeders, so the links start working the day
+    | the pages do rather than needing to be rewritten.
+    |
+    | One shape for every column, so a single partial renders all of them. The
+    | old footer had three loops over three different shapes, which is exactly
+    | why nothing was ever shared between them.
+    |
+    | `more` is only present where there is somewhere for it to go. Airlines and
+    | Airports have index pages; the other four do not, and a "more" link into
+    | another 404 is a dead end offering to show you more dead ends.
+    |
+    */
+
+    'footer-columns' => [
+        [
+            'title' => 'Airlines',
+            'links' => [
+                'Air Canada' => '/airlines/AC',
+                'WestJet' => '/airlines/WS',
+                'Delta Air Lines' => '/airlines/DL',
+                'American Airlines' => '/airlines/AA',
+                'United Airlines' => '/airlines/UA',
+            ],
+            'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
+        ],
+        [
+            'title' => 'Directions',
+            'links' => [
+                'Montreal — Toronto' => '/routes/YMQ-YTO',
+                'Montreal — Vancouver' => '/routes/YMQ-YVR',
+                'Montreal — Paris' => '/routes/YMQ-PAR',
+                'Toronto — New York' => '/routes/YTO-NYC',
+                'Toronto — London' => '/routes/YTO-LON',
+            ],
+        ],
+        [
+            'title' => 'Cities',
+            'links' => [
+                'Montreal' => '/cities/YMQ',
+                'Toronto' => '/cities/YTO',
+                'Vancouver' => '/cities/YVR',
+                'New York' => '/cities/NYC',
+                'London' => '/cities/LON',
+            ],
+        ],
+        [
+            'title' => 'Airports',
+            'links' => [
+                'Montréal–Trudeau' => '/airports/YUL',
+                'Toronto Pearson' => '/airports/YYZ',
+                'Vancouver' => '/airports/YVR',
+                'New York JFK' => '/airports/JFK',
+                'London Heathrow' => '/airports/LHR',
+            ],
+            'more' => ['text' => 'All airports', 'url' => '/airports/'],
+        ],
+        [
+            'title' => 'Countries',
+            'links' => [
+                'Canada' => '/countries/CA',
+                'United States' => '/countries/US',
+                'United Kingdom' => '/countries/GB',
+                'France' => '/countries/FR',
+                'Japan' => '/countries/JP',
+            ],
+        ],
+        [
+            'title' => 'Help & tips',
+            'links' => [
+                'Baggage' => '/help/baggage',
+                'Refunds and exchanges' => '/help/refunds',
+                'Ticket did not arrive' => '/help/ticket-not-received',
+                'Changing passenger details' => '/help/passenger-details',
+                'Flying with children' => '/help/flying-with-children',
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Footer destinations
+    |--------------------------------------------------------------------------
+    |
+    | The block above the columns, and the only part of the footer that differs
+    | between pages: the homepage shows it, nothing else does.
+    |
+    | Curated rather than counted. A "most popular" list taken from the search
+    | table would be honest and would also be whatever three routes somebody
+    | last clicked on a demo database -- and it would put a query on every page
+    | render, in a footer that currently makes none.
+    |
+    | Same cities as the POI cards above, which is deliberate: the cards say
+    | there is something to see there, and these say you can get there.
+    |
+    */
+
+    'footer-destinations' => [
+        ['city' => 'Istanbul', 'country' => 'Turkey', 'url' => '/cities/IST'],
+        ['city' => 'Miami', 'country' => 'United States', 'url' => '/cities/MIA'],
+        ['city' => 'Montreal', 'country' => 'Canada', 'url' => '/cities/YMQ'],
+        ['city' => 'New York', 'country' => 'United States', 'url' => '/cities/NYC'],
+        ['city' => 'Paris', 'country' => 'France', 'url' => '/cities/PAR'],
+        ['city' => 'Rio de Janeiro', 'country' => 'Brasil', 'url' => '/cities/RIO'],
+        ['city' => 'Sydney', 'country' => 'Australia', 'url' => '/cities/SYD'],
+        ['city' => 'Tokyo', 'country' => 'Japan', 'url' => '/cities/TYO'],
+        ['city' => 'London', 'country' => 'United Kingdom', 'url' => '/cities/LON'],
+        ['city' => 'Toronto', 'country' => 'Canada', 'url' => '/cities/YTO'],
+        ['city' => 'Vancouver', 'country' => 'Canada', 'url' => '/cities/YVR'],
+        ['city' => 'Bangkok', 'country' => 'Thailand', 'url' => '/cities/BKK'],
+    ],
+
 ];

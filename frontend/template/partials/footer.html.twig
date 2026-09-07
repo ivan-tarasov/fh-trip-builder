@@ -1,15 +1,3 @@
-{% set git = git_info() %}
-
-{# A newsletter sign-up sat here: an e-mail field and a tick button with no
-   handler anywhere in the JS. It did not even apologise the way the placeholder
-   links did -- it took what somebody typed and silently dropped it. Sending
-   mail needs a list to store an address on and something to send from, and the
-   app has neither. The field was also type="text" labelled "Last name", and the
-   button had no accessible name, which is the tell that it was never wired.
-
-   The <hr> above it went too: it separated the page from that band, and with
-   the band gone it was a dark hairline drawn straight onto the dark footer. #}
-
 {# Long pages — a results list that keeps growing most of all — leave the top
    a long way behind. Hidden until there is something to come back from, and
    rendered here so every page has it. #}
@@ -17,75 +5,28 @@
     <i class="fas fa-chevron-up"></i>
 </button>
 
-<footer class="footer mt-auto py-3 bg-dark">
-    <div class="container">
-        <div class="container py-4 py-md-5 px-4 px-md-3">
-            <div class="row">
-                <!-- Info cell -->
-                <div class="col-lg-4">
-                    <a href="/"
-                       class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none me-5 pb-3">
-                        <i class="fas fa-2x fa-plane-departure pe-3"></i>
-                        <strong class="lead">{{ config('app.name') }}</strong>
-                    </a>
-                    <ul class="list-unstyled small">
-                        <li>
-                            Software made by <a href="{{ config('meta.author.website') }}" target="_blank" class="link-light">{{ config('meta.author.name') }}</a>
-                            as <a href="https://www.flighthub.com/" target="_blank" class="link-light">FlightHub</a>
-                            PHP Coding <a href="/Trip_Builder_1.pdf" target="_blank" class="link-light">Assessment</a>.
-                        </li>
-                        <li>
-                            Code licensed <a href="{{ config('app.license.url') }}" target="_blank" class="link-light" rel="license noopener">{{ config('app.license.type') }}</a>,
-                            documentation are available <a href="{{ config('app.documentation') }}" target="_blank" class="link-light">here</a>.
-                        </li>
-                        <li class="my-2">
-                            Generated in <code>{{ execution_time }} seconds</code>,
-                            DB requests: <code>{{ database_requests }}</code>, flights in DB: <code>{{ flights_count }}</code>
-                        </li>
-                        <li>Currently <span class="font-monospace small"><a href="{{ git_repo() }}/commit/{{ git.commit_hash }}" class="text-light" target="_blank">{{ git.tag }}-{{ git.branch }}-{{ git.commit_hash }}</a> posted at {{ git.commit_date }}</span></li>
-                        <li class="my-2">
-                            <i class="far fa-lg fa-copyright pe-1"></i>{{ copyright_years() }}
-                        </li>
-                    </ul>
-                </div>
-                <!-- End / Info cell -->
-                <!-- Main menu cell -->
-                <div class="col-6 col-lg-2 offset-lg-2 mb-4 text-white">
-                    <h5>Navigation</h5>
-                    <ul class="list-unstyled pt-3">
-                        {# Same filter the header applies. Without it the footer
-                           listed every item regardless, so a disabled route --
-                           /about/ and /software-tests/, neither of which is in
-                           Routes::ENABLED_ROUTES -- shipped as a 404 link on
-                           every page of the site. #}
-                        {% for url, item in config('site.main-menu')|filter(item => item.enabled and (item.footer ?? true)) %}
-                        <li class="mb-2"><a href="{{ url }}" class="link-light">{{ item.text }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <!-- End / Main menu cell -->
-                <!-- ... cell -->
-                <div class="col-6 col-lg-2 mb-4 text-white">
-                    <h5>Repository</h5>
-                    <ul class="list-unstyled pt-3">
-                        {% for title, url in config('site.footer-git') %}
-                        <li class="mb-2"><a href="{{ url }}" class="link-light" target="_blank">{{ title }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <!-- End / ... cell -->
-                <!-- ... cell -->
-                <div class="col-6 col-lg-2 mb-3 text-white">
-                    <h5>Socials</h5>
-                    <ul class="list-unstyled pt-3">
-                        {% for title, item in config('site.footer-social') %}
-                        <li class="mb-2"><a href="{{ item.url }}" class="link-light" target="_blank"><i class="fa-brands fa-lg fa-{{ item.ico }} pe-2"></i>{{ title }}</a></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <!-- End / ... cell -->
-            </div>
-        </div>
+{# Three bands, and only the first of them varies by page.
+
+   The destinations belong where somebody has not yet said where they are going,
+   which is the homepage and nowhere else. `current_page()` returns the raw URL,
+   so the test is against '/' -- the same one header.html.twig makes in reverse
+   to decide whether the section tray starts in the header. #}
+<footer class="footer mt-auto">
+    <div class="container footer__inner">
+        {% if current_page() == '/' %}
+            {% include 'partials/footer/destinations.html.twig' only %}
+        {% endif %}
+
+        {% include 'partials/footer/links.html.twig' only %}
+
+        {# The stats come from renderPage()'s context merge rather than from a
+           Twig function, so they do not survive `only` and have to be handed
+           over by name. #}
+        {% include 'partials/footer/bottom.html.twig' with {
+            'execution_time': execution_time,
+            'database_requests': database_requests,
+            'flights_count': flights_count
+        } only %}
     </div>
 </footer>
 
