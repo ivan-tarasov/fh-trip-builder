@@ -77,12 +77,41 @@
         /** Month arithmetic from a month's first day, so nothing can overflow. */
         addMonths: (day, months) => utc(day.getUTCFullYear(), day.getUTCMonth() + months, 1),
 
-        /** "Oct 15", what the search bar shows. */
-        short: (day) => MONTHS_SHORT[day.getUTCMonth()] + ' ' + day.getUTCDate(),
+        /**
+         * "Oct 15", what the search bar shows -- "Oct 15, 2027" once the year
+         * stops being this one.
+         *
+         * Inside one year the year says nothing worth the space. Across a new
+         * one it is the whole of what the label means: a December search for a
+         * January flight showed both ends as though they were days apart in the
+         * same year. Day.full() and Day.long() always carry it, because both
+         * name a single date out of any context that would supply one.
+         */
+        short: (day) => MONTHS_SHORT[day.getUTCMonth()] + ' ' + day.getUTCDate()
+            + (day.getUTCFullYear() === Day.today().getUTCFullYear()
+                ? ''
+                : ', ' + day.getUTCFullYear()),
 
         /** "October 15, 2026", what the rebook dialog shows. */
         full: (day) => MONTHS[day.getUTCMonth()] + ' ' + day.getUTCDate() + ', ' + day.getUTCFullYear(),
-        title: (day) => MONTHS[day.getUTCMonth()] + ' ' + day.getUTCFullYear(),
+        /**
+         * "December", the heading over a month's grid -- "January 2027" once
+         * the year stops being this one.
+         *
+         * The year on every panel was noise for the months it is obvious for,
+         * which is nearly all of them: a calendar opens on today and walks
+         * forward, so the reader already knows what year they started in. It
+         * earns its place at the point it changes, and there it appears on the
+         * panel that changed it -- "December" beside "January 2027" says where
+         * the boundary is more plainly than repeating 2026 would.
+         *
+         * The day cells keep the full date in Day.long(), so nothing a screen
+         * reader lands on has lost its year.
+         */
+        title: (day) => MONTHS[day.getUTCMonth()]
+            + (day.getUTCFullYear() === Day.today().getUTCFullYear()
+                ? ''
+                : ' ' + day.getUTCFullYear()),
         long: (day) => WEEKDAYS[day.getUTCDay()] + ', ' + day.getUTCDate() + ' '
             + MONTHS[day.getUTCMonth()] + ' ' + day.getUTCFullYear()
     };
