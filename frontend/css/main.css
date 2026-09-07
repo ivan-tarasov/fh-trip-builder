@@ -4303,6 +4303,30 @@ textarea {
 .modal-content { position: relative; }
 
 
+/* Groups on the bookings list. They were separated by the card margin alone,
+   which is the same gap that sits between two cards inside one group -- so the
+   groups did not read as groups. */
+.bookings section { margin-bottom: 2.75rem; }
+.bookings section:last-of-type { margin-bottom: 0; }
+
+/* How many are in this group. Bootstrap's .badge is 11px grey-on-grey and was
+   losing to the heading beside it; this is the tab strip's count chip, which
+   is the same thing being said in the same place. */
+.bookings-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.625rem;
+  height: 1.625rem;
+  padding: 0 .5rem;
+  border-radius: 999px;
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* Two addresses drawn as one strip. Underlined-when-current rather than a
    filled pill, so it reads as "where am I in this page" and not as a pair of
    buttons competing with the actions below it. */
@@ -4366,7 +4390,11 @@ textarea {
   letter-spacing: .12em;
   text-transform: uppercase;
   white-space: nowrap;
-  transform: rotate(-3deg);
+  /* Clockwise, sitting at the card's top right. Anticlockwise there dips the
+     outer end toward the card edge and reads as a badge set down crookedly;
+     turned the other way the stamp hinges off the reference it voids and the
+     outer end lifts clear. */
+  transform: rotate(3deg);
   /* The double rule is the stamp's whole tell; without it this is a red
      button. Drawn as a shadow so it costs no extra element. */
   box-shadow: 0 0 0 1px #FFFFFF, 0 0 0 3px rgba(176, 42, 55, .28);
@@ -4375,7 +4403,7 @@ textarea {
   padding: .375rem 1rem;
   font-size: 1rem;
   letter-spacing: .16em;
-  transform: rotate(-4deg);
+  transform: rotate(4deg);
 }
 
 /* The card keeps every bit of its text contrast -- it is still a receipt
@@ -4461,6 +4489,10 @@ textarea {
   .booking-head__state { order: -1; }
 }
 
+/* The footer is a dark band, and content ending a few pixels above it reads as
+   having been cut off rather than finished. */
+.bookings { padding-bottom: 4rem; }
+
 /* A block of the booking page.
 
    The page is a stack of these and nothing else, so a new one -- baggage,
@@ -4508,7 +4540,11 @@ textarea {
 
 /* Two directions in one block, told apart by a rule rather than by a second
    panel: they are one journey. */
-.bkflights__half--next { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.bkflights__half--next { margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+
+/* The summary line and the legs it summarises were touching, so the route bar
+   read as the top edge of the panel below it rather than as its own line. */
+.bkflights__half .legs { margin-top: 1rem; }
 
 /* Who is on the booking. One row each, name first: a manifest is scanned down
    its left edge. */

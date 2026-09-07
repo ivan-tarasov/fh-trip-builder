@@ -50,9 +50,9 @@
         {% for group in groups %}
             {% if group.bookings %}
                 <section aria-labelledby="bookings-{{ group.key }}">
-                    <div class="d-flex align-items-baseline gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-3">
                         <h2 class="h4 mb-0" id="bookings-{{ group.key }}">{{ group.title }}</h2>
-                        <span class="badge text-bg-light border text-secondary fw-normal">{{ group.bookings|length }}</span>
+                        <span class="bookings-count">{{ group.bookings|length }}</span>
                     </div>
 
                     {% for booking in group.bookings %}

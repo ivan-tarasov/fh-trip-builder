@@ -44,6 +44,7 @@ class MyController extends AbstractController
         $sorted = $this->sortedBookings();
 
         $this->renderBookings('active', [
+            ['key' => 'now', 'title' => 'Under way', 'bookings' => $sorted['now']],
             ['key' => 'week', 'title' => 'This week', 'bookings' => $sorted['week']],
             ['key' => 'month', 'title' => 'Within a month', 'bookings' => $sorted['month']],
             ['key' => 'later', 'title' => 'Later', 'bookings' => $sorted['later']],
@@ -98,7 +99,8 @@ class MyController extends AbstractController
             // Every count on every page: the tab strip names them all whichever
             // side it is drawn from.
             'counts' => [
-                'active' => count($sorted['week']) + count($sorted['month']) + count($sorted['later']),
+                'active' => count($sorted['now']) + count($sorted['week'])
+                    + count($sorted['month']) + count($sorted['later']),
                 'past' => count($sorted['past']),
                 'cancelled' => count($sorted['cancelled']),
             ],
@@ -168,24 +170,30 @@ class MyController extends AbstractController
     }
 
     /**
-     * Trips ahead, split into this week, this month and later.
+     * Trips ahead, split by how soon they are.
      *
-     * A row whose dates would not parse has no `days_until` and lands in
+     * "Under way" is a trip whose outbound has gone but whose last flight has
+     * not landed -- somebody sitting in Lisbon halfway through a round trip.
+     * It has no days-until to count, and filing it under "Later" put the one
+     * booking being lived through at the bottom of the page.
+     *
+     * A row whose dates would not parse also has no `days_until`, and lands in
      * "Later" -- the one pile where being wrong about the order costs nothing.
+     * The two are told apart by whether there is a start date at all.
      *
      * @param list<array<string, mixed>> $upcoming
      *
-     * @return array{week: list<array<string, mixed>>, month: list<array<string, mixed>>, later: list<array<string, mixed>>}
+     * @return array{now: list<array<string, mixed>>, week: list<array<string, mixed>>, month: list<array<string, mixed>>, later: list<array<string, mixed>>}
      */
     private static function byNearness(array $upcoming): array
     {
-        $piles = ['week' => [], 'month' => [], 'later' => []];
+        $piles = ['now' => [], 'week' => [], 'month' => [], 'later' => []];
 
         foreach ($upcoming as $booking) {
             $days = $booking['days_until'] ?? null;
 
             $piles[match (true) {
-                $days === null => 'later',
+                $days === null => $booking['starts_at'] === null ? 'later' : 'now',
                 $days <= self::DAYS_THIS_WEEK => 'week',
                 $days <= self::DAYS_THIS_MONTH => 'month',
                 default => 'later',
