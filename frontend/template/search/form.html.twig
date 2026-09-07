@@ -4,7 +4,9 @@
    of the same markup sharing every element id, which worked only because the two
    never render on the same page. global.js is wired to those literal ids, so the
    duplication was one accidental include away from breaking. This is the single
-   definition; `variant` is the only thing that differs.
+   definition, and the two pages now render it identically -- the results page
+   used to get a compact version with standing labels above each field, which
+   was a second thing to keep in step for no reason anybody could point at.
 
    There is no round trip / one way switch. An empty return field is a one-way
    trip, which is already how SearchUrl derives the trip type — the tabs were a
@@ -15,12 +17,6 @@
    Included with `only`, so every value is passed explicitly and defaulted here
    rather than depending on whatever the page happens to have in scope. #}
 
-{% set variant = variant|default('bar') %}
-{# The hero names a place the short way -- "Montreal", with YUL to one side --
-   the way the reference does. The two go together: on their own the city cannot
-   say which of a city's airports was chosen, and the compact bar has no room
-   for the code, so there it keeps the airport's own name. #}
-{% set short_places = variant == 'hero' %}
 {% set depart_code = depart_code|default('') %}
 {% set arrive_code = arrive_code|default('') %}
 {% set depart_city = depart_city|default('') %}
@@ -33,7 +29,7 @@
 {% set return_flex = return_flex|default(1) %}
 
 <form method="get" action="{{ config('site.paths.search') }}" id="searchForm"
-      class="searchbar searchbar--{{ variant }}">
+      class="searchbar searchbar--hero">
     <div class="searchbar__bar">
 
         {# A select, not a text box asking the server after every third
@@ -54,16 +50,14 @@
                         {{ recent is not empty ? 'data-recent="searchbar-recent"' : '' }} required>
                     <option value="">City or airport</option>
                     {% for row in places|default([]) %}
-                        <option value="{{ row.code }}" data-sub="{{ row.sub }}"{% if short_places %} data-short="{{ row.city|default(row.label) }}"{% endif %}{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
+                        <option value="{{ row.code }}" data-sub="{{ row.sub }}" data-short="{{ row.city|default(row.label) }}"{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
                     {% endfor %}
                 </select>
                 {# Filled by the combobox from whatever the select holds, and
-                   hidden until there is one. Only in the hero: the compact bar's
-                   fields are half as wide and its airport names already ellipse,
-                   so a code there would sit on top of the name. #}
-                {% if short_places %}
-                    <span class="searchbar__code" aria-hidden="true"></span>
-                {% endif %}
+                   hidden until there is one. It goes with the short name: on its
+                   own "Montreal" cannot say which of a city's airports was
+                   chosen. #}
+                <span class="searchbar__code" aria-hidden="true"></span>
             </div>
         {% endfor %}
 
