@@ -9,10 +9,14 @@ use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\RoutePriceRepository;
+use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Service\FlightFinder;
 
 class AjaxController extends AbstractController
 {
+    /** The longest address SMTP will carry, so anything longer was never deliverable. */
+    private const int EMAIL_MAX = 254;
+
     private array $get;
 
     public function addTrip(): void
@@ -225,6 +229,57 @@ class AjaxController extends AbstractController
         } finally {
             $connection->fetchValue('SELECT RELEASE_LOCK(?)', [$name]);
         }
+    }
+
+    /**
+     * Put an address on the fare-alert list.
+     *
+     * The footer carried a sign-up once and it was removed, because it took
+     * what somebody typed and dropped it -- there was nowhere to put an
+     * address. There is now, and this is the other half.
+     *
+     * Every answer says what actually happened. "Already on the list" is not an
+     * error and is not dressed up as success either: somebody who cannot
+     * remember whether they subscribed is precisely who needs telling.
+     */
+    public function subscribe(): void
+    {
+        header('Content-type: application/json; charset=utf-8');
+
+        if (!$this->guardRequest()) {
+            return;
+        }
+
+        $email = trim($this->request->body->str('email'));
+
+        // Checked here and not only in the browser: the form is one way to
+        // reach this, not the only one.
+        if ($email === '' || mb_strlen($email) > self::EMAIL_MAX || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(422);
+            echo json_encode(['status' => 'error', 'message' => 'That does not look like an email address.']);
+
+            return;
+        }
+
+        try {
+            $added = new SubscriberRepository($this->connection())->add($email);
+        } catch (Throwable $e) {
+            // The reason goes to the log, not to the page: a visitor cannot act
+            // on it and a database error is not theirs to read.
+            error_log('Subscribe failed: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'That did not work. Try again in a moment.']);
+
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'ok',
+            'added' => $added,
+            'message' => $added
+                ? 'Done. We will write when a fare drops.'
+                : 'That address is already on the list.',
+        ]);
     }
 
     private static function isCode(string $code): bool
