@@ -18,5 +18,7 @@ enum Table: string
     case Countries = 'countries';
     case FareBrands = 'fare_brands';
     case Flights = 'flights';
+    case RouteDayPrice = 'route_day_price';
+    case RoutePriceBuild = 'route_price_build';
     case Search = 'search';
 }

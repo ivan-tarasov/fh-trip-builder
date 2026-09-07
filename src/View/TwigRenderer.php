@@ -48,6 +48,9 @@ final readonly class TwigRenderer
         // a trip crossing New Year cannot print two dates eleven months apart
         // as though they were days.
         $this->twig->addFunction(new TwigFunction('date_label', Helper::dateLabel(...)));
+        // What each passenger type pays, so the calendar can price a party in
+        // the browser without a second definition of it living there.
+        $this->twig->addFunction(new TwigFunction('party_shares', Party::shares(...)));
 
         // ...and the dynamic header/footer data (see LayoutData).
         // A global, so it reaches the passenger partial through the `only`

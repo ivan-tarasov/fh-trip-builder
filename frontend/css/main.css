@@ -704,15 +704,17 @@ a:active {
    #DATEPICKER
    ==========================================================================
 
-   Dan Grossman's daterangepicker, restyled. This whole section was commented
-   out, so the picker rendered on the vendor stylesheet alone -- a dense little
-   grid in someone else's colours, next to a form that had just been rebuilt.
+   Ours, and no longer a vendor's restyled. It replaced daterangepicker and with
+   it moment -- 26KB gzipped for a month grid and some date arithmetic, around
+   which sat as much of our code again fighting its interaction model.
 
    The range reads as one pill: the days between are tinted and square-edged so
    they run together, and only the two ends are round. A single day is both ends
    at once, so it is a circle. */
 
-.daterangepicker {
+.datepicker {
+  position: absolute;
+  z-index: 30;
   padding: .5rem;
   font-family: inherit;
   background-color: #fff;
@@ -721,123 +723,284 @@ a:active {
   box-shadow: 0 1rem 2.5rem rgba(21, 26, 33, .16);
 }
 
-/* The little pointer the vendor draws at the top. The panel sits under a field
-   that is already visually attached to it. */
-.daterangepicker:after,
-.daterangepicker:before { display: none; }
+.datepicker__months { display: flex; }
+.datepicker__month { padding: .5rem .75rem; }
 
-.daterangepicker .drp-calendar {
-  max-width: none;
-  padding: .5rem .75rem;
+.datepicker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding-bottom: .5rem;
 }
 
-.daterangepicker .drp-calendar.left,
-.daterangepicker .drp-calendar.right { padding: .5rem .75rem; }
-
-.daterangepicker .calendar-table { border: none; }
-
-.daterangepicker th.month {
-  padding-bottom: .5rem;
+.datepicker__title {
+  flex: 1 1 auto;
+  margin: 0;
   font-size: .9375rem;
   font-weight: 700;
+  text-align: center;
   color: var(--ink-body);
 }
 
 /* Round, quiet, and out of the way until wanted -- the months are the heading,
-   not the arrows. */
-.daterangepicker th.prev,
-.daterangepicker th.next {
+   not the arrows. Drawn rather than lettered, so they do not depend on a font
+   the page may not have finished loading. */
+.datepicker__nav {
+  flex: 0 0 auto;
   width: 2rem;
   height: 2rem;
+  padding: 0;
+  background: none;
+  border: none;
   border-radius: 50%;
   transition: background-color var(--dur-fast) ease;
 }
 
-.daterangepicker th.prev:hover,
-.daterangepicker th.next:hover { background-color: var(--surface); }
-.daterangepicker th.prev span,
-.daterangepicker th.next span { border-color: var(--ink-secondary); border-width: 0 2px 2px 0; }
+.datepicker__nav:hover { background-color: var(--surface); }
 
-/* Day-of-week headings. The weekend pair is greyed, which is most of what makes
-   a calendar scannable at a glance. */
-.daterangepicker th:not(.month):not(.prev):not(.next) {
-  font-size: .75rem;
-  font-weight: 600;
-  color: var(--ink-secondary);
+.datepicker__nav:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
 }
 
-.daterangepicker .calendar-table th.weekend-head { color: var(--ink-faint); }
+.datepicker__nav::before {
+  content: "";
+  display: inline-block;
+  width: .5rem;
+  height: .5rem;
+  border: solid var(--ink-secondary);
+  border-width: 0 2px 2px 0;
+}
+
+.datepicker__nav--prev::before { transform: rotate(135deg) translate(-.0625rem, -.0625rem); }
+.datepicker__nav--next::before { transform: rotate(-45deg) translate(-.0625rem, -.0625rem); }
+
+.datepicker__grid {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
 
 /* min-width and line-height, not width and height: on a table cell those two
-   are hints the layout algorithm is free to ignore, and it did -- the cells
-   stayed the vendor's size. The line height is what actually gives a day its
-   room. */
-/* Through .calendar-table, because the vendor reaches its cells that way too
-   and a bare `.daterangepicker td` loses to it. */
-.daterangepicker .calendar-table td,
-.daterangepicker .calendar-table th {
+   are hints the layout algorithm is free to ignore. The line height is what
+   actually gives a day its room. */
+.datepicker__grid th,
+.datepicker__grid td {
   min-width: 2.375rem;
   padding: 0;
   line-height: 2.375rem;
   text-align: center;
 }
 
-.daterangepicker td {
+/* Roomier where fares belong -- a four-figure price does not fit the width a
+   two-digit day needs.
+
+   Fixed, not fitted. The height is set whether or not that day has a fare and
+   whether or not any have arrived yet, because a grid that grows a line when
+   the prices land moves every day out from under the pointer. */
+.datepicker--priced .datepicker__grid th,
+.datepicker--priced .datepicker__grid td { min-width: 3.5rem; }
+
+.datepicker--priced .datepicker__grid td {
+  height: 3rem;
+  padding: .25rem 0;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.datepicker__grid th {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+.datepicker__grid th abbr {
+  text-decoration: none;
+  border: none;
+  cursor: inherit;
+}
+
+.datepicker__grid th.is-weekend { color: var(--ink-faint); }
+
+/* Two lines once there are prices: the day, and what a seat costs that day.
+   The cell has to grow to hold them, which is most of why the reference's
+   calendar is so much wider than a plain one. */
+.datepicker__grid td {
   position: relative;
+  padding: .125rem 0;
   font-size: .875rem;
   color: var(--ink-body);
+  cursor: pointer;
+  user-select: none;                /* a drag would otherwise select the numbers */
   border-radius: 0;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.daterangepicker td.available:hover {
+.datepicker__grid td:hover:not(.is-disabled):not(.is-in-range) {
   background-color: var(--surface);
   border-radius: .5rem;
 }
 
-/* A day in another month, or one already gone. */
-.daterangepicker td.off,
-.daterangepicker td.off.in-range,
-.daterangepicker td.off.start-date,
-.daterangepicker td.off.end-date {
-  color: var(--ink-faint);
-  background-color: #fff;
+.datepicker__grid td:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: -2px;
+  border-radius: .5rem;
 }
 
-.daterangepicker td.disabled { color: var(--ink-faint); text-decoration: none; }
+/* A day in another month, or one already gone. */
+.datepicker__grid td.is-outside { color: var(--ink-faint); }
+
+.datepicker__grid td.is-disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+/* Today, ringed. It was an underline, which -- on a span that fills its cell --
+   drew a rule the width of the whole column and read as an artefact rather than
+   as a mark on a date. Not on a day that is already chosen: there the accent
+   fill says everything, and a ring inside it is noise. */
+.datepicker__grid td.is-today:not(.is-start):not(.is-end) {
+  /* ink-faint, not a rule colour: this says which day is today, and the rule
+     tier measures 1.4:1 on white -- under the 3:1 a mark carrying meaning has
+     to clear before it is worth drawing at all. */
+  box-shadow: inset 0 0 0 1px var(--ink-faint);
+  border-radius: .5rem;
+}
+
+/* The day is what is being chosen, so it is what the eye lands on. */
+.datepicker__day {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.datepicker--priced .datepicker__grid td.is-outside .datepicker__day { font-weight: 400; }
+
+/* And the fare is what helps choose it, so it stays underneath in every sense:
+   smaller, lighter, and a tier quieter in colour.
+
+   The line is kept whether or not there is a fare to put on it. An empty block
+   generates no line box at all, so a day without a price used to sit lower than
+   its neighbours -- the numbers along a row stopped lining up wherever the route
+   had nothing to sell. */
+.datepicker__price {
+  display: block;
+  min-height: .825rem;
+  font-size: .6875rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Within a tenth of the cheapest fare on the route. Green carries the meaning
+   here, so the weight carries it too -- colour alone would say nothing to
+   anyone who cannot separate these two greens. */
+.datepicker__grid td.is-cheap .datepicker__price {
+  font-weight: 700;
+  color: var(--brand-success);
+}
+
+/* On the chosen days the pill is already accent-filled, so the fare has to sit
+   on that rather than on the page. */
+/* The ends are accent-filled and the middle is tinted, so the fare needs a
+   different colour on each. Excluded rather than ordered: both rules match the
+   ends of a one-day window, and whichever came last would win by accident. */
+.datepicker__grid td.is-in-range:not(.is-start):not(.is-end) .datepicker__price {
+  color: var(--ink-secondary);
+}
+
+.datepicker__grid td.is-start .datepicker__price,
+.datepicker__grid td.is-end .datepicker__price { color: rgba(255, 255, 255, .85); }
 
 /* The middle of the range: square, so consecutive days join up. */
-.daterangepicker td.in-range {
-  color: var(--ink-body);
+.datepicker__grid td.is-in-range {
   background-color: var(--brand-tint);
   border-radius: 0;
 }
 
 /* The ends, which are the only round corners. */
-.daterangepicker td.active,
-.daterangepicker td.active:hover {
+.datepicker__grid td.is-start,
+.datepicker__grid td.is-end {
   color: #fff;
   background-color: var(--brand-accent);
 }
 
-.daterangepicker td.start-date { border-radius: .75rem 0 0 .75rem; }
-.daterangepicker td.end-date { border-radius: 0 .75rem .75rem 0; }
-.daterangepicker td.start-date.end-date { border-radius: .75rem; }
+/* The leg not being edited, and the days the trip covers between the two.
 
-/* The two arrows that say the window can be pulled wider. They sit just
-   outside the ends of the range rather than on them, where they read as
-   something to grab instead of decoration on a chosen day -- there is room,
-   because the calendar is padded past its last column.
+   Both are behind the active window in every sense -- paler fill, no white
+   text -- because they are context for the choice being made rather than the
+   choice itself. Declared before the active rules so those win outright on a
+   day that happens to be in both. */
+.datepicker__grid td.is-between { background-color: var(--surface); }
 
-   Drawn rather than inserted: the plugin rebuilds the whole table on every
-   repaint, and a repaint is exactly what dragging causes several times a
-   second. A pseudo-element survives that; an appended node would not.
+.datepicker__grid td.is-other {
+  color: var(--ink-body);
+  background-color: var(--brand-tint);
+}
 
-   Only on the search form's two pickers. The rebook dialog's calendar spans a
-   departure and a return, which is a different thing that these arrows cannot
-   move. */
-.daterangepicker--flex td.start-date::before,
-.daterangepicker--flex td.end-date::after {
+.datepicker__grid td.is-other-start { border-radius: .75rem 0 0 .75rem; }
+.datepicker__grid td.is-other-end { border-radius: 0 .75rem .75rem 0; }
+.datepicker__grid td.is-other-start.is-other-end { border-radius: .75rem; }
+
+.datepicker__grid td.is-other .datepicker__price { color: var(--ink-secondary); }
+
+.datepicker__grid td.is-start { border-radius: .75rem 0 0 .75rem; }
+.datepicker__grid td.is-end { border-radius: 0 .75rem .75rem 0; }
+.datepicker__grid td.is-start.is-end { border-radius: .75rem; }
+
+.datepicker__foot {
+  padding: .5rem .75rem .25rem;
+  text-align: center;
+  border-top: 1px solid var(--line);
+}
+
+.datepicker__apply {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .0625rem;
+  width: 100%;
+  padding: .5rem 1rem;
+  font-size: .9375rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: var(--brand-accent);
+  border: none;
+  border-radius: .625rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+
+/* What the chosen days cost, under what the button does. Empty until the fares
+   arrive, and it takes no room while it is. */
+.datepicker__apply-price {
+  font-size: .75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, .85);
+}
+
+.datepicker__apply-price:empty { display: none; }
+
+.datepicker__apply:hover:not(:disabled) { background-color: var(--brand-accent-700); }
+.datepicker__apply:active:not(:disabled) { transform: scale(.98); }
+.datepicker__apply:disabled { opacity: .55; }
+
+.datepicker__apply:focus-visible {
+  outline: 2px solid var(--brand-accent-700);
+  outline-offset: 2px;
+}
+
+/* The two arrows that say the window can be pulled wider. They sit just outside
+   the ends of the range rather than on them, where they read as something to
+   grab instead of decoration on a chosen day -- there is room, because the
+   month is padded past its last column.
+
+   Drawn rather than inserted, so nothing has to be rebuilt as the range moves.
+   Only where a window can actually be dragged: the rebook dialog's calendar
+   spans a departure and a return, which these cannot move. */
+.datepicker--drag .datepicker__grid td.is-start::before,
+.datepicker--drag .datepicker__grid td.is-end::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -848,61 +1011,44 @@ a:active {
   pointer-events: none;
 }
 
-.daterangepicker--flex td.start-date::before {
+.datepicker--drag .datepicker__grid td.is-start::before {
   left: -.4375rem;
   transform: translateY(-50%) rotate(-135deg);
 }
 
-.daterangepicker--flex td.end-date::after {
+.datepicker--drag .datepicker__grid td.is-end::after {
   right: -.4375rem;
   transform: translateY(-50%) rotate(45deg);
 }
 
-.daterangepicker td.available { cursor: pointer; }
-.daterangepicker--flex td.start-date,
-.daterangepicker--flex td.end-date { cursor: ew-resize; }
+.datepicker--drag .datepicker__grid td.is-start,
+.datepicker--drag .datepicker__grid td.is-end { cursor: ew-resize; }
 
-/* Dragging: the browser would otherwise select the numbers as text. */
-.daterangepicker .calendar-table,
-.daterangepicker td { user-select: none; }
+/* Lifted out of the dialog's flow, though not out of the dialog.
 
-/* One button, because there is only one decision left to make. The plugin's
-   Cancel would discard a window that has been on screen since the first
-   click, and its running total already reads on the field behind. */
-.daterangepicker .drp-buttons {
-  padding: .5rem .75rem .25rem;
-  text-align: center;
-  border-top-color: var(--line);
+   A scrollable modal clips its own content -- Bootstrap gives `.modal-content`
+   overflow:hidden so the body can scroll -- which cut the calendar off at the
+   dialog's edge. Fixed to the viewport, it is clipped by nothing and has the
+   whole screen to open in. 1060 draws it over the dialog it still belongs to,
+   which Bootstrap puts at 1055. */
+.datepicker--overlay {
+  position: fixed;
+  z-index: 1060;
 }
 
-.daterangepicker .drp-buttons .drp-selected,
-.daterangepicker .drp-buttons .cancelBtn { display: none; }
-
-.daterangepicker .drp-buttons .applyBtn {
-  width: 100%;
-  padding: .5625rem 1rem;
-  font-size: .9375rem;
-  font-weight: 600;
-  color: #fff;
-  background-color: var(--brand-accent);
-  border: none;
-  border-radius: .625rem;
-  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
-}
-
-.daterangepicker .drp-buttons .applyBtn:hover { background-color: var(--brand-accent-700); }
-.daterangepicker .drp-buttons .applyBtn:active { transform: scale(.98); }
-
-.daterangepicker .drp-buttons .applyBtn:focus-visible {
-  outline: 2px solid var(--brand-accent-700);
-  outline-offset: 2px;
-}
-
+/* One month under the other on a phone: side by side they do not fit. */
 @media (max-width: 575.98px) {
-  .daterangepicker .calendar-table td,
-  .daterangepicker .calendar-table th { min-width: 2rem; line-height: 2rem; }
-  .daterangepicker .drp-calendar { padding: .5rem .25rem; }
+  .datepicker__months { flex-direction: column; }
+  .datepicker__month { padding: .5rem .25rem; }
+  .datepicker__grid { width: 100%; }
+  .datepicker__grid th,
+  .datepicker__grid td { min-width: 2rem; line-height: 2rem; }
+  .datepicker--priced .datepicker__grid th,
+  .datepicker--priced .datepicker__grid td { min-width: 2.875rem; }
+  .datepicker--priced .datepicker__grid td { height: 2.75rem; }
+  .datepicker__day { font-size: .9375rem; }
 }
+
 
 /* ==========================================================================
    #FORM
@@ -1283,6 +1429,28 @@ a.hero__mode:active { transform: scale(.97); }
 
 .searchbar__input::placeholder { color: var(--ink-faint); }
 .searchbar__input:read-only { cursor: pointer; }
+
+/* The field the calendar is currently working on.
+
+   A ring rather than a fill: the field still has to read as a field, and the
+   two dates sit next to each other, so what is needed is a mark saying which of
+   them a click in the calendar will move -- not a second selected-looking
+   thing. Drawn inside, because the fields are butted together with a one-pixel
+   rule between them and an outline would sit on top of its neighbour.
+
+   No radius of its own. It had one from when each field carried its own frame;
+   the bar is one white block now, and a rounded box in the middle of it read as
+   something dropped on top rather than one of the cells being marked. The ring
+   takes whatever corners the field itself has, which is square in the middle of
+   the row and rounded at the two ends. */
+.searchbar__field.is-picking {
+  box-shadow: inset 0 0 0 2px var(--brand-accent);
+}
+
+/* Outside the search bar -- the rebook dialog -- there is no field wrapper to
+   mark, so the control itself carries it. */
+.is-picking:not(.searchbar__field) { outline: 2px solid var(--brand-accent); outline-offset: 1px; }
+.searchbar__field .is-picking { outline: none; }
 
 /* The way back to a one-way trip, now that no tab does it. */
 .searchbar__clear {
@@ -3441,9 +3609,16 @@ body:has(.hero) header#top {
   align-items: center;
 }
 
-/* Below the navbar's own breakpoint the menu is behind a toggler and there is
-   no header row to dock into. The tray stays in the hero and scrolls away. */
-@media (max-width: 991.98px) {
+/* Only where the tray fits between the brand and the menu. It is centred on the
+   header rather than laid out between them, so it does not push what it runs
+   into -- it draws straight over it, and between the navbar's own breakpoint and
+   this one it did: 640px of tray against a 210px menu sitting 92px off the right
+   edge needs about 1276px of window, and at 1096px it covered My bookings by 77.
+
+   Below this the tray stays in the hero and scrolls away, and on the pages that
+   have no hero it is not shown. Nothing becomes unreachable: Saved is in the
+   footer, Flights is the page you are on, and the rest are placeholders. */
+@media (max-width: 1279.98px) {
   .navbar-dock { display: none; }
 }
 
@@ -4486,8 +4661,8 @@ body:has(.hero) header#top {
    the next action added here does not have to find its own corner of the page. */
 .booking-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 
-/* daterangepicker positions itself absolutely against parentEl; without a
-   containing block it lands at the dialog's top-left corner on open. */
+/* The rebook dialog's calendar is rendered in here and positioned against it;
+   without a containing block it would land at the dialog's top-left corner. */
 .modal-content { position: relative; }
 
 

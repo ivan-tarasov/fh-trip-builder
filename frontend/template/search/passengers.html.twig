@@ -20,11 +20,12 @@
 {% set prefix = prefix|default('passengers') %}
 {% set panel_id = prefix ~ '-panel' %}
 {% set types = [
-    { 'key': 'adults', 'label': 'Adults', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
-    { 'key': 'children', 'label': 'Children', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
-    { 'key': 'infants', 'label': 'Infants', 'hint': 'on a lap, no seat', 'from': 0, 'value': party.infants|default(0) }
+    { 'key': 'adults', 'label': 'Adults', 'one': 'adult', 'hint': '12+', 'from': 1, 'value': party.adults|default(1) },
+    { 'key': 'children', 'label': 'Children', 'one': 'child', 'hint': '2–11', 'from': 0, 'value': party.children|default(0) },
+    { 'key': 'infants', 'label': 'Infants', 'one': 'infant', 'hint': 'on a lap, no seat', 'from': 0, 'value': party.infants|default(0) }
 ] %}
 {% set cabin_value = cabin_value|default('economy') %}
+{% set fare_shares = party_shares() %}
 {# A map, so the label the trigger shows is a lookup rather than a loop: `set`
    inside a `for` does not escape it, and Twig 3 dropped the inline `for … if`. #}
 {% set cabins = {
@@ -54,7 +55,14 @@
     {# The rules come from Party::fromCounts() as a number rather than being
        retyped in JavaScript: there is one definition of how many seats a booking
        may hold, and it is in PHP. #}
-    <div class="party__panel" id="{{ panel_id }}" data-max-seats="{{ max_seats }}" hidden>
+    {# The seat limit and the fare shares both come from Party as numbers rather
+       than being retyped in JavaScript: there is one definition of how many
+       seats a booking may hold and of what a child costs, and it is in PHP. The
+       calendar reads these to price its days for the party without asking the
+       server again. #}
+    <div class="party__panel" id="{{ panel_id }}" data-max-seats="{{ max_seats }}"
+         data-child-fare="{{ fare_shares.child_fare }}" data-infant-fare="{{ fare_shares.infant_fare }}"
+         data-child-tax="{{ fare_shares.child_tax }}" data-infant-tax="{{ fare_shares.infant_tax }}" hidden>
         {% for type in types %}
             {% set id = prefix ~ '_' ~ type.key %}
             <div class="party__row">
@@ -71,9 +79,13 @@
                             aria-label="More {{ type.label|lower }}">+</button>
                 </div>
 
+                {# The two spellings, so anything naming this party -- the
+                   calendar's caption -- can say "1 child" and "2 children"
+                   without a second list of words to keep in step. #}
                 <select class="party__native js-party-count" id="{{ id }}"
                         name="{{ config('search.form.input.' ~ type.key) }}"
-                        data-floor="{{ type.from }}" aria-labelledby="{{ id }}-label"
+                        data-floor="{{ type.from }}" data-one="{{ type.one }}"
+                        data-many="{{ type.label|lower }}" aria-labelledby="{{ id }}-label"
                         tabindex="-1" aria-hidden="true">
                     {# "No children" is the absence of a number, not a zero. #}
                     {% if type.from == 0 %}
