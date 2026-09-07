@@ -1203,10 +1203,14 @@ a.hero__mode:active { transform: scale(.97); }
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  gap: 1px;                       /* the dividers, drawn by the field's own background */
-  padding: .375rem;
-  background-color: var(--line);
-  border-radius: var(--bs-border-radius-lg);
+  /* The bar draws nothing. It used to have a white gutter running round the
+     whole row -- which read as a border about the form, and tied the button
+     into the same object as the fields. The dividers it drew as 1px gaps are
+     borders on the fields now, for want of anything behind them. */
+  gap: 0;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 .searchbar__field {
@@ -1218,16 +1222,46 @@ a.hero__mode:active { transform: scale(.97); }
   flex: 1 1 0;
   flex-direction: column;
   justify-content: center;
-  gap: .125rem;
+  gap: 0;
   min-width: 9rem;
-  padding: .5rem .875rem;
+  min-height: 4rem;
+  padding: .5rem 1.125rem;
   background-color: #fff;
+  /* The hairline between fields, drawn here because the bar behind them is
+     transparent and has no colour to show through a gap. */
+  border-left: 1px solid var(--line);
 }
 
-.searchbar__field:first-child { border-radius: var(--bs-border-radius) 0 0 var(--bs-border-radius); }
-.searchbar__field--party { flex: 1.4 1 0; min-width: 12rem; padding: 0; }
+.searchbar__field:first-child {
+  border-left: 0;
+  border-radius: .75rem 0 0 .75rem;
+}
 
+/* Whichever field ends the white block, rather than counting to it: the row has
+   been reordered twice already. */
+.searchbar__field:has(+ .searchbar__submit) { border-radius: 0 .75rem .75rem 0; }
+
+/* The row shared out by what each field actually has to say. A place is a city
+   name with a code beside it, a date is "Oct 12 - Oct 14" once a window is
+   chosen, and the party runs to "6 passengers, Business". An equal share left
+   the last three ellipsing while the places sat on room they did not need. */
+.searchbar__field--place { flex: 1.4 1 0; }
+.searchbar__field--date { flex: 1.15 1 0; }
+/* No `padding: 0` here. The field's own padding used to be outranked by the
+   hero rule and never applied; folded together they tie, and the later one --
+   this -- would start winning and flatten the party field against its edges. */
+.searchbar__field--party { flex: 1.5 1 0; min-width: 12rem; }
+
+/* Named for a screen reader and nothing else: the placeholder says what the
+   field is until a value says it instead, and a placeholder disappears exactly
+   when somebody tabbing back needs it most. */
 .searchbar__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
   margin: 0;
   font-size: .6875rem;
   font-weight: 600;
@@ -1239,7 +1273,7 @@ a.hero__mode:active { transform: scale(.97); }
 .searchbar__input {
   width: 100%;
   padding: 0;
-  font-size: .9375rem;
+  font-size: 1.0625rem;
   color: var(--ink-body);
   background: none;
   border: none;
@@ -1271,122 +1305,43 @@ a.hero__mode:active { transform: scale(.97); }
   background-color: var(--surface);
 }
 
+/* Set apart from the fields, which is what makes it read as the thing that
+   acts rather than the last thing to fill in.
+
+   It carries no edge of its own, by choice. The accent measures 2.85:1 against
+   the ink band behind it, under the 3:1 that would let its boundary be found by
+   contrast alone -- what identifies it here is its label, set in white on the
+   fill at 10.3:1, and its position at the end of the row. */
 .searchbar__submit {
   flex: 0 0 auto;
-  padding: 0 1.75rem;
+  margin-left: .5rem;
+  padding: 0 2.25rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: #fff;
   background-color: var(--brand-accent);
   border: none;
-  border-radius: var(--bs-border-radius);
+  border-radius: .75rem;
   transition: background-color var(--dur-fast) ease;
 }
 
 .searchbar__submit:hover { background-color: var(--brand-accent-700); }
 
-/* The hero's copy of the bar, sized for a page whose subject it is.
-
-   Two differences from the compact one on the results page, both taken from the
-   reference: the fields are taller and set larger, and the standing label above
-   each is dropped -- the placeholder says what the field is until a value says
-   it instead. The label stays in the markup for a screen reader, because a
-   placeholder disappears exactly when someone tabbing back needs it most.
-
-   The fields are one white block and the submit stands apart from it. The bar
-   itself draws nothing: no padding, no frame, no shadow. What it had was a
-   white gutter running round the whole row, which read as a border drawn about
-   the form and tied the button into the same object as the fields -- so the one
-   control that does something looked like a sixth thing to fill in. */
-.searchbar--hero .searchbar__bar {
-  gap: 0;
-  padding: 0;
-  background-color: transparent;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.searchbar--hero .searchbar__field {
-  gap: 0;
-  min-height: 4rem;
-  padding: .5rem 1.125rem;
-  /* The hairline between fields. The compact bar draws these as 1px gaps with
-     the bar's own colour behind; with nothing behind them here, they have to be
-     drawn on the fields themselves. */
-  border-left: 1px solid var(--line);
-}
-
-.searchbar--hero .searchbar__field:first-child {
-  border-left: 0;
-  border-radius: .75rem 0 0 .75rem;
-}
-
-/* Whichever field ends the white block, rather than counting to it: the row has
-   been reordered twice already. */
-.searchbar--hero .searchbar__field:has(+ .searchbar__submit) {
-  border-radius: 0 .75rem .75rem 0;
-}
-
-/* The row shared out by what each field actually has to say. A place is a city
-   name with a code beside it, a date is "Oct 12 - Oct 14" once a window is
-   chosen, and the party runs to "6 passengers, Business". An equal share left
-   the last three ellipsing while the places sat on room they did not need. */
-.searchbar--hero .searchbar__field--place { flex: 1.4 1 0; }
-.searchbar--hero .searchbar__field--date { flex: 1.15 1 0; }
-.searchbar--hero .searchbar__field--party { flex: 1.5 1 0; }
-
-.searchbar--hero .searchbar__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.searchbar--hero .searchbar__input { font-size: 1.0625rem; }
-
-/* Stacked, since the hero has no standing label to say what the field is: the
-   count and the cabin become the two lines that name it. It is also what makes
-   the longest party fit -- "9 passengers, Premium Economy" has no width at
-   which it sits on one line beside four other fields. */
-.searchbar--hero .party__summary {
-  flex-direction: column;
-  gap: 0;
-  line-height: 1.3;
-}
-
-.searchbar--hero .party__heads::after { content: none; }
-.searchbar--hero .party__class { font-size: .875rem; color: var(--ink-muted); }
-
-/* Set apart from the fields, which is what makes it read as the thing that
-   acts rather than the last thing to fill in.
-
-   It carries no edge of its own, by choice. The accent measures 2.85:1 against
-   the ink band, under the 3:1 that would let its boundary be found by contrast
-   alone -- what identifies it here is its label, set in white on the fill at
-   10.3:1, and its position at the end of the row. */
-.searchbar--hero .searchbar__submit {
-  margin-left: .5rem;
-  padding: 0 2.25rem;
-  font-size: 1.0625rem;
-  border-radius: .75rem;
-}
-
 /* Stacked, the row's parts stop being a row. Each field is a card of its own,
    so the divider between them, the radii that opened and closed the white
    block, and the gap that set the button apart all have nothing left to do --
    and left alone they show up as a stray edge down one side of every card and
-   an indent on a full-width button. (The one-sided first-child radius was doing
-   that before any of this; it is fixed here too.) */
+   an indent on a full-width button. */
 @media (max-width: 991.98px) {
-  .searchbar--hero .searchbar__field,
-  .searchbar--hero .searchbar__field:first-child,
-  .searchbar--hero .searchbar__field:has(+ .searchbar__submit) {
+  .searchbar__field,
+  .searchbar__field:first-child,
+  .searchbar__field:has(+ .searchbar__submit) {
     border-left: 0;
     border-radius: var(--bs-border-radius);
   }
 
-  .searchbar--hero .searchbar__submit { margin-left: 0; }
+  /* And it takes the row it has been pushed onto. */
+  .searchbar__submit { margin-left: 0; flex-basis: 100%; }
 }
 
 /* The code for whatever place is chosen, set to one side of the field the way
@@ -1411,12 +1366,12 @@ a.hero__mode:active { transform: scale(.97); }
    input, not the class on its own: the hidden native select carries the same
    class, and padding on a 1px-wide absolutely positioned element is still 3rem
    of box -- enough to push the page 9px wider than the phone showing it. */
-.searchbar--hero .searchbar__field--place input.searchbar__input { padding-right: 3rem; }
+.searchbar__field--place input.searchbar__input { padding-right: 3rem; }
 
 /* Stacked rather than paired. Two of them side by side on a phone leaves each
    about 140px, which is not enough for a placeholder, let alone a place. */
 @media (max-width: 767.98px) {
-  .searchbar--hero .searchbar__field--place { flex-basis: 100%; }
+  .searchbar__field--place { flex-basis: 100%; }
 }
 
 /* The band the results-page form sits in. Replaces .card-4, which was a
@@ -1472,22 +1427,31 @@ body:has(.searchbar-band) header#top { position: static; }
   border: none;
 }
 
+/* Who is flying, stacked. There is no standing label to say what the field is,
+   so the count and the cabin become the two lines that name it. It is also what
+   makes the longest party fit -- "9 passengers, Premium Economy" has no width at
+   which it sits on one line beside four other fields. */
 .party__summary {
   display: flex;
-  gap: .25rem;
+  flex-direction: column;
+  gap: 0;
   overflow: hidden;
   font-size: .9375rem;
+  line-height: 1.3;
   color: var(--ink-body);
   white-space: nowrap;
 }
 
+.party__class { font-size: .875rem; color: var(--ink-muted); }
+
 .party__summary > span { overflow: hidden; text-overflow: ellipsis; }
 
-/* On one line the two run together, so the count keeps its comma. Written here
-   rather than into the element, because the hero drops it and the text is
+/* Nothing between the count and the cabin: they are on their own lines. The
+   comma this once carried was for the one-line layout the results page used to
+   have, and it is written here rather than into the element because the text is
    rewritten on every change -- a separator in the markup would have to be
    rebuilt each time by a paint that should only care about the two facts. */
-.party__heads::after { content: ","; }
+.party__heads::after { content: none; }
 
 .party__panel {
   position: absolute;
@@ -1650,11 +1614,14 @@ body:has(.searchbar-band) header#top { position: static; }
 /* Focus lands on the input, which is not visible -- so the tile wears it. */
 .party__cabin:has(input:focus-visible) { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
 
+/* What is left of the compact bar's own small-screen rules. The rest of them --
+   a gap on the bar, a full-width basis on every field, a squarer button -- never
+   reached the page: the modifier that carried the tall form outranked this
+   block, and with the two folded together they would have started applying and
+   turned a row that wraps on its own into one field per line. The fields carry
+   `min-width: 9rem`, which is what wraps them, and the block above this one
+   squares off their corners and gives the button its own row. */
 @media (max-width: 991.98px) {
-  .searchbar__bar { gap: .375rem; background: none; padding: 0; }
-  .searchbar__field { border-radius: var(--bs-border-radius); flex-basis: 100%; }
-  .searchbar__submit { flex-basis: 100%; padding: .75rem; }
-  .searchbar__field--party { padding: 0; }
   .party__panel { width: 100%; }
 }
 
