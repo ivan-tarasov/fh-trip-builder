@@ -7,6 +7,7 @@ namespace TripBuilder\View;
 use DateTime;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
+use TripBuilder\Helper;
 
 /**
  * Turns an itinerary (an ordered list of flight segments plus its layovers)
@@ -97,11 +98,11 @@ class ItineraryPresenter
                     ? number_format((int) $segment->aircraft_seats)
                     : null,
                 'depart_time' => date('H:i', strtotime($segment->depart->date_time)),
-                'depart_date' => date('D, d M', strtotime($segment->depart->date_time)),
+                'depart_date' => Helper::dateLabel($segment->depart->date_time, 'D, d M', 'D, d M Y'),
                 'depart_city' => $segment->depart->airport_city,
                 'depart_code' => $segment->depart->airport_code,
                 'arrive_time' => date('H:i', strtotime($segment->arrive->date_time)),
-                'arrive_date' => date('D, d M', strtotime($segment->arrive->date_time)),
+                'arrive_date' => Helper::dateLabel($segment->arrive->date_time, 'D, d M', 'D, d M Y'),
                 'arrive_city' => $segment->arrive->airport_city,
                 'arrive_code' => $segment->arrive->airport_code,
             ];
@@ -115,11 +116,11 @@ class ItineraryPresenter
                 'depart_time' => date('H:i', strtotime($first->depart->date_time)),
                 'depart_code' => $first->depart->airport_code,
                 'depart_city' => $first->depart->airport_city,
-                'depart_day' => date('D, j M', strtotime($first->depart->date_time)),
+                'depart_day' => Helper::dateLabel($first->depart->date_time, 'D, j M', 'D, j M Y'),
                 'arrive_time' => date('H:i', strtotime($last->arrive->date_time)),
                 'arrive_code' => $last->arrive->airport_code,
                 'arrive_city' => $last->arrive->airport_city,
-                'arrive_day' => date('D, j M', strtotime($last->arrive->date_time)),
+                'arrive_day' => Helper::dateLabel($last->arrive->date_time, 'D, j M', 'D, j M Y'),
                 'notices' => $this->buildNotices($segments, $itinerary->layovers, (int) $itinerary->total_duration),
                 'badges' => array_map($this->badgeMeta(...), $itinerary->badges),
                 'route' => $this->routeParts($itinerary),

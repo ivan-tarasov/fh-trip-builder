@@ -475,7 +475,27 @@ a {
   min-height: 100vh;
 }
 
+/* What a rubber-band scroll reveals past either end of the page.
+
+   The canvas was white, so overscrolling at the foot showed a white strip under
+   the footer, and at the top the sticky header rode up with the document while
+   the pinned search bar stayed at the viewport -- opening a white gap between
+   two things that are meant to read as one band. The header's own colour closes
+   that: the gap fills with the colour on both sides of it. Under the footer it
+   is navy against #212529, which is a seam between two dark greys rather than a
+   flash of white. */
+html { background-color: var(--brand-ink); }
+
 body {
+  /* Tall enough to push the footer down on a short page, and no taller.
+     Bootstrap's .h-100 was doing the first half and breaking the second: it
+     gives the body a box exactly one viewport tall whatever it holds, and a
+     sticky child only sticks within its parent's box -- so the header came
+     unstuck a screen down and the page ended with a pinned search bar and
+     nothing above it. min-height grows with the content; the sticky footer
+     still works, because that is `d-flex flex-column` here and `mt-auto` on
+     the footer, neither of which needed the fixed height. */
+  min-height: 100vh;
   /* Falls back to the platform UI face rather than Arial, so a failed webfont
      lands somewhere deliberate. */
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
@@ -1082,16 +1102,19 @@ button {
    colour is the app's own ink rather than the reference's blue, and it is very
    slightly graded so a full-width rectangle does not read as a dead block. */
 
-.hero {
-  background-color: var(--brand-ink);
-  background-image: linear-gradient(160deg, var(--brand-ink-700) 0%, var(--brand-ink) 55%);
-}
+/* One flat colour, the header's own. The band was very slightly graded so that
+   a full-width rectangle would not read as a dead block; with the header stuck
+   above it and the search bar pinned into it, all three are the same surface
+   now, and a gradient meeting a flat colour at two seams looked like three
+   panels rather than one. */
+.hero { background-color: var(--brand-ink); }
 
 .hero__inner {
-  padding-top: 3.5rem;
-  /* Deep, because the cards below are pulled up into it. What is left between
-     the search bar and the top of a card is this less the overlap. */
-  padding-bottom: 8.75rem;
+  padding-top: 5.5rem;
+  /* Half the gap to the search bar. The other half is the bar's own top
+     padding, and the split is what lets the gap differ at rest and pinned: all
+     of this scrolls away, and only the bar's half is left under the header. */
+  padding-bottom: 1.25rem;
 }
 
 /* The destination cards, starting inside the band and finishing outside it.
@@ -1111,8 +1134,99 @@ button {
 @media (max-width: 767.98px) {
   /* Less of both: the band is already tall once the fields stack, and a card
      is most of the screen, so a deep overlap buries its own heading. */
-  .hero__inner { padding-bottom: 6.5rem; }
+  .hero__inner { padding-top: 3rem; padding-bottom: 7.5rem; }
   .hero-cards { margin-top: -2.5rem; }
+}
+
+/* Holds the tray's height while the tray is up in the header, so nothing below
+   it moves when it leaves. The height itself is written by global.js from the
+   tray's own.
+
+   The gap to the search bar belongs here rather than on the tray. A child's
+   bottom margin only escapes a parent whose height is `auto`, and this one's is
+   pinned by that min-height -- so on the tray the 1.75rem was swallowed by the
+   slot's own box the moment the height was written, and the bar jumped up to
+   sit against the tray. On the slot it is outside the pinned box and cannot be
+   eaten. */
+.hero__modes-slot { position: relative; }
+
+/* The slot's bottom edge, which is where the tray finishes going under the
+   header. Taken out of the flow and pinned there: as a flow child it would ride
+   up to the top of the slot the moment the tray left, moving the very line that
+   decides whether the tray should have left -- which is a switch that flips
+   itself back and forth for as long as you hold still. */
+.hero__modes-sentinel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+}
+
+/* The tray, docked into the header.
+
+   Laid out along the row rather than down it: in the hero each section is a
+   tile with its icon above its name and room to breathe, and in a 88px header
+   that is a tile too tall to fit and too loud beside a logo. Same tray, same
+   order, one line. */
+.hero__modes.is-docked { margin: 0; gap: .25rem; }
+.hero__modes.is-docked .hero__modes-group { padding: .1875rem; border-radius: .625rem; }
+.hero__modes.is-docked .hero__mode {
+  flex-direction: row;
+  gap: .5rem;
+  min-width: 0;
+  padding: .4375rem .75rem;
+  font-size: .8125rem;
+}
+.hero__modes.is-docked .hero__mode i { font-size: .875rem; }
+
+/* The band, condensed.
+
+   Scrolling the homepage leaves the menu and the search bar behind and takes
+   the rest of the hero with it -- the slogan and the sections have said what
+   they had to say by the time a visitor is reading destinations, and the one
+   thing they may still want is the field they were typing in.
+
+   The bar is pinned rather than copied. The form is wired to literal element
+   ids (see search/form.html.twig), so a second copy on the page would fight the
+   first over every one of them; and it is pinned rather than moved in the DOM,
+   because moving a field that has an open dropdown attached to it loses the
+   dropdown. The header above is sticky, so the two sit together.
+
+   --header-h is written by global.js, which measures the header rather than
+   guessing: it is a navbar that wraps at some widths and not others. */
+/* Sticky, not pinned by script. A scroll is run on the compositor and a scroll
+   handler on the main thread, so anything driven from JS is a frame behind the
+   page it is reacting to -- on a flick the bar appeared where the scroll had
+   got to and then dropped into place. Sticky is resolved where the scrolling
+   happens and cannot lag it.
+
+   Its own band, in the hero's colour, so at rest it reads as the foot of the
+   hero and pinned it reads as the underside of the header. */
+.hero__bar {
+  position: sticky;
+  top: var(--header-h, 4.5rem);
+  z-index: 1020;
+  /* Tight to the menu once it is against it: the two are one band there, and a
+     gap between them reads as the bar having come loose. The rest of the gap it
+     has at rest is the hero's bottom padding, which scrolls away. */
+  padding: .5rem 0 .75rem;
+  background-color: var(--brand-ink);
+}
+
+/* The band's remaining depth, below the bar, out of which the cards are pulled.
+   Padding on the bar would make the sticky strip this tall. */
+.hero__tail { height: 10.25rem; background-color: var(--brand-ink); }
+
+/* Nothing here resizes the form. It was compacted to the results page's
+   metrics when pinned, which made the fields jump the moment they stuck -- the
+   thing somebody may be part-way through typing into should not change shape
+   underneath them. It keeps its own size, and only the band behind it changes. */
+
+@media (max-width: 767.98px) {
+  /* The fields stack here, so a pinned bar would be most of the screen. It
+     scrolls away with the rest of the band. */
+  .hero__bar { position: static; }
 }
 
 .hero__slogan {
@@ -1135,7 +1249,6 @@ button {
   display: flex;
   justify-content: center;
   gap: .5rem;
-  margin-bottom: 1.75rem;
 }
 
 .hero__modes-group {
@@ -1236,10 +1349,14 @@ a.hero__mode:active { transform: scale(.97); }
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  gap: 1px;                       /* the dividers, drawn by the field's own background */
-  padding: .375rem;
-  background-color: var(--line);
-  border-radius: var(--bs-border-radius-lg);
+  /* The bar draws nothing. It used to have a white gutter running round the
+     whole row -- which read as a border about the form, and tied the button
+     into the same object as the fields. The dividers it drew as 1px gaps are
+     borders on the fields now, for want of anything behind them. */
+  gap: 0;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 .searchbar__field {
@@ -1251,16 +1368,46 @@ a.hero__mode:active { transform: scale(.97); }
   flex: 1 1 0;
   flex-direction: column;
   justify-content: center;
-  gap: .125rem;
+  gap: 0;
   min-width: 9rem;
-  padding: .5rem .875rem;
+  min-height: 4rem;
+  padding: .5rem 1.125rem;
   background-color: #fff;
+  /* The hairline between fields, drawn here because the bar behind them is
+     transparent and has no colour to show through a gap. */
+  border-left: 1px solid var(--line);
 }
 
-.searchbar__field:first-child { border-radius: var(--bs-border-radius) 0 0 var(--bs-border-radius); }
-.searchbar__field--party { flex: 1.4 1 0; min-width: 12rem; padding: 0; }
+.searchbar__field:first-child {
+  border-left: 0;
+  border-radius: .75rem 0 0 .75rem;
+}
 
+/* Whichever field ends the white block, rather than counting to it: the row has
+   been reordered twice already. */
+.searchbar__field:has(+ .searchbar__submit) { border-radius: 0 .75rem .75rem 0; }
+
+/* The row shared out by what each field actually has to say. A place is a city
+   name with a code beside it, a date is "Oct 12 - Oct 14" once a window is
+   chosen, and the party runs to "6 passengers, Business". An equal share left
+   the last three ellipsing while the places sat on room they did not need. */
+.searchbar__field--place { flex: 1.4 1 0; }
+.searchbar__field--date { flex: 1.15 1 0; }
+/* No `padding: 0` here. The field's own padding used to be outranked by the
+   hero rule and never applied; folded together they tie, and the later one --
+   this -- would start winning and flatten the party field against its edges. */
+.searchbar__field--party { flex: 1.5 1 0; min-width: 12rem; }
+
+/* Named for a screen reader and nothing else: the placeholder says what the
+   field is until a value says it instead, and a placeholder disappears exactly
+   when somebody tabbing back needs it most. */
 .searchbar__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
   margin: 0;
   font-size: .6875rem;
   font-weight: 600;
@@ -1272,7 +1419,7 @@ a.hero__mode:active { transform: scale(.97); }
 .searchbar__input {
   width: 100%;
   padding: 0;
-  font-size: .9375rem;
+  font-size: 1.0625rem;
   color: var(--ink-body);
   background: none;
   border: none;
@@ -1321,81 +1468,43 @@ a.hero__mode:active { transform: scale(.97); }
   background-color: var(--surface);
 }
 
+/* Set apart from the fields, which is what makes it read as the thing that
+   acts rather than the last thing to fill in.
+
+   It carries no edge of its own, by choice. The accent measures 2.85:1 against
+   the ink band behind it, under the 3:1 that would let its boundary be found by
+   contrast alone -- what identifies it here is its label, set in white on the
+   fill at 10.3:1, and its position at the end of the row. */
 .searchbar__submit {
   flex: 0 0 auto;
-  padding: 0 1.75rem;
+  margin-left: .5rem;
+  padding: 0 2.25rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: #fff;
   background-color: var(--brand-accent);
   border: none;
-  border-radius: var(--bs-border-radius);
+  border-radius: .75rem;
   transition: background-color var(--dur-fast) ease;
 }
 
 .searchbar__submit:hover { background-color: var(--brand-accent-700); }
 
-/* The hero's copy of the bar, sized for a page whose subject it is.
+/* Stacked, the row's parts stop being a row. Each field is a card of its own,
+   so the divider between them, the radii that opened and closed the white
+   block, and the gap that set the button apart all have nothing left to do --
+   and left alone they show up as a stray edge down one side of every card and
+   an indent on a full-width button. */
+@media (max-width: 991.98px) {
+  .searchbar__field,
+  .searchbar__field:first-child,
+  .searchbar__field:has(+ .searchbar__submit) {
+    border-left: 0;
+    border-radius: var(--bs-border-radius);
+  }
 
-   Two differences from the compact one on the results page, both taken from the
-   reference: the fields are taller and set larger, and the standing label above
-   each is dropped -- the placeholder says what the field is until a value says
-   it instead. The label stays in the markup for a screen reader, because a
-   placeholder disappears exactly when someone tabbing back needs it most.
-
-   The submit stays inside the white bar rather than detached on the band. That
-   is the one deliberate departure: the accent measures 2.86:1 against the ink
-   behind it, short of the 3:1 a control needs to be seen at all, and on white
-   it is unambiguous. */
-.searchbar--hero .searchbar__bar {
-  padding: .5rem;
-  border-radius: 1rem;
-  box-shadow: 0 1.25rem 2.5rem rgba(5, 12, 24, .28);
-}
-
-.searchbar--hero .searchbar__field {
-  gap: 0;
-  min-height: 4rem;
-  padding: .5rem 1.125rem;
-}
-
-.searchbar--hero .searchbar__field:first-child { border-radius: .75rem 0 0 .75rem; }
-
-/* The row shared out by what each field actually has to say. A place is a city
-   name with a code beside it, a date is "Oct 12 - Oct 14" once a window is
-   chosen, and the party runs to "6 passengers, Business". An equal share left
-   the last three ellipsing while the places sat on room they did not need. */
-.searchbar--hero .searchbar__field--place { flex: 1.4 1 0; }
-.searchbar--hero .searchbar__field--date { flex: 1.15 1 0; }
-.searchbar--hero .searchbar__field--party { flex: 1.5 1 0; }
-
-.searchbar--hero .searchbar__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.searchbar--hero .searchbar__input { font-size: 1.0625rem; }
-
-/* Stacked, since the hero has no standing label to say what the field is: the
-   count and the cabin become the two lines that name it. It is also what makes
-   the longest party fit -- "9 passengers, Premium Economy" has no width at
-   which it sits on one line beside four other fields. */
-.searchbar--hero .party__summary {
-  flex-direction: column;
-  gap: 0;
-  line-height: 1.3;
-}
-
-.searchbar--hero .party__heads::after { content: none; }
-.searchbar--hero .party__class { font-size: .875rem; color: var(--ink-muted); }
-
-.searchbar--hero .searchbar__submit {
-  padding: 0 2.25rem;
-  font-size: 1.0625rem;
-  border-radius: .75rem;
+  /* And it takes the row it has been pushed onto. */
+  .searchbar__submit { margin-left: 0; flex-basis: 100%; }
 }
 
 /* The code for whatever place is chosen, set to one side of the field the way
@@ -1420,19 +1529,40 @@ a.hero__mode:active { transform: scale(.97); }
    input, not the class on its own: the hidden native select carries the same
    class, and padding on a 1px-wide absolutely positioned element is still 3rem
    of box -- enough to push the page 9px wider than the phone showing it. */
-.searchbar--hero .searchbar__field--place input.searchbar__input { padding-right: 3rem; }
+.searchbar__field--place input.searchbar__input { padding-right: 3rem; }
 
 /* Stacked rather than paired. Two of them side by side on a phone leaves each
    about 140px, which is not enough for a placeholder, let alone a place. */
 @media (max-width: 767.98px) {
-  .searchbar--hero .searchbar__field--place { flex-basis: 100%; }
+  .searchbar__field--place { flex-basis: 100%; }
 }
 
 /* The band the results-page form sits in. Replaces .card-4, which was a
    translucent black panel over whatever the page had behind it. */
+/* The results page's own band, and the only thing held on this page.
+
+   The search is what you are adjusting here -- scrolling a list of flights is
+   exactly when you want to change a date -- and the menu is not. So the band
+   takes the top of the screen for itself and the header goes with the page,
+   which is why this sticks at 0 rather than under a header that is no longer
+   there. See the rule below, which is what lets the header scroll.
+
+   Sticky rather than pinned from script, for the reason the homepage's bar is:
+   scrolling runs on the compositor and a scroll handler does not, so anything
+   driven from JS arrives a frame late and drops into place. A direct child of
+   the body, so the page is what bounds it. */
 .searchbar-band {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
   padding: 1rem 0 1.25rem;
   background-color: var(--brand-ink);
+}
+
+@media (max-width: 991.98px) {
+  /* The fields stack below the navbar's breakpoint, and a band that tall
+     against the top of the screen leaves no room for the results. */
+  .searchbar-band { position: static; }
 }
 
 /* Who is flying: one trigger, and a panel holding the controls that submit.
@@ -1453,22 +1583,31 @@ a.hero__mode:active { transform: scale(.97); }
   border: none;
 }
 
+/* Who is flying, stacked. There is no standing label to say what the field is,
+   so the count and the cabin become the two lines that name it. It is also what
+   makes the longest party fit -- "9 passengers, Premium Economy" has no width at
+   which it sits on one line beside four other fields. */
 .party__summary {
   display: flex;
-  gap: .25rem;
+  flex-direction: column;
+  gap: 0;
   overflow: hidden;
   font-size: .9375rem;
+  line-height: 1.3;
   color: var(--ink-body);
   white-space: nowrap;
 }
 
+.party__class { font-size: .875rem; color: var(--ink-muted); }
+
 .party__summary > span { overflow: hidden; text-overflow: ellipsis; }
 
-/* On one line the two run together, so the count keeps its comma. Written here
-   rather than into the element, because the hero drops it and the text is
+/* Nothing between the count and the cabin: they are on their own lines. The
+   comma this once carried was for the one-line layout the results page used to
+   have, and it is written here rather than into the element because the text is
    rewritten on every change -- a separator in the markup would have to be
    rebuilt each time by a paint that should only care about the two facts. */
-.party__heads::after { content: ","; }
+.party__heads::after { content: none; }
 
 .party__panel {
   position: absolute;
@@ -1631,11 +1770,14 @@ a.hero__mode:active { transform: scale(.97); }
 /* Focus lands on the input, which is not visible -- so the tile wears it. */
 .party__cabin:has(input:focus-visible) { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
 
+/* What is left of the compact bar's own small-screen rules. The rest of them --
+   a gap on the bar, a full-width basis on every field, a squarer button -- never
+   reached the page: the modifier that carried the tall form outranked this
+   block, and with the two folded together they would have started applying and
+   turned a row that wraps on its own into one field per line. The fields carry
+   `min-width: 9rem`, which is what wraps them, and the block above this one
+   squares off their corners and gives the button its own row. */
 @media (max-width: 991.98px) {
-  .searchbar__bar { gap: .375rem; background: none; padding: 0; }
-  .searchbar__field { border-radius: var(--bs-border-radius); flex-basis: 100%; }
-  .searchbar__submit { flex-basis: 100%; padding: .75rem; }
-  .searchbar__field--party { padding: 0; }
   .party__panel { width: 100%; }
 }
 
@@ -3425,6 +3567,52 @@ textarea {
 .filter-slider__clear[hidden] { display: none; }
 
 /* --- Apply --------------------------------------------------------------- */
+/* The menu stays put on the homepage, and only there.
+
+   That page folds its hero into the header -- the section tray moves up into it
+   and the search bar sticks beneath -- and the two have to sit together for
+   that to read as one band rather than as a bar that has come loose. Nowhere
+   else is anything depending on it, and a menu holding the top of every page is
+   a strip of chrome taken off the content for the rest of the visit.
+
+   Matched on the hero rather than on a class the page would have to carry: the
+   hero is what makes this the page the header has a job in, and it is rendered
+   nowhere else. `.hero__modes` and `.hero-cards` are their own classes and do
+   not match.
+
+   Above the sticky search bar at 1020, below Bootstrap's modal at 1055. */
+body:has(.hero) header#top {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+/* Where the homepage's section tray lands once the slogan has gone.
+
+   Centred on the header rather than placed between the logo and the menu: the
+   tray is the page's own subject and belongs on the page's axis, and a flex
+   slot between two lists of different widths would put it wherever those two
+   happened to leave room. That is also why the header menu is two items -- see
+   site.main-menu -- a full one leaves nothing for this to land in. */
+.navbar > .container-fluid { position: relative; }
+
+.navbar-dock {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
+
+/* Below the navbar's own breakpoint the menu is behind a toggler and there is
+   no header row to dock into. The tray stays in the hero and scrolls away. */
+@media (max-width: 991.98px) {
+  .navbar-dock { display: none; }
+}
+
+/* A placeholder in the header: not a link, and saying so quietly. */
+.nav-link--soon { opacity: .65; cursor: default; }
+
 /* Pinned to the bottom of the screen so Apply is reachable without scrolling
    back down a long sidebar. It needs an opaque background and a shadow: the
    controls above scroll underneath it, and without those the two would blur
@@ -4464,6 +4652,320 @@ textarea {
 /* The rebook dialog's calendar is rendered in here and positioned against it;
    without a containing block it would land at the dialog's top-left corner. */
 .modal-content { position: relative; }
+
+
+/* Groups on the bookings list. They were separated by the card margin alone,
+   which is the same gap that sits between two cards inside one group -- so the
+   groups did not read as groups. */
+.bookings section { margin-bottom: 2.75rem; }
+.bookings section:last-of-type { margin-bottom: 0; }
+
+/* How many are in this group. Bootstrap's .badge is 11px grey-on-grey and was
+   losing to the heading beside it; this is the tab strip's count chip, which
+   is the same thing being said in the same place. */
+.bookings-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.625rem;
+  height: 1.625rem;
+  padding: 0 .5rem;
+  border-radius: 999px;
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Two addresses drawn as one strip. Underlined-when-current rather than a
+   filled pill, so it reads as "where am I in this page" and not as a pair of
+   buttons competing with the actions below it. */
+.bookings-tabs {
+  display: flex;
+  gap: .25rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--line);
+}
+.bookings-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .625rem .875rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--ink-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+.bookings-tabs__tab:hover { color: var(--ink-body); background-color: var(--surface); }
+.bookings-tabs__tab.is-current { color: var(--brand-accent-700); border-bottom-color: var(--brand-accent); }
+.bookings-tabs__count {
+  min-width: 1.5rem;
+  padding: 0 .375rem;
+  border-radius: 999px;
+  background-color: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: .75rem;
+  font-weight: 600;
+  text-align: center;
+}
+.bookings-tabs__tab.is-current .bookings-tabs__count {
+  background-color: var(--brand-tint);
+  color: var(--brand-accent-700);
+}
+
+/* A cancelled booking is stamped, not badged and not banded.
+
+   A tint the size of the word "Confirmed" was the quietest thing on a card
+   whose every other line it invalidates. A bar of solid red across the top
+   fixed that and overcorrected: it shouted before the reader had reached
+   anything to shout about, and three of them down a page was all the page was.
+
+   A stamp is what a travel document actually carries when it stops being
+   valid -- outlined, off-square, sitting on top of the thing it voids rather
+   than replacing it. It takes the badge's place, so nothing moves.
+
+   #B02A37 on white measures 6.50, and the outline is the same colour at full
+   strength rather than a tint, so the text clears AA at this size. */
+.booking-stamp {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .625rem;
+  border: 2px solid var(--brand-danger);
+  border-radius: .25rem;
+  color: var(--brand-danger);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  /* Clockwise, sitting at the card's top right. Anticlockwise there dips the
+     outer end toward the card edge and reads as a badge set down crookedly;
+     turned the other way the stamp hinges off the reference it voids and the
+     outer end lifts clear. */
+  transform: rotate(3deg);
+  /* The double rule is the stamp's whole tell; without it this is a red
+     button. Drawn as a shadow so it costs no extra element. */
+  box-shadow: 0 0 0 1px #FFFFFF, 0 0 0 3px rgba(176, 42, 55, .28);
+}
+.booking-stamp--lg {
+  padding: .375rem 1rem;
+  font-size: 1rem;
+  letter-spacing: .16em;
+  transform: rotate(4deg);
+}
+
+/* The card keeps every bit of its text contrast -- it is still a receipt
+   somebody may need -- and loses the colour that says "live": the carrier
+   marks go grey, which is the difference you see before you have read a word. */
+.booking-card--cancelled .airline-logo { filter: grayscale(1); opacity: .65; }
+
+/* The sentence under the stamp on the booking's own page. It explains what the
+   stamp means once; the stamp does not repeat it on every block below. */
+.booking-note {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin: 1.5rem 0 0;
+  padding: .75rem 1rem;
+  border: 1px solid #F3C7CC;
+  border-left: 3px solid var(--brand-danger);
+  border-radius: .5rem;
+  background-color: #FDF4F5;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+}
+.booking-note i { color: var(--brand-danger); margin-top: .1875rem; }
+
+/* On its way to the cancelled page. Opacity and a collapse, both cheap to
+   composite; `ease-out` because the card is leaving and the movement should be
+   over before it is studied. Anyone who has asked for less motion gets the
+   removal with none of it. */
+.booking-card--leaving {
+  opacity: 0;
+  transform: scale(.98);
+  transition: opacity .35s ease-out, transform .35s ease-out;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .booking-card--leaving { transition: none; }
+}
+
+/* The reference, the name on it, and the date it was paid for -- what somebody
+   opens this page already holding. It used to be set at the same size as a
+   card in a list of twenty, on a page showing exactly one. */
+.booking-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.75rem 0 1.5rem;
+}
+.booking-head__label {
+  margin: 0 0 .25rem;
+  font-size: .6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink-muted);
+}
+.booking-head__code-row { display: flex; align-items: center; gap: .5rem; }
+.booking-head__code {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: .16em;
+  color: var(--ink-body);
+}
+/* No code to space out -- this is a sentence, not an identifier. */
+.booking-head__code--none { font-size: 1.75rem; letter-spacing: normal; }
+.booking-head__who {
+  margin: .625rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink-body);
+}
+.booking-head__meta { margin: .125rem 0 0; font-size: .875rem; color: var(--ink-muted); }
+.booking-head__state { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+/* The banner above already carries the news in white on red; repeating it at
+   full strength here would be the third time in 200px. */
+.booking-head--cancelled .booking-head__code { color: var(--ink-secondary); }
+
+@media (max-width: 575.98px) {
+  .booking-head__code { font-size: 1.75rem; }
+  .booking-head__state { order: -1; }
+}
+
+/* The footer is a dark band, and content ending a few pixels above it reads as
+   having been cut off rather than finished. */
+.bookings { padding-bottom: 4rem; }
+
+/* A block of the booking page.
+
+   The page is a stack of these and nothing else, so a new one -- baggage,
+   seats, check-in -- is a template plus a line in the list at the top of
+   detail.html.twig. The heading sits outside the panel so the stack can be
+   read by its headings alone. */
+/* Blocks sit in a grid so two short ones can share a row rather than each
+   taking the full width for four lines. */
+.bkblocks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.25rem;
+  align-items: start;
+}
+.bkblock { grid-column: 1 / -1; margin-bottom: 1.5rem; }
+.bkblock--half { grid-column: span 1; }
+
+/* These were 13px uppercase grey -- the same treatment as the "DEPARTING"
+   label inside a card, which made the name of a whole section look like an
+   annotation on the thing above it. A section heading is set as a heading:
+   sentence case, dark, and larger than the body it introduces. */
+.bkblock__title {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0 0 .75rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+  color: var(--ink-body);
+}
+.bkblock__icon { color: var(--brand-accent); font-size: 1rem; }
+
+@media (max-width: 767.98px) {
+  .bkblocks { grid-template-columns: minmax(0, 1fr); }
+  .bkblock--half { grid-column: 1 / -1; }
+}
+.bkblock__body {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background-color: #FFFFFF;
+}
+
+/* Two directions in one block, told apart by a rule rather than by a second
+   panel: they are one journey. */
+.bkflights__half--next { margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid var(--line); }
+
+/* The summary line and the legs it summarises were touching, so the route bar
+   read as the top edge of the panel below it rather than as its own line. */
+.bkflights__half .legs { margin-top: 1rem; }
+
+/* Who is on the booking. One row each, name first: a manifest is scanned down
+   its left edge. */
+.people { margin: 0; padding: 0; list-style: none; }
+.people__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.people__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.people__name { font-weight: 600; color: var(--ink-body); }
+.people__type { font-size: .8125rem; color: var(--ink-muted); }
+
+/* Label and value, both left-aligned. Used by contact and by the receipt's
+   payment lines -- anywhere a short label introduces a short value. */
+.facts { margin: 0; }
+.facts__row {
+  display: grid;
+  grid-template-columns: minmax(5rem, 7rem) 1fr;
+  gap: .25rem 1rem;
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.facts__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.facts__row dt { font-size: .8125rem; font-weight: 600; color: var(--ink-muted); }
+.facts__row dd { margin: 0; color: var(--ink-body); font-size: .9375rem; word-break: break-word; }
+
+/* What the ticket allows. */
+.fare__name { margin: 0 0 .5rem; font-size: 1rem; font-weight: 600; color: var(--ink-body); }
+.fare__rules { margin: 0; padding: 0; list-style: none; }
+.fare__rules .rules__item { break-inside: avoid; }
+
+/* Whether a direction is behind you. Quiet: it qualifies the heading it sits
+   beside rather than competing with the booking's own status. */
+.leg-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .3125rem;
+  padding: .125rem .5rem;
+  border-radius: 999px;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: none;
+}
+.leg-state--flown { background-color: var(--surface-sunken); color: var(--ink-secondary); }
+.leg-state--ahead { background-color: var(--brand-tint); color: var(--brand-accent-700); }
+.bkflights__label { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+/* Amounts, right-aligned: a column of figures is compared by its last digit. */
+.receipt__amounts { margin: 0; }
+.receipt__amount { display: flex; justify-content: space-between; gap: 1.5rem; padding: .3125rem 0; }
+.receipt__amount dt { font-weight: 400; color: var(--ink-secondary); font-size: .9375rem; }
+.receipt__amount dd { margin: 0; color: var(--ink-body); font-size: .9375rem; font-variant-numeric: tabular-nums; }
+.receipt__amount--total { margin-top: .5rem; padding-top: .75rem; border-top: 1px solid var(--line-strong); }
+.receipt__amount--total dt,
+.receipt__amount--total dd { font-size: 1.25rem; font-weight: 700; color: var(--ink-body); }
+.receipt__currency { font-size: .8125rem; font-weight: 600; color: var(--ink-muted); }
+.receipt__method { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--line); }
+.receipt__no-price { margin: 0; font-size: .875rem; color: var(--ink-muted); }
+
+/* Inside a week, the countdown is the reason the card is being looked at. */
+.booking-when--soon { color: var(--brand-accent-700); font-weight: 600; }
+
+@media (max-width: 575.98px) {
+  .facts__row { grid-template-columns: 1fr; gap: .125rem; }
+}
 
 
 /* ==========================================================================

@@ -1164,7 +1164,7 @@
         Swal.fire({
             title: 'Cancel this booking?',
             // text, not html: a reference is data and Swal escapes this one.
-            text: named + ' will be marked cancelled. It stays in your list.',
+            text: named + ' will be cancelled. You will find it under Cancelled.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Cancel booking',
@@ -1206,15 +1206,16 @@
                 return;
             }
 
-            markCancelled(card, button, reference);
+            moveToCancelled(card, button, reference);
         });
     });
 
-    // The row survives a cancel, so the card is restyled where it stands
-    // rather than removed and the page reloaded. No success dialog: the card
-    // changing in front of you is the confirmation, and the live region
-    // carries it for anyone who cannot see that.
-    function markCancelled(card, button, reference) {
+    // Cancelled bookings live on their own page now, so the card leaves this
+    // one instead of being restyled where it stands. It is faded out rather
+    // than cut: something vanishing from under the pointer with no transition
+    // reads as a bug, and the half second is where the confirmation lives.
+    // The live region carries it for anyone who cannot see that.
+    function moveToCancelled(card, button, reference) {
         // The tooltip outlives its trigger otherwise, and hangs over the card.
         const tip = bootstrap.Tooltip.getInstance(button);
 
@@ -1224,32 +1225,54 @@
 
         button.remove();
 
+        const live = document.querySelector('.js-bookings-live');
+
+        if (live) {
+            live.textContent = (reference ? 'Booking ' + reference : 'Booking')
+                + ' cancelled, and moved to your cancelled bookings.';
+        }
+
         if (!card) {
             return;
         }
 
-        card.classList.add('booking-card--cancelled');
-        card.classList.remove('shadow-sm');
+        const section = card.closest('section');
 
-        const status = card.querySelector('.js-booking-status');
+        card.classList.add('booking-card--leaving');
+        setTimeout(function () {
+            card.remove();
+            retally(section);
+        }, 400);
+    }
 
-        if (status) {
-            status.className = 'booking-status js-booking-status booking-status--cancelled';
-            status.textContent = 'Cancelled';
+    // Every count the cancelled card was in: its own group's badge, the tab it
+    // sat under, and the tab it has gone to. A group with nothing left in it
+    // goes as well, heading and all, rather than standing over a gap.
+    function retally(section) {
+        if (section && !section.querySelector('[data-booking-card]')) {
+            section.remove();
+        } else if (section) {
+            bump(section.querySelector('.badge'), -1);
         }
 
-        // How near the departure is stops being the point once it is cancelled.
-        const when = card.querySelector('.booking-when');
+        const tabs = document.querySelectorAll('.bookings-tabs__tab');
 
-        if (when) {
-            when.remove();
+        bump(tabs[0] && tabs[0].querySelector('.bookings-tabs__count'), -1);
+        bump(tabs[1] && tabs[1].querySelector('.bookings-tabs__count'), 1);
+
+        // Nothing left to show. The empty state is rendered by the server, so
+        // the page is asked for again rather than rebuilt here.
+        if (!document.querySelector('[data-booking-card]')) {
+            window.location.reload();
+        }
+    }
+
+    function bump(node, by) {
+        if (!node) {
+            return;
         }
 
-        const live = document.querySelector('.js-bookings-live');
-
-        if (live) {
-            live.textContent = (reference ? 'Booking ' + reference : 'Booking') + ' cancelled.';
-        }
+        node.textContent = String(Math.max(0, (parseInt(node.textContent, 10) || 0) + by));
     }
 
     /*[ Copy to clipboard ]
@@ -1740,6 +1763,131 @@
         paintExpiry();
         paintCvv();
     })();
+
+    /*[ How tall the header is ]
+    ===========================================================*/
+    // Written for the CSS, which holds the search bars against the header's
+    // underside on the home and results pages. Measured rather than assumed:
+    // the navbar wraps at some widths and not others. This runs on every page,
+    // because every page has a header and the results page has a sticky bar
+    // whether or not it has a hero.
+    (function () {
+        const header = document.getElementById('top');
+
+        if (!header) {
+            return;
+        }
+
+        const measure = () => document.documentElement.style
+            .setProperty('--header-h', header.offsetHeight + 'px');
+
+        measure();
+        window.addEventListener('resize', measure);
+    }());
+
+    /*[ Homepage: dock the section tray into the header ]
+    ===========================================================*/
+    // Once the slogan and the tray have scrolled under the header, the tray
+    // leaves the hero and takes its place in the middle of the header, which is
+    // sticky -- so the sections stay reachable for the rest of the page.
+    //
+    // The search bar below it needs no script at all: it is `position: sticky`
+    // and the browser holds it against the header on its own. It used to be
+    // pinned from here, and could not be made not to jump -- a scroll runs on
+    // the compositor and this runs on the main thread, so on a flick the page
+    // had already moved by the time the class landed.
+    //
+    // The tray is moved rather than copied, and lands in a real slot in the
+    // header row, which centres it without any arithmetic.
+    (function () {
+        const header = document.getElementById('top');
+        const dock = document.querySelector('.js-header-dock');
+        const modes = document.querySelector('.js-hero-modes');
+        const slot = document.querySelector('.js-modes-slot');
+        const sentinel = document.querySelector('.js-modes-sentinel');
+
+        if (!header || !dock || !modes || !slot || !sentinel) {
+            return;
+        }
+
+        // The navbar's own breakpoint. Below it the menu is behind a toggler,
+        // so there is no header row for the tray to dock into.
+        const DOCKS_ABOVE = 992;
+
+        // Nothing in the world arrives instantly. The tray appears in a place
+        // it was not a frame ago, and without this it reads as a glitch rather
+        // than as the same tray having moved. Short, and on the way in only:
+        // going back to the hero it is landing where the visitor is already
+        // looking.
+        const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+        const fadeIn = () => {
+            if (REDUCED.matches || typeof modes.animate !== 'function') {
+                return;
+            }
+
+            modes.animate(
+                [{opacity: 0, transform: 'translateY(-.25rem)'}, {opacity: 1, transform: 'none'}],
+                {duration: 180, easing: 'cubic-bezier(0.23, 1, 0.32, 1)'}
+            );
+        };
+
+        const setDocked = (docked) => {
+            const wanted = docked && window.innerWidth >= DOCKS_ABOVE;
+
+            if (wanted === modes.classList.contains('is-docked')) {
+                return;
+            }
+
+            // Held open only while the tray is away, and measured at the moment
+            // it leaves rather than once at load: the tray is a few pixels
+            // shorter after its first trip to the header, and a height taken
+            // before that left the slot standing slightly too tall for the rest
+            // of the page's life.
+            slot.style.minHeight = wanted ? slot.offsetHeight + 'px' : '';
+
+            modes.classList.toggle('is-docked', wanted);
+            (wanted ? dock : slot).appendChild(modes);
+
+            if (wanted) {
+                fadeIn();
+            }
+        };
+
+        // An observer rather than a scroll handler: this fires a handful of
+        // times per page rather than on every frame of every scroll, and a
+        // callback a frame late costs nothing here -- the tray is out of sight
+        // when it docks. The sentinel sits at the foot of the slot, which holds
+        // its place open, so it cannot be moved by what it is watching for.
+        const watch = () => {
+            // The root's top edge, which the margin below has pushed down to
+            // the header's underside. Compared against that rather than against
+            // zero: with the margin in play a sentinel can be out of the root
+            // and still have a positive top, which is a sentinel that has gone
+            // under the header -- exactly the case being watched for.
+            const line = header.offsetHeight;
+            const observer = new IntersectionObserver(
+                (entries) => setDocked(!entries[0].isIntersecting && entries[0].boundingClientRect.top < line),
+                {rootMargin: '-' + line + 'px 0px 0px 0px', threshold: 0}
+            );
+
+            observer.observe(sentinel);
+
+            return observer;
+        };
+
+        let observer = watch();
+
+        window.addEventListener('resize', function () {
+            // Put the tray back before measuring: a docked one cannot report
+            // its resting height, and the observer is carrying the old header
+            // height until it is rebuilt.
+            setDocked(false);
+            observer.disconnect();
+            slot.style.minHeight = '';
+            observer = watch();
+        });
+    }());
 
     /*[ Back to top ]
     ===========================================================*/

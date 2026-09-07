@@ -1,0 +1,67 @@
+{# Where a visitor can go, and what this is going to grow into.
+
+   Rendered in two places and never both at once: the homepage puts it in the
+   hero and lifts it into the header as the hero scrolls past, and every other
+   page starts it in the header, where there is no hero for it to come from.
+   `docked` says which -- the homepage passes nothing, and its copy is given the
+   class by global.js at the moment it moves.
+
+   The ones with nowhere to lead are spans, not links. This codebase has twice
+   removed an <a> with no href -- the point-of-interest cards and the old profile
+   item -- because it is styled as a link, skipped by the keyboard, and on a
+   click it apologises for doing nothing. A section that does not exist yet says
+   so instead, out loud for a screen reader as well as in the colour.
+
+   Flights is the current section on the search funnel as well as on the home
+   page, which is what `current` carries; aria-current marks it rather than the
+   colour alone. Saved is a link, because it is a different page. #}
+{# `??`, not `|default`: the default filter substitutes for anything empty and
+   `false` is empty, so a flag passed as false would come back true. #}
+{% set docked = docked ?? false %}
+{% set current = current ?? true %}
+{% set saved = saved ?? false %}
+
+<nav class="hero__modes{{ docked ? ' is-docked' : ' js-hero-modes' }}" aria-label="Sections">
+    <div class="hero__modes-group">
+        {% if current %}
+            <span class="hero__mode is-current" aria-current="page">
+                <i class="fas fa-plane-departure" aria-hidden="true"></i>
+                Flights
+            </span>
+        {% else %}
+            <a class="hero__mode" href="/">
+                <i class="fas fa-plane-departure" aria-hidden="true"></i>
+                Flights
+            </a>
+        {% endif %}
+
+        {% for soon in [
+            { 'icon': 'fa-bed', 'text': 'Stays' },
+            { 'icon': 'fa-car', 'text': 'Cars' },
+            { 'icon': 'fa-compass', 'text': 'Impressions' }
+        ] %}
+            <span class="hero__mode is-soon">
+                <i class="fas {{ soon.icon }}" aria-hidden="true"></i>
+                {{ soon.text }}<span class="visually-hidden"> — coming soon</span>
+            </span>
+        {% endfor %}
+
+        <a class="hero__mode{{ saved ? ' is-current' : '' }}"
+           href="{{ config('site.paths.saved') }}"
+           {% if saved %}aria-current="page"{% endif %}>
+            <i class="fas fa-heart" aria-hidden="true"></i>
+            Saved
+        </a>
+    </div>
+
+    {# Set apart, because it is a different audience rather than another thing to
+       book. Its own tray rather than a section wearing one: a tray holds items
+       inset from its edge, and one element doing both jobs sat flush against its
+       own while every label beside it did not. #}
+    <div class="hero__modes-group hero__modes-group--aside">
+        <span class="hero__mode is-soon">
+            <i class="fas fa-briefcase" aria-hidden="true"></i>
+            For business<span class="visually-hidden"> — coming soon</span>
+        </span>
+    </div>
+</nav>

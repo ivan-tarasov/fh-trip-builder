@@ -1,0 +1,42 @@
+{# What was charged, and nothing else. Who travelled, how to reach them and
+   what the fare allows have blocks of their own -- none of them is money, and
+   putting them here made the receipt a drawer for anything that did not fit
+   elsewhere.
+
+   Amounts keep the right edge: a column of figures is read by its last digit. #}
+{% if booking.price_total %}
+<dl class="receipt__amounts">
+    <div class="receipt__amount">
+        <dt>Base</dt>
+        <dd>${{ booking.price_base.whole }}.{{ booking.price_base.cents }}</dd>
+    </div>
+    <div class="receipt__amount">
+        <dt>Taxes &amp; fees</dt>
+        <dd>${{ booking.price_tax.whole }}.{{ booking.price_tax.cents }}</dd>
+    </div>
+    <div class="receipt__amount receipt__amount--total">
+        <dt>{{ booking.is_cancelled ? 'Total charged' : 'Total paid' }}</dt>
+        <dd>${{ booking.price_total.whole }}.{{ booking.price_total.cents }} <span class="receipt__currency">CAD</span></dd>
+    </div>
+</dl>
+{% else %}
+    {# Booked before the price columns existed. The per-leg prices in the stored
+       JSON are a search price nobody was charged, so no total is shown rather
+       than a wrong one. #}
+    <p class="receipt__no-price">Price not recorded for this booking.</p>
+{% endif %}
+
+<dl class="facts receipt__method">
+    {% if booking.card_last4 %}
+        <div class="facts__row">
+            <dt>Paid with</dt>
+            <dd>{{ booking.card_brand }} ending {{ booking.card_last4 }}</dd>
+        </div>
+    {% endif %}
+    {% if booking.created %}
+        <div class="facts__row">
+            <dt>Booked</dt>
+            <dd>{{ booking.created|date('j M Y') }}</dd>
+        </div>
+    {% endif %}
+</dl>

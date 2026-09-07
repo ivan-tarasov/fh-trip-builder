@@ -18,20 +18,111 @@ use TripBuilder\View\TwigRenderer;
 
 class MyController extends AbstractController
 {
+    // Where the upcoming list is cut. A week is what somebody is packing for;
+    // a month is what they are planning around. Past that the distinction stops
+    // meaning anything, so there is only one more pile.
+    private const int DAYS_THIS_WEEK = 7;
+    private const int DAYS_THIS_MONTH = 30;
+
     // Written by the browser; global.js owns the other half of this contract.
     private const string SAVED_COOKIE = 'tb_saved_flights';
     private const int SAVED_LIMIT = 50;
 
     /**
-     * Every booking made in this browser, split by whether the trip is over.
+     * Trips still ahead, grouped by how soon they are.
+     *
+     * Grouped by nearness rather than by calendar month. A month heading says
+     * where a trip sits in the year, which is not a question anybody opens this
+     * page with -- "is there anything I need to get ready for?" is, and a trip
+     * four days out and one four months out want different attention. The
+     * bounds do not overlap, so nothing has to be read twice to be placed.
      *
      * @throws Exception|\Twig\Error\Error
      */
     public function bookings(): void
     {
+        $sorted = $this->sortedBookings();
+
+        $this->renderBookings('active', [
+            ['key' => 'now', 'title' => 'Under way', 'bookings' => $sorted['now']],
+            ['key' => 'week', 'title' => 'This week', 'bookings' => $sorted['week']],
+            ['key' => 'month', 'title' => 'Within a month', 'bookings' => $sorted['month']],
+            ['key' => 'later', 'title' => 'Later', 'bookings' => $sorted['later']],
+        ], $sorted);
+    }
+
+    /**
+     * Trips already flown.
+     *
+     * @throws Exception|\Twig\Error\Error
+     */
+    public function past(): void
+    {
+        $sorted = $this->sortedBookings();
+
+        $this->renderBookings('past', [
+            ['key' => 'past', 'title' => 'Past', 'bookings' => $sorted['past']],
+        ], $sorted);
+    }
+
+    /**
+     * Trips that were called off.
+     *
+     * Their own page rather than a third pile under the others. A cancelled
+     * booking is not a trip any more, and mixing it in means every glance at
+     * the list has to re-read the status of everything on it.
+     *
+     * @throws Exception|\Twig\Error\Error
+     */
+    public function cancelled(): void
+    {
+        $sorted = $this->sortedBookings();
+
+        $this->renderBookings('cancelled', [
+            ['key' => 'cancelled', 'title' => 'Cancelled', 'bookings' => $sorted['cancelled']],
+        ], $sorted);
+    }
+
+    /**
+     * @param list<array{key: string, title: string, bookings: list<array<string, mixed>>}> $groups
+     * @param array<string, list<array<string, mixed>>> $sorted
+     *
+     * @throws \Twig\Error\Error
+     */
+    private function renderBookings(string $tab, array $groups, array $sorted): void
+    {
+        $shown = array_sum(array_map(static fn(array $group): int => count($group['bookings']), $groups));
+
+        echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
+            'tab' => $tab,
+            'groups' => $groups,
+            // Every count on every page: the tab strip names them all whichever
+            // side it is drawn from.
+            'counts' => [
+                'active' => count($sorted['now']) + count($sorted['week'])
+                    + count($sorted['month']) + count($sorted['later']),
+                'past' => count($sorted['past']),
+                'cancelled' => count($sorted['cancelled']),
+            ],
+            // From what was built, not from what was read: a page whose every
+            // row was skipped has nothing to show and needs the empty state.
+            'has_rows' => $shown > 0,
+        ]);
+    }
+
+    /**
+     * Every booking made in this browser, in piles and in reading order.
+     *
+     * @return array<string, list<array<string, mixed>>>
+     *
+     * @throws Exception
+     */
+    private function sortedBookings(): array
+    {
         $presenter = new BookingPresenter();
         $upcoming = [];
         $past = [];
+        $cancelled = [];
 
         $rows = new BookingRepository($this->connection())->forSession(session_id());
 
@@ -50,7 +141,11 @@ class MyController extends AbstractController
                 continue;
             }
 
-            if ($booking['is_past']) {
+            // Cancelled first, whether or not the dates have passed: a trip
+            // that was called off never became a past trip.
+            if ($booking['is_cancelled']) {
+                $cancelled[] = $booking;
+            } elseif ($booking['is_past']) {
                 $past[] = $booking;
             } else {
                 $upcoming[] = $booking;
@@ -64,14 +159,48 @@ class MyController extends AbstractController
             <=> ($b['starts_at']?->getTimestamp() ?? PHP_INT_MAX));
         usort($past, static fn(array $a, array $b): int => ($b['ends_at']?->getTimestamp() ?? 0)
             <=> ($a['ends_at']?->getTimestamp() ?? 0));
+        // Most recently booked first: a cancelled trip is looked up by when it
+        // was bought, not by when it would have flown.
+        usort($cancelled, static fn(array $a, array $b): int => strcmp(
+            (string) ($b['created'] ?? ''),
+            (string) ($a['created'] ?? ''),
+        ));
 
-        echo new TwigRenderer()->renderPage('my/bookings/view.html.twig', [
-            'upcoming' => $upcoming,
-            'past' => $past,
-            // From what was built, not from what was read: a page whose every
-            // row was skipped has nothing to show and needs the empty state.
-            'has_rows' => $upcoming !== [] || $past !== [],
-        ]);
+        return self::byNearness($upcoming) + ['past' => $past, 'cancelled' => $cancelled];
+    }
+
+    /**
+     * Trips ahead, split by how soon they are.
+     *
+     * "Under way" is a trip whose outbound has gone but whose last flight has
+     * not landed -- somebody sitting in Lisbon halfway through a round trip.
+     * It has no days-until to count, and filing it under "Later" put the one
+     * booking being lived through at the bottom of the page.
+     *
+     * A row whose dates would not parse also has no `days_until`, and lands in
+     * "Later" -- the one pile where being wrong about the order costs nothing.
+     * The two are told apart by whether there is a start date at all.
+     *
+     * @param list<array<string, mixed>> $upcoming
+     *
+     * @return array{now: list<array<string, mixed>>, week: list<array<string, mixed>>, month: list<array<string, mixed>>, later: list<array<string, mixed>>}
+     */
+    private static function byNearness(array $upcoming): array
+    {
+        $piles = ['now' => [], 'week' => [], 'month' => [], 'later' => []];
+
+        foreach ($upcoming as $booking) {
+            $days = $booking['days_until'] ?? null;
+
+            $piles[match (true) {
+                $days === null => $booking['starts_at'] === null ? 'later' : 'now',
+                $days <= self::DAYS_THIS_WEEK => 'week',
+                $days <= self::DAYS_THIS_MONTH => 'month',
+                default => 'later',
+            }][] = $booking;
+        }
+
+        return $piles;
     }
 
     /**
