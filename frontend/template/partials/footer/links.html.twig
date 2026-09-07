@@ -1,0 +1,15 @@
+{# The six columns.
+
+   One landmark around the whole band rather than one per column: six navigation
+   landmarks at the bottom of every page is a lot to page through, and the column
+   headings already give a screen reader something to jump between. #}
+<nav class="footer__columns" aria-label="More on {{ config('app.name') }}">
+    {% for column in config('site.footer-columns') %}
+        {% include 'partials/footer/column.html.twig' with {
+            'id': loop.index,
+            'title': column.title,
+            'links': column.links,
+            'more': column.more ?? null
+        } only %}
+    {% endfor %}
+</nav>

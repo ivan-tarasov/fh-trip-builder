@@ -141,11 +141,16 @@
   --line-strongest:   #C2CBD6;   /* filled route leg */
 
   /* The same scale does not run backwards. #adb5bd was removed above for
-     measuring 2.07 on white; on the #212529 footer it measures 7.43 and is
+     measuring 2.07 on white; on the navy footer it measures 7.52 and is
      exactly right. A colour is not accessible or inaccessible -- a pairing
      is. These two are for dark surfaces only. */
-  --ink-on-dark:      #ADB5BD;   /* 7.43 on #212529  -- quiet prose */
-  --ink-on-dark-lead: #DEE2E6;   /* 11.85 on #212529 -- figures, emphasis */
+  --ink-on-dark:      #ADB5BD;   /* 7.52 on --brand-ink  -- quiet prose */
+  --ink-on-dark-lead: #DEE2E6;   /* 11.98 on --brand-ink -- figures, emphasis */
+  /* The rule to match them. --line and its neighbours are mixed for white and
+     come out as glare here; a rule on a dark surface is the surface lightened,
+     not a light colour laid on top, so this is white at low alpha and picks up
+     whatever it sits on. */
+  --line-on-dark:     rgba(255, 255, 255, .12);
 
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
   --bs-body-color: var(--ink-body);
@@ -329,10 +334,12 @@
    which is what the monospace was reaching for with a pink that failed at
    3.43. */
 .footer { color: var(--ink-on-dark); }
-/* `code` inside `ul.small` compounded to 10.7px -- these are figures somebody
-   is meant to read, so they inherit their list's size instead. */
-.footer code { color: var(--ink-on-dark-lead); font-size: 1em; }
-.footer .font-monospace { color: var(--ink-on-dark-lead); }
+
+/* The `code` and `.font-monospace` rules that sat here went with the markup
+   they were written for. The render time and the commit were set in monospace
+   in an info column, which made the two loudest things in the footer a number
+   nobody came for and a hash; both are now one quiet line under the legal text
+   -- see .footer__stats. */
 
 /* ==========================================================================
    #FLOATING LABELS
@@ -482,8 +489,9 @@ a {
    the pinned search bar stayed at the viewport -- opening a white gap between
    two things that are meant to read as one band. The header's own colour closes
    that: the gap fills with the colour on both sides of it. Under the footer it
-   is navy against #212529, which is a seam between two dark greys rather than a
-   flash of white. */
+   used to be navy against Bootstrap's #212529 -- a seam between two dark greys
+   rather than a flash of white, which was the best that could be said for it.
+   The footer is this colour now, so there is no seam at either end. */
 html { background-color: var(--brand-ink); }
 
 body {
@@ -2355,19 +2363,6 @@ input[type=number]::-webkit-outer-spin-button {
   color: var(--ink-muted);
   font-size: .875rem;
 }
-
-/* ==========================================================================
-   #FOOTER
-   ========================================================================== */
-
-/* footer {
-  padding-top: 3rem;
-  padding-bottom: 3rem;
-}
-
-footer p {
-  margin-bottom: .25rem;
-} */
 
 button,
 input[type="text"],
@@ -5048,4 +5043,332 @@ body:has(.hero) header#top {
      the viewport. */
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   #FOOTER
+   ==========================================================================
+   Colour for this block lives up in #FOOTER COLOUR with the tokens it depends
+   on; this is the structure.
+
+   Grid rather than the Bootstrap row it replaced. Six columns do not divide
+   into twelve, so the old markup would have needed `col-2` and an offset to
+   fake it, and every breakpoint would have been a second set of classes on
+   every column. Here the column count is one line per breakpoint and the
+   columns themselves carry no layout at all. */
+
+/* The app's own navy, not Bootstrap's #212529 that `bg-dark` was painting here.
+   That was the last stock Bootstrap colour filling a full-width band, and it
+   left a seam against the navy `html` background behind it. Same colour at both
+   ends of the document now. The two on-dark inks were measured against #212529
+   and are very slightly better here -- 7.52 and 11.98 against 7.43 and 11.85 --
+   because navy carries less luminance than grey at the same darkness. */
+.footer {
+  background-color: var(--brand-ink);
+}
+
+.footer__inner {
+  padding-top: 3rem;
+  padding-bottom: 2rem;
+}
+
+/* A band is separated from the one below it by a rule, so the last one has
+   none -- the footer's own bottom edge already ends it. */
+.footer__band {
+  padding-bottom: 2.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--line-on-dark);
+}
+
+.footer__title {
+  margin: 0 0 1rem;
+  color: var(--ink-on-dark-lead);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* The heading over a whole band, rather than over one column of one. */
+.footer__title--band {
+  margin-bottom: 1.5rem;
+  font-size: 1.125rem;
+}
+
+.footer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer__item + .footer__item { margin-top: .625rem; }
+
+.footer__link {
+  color: var(--ink-on-dark);
+  font-size: .9375rem;
+  text-decoration: none;
+  transition: color var(--dur-fast) ease;
+}
+
+/* Gated for the same reason as the breadcrumbs: on a touchscreen :hover latches
+   on tap, and a footer link would stay lit after the page it points at has been
+   left. */
+@media (hover: hover) and (pointer: fine) {
+  .footer__link:hover { color: var(--ink-on-dark-lead); text-decoration: underline; }
+}
+
+/* The way out of a column, so it reads as an action rather than as a sixth
+   sibling of the five above it. */
+.footer__more { color: var(--ink-on-dark-lead); font-weight: 500; }
+
+/* ---------- The six columns ---------- */
+
+.footer__columns {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2rem 1.5rem;
+  padding-bottom: 2.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--line-on-dark);
+}
+
+/* ---------- Popular destinations ---------- */
+
+.footer__destinations {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .75rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A row is two facts, not one long name: "Montreal" answers where and "Canada"
+   answers where that is. Run together on one line they read as a single place
+   name nobody calls it. */
+.footer__destination {
+  display: flex;
+  flex-direction: column;
+  gap: .125rem;
+  padding: .75rem 1rem;
+  background-color: rgba(255, 255, 255, .04);
+  border-radius: .5rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.footer__destination-city {
+  color: var(--ink-on-dark-lead);
+  font-size: .9375rem;
+  font-weight: 600;
+}
+
+.footer__destination-country {
+  color: var(--ink-on-dark);
+  font-size: .8125rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .footer__destination:hover { background-color: rgba(255, 255, 255, .08); }
+}
+
+/* ---------- Brand, socials, and the two short columns ---------- */
+
+.footer__bottom {
+  display: grid;
+  /* Brand, two short columns, and the card. The card is given a fixed share
+     rather than a fraction so the field inside it does not shrink to a stub on
+     a middling window while the brand block, which is only text, keeps growing.
+
+     24rem, because the card's own padding and the Subscribe button take 149px
+     of it before the field gets any: at 20rem that left 171px, which is shorter
+     than an ordinary work address and made everyone type into a keyhole. */
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, .8fr) 24rem;
+  gap: 2rem 1.5rem;
+  padding-bottom: 2rem;
+  align-items: start;
+}
+
+.footer__brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: .625rem;
+  color: var(--ink-on-dark-lead);
+  font-size: 1.125rem;
+  text-decoration: none;
+}
+
+.footer__copyright {
+  margin: .75rem 0 1.25rem;
+  color: var(--ink-on-dark);
+  font-size: .875rem;
+}
+
+.footer__socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Square targets rather than icon-sized ones: 2.5rem clears the 24px minimum a
+   pointer needs, and the tile is what makes a bare glyph look deliberate. */
+.footer__social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--ink-on-dark);
+  background-color: rgba(255, 255, 255, .06);
+  border-radius: .625rem;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .footer__social:hover {
+    color: var(--ink-on-dark-lead);
+    background-color: rgba(255, 255, 255, .12);
+  }
+}
+
+/* ---------- Fare alerts ---------- */
+
+/* Every property here is restated rather than inherited. The reset at the top
+   of this file strips borders and margins from inputs and buttons and sets a
+   global 18px on fields, and none of Bootstrap's .form-control is in play --
+   so anything not written here is not what it looks like it is. */
+.footer__subscribe {
+  padding: 1.25rem;
+  background-color: var(--brand-ink-700);
+  border-radius: .75rem;
+}
+
+.footer__subscribe-text {
+  margin: 0 0 .875rem;
+  color: var(--ink-on-dark);
+  font-size: .875rem;
+}
+
+.footer__subscribe-row {
+  display: flex;
+  gap: .5rem;
+}
+
+.footer__subscribe-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.5rem;
+  padding: 0 .75rem;
+  color: var(--brand-ink);
+  font-size: .875rem;
+  background-color: #fff;
+  border: 1px solid transparent;
+  border-radius: .5rem;
+}
+
+.footer__subscribe-input::placeholder { color: var(--ink-faint); }
+
+.footer__subscribe-input:focus-visible {
+  outline: 2px solid var(--ink-on-dark-lead);
+  outline-offset: 2px;
+}
+
+.footer__subscribe-submit {
+  flex: 0 0 auto;
+  height: 2.5rem;
+  padding: 0 1rem;
+  color: #fff;
+  font-size: .875rem;
+  font-weight: 600;
+  background-color: var(--brand-accent);
+  border-radius: .5rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .footer__subscribe-submit:hover { background-color: var(--brand-accent-700); }
+}
+
+.footer__subscribe-submit:active { transform: scale(.97); }
+
+/* Disabled while the request is out. Without this the button still looks
+   pressable and a second click sends a second address. */
+.footer__subscribe-submit:disabled {
+  opacity: .6;
+  cursor: default;
+  transform: none;
+}
+
+/* The answer. Empty until there is one, so it takes no room on a form nobody
+   has used yet -- but it is in the flow, not absolute, so the card grows to
+   hold it rather than the text landing on top of the consent line. */
+.footer__subscribe-note {
+  margin: .625rem 0 0;
+  font-size: .8125rem;
+}
+
+.footer__subscribe-note:empty { display: none; }
+
+.footer__subscribe-note[data-tone="good"]  { color: #6EE7B7; }
+.footer__subscribe-note[data-tone="bad"]   { color: #FCA5A5; }
+.footer__subscribe-note[data-tone="quiet"] { color: var(--ink-on-dark); }
+
+.footer__subscribe-consent {
+  margin: .625rem 0 0;
+  color: var(--ink-on-dark);
+  font-size: .75rem;
+  opacity: .8;
+}
+
+/* ---------- Legal, and what the page cost to draw ---------- */
+
+.footer__legal {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line-on-dark);
+  color: var(--ink-on-dark);
+  font-size: .8125rem;
+}
+
+.footer__legal p { margin: 0 0 .5rem; }
+.footer__legal a { color: var(--ink-on-dark-lead); }
+
+/* A step quieter than the line above it. This is a note to whoever is curious
+   about the build, not something the page is trying to tell anyone. */
+.footer__stats {
+  color: var(--ink-on-dark);
+  font-size: .75rem;
+  opacity: .75;
+}
+
+/* ---------- Narrowing ---------- */
+
+@media (max-width: 1279.98px) {
+  .footer__columns { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1279.98px) {
+  /* The card drops to a row of its own before the columns do. It is the widest
+     thing in the band and the first to make the other three too narrow to read. */
+  .footer__bottom { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, .8fr); }
+  .footer__subscribe { grid-column: 1 / -1; max-width: 28rem; }
+}
+
+@media (max-width: 991.98px) {
+  .footer__bottom { grid-template-columns: 1fr 1fr; }
+  /* The brand sits over both columns rather than squeezing into one, so the
+     social row keeps its shape instead of wrapping to three lines. */
+  .footer__brand { grid-column: 1 / -1; }
+}
+
+@media (max-width: 767.98px) {
+  .footer__columns,
+  .footer__destinations { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 575.98px) {
+  .footer__inner { padding-top: 2rem; }
+  .footer__columns,
+  .footer__destinations,
+  .footer__bottom { grid-template-columns: 1fr; }
 }

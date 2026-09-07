@@ -21,4 +21,5 @@ enum Table: string
     case RouteDayPrice = 'route_day_price';
     case RoutePriceBuild = 'route_price_build';
     case Search = 'search';
+    case Subscribers = 'subscribers';
 }

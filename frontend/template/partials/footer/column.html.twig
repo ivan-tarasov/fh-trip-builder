@@ -1,0 +1,37 @@
+{# One column of links, and the first thing in this codebase that renders a list
+   of links without knowing where they came from.
+
+   The footer used to hold three loops -- navigation, repository, socials -- over
+   three different config shapes, which is the reason none of them was ever
+   shared. Everything that reaches this partial has been flattened to `label =>
+   url` first, so the same eight lines draw a column of airlines, a column of
+   help articles, or the site navigation.
+
+   `??`, not `|default`: the default filter substitutes for anything empty, so a
+   column that deliberately has no `more` link would still have to be written as
+   an explicit null to survive it. #}
+{% set more = more ?? null %}
+{% set external = external ?? false %}
+
+<div class="footer__column">
+    <h2 class="footer__title" id="footer-col-{{ id }}">{{ title }}</h2>
+    {# Named after its own heading. Forty links in one landmark is a lot to page
+       through; this lets a screen reader announce which column it has entered
+       rather than reading the whole footer as one list. #}
+    <ul class="footer__list" aria-labelledby="footer-col-{{ id }}">
+        {% for label, url in links %}
+            <li class="footer__item">
+                <a class="footer__link" href="{{ url }}"
+                   {% if external %}target="_blank" rel="noopener"{% endif %}>{{ label }}</a>
+            </li>
+        {% endfor %}
+
+        {# Only where there is somewhere to go. A "more" link into another 404 is
+           a dead end offering to show you more dead ends. #}
+        {% if more %}
+            <li class="footer__item">
+                <a class="footer__link footer__more" href="{{ more.url }}">{{ more.text }}</a>
+            </li>
+        {% endif %}
+    </ul>
+</div>

@@ -1,0 +1,21 @@
+{# Where people go, on the page where they have not yet said where they are
+   going. The homepage shows this and nothing else does -- it is the only part of
+   the footer that varies by page.
+
+   Two lines per row, city over country, because "Montreal" and "Canada" answer
+   different questions and running them together as "Montreal Canada" reads as
+   one long name. #}
+<section class="footer__band" aria-labelledby="footer-destinations">
+    <h2 class="footer__title footer__title--band" id="footer-destinations">Popular destinations</h2>
+
+    <ul class="footer__destinations">
+        {% for place in config('site.footer-destinations') %}
+            <li>
+                <a class="footer__destination" href="{{ place.url }}">
+                    <span class="footer__destination-city">{{ place.city }}</span>
+                    <span class="footer__destination-country">{{ place.country }}</span>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</section>

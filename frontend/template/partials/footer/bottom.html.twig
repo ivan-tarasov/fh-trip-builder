@@ -1,0 +1,116 @@
+{# Who made this, how to reach it, and what it cost to draw.
+
+   The navigation menu arrives keyed by URL and the repository links keyed by
+   label, so navigation is flipped here rather than in the column partial: the
+   partial's job is to draw `label => url`, and teaching it about two shapes is
+   how the old footer ended up with three loops that could not be shared. #}
+{% set navigation = {} %}
+{% for url, item in config('site.main-menu')|filter(item => item.enabled and (item.footer ?? true)) %}
+    {% set navigation = navigation|merge({(item.text): url}) %}
+{% endfor %}
+
+{% set git = git_info() %}
+
+<div class="footer__bottom">
+    <div class="footer__brand">
+        <a class="footer__brand-mark" href="/">
+            <i class="fas fa-plane-departure" aria-hidden="true"></i>
+            <strong>{{ config('app.name') }}</strong>
+        </a>
+        <p class="footer__copyright">
+            <i class="far fa-copyright" aria-hidden="true"></i> {{ copyright_years() }}
+        </p>
+
+        {# Icons alone, the way the reference has them. Each one still needs a
+           name for anyone who cannot see which brand it is. #}
+        <ul class="footer__socials">
+            {% for title, item in config('site.footer-social') %}
+                <li>
+                    <a class="footer__social" href="{{ item.url }}"
+                       target="_blank" rel="noopener" aria-label="{{ title }}">
+                        <i class="fa-brands fa-{{ item.ico }}" aria-hidden="true"></i>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {% include 'partials/footer/column.html.twig' with {
+        'id': 'nav',
+        'title': 'Navigation',
+        'links': navigation
+    } only %}
+
+    {% include 'partials/footer/column.html.twig' with {
+        'id': 'repo',
+        'title': 'Repository',
+        'links': config('site.footer-git'),
+        'external': true
+    } only %}
+
+    {# A real form, posting to a real endpoint, writing to a real table.
+
+       There was one here before and it was taken out, because it accepted an
+       address and dropped it. The comment that recorded its removal said what
+       it would take to bring it back -- somewhere to put an address -- and that
+       is what `subscribers` is.
+
+       novalidate: the browser's own bubble says "Please enter an email address"
+       in a tooltip that vanishes and is not announced. The field is still
+       type="email", so the right keyboard comes up on a phone; the message is
+       ours to place and to keep on screen. #}
+    {% set notice = subscribe_notice() %}
+
+    <form class="footer__subscribe js-subscribe" id="fare-alerts"
+          action="/ajax/subscribe" method="post" novalidate>
+        <h2 class="footer__title">Fare alerts</h2>
+        <p class="footer__subscribe-text">A note when a fare on a route you searched drops.</p>
+
+        {# Both carried in the form, because without scripting there is no
+           fetch to put the token in a header and no way to know afterwards
+           which page the visitor was on. The endpoint refuses a return_to that
+           is not one of our own paths. #}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ current_page() }}">
+
+        <div class="footer__subscribe-row">
+            <label class="visually-hidden" for="subscribe-email">Email address</label>
+            <input class="footer__subscribe-input js-subscribe-email"
+                   id="subscribe-email" type="email" name="email" required
+                   autocomplete="email" placeholder="you@example.com">
+            <button class="footer__subscribe-submit" type="submit">Subscribe</button>
+        </div>
+
+        {# aria-live, because with the script running the answer arrives after
+           the button has been pressed and focus has not moved: without it a
+           screen reader is never told whether anything happened. Rendered full
+           only for a browser that posted the form and was sent back here. #}
+        <p class="footer__subscribe-note js-subscribe-note" role="status" aria-live="polite"
+           {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>{{ notice ? notice.message : '' }}</p>
+        <p class="footer__subscribe-consent">We store the address to send those alerts, nothing else.</p>
+    </form>
+</div>
+
+<div class="footer__legal">
+    <p>
+        Software made by
+        <a href="{{ config('meta.author.website') }}" target="_blank" rel="noopener">{{ config('meta.author.name') }}</a>
+        as <a href="https://www.flighthub.com/" target="_blank" rel="noopener">FlightHub</a>
+        PHP Coding <a href="/Trip_Builder_1.pdf" target="_blank" rel="noopener">Assessment</a>.
+        Code licensed
+        <a href="{{ config('app.license.url') }}" target="_blank" rel="license noopener">{{ config('app.license.type') }}</a>,
+        documentation <a href="{{ config('app.documentation') }}" target="_blank" rel="noopener">here</a>.
+    </p>
+
+    {# What the page cost to build. It used to sit in a column of its own beside
+       the navigation, in <code>, which made the render time the loudest thing in
+       the footer. It is worth keeping on a project whose point is how it is
+       built -- it is not worth a column. #}
+    <p class="footer__stats">
+        {{ execution_time }}s &middot;
+        {{ database_requests }} quer{{ database_requests == 1 ? 'y' : 'ies' }} &middot;
+        {{ flights_count }} flights &middot;
+        <a href="{{ git_repo() }}/commit/{{ git.commit_hash }}" target="_blank" rel="noopener">{{ git.tag }}-{{ git.branch }}-{{ git.commit_hash }}</a>
+        posted {{ git.commit_date }}
+    </p>
+</div>
