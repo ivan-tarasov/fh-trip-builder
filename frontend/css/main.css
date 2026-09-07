@@ -5176,8 +5176,12 @@ body:has(.hero) header#top {
   display: grid;
   /* Brand, two short columns, and the card. The card is given a fixed share
      rather than a fraction so the field inside it does not shrink to a stub on
-     a middling window while the brand block, which is only text, keeps growing. */
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, .8fr) 20rem;
+     a middling window while the brand block, which is only text, keeps growing.
+
+     24rem, because the card's own padding and the Subscribe button take 149px
+     of it before the field gets any: at 20rem that left 171px, which is shorter
+     than an ordinary work address and made everyone type into a keyhole. */
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, .8fr) 24rem;
   gap: 2rem 1.5rem;
   padding-bottom: 2rem;
   align-items: start;
