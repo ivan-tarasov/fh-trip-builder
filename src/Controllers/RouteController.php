@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
+use TripBuilder\GreatCircle;
 use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\RouteRepository;
@@ -114,7 +115,19 @@ class RouteController extends AbstractController
 
             echo new TwigRenderer()->renderPage('route/view.html.twig', [
                 'breadcrumbs' => self::trailFor($from, $to),
-                'route' => $summary + ['from' => $from, 'to' => $to],
+                'route' => $summary + [
+                    'from' => $from,
+                    'to' => $to,
+                    // The line the map draws between them. Computed here
+                    // because it is spherical trigonometry and a template is
+                    // no place for it; see GreatCircle.
+                    'path' => GreatCircle::segments(
+                        (float) $from['latitude'],
+                        (float) $from['longitude'],
+                        (float) $to['latitude'],
+                        (float) $to['longitude'],
+                    ),
+                ],
                 'dates' => self::datesFor(
                     $routes->cheapestDates($origins, $destinations, CabinClass::Economy, self::CHEAPEST_DATES),
                     (string) $from['code'],
