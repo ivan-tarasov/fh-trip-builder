@@ -10,12 +10,13 @@ use TripBuilder\Helper;
 use TripBuilder\Routes;
 
 /**
- * How a city and a country are spelled in a URL, and read back out of one.
+ * How a place is spelled in a URL, and read back out of one.
  *
- * The router matches a place path on shape alone -- /city/anything-hyphenated
- * -- so what actually decides whether a page exists is the code read off the
- * end of the slug. Two rules, one length apart: three characters for a city's
- * IATA code, two for a country's ISO one.
+ * Four kinds now: a city, a country, an airport and an airline. The router
+ * matches a place path on shape alone -- /city/anything-hyphenated -- so what
+ * actually decides whether a page exists is the code read off the end of the
+ * slug. Two rules, one length apart: three characters for the IATA code of a
+ * city or an airport, two for a country's ISO code or an airline's IATA one.
  *
  * Worth its own test because the first spelling of the city rule allowed
  * exactly one word before the code. Montreal worked, which hid it, and every
@@ -62,6 +63,36 @@ final class PlaceAddressTest extends TestCase
     {
         self::assertSame($slug, Helper::placeSlug($name, $code));
         self::assertSame($code, Helper::placeCode($slug, 2));
+    }
+
+    /**
+     * An airline's code is two characters like a country's, and unlike a
+     * country's it is very often not two letters.
+     *
+     * Ten of the 105 we sell have a digit in the code and two have an accent in
+     * the name, which is why these are real rows rather than invented ones: a
+     * rule written against AC and BA would pass every test and 404 easyJet.
+     *
+     * @return array<string, array{string, string, string}>
+     */
+    public static function airlines(): array
+    {
+        return [
+            'two words' => ['Air Canada', 'AC', 'air-canada-ac'],
+            'a letter then a digit' => ['Aegean', 'A3', 'aegean-a3'],
+            'a digit then a letter' => ['IndiGo Airlines', '6E', 'indigo-airlines-6e'],
+            'a name with inner capitals' => ['easyJet', 'U2', 'easyjet-u2'],
+            'an accent in the name' => ['AeroMéxico', 'AM', 'aeromexico-am'],
+            'both at once' => ['Gol Transportes Aéreos', 'G3', 'gol-transportes-aereos-g3'],
+        ];
+    }
+
+    #[DataProvider('airlines')]
+    public function testAnAirlineGoesToASlugAndComesBack(string $name, string $code, string $slug): void
+    {
+        self::assertSame($slug, Helper::placeSlug($name, $code));
+        self::assertSame($code, Helper::placeCode($slug, 2));
+        self::assertSame('/airline/' . $slug, Helper::airlineUrl($name, $code));
     }
 
     /**
@@ -181,30 +212,40 @@ final class PlaceAddressTest extends TestCase
         self::assertSame('City@show', Routes::resolve('/city/nonsense'));
         self::assertSame('Country@show', Routes::resolve('/country/nonsense'));
         self::assertSame('Airport@show', Routes::resolve('/airport/nonsense'));
+        self::assertSame('Airline@show', Routes::resolve('/airline/nonsense'));
 
         self::assertNull(Helper::placeCode('nonsense', 3));
         self::assertNull(Helper::placeCode('nonsense', 2));
 
-        // The one that has already been written into config by hand: an
-        // airport used to be addressed by its bare code, and the pattern still
-        // takes it. Only the controller turns it away.
+        // The two that have already been written into config by hand: an
+        // airport and an airline were both addressed by their bare code, and
+        // the pattern still takes either. Only the controller turns them away.
         self::assertSame('Airport@show', Routes::resolve('/airport/LHR'));
         self::assertNull(Helper::placeCode('LHR', 3));
+
+        self::assertSame('Airline@show', Routes::resolve('/airline/AC'));
+        self::assertNull(Helper::placeCode('AC', 2));
     }
 
     /**
-     * The two indexes, which are ordinary fixed routes and the only way in to
+     * The four indexes, which are ordinary fixed routes and the only way in to
      * the pages above.
      */
     public function testEachDirectoryIsARoute(): void
     {
-        self::assertSame('City@index', Routes::resolve('/cities'));
-        self::assertSame('Country@index', Routes::resolve('/countries'));
-        self::assertSame('Airports@index', Routes::resolve('/airports'));
+        $indexes = [
+            '/cities' => 'City@index',
+            '/countries' => 'Country@index',
+            '/airports' => 'Airports@index',
+            '/airlines' => 'Airlines@index',
+        ];
 
-        // Public, so the sitemap lists them and no robots tag keeps them out.
-        self::assertTrue(Routes::isPublic('/cities'));
-        self::assertTrue(Routes::isPublic('/countries'));
-        self::assertTrue(Routes::isPublic('/airports'));
+        foreach ($indexes as $path => $route) {
+            self::assertSame($route, Routes::resolve($path));
+
+            // Public, so the sitemap lists them and no robots tag keeps them
+            // out.
+            self::assertTrue(Routes::isPublic($path), $path . ' should be public');
+        }
     }
 }
