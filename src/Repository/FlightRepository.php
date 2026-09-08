@@ -1034,6 +1034,12 @@ final readonly class FlightRepository
      * nothing. Naming 24 busy origin airports and letting the arrival side
      * filter runs Canada's seven cities in 10ms.
      *
+     * Nothing that starts and ends in the same city. Both ends of this query
+     * are airports and a city can hold three, so the United Kingdom's domestic
+     * tab offered "London -- London" for a Heathrow-Gatwick hop. It is a real
+     * flight; it is not a fare anybody is looking for, and it took the cheapest
+     * row on the tab.
+     *
      * @param list<string> $fromAirports
      * @param list<string> $toAirports
      * @return list<array<string, mixed>>
@@ -1063,6 +1069,7 @@ final readonly class FlightRepository
             . ' JOIN ' . Table::Airports->value . ' d ON d.code = f.arrival_airport'
             . ' WHERE f.departure_airport IN (' . $from . ')'
             . '  AND f.arrival_airport IN (' . $to . ')'
+            . '  AND d.city_code <> o.city_code'
             . '  AND f.departure_time >= NOW()'
             . '  AND (f.cabins & ?)'
             . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
