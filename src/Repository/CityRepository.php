@@ -270,6 +270,52 @@ final readonly class CityRepository
     }
 
     /**
+     * The one place a city_code becomes a name, as SQL another query can join.
+     *
+     * `airports.city` is not the city's name -- it is the name that airport
+     * reports, and two airports in one city may disagree. Newark Liberty says
+     * "Newark" and the other two NYC airports say "New York"; both are true,
+     * and the airline convention that files Newark under NYC is what makes them
+     * a single city here. Every method in this class already resolves that the
+     * same way, with MIN() over the city's airports, and so does the slug the
+     * city page answers at.
+     *
+     * It is offered as SQL rather than as an array because the callers are
+     * other repositories, mid-query. Read off a single joined airport row
+     * instead, a schedule board linked a flight to "/city/newark-nyc" -- a real
+     * page, reached by a redirect, titled New York -- and fares strips on the
+     * city, country and airport pages all printed "Newark" beside it.
+     */
+    public static function namesSql(): string
+    {
+        return 'SELECT a.city_code AS code, MIN(a.city) AS name'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' GROUP BY a.city_code';
+    }
+
+    /**
+     * The same names as an array, keyed by city code.
+     *
+     * For callers that cannot afford the join. The schedule board is one: joined
+     * to, the derived table becomes the query's driving table and the index that
+     * makes an arrivals board possible stops being used -- 0.6ms to 19.5ms. One
+     * scan of 1,091 rows here costs 1ms and answers for every row on the page.
+     *
+     * @return array<string, string>
+     */
+    public function names(): array
+    {
+        $names = [];
+
+        foreach ($this->connection->fetchAll(self::namesSql()) as $row) {
+            $names[(string) $row['code']] = (string) $row['name'];
+        }
+
+        return $names;
+    }
+
+    /**
      * Every sellable city as one point. 231 rows over a 1,091-row table, which
      * is why this can be grouped on the fly instead of stored.
      */

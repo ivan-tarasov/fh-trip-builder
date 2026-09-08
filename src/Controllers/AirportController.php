@@ -11,6 +11,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\SearchUrl;
 use TripBuilder\View\TwigRenderer;
@@ -109,18 +110,25 @@ class AirportController extends AbstractController
             ['id' => 'in', 'label' => 'Arrivals', 'flights' => $airports->arrivals($code, $date)],
         ];
 
+        // The city each flight is to or from, by the name this app knows it by.
+        // The query hands back the other airport's own value, which for Newark
+        // Liberty is "Newark" where the city with the page is New York -- a
+        // label no page of ours answers to, and a link to a redirect. Fetched
+        // once and used for both directions.
+        $names = new CityRepository($this->connection())->names();
+
         foreach ($directions as $i => $direction) {
-            // The other end of each flight is a city we have a page for, and
-            // the address is built here rather than in the template for the
-            // same reason it is everywhere else: one place knows where a city
-            // lives.
             $directions[$i]['flights'] = array_map(
-                static fn(array $flight): array => $flight + [
-                    'other_url' => '/city/' . Helper::placeSlug(
-                        (string) $flight['other_city'],
-                        (string) $flight['other_city_code'],
-                    ),
-                ],
+                static function (array $flight) use ($names): array {
+                    $code = (string) $flight['other_city_code'];
+                    $city = $names[$code] ?? (string) $flight['other_city'];
+
+                    return [...$flight, 'other_city' => $city]
+                        // Built here rather than in the template for the reason
+                        // it is everywhere else: one place knows where a city
+                        // lives.
+                        + ['other_url' => '/city/' . Helper::placeSlug($city, $code)];
+                },
                 $direction['flights'],
             );
         }

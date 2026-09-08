@@ -999,7 +999,7 @@ final readonly class FlightRepository
 
         return $this->connection->fetchAll(
             'SELECT x.* FROM ('
-            . ' SELECT o.city_code AS from_city_code, o.city AS from_city,'
+            . ' SELECT o.city_code AS from_city_code, oc.name AS from_city,'
             . '  f.airline, f.departure_airport, f.arrival_airport,'
             . '  f.departure_time, f.arrival_time, f.duration,'
             . '  f.price_base + f.price_tax AS total,'
@@ -1009,6 +1009,9 @@ final readonly class FlightRepository
             . '  ) AS rn'
             . ' FROM ' . Table::Flights->value . ' f'
             . ' JOIN ' . Table::Airports->value . ' o ON o.code = f.departure_airport'
+            // The city's name, not this airport's idea of it -- see
+            // CityRepository::namesSql().
+            . ' JOIN (' . CityRepository::namesSql() . ') oc ON oc.code = o.city_code'
             . ' WHERE f.departure_airport IN (' . $from . ')'
             . '  AND f.arrival_airport IN (' . $to . ')'
             // Today's flights that have already left are not fares anybody can
@@ -1055,8 +1058,8 @@ final readonly class FlightRepository
 
         return $this->connection->fetchAll(
             'SELECT x.* FROM ('
-            . ' SELECT d.city_code AS to_city_code, d.city AS to_city,'
-            . '  o.city_code AS from_city_code, o.city AS from_city,'
+            . ' SELECT d.city_code AS to_city_code, dc.name AS to_city,'
+            . '  o.city_code AS from_city_code, oc.name AS from_city,'
             . '  f.airline, f.departure_airport, f.arrival_airport,'
             . '  f.departure_time, f.arrival_time, f.duration,'
             . '  f.price_base + f.price_tax AS total,'
@@ -1067,6 +1070,9 @@ final readonly class FlightRepository
             . ' FROM ' . Table::Flights->value . ' f'
             . ' JOIN ' . Table::Airports->value . ' o ON o.code = f.departure_airport'
             . ' JOIN ' . Table::Airports->value . ' d ON d.code = f.arrival_airport'
+            // Both ends by the city's own name -- see CityRepository::namesSql().
+            . ' JOIN (' . CityRepository::namesSql() . ') oc ON oc.code = o.city_code'
+            . ' JOIN (' . CityRepository::namesSql() . ') dc ON dc.code = d.city_code'
             . ' WHERE f.departure_airport IN (' . $from . ')'
             . '  AND f.arrival_airport IN (' . $to . ')'
             . '  AND d.city_code <> o.city_code'
