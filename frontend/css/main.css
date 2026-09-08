@@ -108,6 +108,37 @@
      the brighter originals did. */
   --brand-success:    #146C43;   /* 6.45 on white, 6.12 on #f8f9fa */
   --brand-danger:     #B02A37;   /* 6.50 on white, 6.16 on #f8f9fa */
+  --brand-danger-700: #96232E;   /* pressed and hovered, as accent-700 is */
+
+  /* Tints for the two semantics, mirroring --brand-tint / --brand-tint-edge.
+     These are not new colours: every value here was already in the file. What
+     was missing was a name, and without one the same job had been mixed by
+     hand each time it came up -- six near-identical pale pinks across the
+     checkout alert, the notice chips, a cancelled booking and a danger hover,
+     and two pale greens. The ink that goes on them measures 5.56 and 5.59. */
+  /* Categorical, and decorative only.
+     Colours whose job is to tell one section from another. Neither brand hue
+     can do that alone, and the semantics must not be borrowed for it -- green
+     as a category would collide with green as "good".
+     Bright on purpose. The first attempt held the brand teal's own lightness
+     and chroma and rotated hue, which produced a well-behaved family and a
+     drab one: at that chroma an orange comes out salmon. Holding one lightness
+     across four hues is what forces that, so each of these takes the lightness
+     its own hue needs, the way the reference set does -- its yellow is light
+     and its red is dark.
+     White glyph on each, measured: 3.45, 5.02, 3.58, 5.55. All clear the 3:1 a
+     graphic needs; blue and violet also clear 4.5. Amber is the one this family
+     cannot offer -- #F08C00 measures 2.48 and no white mark belongs on it.
+     Nothing wearing these carries state, so none has to mean anything. */
+  --cat-green:         #2F9E44;
+  --cat-blue:          #1971C2;
+  --cat-orange:        #E8590C;
+  --cat-violet:        #7048E8;
+
+  --success-tint:      #E4F2EA;
+  --success-tint-edge: #B2E2C4;
+  --danger-tint:       #FBE9EB;
+  --danger-tint-edge:  #F3C7CC;
 
   /* Muted text. This file used Bootstrap's gray-500 in 25 places -- 2.07:1 on
      white, which is not only past AA but past the 3:1 floor for a graphic, and
@@ -151,6 +182,12 @@
      not a light colour laid on top, so this is white at low alpha and picks up
      whatever it sits on. */
   --line-on-dark:     rgba(255, 255, 255, .12);
+  /* Success and danger for a dark surface. --brand-success and --brand-danger
+     are mixed for white and measure 1.3 and 1.7 on the navy card -- unreadable
+     -- so the pair is lightened rather than reused. Both against
+     --brand-ink-700, which is the only dark surface either appears on. */
+  --good-on-dark:     #6EE7B7;   /* 7.52 on --brand-ink-700 */
+  --bad-on-dark:      #FCA5A5;   /* 6.04 on --brand-ink-700 */
 
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
   --bs-body-color: var(--ink-body);
@@ -188,10 +225,10 @@
 .btn-danger {
   --bs-btn-bg: var(--brand-danger);
   --bs-btn-border-color: var(--brand-danger);
-  --bs-btn-hover-bg: #96232e;
-  --bs-btn-hover-border-color: #96232e;
-  --bs-btn-active-bg: #96232e;
-  --bs-btn-active-border-color: #96232e;
+  --bs-btn-hover-bg: var(--brand-danger-700);
+  --bs-btn-hover-border-color: var(--brand-danger-700);
+  --bs-btn-active-bg: var(--brand-danger-700);
+  --bs-btn-active-border-color: var(--brand-danger-700);
 }
 
 .btn-primary {
@@ -481,6 +518,22 @@ a {
 .page-wrapper {
   min-height: 100vh;
 }
+/* The ground every page stands on.
+
+   White was the default because nothing had ever said otherwise, and it left
+   the white cards the app is built out of invisible against it -- a booking
+   block, a flight card and a footer column all have a white surface and no
+   edge, so on white they read as one continuous sheet. A step of grey behind
+   them is what makes each one a thing.
+
+   On body and not on .page, so it also reaches the bands that are not page
+   content: the breadcrumb strip sits above .page and was left a white seam
+   between the navy header and the grey below it. The header and the footer
+   paint their own colour over this, so there is nothing to fight. */
+body {
+  background-color: var(--surface);
+}
+
 
 /* What a rubber-band scroll reveals past either end of the page.
 
@@ -1085,16 +1138,6 @@ textarea {
 
 button {
   cursor: pointer;
-}
-
-.label {
-  font-size: 14px;
-  color: #333;
-  text-transform: capitalize;
-  display: block;
-  font-weight: 700;
-  white-space: nowrap;
-  margin-right: 30px;
 }
 
 
@@ -1805,98 +1848,6 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 /* ==========================================================================
-   #SELECT2
-   ========================================================================== */
-.select--no-search .select2-search {
-  display: none !important;
-}
-
-.rs-select2 {
-  width: 100%;
-}
-
-.rs-select2 .select2-container {
-  width: 100% !important;
-  outline: none;
-}
-
-.rs-select2 .select2-container .select2-selection--single {
-  outline: none;
-  border: none;
-  height: 60px;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__rendered {
-  line-height: 60px;
-  padding-left: 0;
-  color: #666;
-  font-size: 16px;
-  text-transform: uppercase;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__arrow {
-  height: 58px;
-  right: 4px;
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: center;
-  -webkit-justify-content: center;
-  -moz-box-pack: center;
-  -ms-flex-pack: center;
-  justify-content: center;
-  -webkit-box-align: center;
-  -webkit-align-items: center;
-  -moz-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__arrow b {
-  display: none;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__arrow:after {
-  font-family: "Material-Design-Iconic-Font";
-  content: '\f2f9';
-  font-size: 24px;
-  color: #808080;
-  transition: transform var(--dur-base) var(--ease-out);
-}
-
-.rs-select2 .select2-container.select2-container--open .select2-selection--single .select2-selection__arrow::after {
-  -webkit-transform: rotate(-180deg);
-  -moz-transform: rotate(-180deg);
-  -ms-transform: rotate(-180deg);
-  -o-transform: rotate(-180deg);
-  transform: rotate(-180deg);
-}
-
-.select2-container--open .select2-dropdown--below {
-  border: none;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  border-radius: 10px;
-  -webkit-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  -moz-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  margin-top: 2px;
-  overflow: hidden;
-}
-
-.select2-container--default .select2-results__option {
-  padding: 10px;
-  font-size: 16px;
-  color: #666;
-}
-
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-  background: #6c7ae0;
-}
-
-/* ==========================================================================
    #SIDEBAR
    ========================================================================== */
 
@@ -2035,6 +1986,16 @@ input[type=number]::-webkit-outer-spin-button {
    #AIRLINES
    ========================================================================== */
 
+/* An airline is the only listing on the site with no surface of its own -- the
+   airports beside it use a Bootstrap .card and these never did, because the
+   white page was doing the job. With the page grey they needed a sheet like
+   everything else. */
+.airline-panel {
+  padding: 1.25rem;
+  background-color: #fff;
+  border-radius: .75rem;
+}
+
 .feature-icon {
   width: 4rem;
   height: 4rem;
@@ -2081,11 +2042,21 @@ input[type=number]::-webkit-outer-spin-button {
 
    Measure is capped rather than left to the container: the README is prose, and
    a 1,300px line of it is unreadable. */
+/* A sheet of its own, now that the page behind it is grey. This is the one
+   page whose content is prose rather than cards, so there was nothing to give
+   it an edge and it read as text dropped on the floor. */
 .readme {
   max-width: 64ch;
+  padding: 2rem 2.25rem;
   color: var(--ink-body);
   font-size: 1rem;
   line-height: 1.7;
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+@media (max-width: 575.98px) {
+  .readme { padding: 1.25rem; }
 }
 
 .readme > :first-child {
@@ -2383,7 +2354,7 @@ textarea {
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: .25rem .85rem;
-  color: #495057;
+  color: var(--ink-secondary);
   background-color: #fff;
   font-weight: 500;
   transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
@@ -2396,7 +2367,7 @@ textarea {
 }
 
 .details-toggle:not(.collapsed) {
-  background-color: #e7f1ff;
+  background-color: var(--brand-tint);
   border-color: var(--brand-tint-edge);
   color: var(--brand-accent-700);
 }
@@ -2608,22 +2579,64 @@ textarea {
   padding-left: .75rem;
 }
 
+/* Shape only. The colour used to be white here as well, which was right while
+   all four badges were saturated fills and wrong the moment two of them became
+   tinted -- and wrong at a specificity the modifiers could not answer, so a
+   tinted chip rendered white on pale grey. Each modifier states its own pair. */
 .flight-badges .badge {
   font-size: .8125rem;
   padding: .35rem .7rem;
   border-radius: 999px;
-  color: #fff;
 }
 
-.badge--success { background-color: #2fa360; }
-.badge--primary { background-color: #2f6fed; }
-.badge--purple  { background-color: #7048e8; }
-.badge--teal    { background-color: #0f9b8e; }
+
+
+
+
 .badge--secondary { background-color: var(--ink-secondary); }
 
 /* The flight a Change link came back to replace. Deliberately the brand accent
    rather than one of the sort badges' colours: those describe how a row scored,
    this one says the traveller already has it. */
+/* How a row scored, in the palette the rest of the app is in.
+
+   These were four saturated fills -- a green, a violet, a bright blue and a
+   second teal -- and three things were wrong with them. Two failed WCAG AA
+   outright: white measured 3.22 on the green and 3.44 on the teal. Two were
+   near-misses of tokens that already existed, a second green beside
+   --brand-success and a second teal beside --brand-accent, which reads as a
+   mistake rather than a choice. And the blue was #2f6fed, which is the stock
+   Bootstrap blue this palette was written to purge.
+
+   Two tiers now, which is what the four labels actually are. Cheapest and Best
+   value are claims about the whole list and carry a filled chip; Fastest and
+   Cheapest nonstop qualify one, and are tinted. Every pairing is measured:
+   6.45, 15.60, 7.87 and 7.04 against their own backgrounds.
+
+   No new tokens. The tinted pair is the treatment .search-cabin already uses
+   for the same job a few lines up. */
+.badge--success {
+  background-color: var(--brand-success);
+  color: #fff;
+}
+
+.badge--primary {
+  background-color: var(--brand-ink);
+  color: #fff;
+}
+
+.badge--purple {
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-secondary);
+}
+
+.badge--teal {
+  background-color: var(--brand-tint);
+  border: 1px solid var(--brand-tint-edge);
+  color: var(--brand-accent-700);
+}
+
 .badge--current { background-color: var(--brand-accent-700); }
 
 .flight-card--badged { border-top-left-radius: .5rem; }
@@ -2649,16 +2662,16 @@ textarea {
   border: 0;
   border-radius: 50%;
   background-color: var(--surface-sunken);
-  color: #495057;
+  color: var(--ink-secondary);
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .icon-btn:hover { background-color: var(--line); }
-.icon-btn.is-active { color: #e03131; }
-.icon-btn.is-copied { background-color: #d3f9d8; color: #2b8a3e; }
+.icon-btn.is-active { color: var(--brand-danger); }
+.icon-btn.is-copied { background-color: var(--brand-tint); color: var(--brand-success); }
 
 /* Removing a saved flight: the one destructive control on the saved page. */
-.icon-btn--danger:hover { background-color: #ffe3e3; color: #c92a2a; }
+.icon-btn--danger:hover { background-color: var(--danger-tint); color: var(--brand-danger); }
 
 /* Dropping a saved flight used to delete the card mid-click, so everything
    below jumped up under the pointer at the exact moment it was busy. The card
@@ -2712,7 +2725,7 @@ textarea {
 .notice--risk,
 .notice--check,
 .notice--note {
-  background-color: #FFE9E9;
+  background-color: var(--danger-tint);
   color: var(--brand-danger);
 }
 
@@ -2952,7 +2965,7 @@ textarea {
 
 /* The chosen outbound: a green banner rather than a green wash, so the route
    bar inside keeps the same contrast it has on every other card. */
-.selected-flight { border: 1px solid #b2e2c4; }
+.selected-flight { border: 1px solid var(--success-tint-edge); }
 
 .selected-flight__banner {
   display: flex;
@@ -2960,7 +2973,7 @@ textarea {
   justify-content: space-between;
   gap: .75rem;
   padding: .5rem 1rem;
-  background-color: #2fa360;
+  background-color: var(--brand-success);
   color: #fff;
   border-radius: calc(var(--bs-border-radius) - 1px) calc(var(--bs-border-radius) - 1px) 0 0;
 }
@@ -2996,7 +3009,7 @@ textarea {
 .price__symbol {
   font-size: 1.35rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 
 .price__whole {
@@ -3008,7 +3021,7 @@ textarea {
 .price__cents {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
   margin-left: -.15rem;
 }
 
@@ -3066,9 +3079,12 @@ textarea {
   align-items: stretch;
   margin-bottom: 1rem;
   border-radius: .75rem;
-  /* A light ground, so the chosen tab reads as filled rather than as the only
-     thing with a border. */
-  background-color: var(--surface);
+  /* White, because the page is not. This was --surface, which gave the bar its
+     own light ground back when every page was white -- and became invisible the
+     day the page took that same colour, leaving two of the three tabs floating
+     with no surface at all while the chosen one looked like the only control
+     there. A control on a grey page is a white one. */
+  background-color: #fff;
   overflow: hidden;
 }
 
@@ -3086,7 +3102,11 @@ textarea {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.sort-bar__tab:hover { background-color: var(--line); }
+/* --brand-tint, which is what every other hover in this file uses. It was
+   --surface for a moment, and --surface is exactly the colour of the page: the
+   hovered tab stopped looking hovered and started looking like a hole cut in
+   the white bar. */
+.sort-bar__tab:hover { background-color: var(--brand-tint); }
 
 /* Ink, not accent. This marks which sort is active -- it is state, not a step
    forward -- and leaving the accent free for the Select buttons is what stops
@@ -3331,7 +3351,7 @@ textarea {
 
 .filter-row:hover .filter-row__only,
 .filter-row__only:focus-visible { opacity: 1; }
-.filter-row__only:hover { background-color: #e7f1ff; }
+.filter-row__only:hover { background-color: var(--brand-tint); }
 
 .filter-row__label {
   display: block;
@@ -3487,7 +3507,7 @@ textarea {
   pointer-events: none;
 }
 .filter-pill:hover { background-color: var(--line); }
-.filter-pill__icon { color: #868e96; font-size: .8125rem; }
+.filter-pill__icon { color: var(--ink-muted); font-size: .8125rem; }
 
 /* A selected pill. `is-on` is set by JS on load and on every change.
    :has(input:checked) would express this in CSS alone, but the state is then
@@ -3644,7 +3664,7 @@ body:has(.hero) header#top {
   display: inline-block;
   margin-top: .5rem;
   font-size: .875rem;
-  color: #868e96;
+  color: var(--ink-muted);
 }
 
 /* --- Unavailable ---------------------------------------------------------
@@ -3792,12 +3812,12 @@ body:has(.hero) header#top {
   display: flex;
   align-items: center;
   gap: .5rem;
-  border: 1px solid #f5c2c7;
+  border: 1px solid var(--danger-tint-edge);
   border-radius: .75rem;
-  background-color: #fff5f5;
+  background-color: var(--danger-tint);
   padding: .75rem 1rem;
   margin-bottom: 1.25rem;
-  color: #842029;
+  color: var(--brand-danger);
 }
 
 /* Form and summary side by side; the summary drops under the form on a narrow
@@ -3857,7 +3877,7 @@ body:has(.hero) header#top {
   margin-bottom: .3125rem;
   font-size: .875rem;
   font-weight: 500;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .field__input {
   width: 100%;
@@ -3917,6 +3937,10 @@ body:has(.hero) header#top {
   border-radius: .875rem;
   padding: 1.125rem 1.25rem;
   backface-visibility: hidden;
+  /* Outside the palette on purpose. This is a picture of a physical object,
+     not a piece of interface: a bank card is navy plastic with a gold chip, and
+     paying it in --brand-ink and --brand-accent would make it a Trip Builder
+     card rather than the visitor's. Nothing here carries text or state. */
   background: linear-gradient(135deg, #1f2c47 0%, #2b3a5c 55%, #33415f 100%);
   box-shadow: 0 .5rem 1.5rem rgba(31, 44, 71, .35);
   color: #fff;
@@ -3992,7 +4016,7 @@ body:has(.hero) header#top {
 .pay-card__back-note { margin: .75rem 0 0; font-size: .6875rem; opacity: .65; }
 
 /* --- accept and pay ----------------------------------------------------- */
-.accept { display: flex; gap: .625rem; font-size: .875rem; color: #495057; }
+.accept { display: flex; gap: .625rem; font-size: .875rem; color: var(--ink-secondary); }
 
 /* Sized explicitly. The form block near the top of this file sets
    `input { width: 100% }`, and on a flex item that is what flex-basis:auto
@@ -4006,7 +4030,7 @@ body:has(.hero) header#top {
   margin-top: .1rem;
   accent-color: var(--brand-accent);
 }
-.accept--invalid { color: #842029; }
+.accept--invalid { color: var(--brand-danger); }
 
 .checkout__pay {
   display: block;
@@ -4026,7 +4050,7 @@ body:has(.hero) header#top {
 .checkout__pay:hover { filter: brightness(.92); color: #fff; }
 .checkout__pay--link { max-width: 18rem; }
 .checkout__test { margin: .75rem 0 0; color: var(--ink-secondary); font-size: .8125rem; }
-.checkout__test code { color: #495057; }
+.checkout__test code { color: var(--ink-secondary); }
 
 /* --- order summary ------------------------------------------------------ */
 .order {
@@ -4049,7 +4073,7 @@ body:has(.hero) header#top {
 .order__route { display: flex; align-items: center; gap: .5rem; margin: 0 0 .25rem; }
 .order__code { font-size: 1.125rem; font-weight: 700; color: var(--ink-body); }
 .order__arrow { color: var(--ink-muted); font-size: .8125rem; }
-.order__when { margin: 0; font-size: .875rem; color: #495057; }
+.order__when { margin: 0; font-size: .875rem; color: var(--ink-secondary); }
 .order__detail { margin: 0; font-size: .8125rem; color: var(--ink-muted); }
 
 .order__prices { margin: 0; }
@@ -4082,7 +4106,7 @@ body:has(.hero) header#top {
   margin: 0 0 .5rem;
   font-size: .875rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .rules__brand {
   flex: 0 0 auto;
@@ -4091,7 +4115,7 @@ body:has(.hero) header#top {
   padding: .1rem .5rem;
   font-size: .75rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .rules__list { margin: 0; padding: 0; list-style: none; }
 /* In a booking's Fare row the list follows the brand name, so it needs the gap a standalone block does not. */
@@ -4101,7 +4125,7 @@ body:has(.hero) header#top {
   gap: .5rem;
   padding: .1875rem 0;
   font-size: .8125rem;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .rules__icon { flex: 0 0 .875rem; margin-top: .2rem; font-size: .6875rem; color: var(--brand-success); }
 .rules__item--restricted { color: var(--ink-secondary); }
@@ -4121,7 +4145,7 @@ body:has(.hero) header#top {
 .done { text-align: center; padding: 1.5rem 0 2rem; }
 .done__icon { font-size: 2.75rem; color: var(--brand-success); }
 .done__title { margin: .875rem 0 .5rem; font-size: 1.75rem; font-weight: 700; }
-.done__lead { margin: 0 auto; max-width: 32rem; color: #495057; }
+.done__lead { margin: 0 auto; max-width: 32rem; color: var(--ink-secondary); }
 .done__reference {
   display: inline-flex;
   flex-direction: column;
@@ -4164,7 +4188,7 @@ body:has(.hero) header#top {
 }
 .done__leg { padding: .625rem 0; border-bottom: 1px solid var(--surface-sunken); }
 .done__leg-route { display: flex; align-items: center; gap: .5rem; }
-.done__leg-when { display: flex; gap: .5rem; font-size: .875rem; color: #495057; }
+.done__leg-when { display: flex; gap: .5rem; font-size: .875rem; color: var(--ink-secondary); }
 .done__leg-sep { color: var(--ink-muted); }
 .done__leg-carrier { font-size: .8125rem; color: var(--ink-muted); }
 .done__demo { margin: .75rem 0 0; font-size: .8125rem; color: var(--ink-muted); }
@@ -4220,7 +4244,7 @@ body:has(.hero) header#top {
   letter-spacing: .06em;
   color: var(--bs-primary);
 }
-.review__half-date { margin: .125rem 0 0; font-size: .9375rem; color: #495057; }
+.review__half-date { margin: .125rem 0 0; font-size: .9375rem; color: var(--ink-secondary); }
 
 .review__change {
   border: 1px solid var(--line-strong);
@@ -4228,7 +4252,7 @@ body:has(.hero) header#top {
   padding: .25rem .85rem;
   font-size: .875rem;
   font-weight: 500;
-  color: #495057;
+  color: var(--ink-secondary);
   text-decoration: none;
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
@@ -4607,9 +4631,9 @@ body:has(.hero) header#top {
    solid fill, which stays legible at this weight without shouting.
 
    Contrast, measured in the browser on the tint each sits on:
-     confirmed  #146C43 on #E4F2EA   5.59
-     cancelled  #B02A37 on #FBE9EB   5.56
-     flown      #3F4854 on #E8EDF3   7.87  */
+     confirmed  --brand-success on --success-tint    5.59
+     cancelled  --brand-danger  on --danger-tint     5.56
+     flown      --ink-secondary on --surface-sunken  7.87 */
 .booking-status {
   display: inline-flex;
   align-items: center;
@@ -4620,8 +4644,8 @@ body:has(.hero) header#top {
   line-height: 1.3;
   white-space: nowrap;
 }
-.booking-status--confirmed { background-color: #E4F2EA; color: var(--brand-success); }
-.booking-status--cancelled { background-color: #FBE9EB; color: var(--brand-danger); }
+.booking-status--confirmed { background-color: var(--success-tint); color: var(--brand-success); }
+.booking-status--cancelled { background-color: var(--danger-tint); color: var(--brand-danger); }
 .booking-status--flown { background-color: var(--surface-sunken); color: var(--ink-secondary); }
 
 /* "Departs in 40 days". Quiet beside the status pill: the status answers
@@ -4647,10 +4671,15 @@ body:has(.hero) header#top {
    still a receipt somebody may need -- and loses only the lift. .shadow-sm is
    a Bootstrap utility and carries !important, so the honest place to drop it is
    the template, which simply does not emit it. */
+/* Sunken rather than merely un-lifted. This was --surface, which read as a
+   dimmer card while the page was white and read as nothing at all once the page
+   became that colour -- the card disappeared into the ground instead of sitting
+   quietly on it. A step below the page says "already flown" more clearly than
+   an absent shadow did anyway. */
 .booking-card--past,
-.booking-card--cancelled { background-color: var(--surface); }
+.booking-card--cancelled { background-color: var(--surface-sunken); }
 .booking-card--past .flight-card__footer,
-.booking-card--cancelled .flight-card__footer { background-color: var(--surface-sunken); }
+.booking-card--cancelled .flight-card__footer { background-color: var(--line); }
 
 /* What you can do with a booking, as one row. Wraps rather than squeezing, so
    the next action added here does not have to find its own corner of the page. */
@@ -4777,10 +4806,10 @@ body:has(.hero) header#top {
   gap: .5rem;
   margin: 1.5rem 0 0;
   padding: .75rem 1rem;
-  border: 1px solid #F3C7CC;
+  border: 1px solid var(--danger-tint-edge);
   border-left: 3px solid var(--brand-danger);
   border-radius: .5rem;
-  background-color: #FDF4F5;
+  background-color: var(--danger-tint);
   color: var(--ink-secondary);
   font-size: .9375rem;
 }
@@ -5310,8 +5339,8 @@ body:has(.hero) header#top {
 
 .footer__subscribe-note:empty { display: none; }
 
-.footer__subscribe-note[data-tone="good"]  { color: #6EE7B7; }
-.footer__subscribe-note[data-tone="bad"]   { color: #FCA5A5; }
+.footer__subscribe-note[data-tone="good"]  { color: var(--good-on-dark); }
+.footer__subscribe-note[data-tone="bad"]   { color: var(--bad-on-dark); }
 .footer__subscribe-note[data-tone="quiet"] { color: var(--ink-on-dark); }
 
 .footer__subscribe-consent {
@@ -5382,7 +5411,6 @@ body:has(.hero) header#top {
 
 .city {
   padding: 2rem 0 4rem;
-  background-color: var(--surface);
 }
 
 .city__layout {
@@ -5447,9 +5475,16 @@ body:has(.hero) header#top {
   border-radius: 50%;
 }
 
-.city__rail-icon--green  { background-color: #2F9E44; }
-.city__rail-icon--orange { background-color: #E8590C; }
-.city__rail-icon--red    { background-color: #C2255C; }
+/* A colour per block, from the categorical set. These were four hues invented
+   on the spot -- a #2F9E44, an #E8590C, a #C2255C and a #1971C2, none of them
+   from this palette. Flattening them was the wrong answer -- a rail you can
+   find by colour is easier to come back to than one you have to read -- and so
+   was muting them. They are those four colours again, named this time, and
+   measured. */
+.city__rail-icon--green  { background-color: var(--cat-green); }
+.city__rail-icon--blue   { background-color: var(--cat-blue); }
+.city__rail-icon--orange { background-color: var(--cat-orange); }
+.city__rail-icon--violet { background-color: var(--cat-violet); }
 
 .city__blocks {
   display: grid;
@@ -5687,7 +5722,6 @@ body:has(.hero) header#top {
 .fare__legs { margin-left: auto; white-space: nowrap; }
 .fare__times { color: var(--ink-muted); font-size: .8125rem; }
 
-.city__rail-icon--blue { background-color: #1971C2; }
 
 @media (max-width: 575.98px) {
   .fares__strip { grid-auto-columns: minmax(13rem, 1fr); }
