@@ -1,0 +1,39 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Cities we fly to{% endblock %}
+
+{# Every city, by country.
+
+   This page exists for a reason that was measured rather than guessed. Crawling
+   the links out of the homepage reached 171 of the 231 city pages, and the
+   furthest of those took six hops; sixty had no inbound link at all and could
+   only be reached by typing the address. One list puts all of them a hop from
+   the footer. #}
+{% block content %}
+<main role="main" class="cities">
+    <div class="container">
+        <h1 class="cities__title">Cities we fly to</h1>
+        <p class="cities__lead">
+            Every city in our schedules, with the fares and airports for each.
+        </p>
+
+        {# One column per country rather than one row: a country with two cities
+           and a country with fourteen both read as a block, and the alphabet
+           runs down each column instead of across the page. #}
+        <div class="cities__countries">
+            {% for country, cities in countries %}
+                <section class="cities__country" aria-labelledby="country-{{ loop.index }}">
+                    <h2 class="cities__country-name" id="country-{{ loop.index }}">{{ country }}</h2>
+                    <ul class="cities__list">
+                        {% for city in cities %}
+                            <li>
+                                <a class="cities__link" href="/city/{{ city.slug }}">{{ city.name }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endfor %}
+        </div>
+    </div>
+</main>
+{% endblock %}

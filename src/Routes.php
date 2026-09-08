@@ -18,6 +18,9 @@ class Routes
         '/airlines' => 'Airlines@index',
         '/airports' => 'Airports@index',
         '/about' => 'About@index',
+        // Every city we sell to, in one place. Sixty of the 231 city pages had
+        // no inbound link before this existed -- see CityRepository::allByCountry().
+        '/cities' => 'City@index',
 
         /*
         |--------------------------------------------------------------------------

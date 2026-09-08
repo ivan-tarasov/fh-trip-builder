@@ -36,5 +36,9 @@ return [
         '/airlines' => 'Airlines',
         '/airports' => 'Airports',
         '/about' => 'About',
+        // /city/<slug> is deliberately absent: its parent is the country it is
+        // in, not this list, so CityController hands over its own trail. This
+        // entry is for the index only.
+        '/cities' => 'Cities',
     ],
 ];

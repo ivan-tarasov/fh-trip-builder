@@ -37,6 +37,9 @@ final class LayoutData
      * after a deploy — the markup and the code it needs then disagree, which
      * shows up as controls that quietly do nothing.
      */
+    /** Paths whose pages are transient, personal, or both. */
+    private const array PRIVATE_PREFIXES = ['/search', '/checkout', '/my'];
+
     public function asset(string $path): string
     {
         $file = Helper::getRootDir() . '/' . ltrim($path, '/');
@@ -150,6 +153,57 @@ final class LayoutData
      * To the nearest thousand, so the digits that are shown are ones the
      * estimate can stand behind.
      */
+    /**
+     * The one address this page answers at.
+     *
+     * Every page here is reachable at more than one URL. A trailing slash is
+     * optional -- Request::path() rtrims it and both forms return 200 -- and
+     * any query string at all makes another: /airlines?utm_source=x is a fourth
+     * copy of a page that has one piece of content. Without a canonical each of
+     * those competes with the others.
+     *
+     * The path the router normalised to, which is the form it treats as the
+     * page's identity, and no query. Relative rather than absolute for the same
+     * reason the breadcrumb JSON-LD is: this app knows no canonical host, and
+     * inventing one would be a second source of truth nothing could keep right.
+     *
+     * A search or a checkout has no business having one of these -- see
+     * indexable() -- but it costs nothing to answer honestly for them too.
+     */
+    public function canonicalPath(): string
+    {
+        return $this->currentPage();
+    }
+
+    /**
+     * Whether a search engine should keep this page.
+     *
+     * Three kinds of page should not be kept. A search result is a snapshot of
+     * prices that will be wrong tomorrow, and there are more possible search
+     * URLs than there are flights. A checkout is a step in a transaction. And
+     * /my is one browser's own bookings -- nothing there is public, and a
+     * session that has ended renders it empty.
+     *
+     * A page answering 404 is the fourth: the router has already said it is not
+     * a page, and this stops a crawler holding on to the URL that led there.
+     */
+    public function indexable(): bool
+    {
+        if (http_response_code() === 404) {
+            return false;
+        }
+
+        $path = $this->currentPage();
+
+        foreach (self::PRIVATE_PREFIXES as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /**
      * The most-searched cities, ready for the footer's link column.
      *

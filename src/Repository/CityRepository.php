@@ -123,6 +123,42 @@ final readonly class CityRepository
     }
 
     /**
+     * Every city we sell flights to, by country.
+     *
+     * The index exists because of a measurement rather than a wish: crawling
+     * the link graph from the homepage reached 171 of the 231 city pages, and
+     * the furthest took six hops. Sixty had no inbound link at all -- they were
+     * reachable only by typing the URL. One page listing all of them puts every
+     * city one hop from the footer.
+     *
+     * Grouped in PHP rather than by the query, because the grouping is only for
+     * display and a second query per country would be 60 of them.
+     *
+     * @return array<string, list<array<string, mixed>>>
+     */
+    public function allByCountry(): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT a.city_code AS code, MIN(a.city) AS name,'
+            . ' MIN(a.country_code) AS country_code, MIN(c.title) AS country,'
+            . ' COUNT(*) AS airports'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' GROUP BY a.city_code'
+            . ' ORDER BY country ASC, name ASC',
+        );
+
+        $byCountry = [];
+
+        foreach ($rows as $row) {
+            $byCountry[(string) $row['country']][] = $row;
+        }
+
+        return $byCountry;
+    }
+
+    /**
      * The cities people look for most.
      *
      * `airports.search_count` is bumped per search by AirportRepository, and it

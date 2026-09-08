@@ -299,6 +299,9 @@ return [
             'title' => 'Cities',
             'source' => 'most-searched',
             'count' => 5,
+            // The only "more" on this footer that leads anywhere, and the page
+            // it leads to is what gives all 231 city pages a route in.
+            'more' => ['text' => 'All cities', 'url' => '/cities'],
         ],
         [
             'title' => 'Airports',

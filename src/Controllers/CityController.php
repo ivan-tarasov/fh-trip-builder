@@ -31,6 +31,27 @@ class CityController extends AbstractController
     /** Origin cities per tab. Each is one row in the fares strip. */
     private const int FARE_ORIGINS = 8;
 
+    /**
+     * Every city, so every city page has a way in.
+     *
+     * Crawling from the homepage before this existed reached 171 of the 231 city
+     * pages and took six hops to do it; sixty had no inbound link at all. This
+     * is one page, one hop from the footer, that names all of them.
+     */
+    public function index(): void
+    {
+        try {
+            echo new TwigRenderer()->renderPage('city/index.html.twig', [
+                'countries' => self::addressableGroups(
+                    new CityRepository($this->connection())->allByCountry(),
+                ),
+            ]);
+        } catch (Throwable $e) {
+            error_log('Cities page failed: ' . $e->getMessage());
+            echo 'Something went wrong while loading cities. Please try again later.';
+        }
+    }
+
     public function show(): void
     {
         $slug = $this->slug();
@@ -163,6 +184,17 @@ class CityController extends AbstractController
             ],
             ['label' => (string) $city['name'], 'url' => null, 'current' => true],
         ];
+    }
+
+    /**
+     * The same as addressable(), a country at a time.
+     *
+     * @param array<string, list<array<string, mixed>>> $groups
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private static function addressableGroups(array $groups): array
+    {
+        return array_map(self::addressable(...), $groups);
     }
 
     /**

@@ -10,6 +10,18 @@
 
     <title>{{ page_title|default('Flights') }} - {{ config('app.name') }}</title>
 
+    {# The one address this page answers at. A trailing slash is optional here
+       and any query string makes another copy, so without this every page
+       competes with three or four of itself. #}
+    <link rel="canonical" href="{{ canonical_path() }}" />
+
+    {# Search results are a snapshot of prices that will be wrong tomorrow,
+       checkout is a step in a transaction, and /my is one browser's own
+       bookings. None of them is a page anybody should arrive at cold. #}
+    {% if not indexable() %}
+        <meta name="robots" content="noindex, follow" />
+    {% endif %}
+
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
 
     {# Plus Jakarta Sans is self-hosted -- the @font-face rules are the first

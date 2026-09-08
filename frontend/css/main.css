@@ -5726,3 +5726,60 @@ body:has(.hero) header#top {
 @media (max-width: 575.98px) {
   .fares__strip { grid-auto-columns: minmax(13rem, 1fr); }
 }
+
+/* ==========================================================================
+   #CITY INDEX
+   ==========================================================================
+   Every city, by country. A directory, so the job is scanning: the eye should
+   be able to run down a column looking for one name. */
+
+.cities { padding: 2rem 0 4rem; }
+
+.cities__title { margin: 0 0 .375rem; font-size: 2rem; font-weight: 700; }
+
+.cities__lead {
+  margin: 0 0 2rem;
+  color: var(--ink-muted);
+  font-size: 1.0625rem;
+}
+
+/* Masonry by column rather than a grid of equal cells: a country with two
+   cities and one with fourteen are both a block, and columns pack them without
+   leaving a hole under the short ones. */
+.cities__countries {
+  column-count: 4;
+  column-gap: 1.5rem;
+}
+
+.cities__country {
+  /* A country must not be split down the middle by a column break. */
+  break-inside: avoid;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  background-color: #fff;
+  border-radius: .75rem;
+}
+
+.cities__country-name {
+  margin: 0 0 .625rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.cities__list { margin: 0; padding: 0; list-style: none; }
+
+.cities__link {
+  display: block;
+  padding: .1875rem 0;
+  color: var(--brand-accent);
+  font-size: .9375rem;
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cities__link:hover { color: var(--brand-accent-700); text-decoration: underline; }
+}
+
+@media (max-width: 1279.98px) { .cities__countries { column-count: 3; } }
+@media (max-width: 991.98px)  { .cities__countries { column-count: 2; } }
+@media (max-width: 575.98px)  { .cities__countries { column-count: 1; } }

@@ -64,6 +64,8 @@ final readonly class TwigRenderer
         // Given the trail the partial is about to draw, so the two agree.
         $this->twig->addFunction(new TwigFunction('breadcrumb_jsonld', Breadcrumbs::structuredData(...)));
         $this->twig->addFunction(new TwigFunction('current_page', $this->layout->currentPage(...)));
+        $this->twig->addFunction(new TwigFunction('canonical_path', $this->layout->canonicalPath(...)));
+        $this->twig->addFunction(new TwigFunction('indexable', $this->layout->indexable(...)));
         $this->twig->addFunction(new TwigFunction('in_section', $this->layout->inSection(...)));
         $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
         $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));
