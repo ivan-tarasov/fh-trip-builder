@@ -5678,6 +5678,101 @@ body:has(.hero) header#top {
 /* One tab and no radios to check: show it. */
 .tabset:not(:has(.tabset__radio)) .tabset__panel { display: var(--tabset-panel, block); }
 
+/* ---------- Schedule board ---------- */
+
+/* A row per flight, and the columns hold their width down the whole list --
+   that alignment is what makes a board scannable, and a flex row per item would
+   let every row size itself and none of them line up. `auto` on the place
+   column is what absorbs the difference between "Ottawa" and "Ho Chi Minh
+   City". */
+.board__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Up to 114 flights in a day at Heathrow. Left to grow, the block would be
+     four screens tall and the two below it unreachable without scrolling past
+     all of it, so the board scrolls inside its own box instead. */
+  max-height: 26rem;
+  overflow-y: auto;
+}
+
+.board__row {
+  display: grid;
+  grid-template-columns: 3.25rem 1.5rem 4rem auto max-content;
+  align-items: center;
+  gap: .625rem;
+  padding: .5rem .25rem;
+  font-size: .9375rem;
+}
+
+.board__row + .board__row { border-top: 1px solid var(--line); }
+
+/* Already gone, and still worth showing -- a board that shortened itself
+   through the day would leave somebody wondering whether the 06:15 exists. */
+.board__row--gone { color: var(--ink-muted); }
+.board__row--gone .board__time { text-decoration: line-through; }
+
+.board__time {
+  color: var(--ink-body);
+  font-weight: 700;
+  /* Tabular, so the digits sit in a column instead of drifting by a pixel a
+     row -- the one place on the site where a hundred numbers are stacked. */
+  font-variant-numeric: tabular-nums;
+}
+
+.board__row--gone .board__time { color: inherit; }
+
+.board__airline { border-radius: .25rem; }
+
+.board__flight {
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+.board__place {
+  color: var(--ink-body);
+  text-decoration: none;
+  /* One line, clipped: a long city name must not be allowed to make its row
+     taller than every other row. */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.board__row--gone .board__place { color: inherit; }
+
+@media (hover: hover) and (pointer: fine) {
+  .board__place:hover { text-decoration: underline; }
+}
+
+/* "to" and "from", which is what tells the two panels apart once the tab is out
+   of view at the bottom of a long list. */
+.board__label {
+  color: var(--ink-muted);
+  font-size: .8125rem;
+}
+
+.board__code {
+  color: var(--ink-muted);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.board__span {
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  /* The flight number and the duration are the two a phone can do without:
+     the time, the airline mark and where it goes are the board. */
+  .board__row { grid-template-columns: 3.25rem 1.5rem auto; }
+  .board__flight,
+  .board__span { display: none; }
+}
+
 /* ---------- Cheap fares ---------- */
 
 .fares { --tabset-panel: grid; }

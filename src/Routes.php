@@ -114,6 +114,9 @@ class Routes
         // what an ISO country code is; the controllers, not the router, are
         // what tell the two apart.
         '#^/country/[A-Za-z0-9-]+$#' => 'Country@show',
+        // "heathrow-lhr". Three characters again, like a city -- an IATA code
+        // is an IATA code whether it names an airport or the city around it.
+        '#^/airport/[A-Za-z0-9-]+$#' => 'Airport@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [
