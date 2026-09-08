@@ -318,13 +318,22 @@ return [
             'more' => ['text' => 'All cities', 'url' => '/cities'],
         ],
         [
+            // Curated like Countries, and spelled the way the pages are: name
+            // then code. These were /airport/YUL until the pages existed and
+            // the route pattern would still take that, which is exactly why it
+            // is worth saying -- the controller answers 404 for a bare code,
+            // and a footer link that 404s does it on every page of the site.
+            //
+            // The labels are not the airport titles and do not need to be:
+            // "London Heathrow" is how somebody looks for it and "Heathrow" is
+            // what the page is called.
             'title' => 'Airports',
             'links' => [
-                'Montréal–Trudeau' => '/airport/YUL',
-                'Toronto Pearson' => '/airport/YYZ',
-                'Vancouver' => '/airport/YVR',
-                'New York JFK' => '/airport/JFK',
-                'London Heathrow' => '/airport/LHR',
+                'Montréal–Trudeau' => '/airport/pierre-elliott-trudeau-international-yul',
+                'Toronto Pearson' => '/airport/lester-b-pearson-international-yyz',
+                'Vancouver' => '/airport/vancouver-international-yvr',
+                'New York JFK' => '/airport/john-f-kennedy-international-jfk',
+                'London Heathrow' => '/airport/heathrow-lhr',
             ],
             'more' => ['text' => 'All airports', 'url' => '/airports/'],
         ],

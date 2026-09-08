@@ -180,9 +180,16 @@ final class PlaceAddressTest extends TestCase
     {
         self::assertSame('City@show', Routes::resolve('/city/nonsense'));
         self::assertSame('Country@show', Routes::resolve('/country/nonsense'));
+        self::assertSame('Airport@show', Routes::resolve('/airport/nonsense'));
 
         self::assertNull(Helper::placeCode('nonsense', 3));
         self::assertNull(Helper::placeCode('nonsense', 2));
+
+        // The one that has already been written into config by hand: an
+        // airport used to be addressed by its bare code, and the pattern still
+        // takes it. Only the controller turns it away.
+        self::assertSame('Airport@show', Routes::resolve('/airport/LHR'));
+        self::assertNull(Helper::placeCode('LHR', 3));
     }
 
     /**
@@ -193,9 +200,11 @@ final class PlaceAddressTest extends TestCase
     {
         self::assertSame('City@index', Routes::resolve('/cities'));
         self::assertSame('Country@index', Routes::resolve('/countries'));
+        self::assertSame('Airports@index', Routes::resolve('/airports'));
 
         // Public, so the sitemap lists them and no robots tag keeps them out.
         self::assertTrue(Routes::isPublic('/cities'));
         self::assertTrue(Routes::isPublic('/countries'));
+        self::assertTrue(Routes::isPublic('/airports'));
     }
 }

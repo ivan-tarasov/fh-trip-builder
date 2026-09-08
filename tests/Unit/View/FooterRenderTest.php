@@ -300,6 +300,36 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
+     * And the airport links, which changed shape when the pages arrived.
+     *
+     * These were /airport/YUL, and the route pattern still accepts that -- it
+     * is deliberately loose about the half in front of the code. What turns a
+     * bare code away is the controller, so a link left in the old spelling
+     * would pass every check except the only one that matters and 404 on every
+     * page of the site.
+     */
+    public function testEveryAirportLinkResolves(): void
+    {
+        $html = $this->render('/');
+
+        preg_match_all('#href="(/airport/[^"]+)"#', $html, $links);
+
+        self::assertNotEmpty($links[1], 'the footer should link to airports');
+
+        foreach (array_unique($links[1]) as $href) {
+            self::assertNotNull(
+                Routes::resolve($href),
+                $href . ' is linked in the footer but is not a route',
+            );
+
+            self::assertNotNull(
+                Helper::placeCode(substr($href, strlen('/airport/')), 3),
+                $href . ' is not a canonical airport address',
+            );
+        }
+    }
+
+    /**
      * A new tab must not be handed a reference back to this one.
      */
     public function testExternalLinksCannotReachBack(): void

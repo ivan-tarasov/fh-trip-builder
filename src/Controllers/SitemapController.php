@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\Helper;
+use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Routes;
@@ -18,9 +19,9 @@ class SitemapController extends AbstractController
     /**
      * Every page worth finding, for a crawler that would rather be told.
      *
-     * There are 330 of them and 324 are city or country pages, which is why
-     * this is generated rather than a file on disk: the list is rows in a
-     * table, and a checked-in copy would be wrong the first time a route is
+     * There are 584 of them and 578 are a city, a country or an airport, which
+     * is why this is generated rather than a file on disk: the list is rows in
+     * a table, and a checked-in copy would be wrong the first time a route is
      * added.
      *
      * The pages are gathered by inclusion, not exclusion -- ENABLED_ROUTES
@@ -38,7 +39,12 @@ class SitemapController extends AbstractController
         header('Content-Type: application/xml; charset=utf-8');
 
         try {
-            $urls = [...$this->staticPaths(), ...$this->cityPaths(), ...$this->countryPaths()];
+            $urls = [
+                ...$this->staticPaths(),
+                ...$this->cityPaths(),
+                ...$this->countryPaths(),
+                ...$this->airportPaths(),
+            ];
         } catch (Throwable $e) {
             // The static pages are worth serving even if the database is not
             // answering -- an empty sitemap would tell a crawler the site has
@@ -133,6 +139,20 @@ class SitemapController extends AbstractController
                 (string) $country['code'],
             ),
             new CountryRepository($this->connection())->sellable(),
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function airportPaths(): array
+    {
+        return array_map(
+            static fn(array $airport): string => '/airport/' . Helper::placeSlug(
+                (string) $airport['title'],
+                (string) $airport['code'],
+            ),
+            new AirportRepository($this->connection())->enabled(true),
         );
     }
 
