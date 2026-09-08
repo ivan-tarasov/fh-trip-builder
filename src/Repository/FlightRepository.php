@@ -966,17 +966,6 @@ final readonly class FlightRepository
     }
 
     /**
-     * The cheapest total (base + tax) for one direction, or null when it has no
-     * itineraries.
-     *
-     * Finding it by ranking every candidate costs as much as the search itself.
-     * Instead the direct and one-stop branches — which are cheap to scan — give
-     * a bound, and each two-stop branch is then asked only for itineraries that
-     * beat it. Every leg of a cheaper itinerary must itself cost less than the
-     * bound, and so must each running total, which prunes the join early. The
-     * answer is exactly the same; it is only reached with far less work.
-     */
-    /**
      * The cheapest direct fare into one city, from each of several origins.
      *
      * One query, not one per origin, and deliberately not the obvious query.
@@ -1031,6 +1020,67 @@ final readonly class FlightRepository
         );
     }
 
+    /**
+     * The cheapest direct fare into each city of a country, from anywhere on a
+     * shortlist of origins.
+     *
+     * The mirror image of cheapestDirectPerOrigin: a city page asks "from
+     * where", a country page asks "to which of my cities", so the partition
+     * moves from the departure city to the arrival one and the row that wins is
+     * the cheapest way into that city rather than out of that origin.
+     *
+     * The origins still have to be named, and for the same reason -- the index
+     * leads with `departure_airport`, so "everything arriving in Canada" seeks
+     * nothing. Naming 24 busy origin airports and letting the arrival side
+     * filter runs Canada's seven cities in 10ms.
+     *
+     * @param list<string> $fromAirports
+     * @param list<string> $toAirports
+     * @return list<array<string, mixed>>
+     */
+    public function cheapestPerDestinationCity(array $fromAirports, array $toAirports, CabinClass $cabin): array
+    {
+        if ($fromAirports === [] || $toAirports === []) {
+            return [];
+        }
+
+        $from = implode(',', array_fill(0, count($fromAirports), '?'));
+        $to = implode(',', array_fill(0, count($toAirports), '?'));
+
+        return $this->connection->fetchAll(
+            'SELECT x.* FROM ('
+            . ' SELECT d.city_code AS to_city_code, d.city AS to_city,'
+            . '  o.city_code AS from_city_code, o.city AS from_city,'
+            . '  f.airline, f.departure_airport, f.arrival_airport,'
+            . '  f.departure_time, f.arrival_time, f.duration,'
+            . '  f.price_base + f.price_tax AS total,'
+            . '  ROW_NUMBER() OVER ('
+            . '   PARTITION BY d.city_code'
+            . '   ORDER BY f.price_base + f.price_tax ASC, f.departure_time ASC'
+            . '  ) AS rn'
+            . ' FROM ' . Table::Flights->value . ' f'
+            . ' JOIN ' . Table::Airports->value . ' o ON o.code = f.departure_airport'
+            . ' JOIN ' . Table::Airports->value . ' d ON d.code = f.arrival_airport'
+            . ' WHERE f.departure_airport IN (' . $from . ')'
+            . '  AND f.arrival_airport IN (' . $to . ')'
+            . '  AND f.departure_time >= NOW()'
+            . '  AND (f.cabins & ?)'
+            . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
+            [...$fromAirports, ...$toAirports, $cabin->bit()],
+        );
+    }
+
+    /**
+     * The cheapest total (base + tax) for one direction, or null when it has no
+     * itineraries.
+     *
+     * Finding it by ranking every candidate costs as much as the search itself.
+     * Instead the direct and one-stop branches — which are cheap to scan — give
+     * a bound, and each two-stop branch is then asked only for itineraries that
+     * beat it. Every leg of a cheaper itinerary must itself cost less than the
+     * bound, and so must each running total, which prunes the join early. The
+     * answer is exactly the same; it is only reached with far less work.
+     */
     public function cheapestTotal(string $from, string $to, string $date, CabinClass $cabin, int $span = 1): ?float
     {
         $fromCodes = $this->resolveAirportCodes($from);

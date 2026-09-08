@@ -19,8 +19,11 @@ class Routes
         '/airports' => 'Airports@index',
         '/about' => 'About@index',
         // Every city we sell to, in one place. Sixty of the 231 city pages had
-        // no inbound link before this existed -- see CityRepository::allByCountry().
+        // no inbound link before this existed -- see CityRepository::all().
         '/cities' => 'City@index',
+        // And every country. Same page, different rows: both are a few hundred
+        // names somebody arrives already knowing.
+        '/countries' => 'Country@index',
 
         // Not a page. It is here rather than as a file on disk because its
         // contents are the 231 city pages, which are rows in a table.
@@ -106,6 +109,11 @@ class Routes
         // -- a stale or mistyped one still finds the city and is redirected to
         // the spelling this app would have written.
         '#^/city/[A-Za-z0-9-]+$#' => 'City@show',
+        // "canada-ca", spelled the same way and loose for the same reason. The
+        // code on the end is two characters rather than three, because that is
+        // what an ISO country code is; the controllers, not the router, are
+        // what tell the two apart.
+        '#^/country/[A-Za-z0-9-]+$#' => 'Country@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

@@ -151,6 +151,28 @@ final readonly class CityRepository
     }
 
     /**
+     * The cities of one country, busiest first.
+     *
+     * Busiest and not alphabetical, because this answers "where in Canada" and
+     * the honest answer leads with Toronto. The airport count comes along so a
+     * city with more than one can say so without a second query per row.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function inCountry(string $countryCode): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT a.city_code AS code, MIN(a.city) AS name,'
+            . ' COUNT(*) AS airports, SUM(a.traffic_weight) AS weight'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' WHERE' . self::ONLY_SELLABLE . ' AND a.country_code = ?'
+            . ' GROUP BY a.city_code'
+            . ' ORDER BY weight DESC, name ASC',
+            [strtoupper($countryCode)],
+        );
+    }
+
+    /**
      * The cities people look for most.
      *
      * `airports.search_count` is bumped per search by AirportRepository, and it
@@ -231,6 +253,20 @@ final readonly class CityRepository
             ),
             'code',
         );
+    }
+
+    /**
+     * The same shortlist, for a country page rather than a city one.
+     *
+     * A country page has no city to leave out. Every city in the country is a
+     * destination, and one of them turning up as an origin is not a duplicate
+     * -- it is the domestic fare the page is there to show.
+     *
+     * @return list<string>
+     */
+    public function busiestOriginAirportsByCountry(string $countryCode, bool $domestic, int $cityLimit): array
+    {
+        return $this->busiestOriginAirports('', $countryCode, $domestic, $cityLimit);
     }
 
     /**

@@ -40,5 +40,8 @@ return [
         // in, not this list, so CityController hands over its own trail. This
         // entry is for the index only.
         '/cities' => 'Cities',
+        // A country's parent is this list, and a city's is its country -- see
+        // above. Neither trail mirrors its URL, and neither needs to.
+        '/countries' => 'Countries',
     ],
 ];
