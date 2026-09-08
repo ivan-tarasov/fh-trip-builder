@@ -21,9 +21,20 @@
     ]
 } only %}
 
-{# Close in, because there is one point to frame and the useful thing is which
-   part of the city it is on. #}
-<img class="place__map"
-     src="https://static-maps.yandex.ru/1.x/?l=map&lang=en-US&size=650,300&z=10&pt={{ place.longitude }},{{ place.latitude }},pm2blm"
-     width="650" height="300" loading="lazy"
-     alt="Map showing where {{ place.title }} sits in {{ place.city }}">
+{# Close in with an explicit zoom, because there is one point here and a frame
+   fitted to one point has no size -- and what this map is for is showing which
+   part of the city the airport sits in.
+
+   `{% if %}`, because a map needs a token and an app without one should show a
+   page with no picture rather than a page with a broken one. See
+   View\StaticMap. #}
+{% set map = static_map(
+    markers = [{ 'lat': place.latitude, 'lon': place.longitude }],
+    zoom = 10
+) %}
+
+{% if map %}
+    <img class="place__map" src="{{ map }}"
+         width="650" height="300" loading="lazy"
+         alt="Map showing where {{ place.title }} sits in {{ place.city }}">
+{% endif %}
