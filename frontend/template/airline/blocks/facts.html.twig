@@ -1,10 +1,14 @@
-{# Who the airline is, then what its network measures.
+{# Who the airline is, and how to reach it, in one masthead.
 
    The mark used to sit on a line of its own above four tiles, two of which
    were not figures at all: the code, which is in the page's title and its
    address, and the country, which is a link rather than a number. A tile is
-   for something counted, so the two that identify the airline now sit with the
-   mark, where a masthead says in one line what the page is about.
+   for something counted, so everything that identifies the airline sits with
+   the mark instead -- its name, those two, and the two ways of contacting it,
+   which had been hanging below the tiles as a row belonging to nothing.
+
+   Three rows of text give the mark something to be as tall as, which is why it
+   is bigger here than the 3.5rem it was when it stood alone.
 
    The country is the one identity fact that goes somewhere else, so it stays a
    link. #}
@@ -15,7 +19,7 @@
        arrives. #}
     <img class="masthead__mark"
          src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ place.code ~ '.png') }}"
-         width="56" height="56" loading="lazy" alt="">
+         width="80" height="80" loading="lazy" alt="">
 
     <div class="masthead__identity">
         <p class="masthead__name">{{ place.name }}</p>
@@ -27,12 +31,45 @@
                    case to survive, and the footer's columns give the same
                    reason for the same choice. #}
                 {% if place.country_url ?? null %}
-                    <a class="masthead__country" href="{{ place.country_url }}">{{ place.country }}</a>
+                    <a class="masthead__link" href="{{ place.country_url }}">{{ place.country }}</a>
                 {% else %}
                     {{ place.country }}
                 {% endif %}
             {% endif %}
         </p>
+
+        {# Both are seed data and both can be missing -- 11 of the 105 have no
+           website and 6 no phone number -- so each appears only where there is
+           one, and the row itself only where there is either.
+
+           The number is text and not a tel: link, which is the one place this
+           row is not a link. Counted: 1 of the 105 numbers carries a country
+           code. The rest are written the way each airline writes them at home
+           -- "800-221-1212" is a North American toll-free that dials nothing
+           from anywhere else, "213 21 98 63 6" is Algeria's code without the
+           plus that would make it one, and one row ends in a stray dash. A
+           tel: built from those dials a wrong number more often than the right
+           one, and a wrong number is worse than a number you copy yourself. #}
+        {% if place.url is not empty or place.phone is not empty %}
+            <p class="masthead__contact">
+                {% if place.url is not empty %}
+                    {# The address itself, as stored. 88 of the 105 are https
+                       and 6 are plain http; those 6 print as they are, because
+                       showing https on a link that goes to http would be the
+                       page claiming something it has not checked. #}
+                    <a class="masthead__link" href="{{ place.url }}"
+                       target="_blank" rel="noopener">{{ place.url }}<i
+                        class="fas fa-arrow-up-right-from-square masthead__out"
+                        aria-hidden="true"></i></a>
+                {% endif %}
+                {% if place.url is not empty and place.phone is not empty %}
+                    <span class="masthead__sep" aria-hidden="true">·</span>
+                {% endif %}
+                {% if place.phone is not empty %}
+                    {{ place.phone }}
+                {% endif %}
+            </p>
+        {% endif %}
     </div>
 </div>
 
@@ -67,33 +104,3 @@
         }
     ]
 } only %}
-
-{# Both are seed data and both can be missing -- 11 of the 105 have no website
-   and 6 no phone number -- so each appears only where there is one.
-
-   The number is text and not a tel: link on purpose. These are written every
-   way the airlines write them: "800-433-7300" is a North American toll-free
-   with no country code, "+91 (0)124 435 2500" carries one, and one row ends in
-   a stray dash. A tel: built from that dials the wrong number as often as the
-   right one, and a wrong number is worse than a number you copy yourself. #}
-{% if place.url is not empty or place.phone is not empty %}
-    <ul class="chips place__contacts">
-        {% if place.url is not empty %}
-            <li>
-                <a class="chip chip--link" href="{{ place.url }}" target="_blank" rel="noopener">
-                    <i class="fas fa-globe chip__icon" aria-hidden="true"></i>
-                    {{ place.name }} website
-                    <i class="fas fa-arrow-up-right-from-square chip__note" aria-hidden="true"></i>
-                </a>
-            </li>
-        {% endif %}
-        {% if place.phone is not empty %}
-            <li>
-                <span class="chip">
-                    <i class="fas fa-phone chip__icon" aria-hidden="true"></i>
-                    {{ place.phone }}
-                </span>
-            </li>
-        {% endif %}
-    </ul>
-{% endif %}

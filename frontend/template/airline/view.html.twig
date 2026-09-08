@@ -13,7 +13,12 @@
 {# Five blocks. A fare table is still not one of them: all five brands are on
    all 105 airlines, so the table would be the same table every time. The fleet
    was in that same category until it was measured a second time -- see
-   AirlineController. #}
+   AirlineController.
+
+   `title_hidden` on the first: the masthead inside it opens with the mark and
+   the name, so a heading above it saying the name again is the same words
+   twice. Hidden rather than dropped -- it still names the section, and the
+   rail's anchor still has something to point at. #}
 {% set blocks = [
     {
         'id': 'general',
@@ -22,7 +27,8 @@
         'icon': 'fa-circle-info',
         'tone': 'green',
         'template': 'airline/blocks/facts.html.twig',
-        'when': true
+        'when': true,
+        'title_hidden': true
     },
     {
         'id': 'fares',

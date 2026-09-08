@@ -42,7 +42,13 @@
             {% for block in blocks %}
                 {% if block.when %}
                     <section class="place__block" id="{{ block.id }}" aria-labelledby="{{ block.id }}-title">
-                        <h2 class="place__block-title" id="{{ block.id }}-title">{{ block.title }}</h2>
+                        {# Hidden, never dropped. A block whose own content
+                           opens with the name -- the airline masthead -- does
+                           not want to say it twice, but the section is named by
+                           this heading and the rail's anchor points at it, so
+                           taking it out would cost both. #}
+                        <h2 class="place__block-title{{ block.title_hidden ?? false ? ' visually-hidden' : '' }}"
+                            id="{{ block.id }}-title">{{ block.title }}</h2>
                         {% include block.template with data only %}
                     </section>
                 {% endif %}
