@@ -6,12 +6,17 @@
    rounding error, it is the wrong answer, so a country with more than one says
    so and a country with one says it plainly.
 
+   Both country codes, because both get used and neither is guessable from the
+   other: the two-letter one is what the page's own address is spelled with and
+   what a form asks for, the three-letter one is what a passport and a boarding
+   pass carry. Four tiles is what the grid holds, so they share one.
+
    No currency and no visa rule, which the reference shows and this database
    does not hold. Both would be seed data rather than a query, and inventing
    either on a page somebody books a flight from is worse than leaving it out. #}
 {% include 'partials/facts-grid.html.twig' with {
     'facts': [
-        { 'icon': 'fa-passport', 'value': place.code_iso_3, 'label': 'Country code' },
+        { 'icon': 'fa-passport', 'value': place.code ~ ' · ' ~ place.code_iso_3, 'label': 'Country code' },
         { 'icon': 'fa-city', 'value': place.cities, 'label': place.cities > 1 ? 'Cities' : 'City' },
         { 'icon': 'fa-plane-departure', 'value': place.airports, 'label': place.airports > 1 ? 'Airports' : 'Airport' },
         {
