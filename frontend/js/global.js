@@ -2716,7 +2716,17 @@
         // for somebody whose browser would leave it inert.
         search.hidden = false;
 
-        let letter = null;
+        // Announces that visibility is this script's job now. Until this class
+        // lands, CSS is showing the first group and letting :target swap it --
+        // see the #DIRECTORY section.
+        root.classList.add('is-scripted');
+
+        // The first letter, or whichever one the address names. A shared link
+        // to #letter-p should open on P, not on A.
+        const named = decodeURIComponent(location.hash.replace(/^#letter-/, '')).toUpperCase();
+        const has = (value) => groups.some((group) => group.dataset.letter === value);
+
+        let letter = has(named) ? named : (groups[0]?.dataset.letter ?? null);
 
         const apply = () => {
             const term = field.value.trim().toLowerCase();
@@ -2757,21 +2767,29 @@
         };
 
         field.addEventListener('input', () => {
-            // Typing is a fresh question; a letter chosen a moment ago would
-            // otherwise hide the thing being searched for.
-            letter = null;
+            // Typing is a fresh question, and it is asked of the whole list:
+            // a letter chosen a moment ago would otherwise hide the very thing
+            // being searched for. Emptying the field puts the alphabet back in
+            // charge rather than leaving 231 rows on screen.
+            letter = field.value.trim() === '' ? (groups[0]?.dataset.letter ?? null) : null;
             apply();
         });
 
         letters.forEach((link) => {
             link.addEventListener('click', function (event) {
                 event.preventDefault();
-                // Clicking the current letter again clears it, which is the only
-                // way back to the whole list without reaching for the field.
-                letter = letter === this.dataset.letter ? null : this.dataset.letter;
+                letter = this.dataset.letter;
+                // Choosing a letter answers a different question from the one
+                // in the field, so the field stops asking.
+                field.value = '';
                 apply();
             });
         });
+
+        // Once at the start, or the page would sit on the whole alphabet until
+        // somebody touched something. The CSS default is one letter and this is
+        // the script agreeing with it rather than undoing it.
+        apply();
     }());
 
 })(jQuery);

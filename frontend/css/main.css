@@ -5833,7 +5833,23 @@ body:has(.hero) header#top {
   scroll-margin-top: 1.5rem;
 }
 
-.directory__group[hidden] { display: none; }
+/* One letter at a time, starting with the first.
+
+   With no script running this is done entirely in CSS: the first group shows,
+   and the alphabet's anchors are real anchors, so following one makes that
+   group the :target and the default steps aside. That is why the groups are
+   not rendered hidden -- a server-side default of "only A" would leave the
+   other twenty-five letters pointing at sections nothing could reveal.
+
+   Once the script is running it owns which group is visible and says so with
+   the hidden attribute; these two rules hand it the decision. */
+.directory__group { display: none; }
+.directory__group:first-of-type { display: block; }
+.directory__groups:has(:target) .directory__group:first-of-type { display: none; }
+.directory__group:target { display: block; }
+
+.directory.is-scripted .directory__group { display: block; }
+.directory.is-scripted .directory__group[hidden] { display: none; }
 
 .directory__group-title {
   margin: 0 0 .75rem;
