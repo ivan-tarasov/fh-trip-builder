@@ -2,6 +2,11 @@
 
 {% block title %}Flights to {{ city.name }}{% endblock %}
 
+{# Named, counted and specific, because 231 of these pages exist and a shared
+   sentence would make them 231 pages claiming to be about the same thing.
+   Reads off the same figures the page shows. #}
+{% block description %}Cheap flights to {{ city.name }}, {{ city.country }} — the cheapest direct fares from {{ city.airports > 1 ? city.airports ~ ' airports' : 'its airport' }}, and the cities nearby to fly from instead.{% endblock %}
+
 {# A city, as a stack of blocks with a rail beside them.
 
    The rail is declared here and nowhere else: each entry names the block it

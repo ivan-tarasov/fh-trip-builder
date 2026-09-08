@@ -5,7 +5,17 @@
    variable keeps its text out of the document body and means a page that
    declares no title still renders. #}
 {% set page_title %}{% block title %}{% endblock %}{% endset %}
-{% include 'partials/header.html.twig' with { 'page_title': page_title|trim } %}
+
+{# The same trick for the description, and for the same reason. Every page used
+   to share one -- "Trip Builder – FlightHub PHP Coding Assessment" -- which on
+   231 city pages is 231 pages claiming to be about the same thing. A page that
+   declares none falls back to that, so nothing is left without one. #}
+{% set page_description %}{% block description %}{% endblock %}{% endset %}
+
+{% include 'partials/header.html.twig' with {
+    'page_title': page_title|trim,
+    'page_description': page_description|trim
+} %}
 {% include 'partials/breadcrumbs.html.twig' %}
 
 {# Everything between the header and the footer, in one box.

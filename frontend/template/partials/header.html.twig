@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="{{ config('app.name') }} – {{ config('meta.description') }}" />
+    {# The page's own, or the site's if it has none.
+
+       Not truncated here. A search engine cuts a description around 160
+       characters, and cutting it in code would mean guessing where -- so each
+       one is written to fit instead. The longest of them is 143, on the city
+       with the longest name we sell to; if one ever needs more room than that,
+       the fix is shorter words rather than an ellipsis. #}
+    <meta name="description" content="{{ page_description|default('')|trim ?: config('app.name') ~ ' – ' ~ config('meta.description') }}" />
     <meta name="keywords" content="{{ config('app.name') }}, {{ config('meta.keywords')|join(', ') }}" />
     <meta name="author" content="{{ config('meta.author.name') }} <{{ config('meta.author.email') }}>"/>
     <meta name="csrf-token" content="{{ csrf_token() }}" />
