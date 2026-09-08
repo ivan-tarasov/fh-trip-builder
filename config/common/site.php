@@ -292,15 +292,29 @@ return [
             ],
         ],
         [
-            // The one column whose pages exist, and so the one that is not a
-            // list somebody has to remember to edit. `source` sends it to
+            // Curated rather than counted, unlike Cities beside it: nothing in
+            // this app records how often a country is searched for, only how
+            // often its cities are, and summing those would rank a country by
+            // how many of them we happen to sell.
+            'title' => 'Countries',
+            'links' => [
+                'Canada' => '/country/canada-ca',
+                'United States' => '/country/united-states-us',
+                'United Kingdom' => '/country/united-kingdom-gb',
+                'France' => '/country/france-fr',
+                'Japan' => '/country/japan-jp',
+            ],
+            'more' => ['text' => 'All countries', 'url' => '/countries'],
+        ],
+        [
+            // The one column whose pages exist and are not a list somebody has
+            // to remember to edit. `source` sends it to
             // LayoutData::mostSearchedCities(), which reads the search counts
             // the app has been keeping since its first search.
             'title' => 'Cities',
             'source' => 'most-searched',
             'count' => 5,
-            // The page it leads to is what gives all 231 city pages a route
-            // in. Countries below have the same pair.
+            // The page it leads to is what gives all 231 city pages a route in.
             'more' => ['text' => 'All cities', 'url' => '/cities'],
         ],
         [
@@ -313,21 +327,6 @@ return [
                 'London Heathrow' => '/airport/LHR',
             ],
             'more' => ['text' => 'All airports', 'url' => '/airports/'],
-        ],
-        [
-            // Curated rather than counted, unlike Cities above: nothing in this
-            // app records how often a country is searched for, only how often
-            // its cities are, and summing those would rank a country by how
-            // many of them we happen to sell.
-            'title' => 'Countries',
-            'links' => [
-                'Canada' => '/country/canada-ca',
-                'United States' => '/country/united-states-us',
-                'United Kingdom' => '/country/united-kingdom-gb',
-                'France' => '/country/france-fr',
-                'Japan' => '/country/japan-jp',
-            ],
-            'more' => ['text' => 'All countries', 'url' => '/countries'],
         ],
         [
             'title' => 'Help & tips',
