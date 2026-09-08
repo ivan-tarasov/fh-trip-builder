@@ -65,6 +65,76 @@ final class PlaceAddressTest extends TestCase
     }
 
     /**
+     * Accents are folded, not dropped.
+     *
+     * The reason this exists: city and country names in this seed are all
+     * ASCII, so slug() dropped accented letters for a long time and nothing
+     * showed it. Airport titles are not all ASCII, and three of them addressed
+     * themselves as nonsense -- "canc-n-international-cun" -- because
+     * `[^a-z0-9]` reads an accented letter as punctuation.
+     *
+     * @return array<string, array{string, string}>
+     */
+    public static function accentedNames(): array
+    {
+        return [
+            'an acute' => ['Cancún International', 'cancun-international'],
+            'an umlaut' => ['Düsseldorf International Airport', 'dusseldorf-international-airport'],
+            'several, and hyphens too' => [
+                'Dakar-Yoff-Léopold Sédar Senghor International',
+                'dakar-yoff-leopold-sedar-senghor-international',
+            ],
+            'a slashed o' => ['Ålesund Ørsta', 'alesund-orsta'],
+            'a cedilla and a tilde' => ['São Paulo Guarulhos', 'sao-paulo-guarulhos'],
+            // Not accents, and already correct before the fold existed: the
+            // apostrophe and the en-dash are punctuation and become a hyphen.
+            'a curly apostrophe' => ['Chicago O’hare International', 'chicago-o-hare-international'],
+            'an en-dash' => ['Fort Lauderdale–Hollywood International', 'fort-lauderdale-hollywood-international'],
+        ];
+    }
+
+    #[DataProvider('accentedNames')]
+    public function testAnAccentFoldsToItsPlainLetter(string $name, string $slug): void
+    {
+        self::assertSame($slug, Helper::slug($name));
+    }
+
+    /**
+     * A ligature stands for two letters, so it folds to two.
+     *
+     * None of these is in the seed. They are covered because the fold above is
+     * positional and cannot expand, which is exactly the sort of thing that
+     * looks fine until one arrives -- Æ folded to "A" would lose half of it.
+     */
+    public function testALigatureFoldsToBothItsLetters(): void
+    {
+        self::assertSame('aeroport', Helper::slug('Æroport'));
+        self::assertSame('oeuvre', Helper::slug('œuvre'));
+        self::assertSame('strasse', Helper::slug('Straße'));
+        self::assertSame('thing', Helper::slug('Þing'));
+    }
+
+    /**
+     * The fold must not have moved an address that already exists.
+     *
+     * 231 city pages and 93 country pages are already linked, sitemapped and
+     * (in five cases) written into the footer by hand. All of those names are
+     * ASCII, so the fold has nothing to do to them -- and this is the assertion
+     * that says so, because a fold that quietly respelled one would 301 every
+     * old link to a page that no longer answers at it.
+     */
+    public function testTheFoldLeavesAnAsciiNameAlone(): void
+    {
+        foreach (['Montreal', 'Tel Aviv-Yafo', 'Coolangatta (Gold Coast)', 'United States', 'Canada'] as $name) {
+            self::assertSame(
+                trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($name)), '-'),
+                Helper::slug($name),
+                $name . ' should be spelled exactly as it was before the fold',
+            );
+        }
+    }
+
+    /**
      * A slug is read as written, so a canonical redirect has something to
      * redirect. Lower-casing it in the lookup and returning the code upper-case
      * is what lets /city/LONDON-LON find London and still be sent to its one

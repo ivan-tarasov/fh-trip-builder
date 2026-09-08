@@ -381,24 +381,85 @@ class Helper
     }
 
     /**
+     * Accented Latin letters and the plain ones they stand in for.
+     *
+     * Latin-1 Supplement and Latin Extended-A, which is what this data holds
+     * and what a European or Latin American place name is written with. Not
+     * ext-intl: the CI image installs mysqli, pdo_mysql, curl and mbstring and
+     * nothing else, so Transliterator is not there to be called. Not iconv's
+     * //TRANSLIT either -- on macOS it renders Montréal as "Montr'eal", which
+     * is worse than doing nothing.
+     *
+     * Written as two strings rather than a map because that is how it stays
+     * legible and how strtr() takes it fastest: each character in the first
+     * becomes the one at the same position in the second.
+     */
+    private const string ACCENTED =
+        'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçÐðŠšŽžŸ';
+    private const string PLAIN =
+        'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcDdSsZzY';
+
+    /**
+     * The few that are two letters rather than an accent on one.
+     *
+     * Kept apart because the fold above is positional and cannot expand: a
+     * ligature stands for a pair, and Æ folded to "A" loses half of it. None of
+     * these is in this seed; they are here because this map is the sort of
+     * thing that gets copied to the next project.
+     */
+    private const array LIGATURES = [
+        'Æ' => 'AE', 'æ' => 'ae',
+        'Œ' => 'OE', 'œ' => 'oe',
+        'Þ' => 'Th', 'þ' => 'th',
+        'ß' => 'ss',
+    ];
+
+    /**
      * A name as it appears in a URL: lower case, words joined by hyphens.
      *
-     * No transliteration, and no ext-intl. Every one of the 233 major city
-     * names in this database is already ASCII -- checked, not assumed -- so
-     * there is nothing to fold, and reaching for Transliterator would add an
-     * extension the CI image does not install. (iconv's //TRANSLIT is not the
-     * answer either: on macOS it renders Montréal as "Montr'eal".)
+     * Accents are folded first, and they have to be. Every one of the 231 major
+     * city names in this seed is ASCII, which is why this did not fold anything
+     * for a long time -- but airport titles are not, and eight of them are not.
+     * Without the fold, `[^a-z0-9]` reads an accented letter as punctuation and
+     * leaves a hyphen where it stood: Cancún International addressed itself as
+     * "canc-n-international-cun" and Dakar's as
+     * "dakar-yoff-l-opold-s-dar-senghor-international-dkr".
      *
-     * Should a name with an accent ever arrive, this leaves a hyphen where the
-     * letter was. That is untidy and it is not broken: a city URL is resolved
-     * by the IATA code on the end of it, and the canonical redirect rewrites
-     * the name half to whatever this returns.
+     * Anything the fold does not know is still dropped, and that is still not
+     * broken -- a place is resolved by the code on the end of its slug, and the
+     * canonical redirect rewrites the name half to whatever this returns. It is
+     * only ugly, which for a URL somebody reads is reason enough to fold.
      */
     public static function slug(string $text): string
     {
-        $slug = preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($text));
+        $folded = strtr($text, self::foldMap());
+        $slug = preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($folded));
 
         return trim($slug ?? '', '-');
+    }
+
+    /**
+     * The fold as strtr() wants it, built once per process.
+     *
+     * Multi-byte, so the two constants cannot be walked a byte at a time --
+     * ß is two bytes and every accented letter here is at least two. strtr()
+     * with an array handles characters of any length; with two strings it would
+     * pair bytes and produce mojibake.
+     *
+     * @return array<string, string>
+     */
+    private static function foldMap(): array
+    {
+        static $map = null;
+
+        if ($map === null) {
+            $map = array_combine(
+                mb_str_split(self::ACCENTED),
+                mb_str_split(self::PLAIN),
+            ) + self::LIGATURES;
+        }
+
+        return $map;
     }
 
     /**
