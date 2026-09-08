@@ -5602,12 +5602,21 @@ body:has(.hero) header#top {
   .place__block { padding: 1.25rem; }
 }
 
-/* ---------- Cheap fares ---------- */
+/* ---------- Tabs, without JavaScript ---------- */
 
-/* The radios do the switching. They are the control -- kept off screen rather
-   than display:none, which would take them out of the tab order and leave the
-   labels operable by mouse only. */
-.fares__radio {
+/* A radio group and sibling selectors do the whole job. It is keyboard-operable
+   because radios are, it is announced because radios are, and it works with
+   scripting off -- which matters on pages whose entire purpose is to be arrived
+   at cold from a search engine.
+
+   Named for the mechanism rather than the fares strip it was written for,
+   because a schedule board wants exactly this and copying forty lines of it
+   would be the wrong way to get one. */
+
+/* The radios are the control -- kept off screen rather than display:none, which
+   would take them out of the tab order and leave the labels operable by mouse
+   only. */
+.tabset__radio {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -5615,13 +5624,13 @@ body:has(.hero) header#top {
   clip-path: inset(50%);
 }
 
-.fares__tabs {
+.tabset__tabs {
   display: flex;
   gap: .25rem;
   margin-bottom: 1.25rem;
 }
 
-.fares__tab {
+.tabset__tab {
   padding: .5rem 1rem;
   color: var(--ink-secondary);
   font-size: .9375rem;
@@ -5631,32 +5640,47 @@ body:has(.hero) header#top {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.fares__radio:checked + .fares__tab {
+.tabset__radio:checked + .tabset__tab {
   color: var(--ink-body);
   background-color: var(--surface-sunken);
 }
 
 /* Focus lands on the radio, which cannot be seen, so the label wears the ring
    on its behalf -- otherwise tabbing to this control shows nothing at all. */
-.fares__radio:focus-visible + .fares__tab {
+.tabset__radio:focus-visible + .tabset__tab {
   outline: 2px solid var(--brand-accent);
   outline-offset: 2px;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .fares__tab:hover { background-color: var(--surface-sunken); }
+  .tabset__tab:hover { background-color: var(--surface-sunken); }
 }
 
-/* Every strip is hidden, then the one whose radio is checked is shown. The
-   selector walks from the radio across its label, the rest of the tabs, and
-   into the panel list -- which is why the panels are siblings of .fares__tabs
-   and not nested inside it. */
-.fares__strip { display: none; }
-.fares:has(#fares-home:checked) #fares-panel-home,
-.fares:has(#fares-away:checked) #fares-panel-away { display: grid; }
+/* Every panel is hidden, then the one whose radio is checked is shown.
+
+   By position, not by id. This was two rules naming #fares-home and
+   #fares-away, which meant a second tabbed block anywhere on the site needed
+   its own pair -- the ids of one page's tabs written into the stylesheet. The
+   radios are the only inputs inside .tabset__tabs and the panels the only lists
+   beside it, so :nth-of-type counts them both without knowing what either is
+   called. A third tab is one more line.
+
+   What a shown panel becomes is the caller's: a fares strip is a grid and a
+   board is a plain block, so the value comes through a custom property instead
+   of being decided here. */
+.tabset__panel { display: none; }
+
+.tabset:has(.tabset__radio:nth-of-type(1):checked) .tabset__panel:nth-of-type(1),
+.tabset:has(.tabset__radio:nth-of-type(2):checked) .tabset__panel:nth-of-type(2) {
+  display: var(--tabset-panel, block);
+}
 
 /* One tab and no radios to check: show it. */
-.fares:not(:has(.fares__radio)) .fares__strip { display: grid; }
+.tabset:not(:has(.tabset__radio)) .tabset__panel { display: var(--tabset-panel, block); }
+
+/* ---------- Cheap fares ---------- */
+
+.fares { --tabset-panel: grid; }
 
 .fares__strip {
   grid-auto-flow: column;
