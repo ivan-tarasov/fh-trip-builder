@@ -230,10 +230,7 @@ class AirportController extends AbstractController
     {
         return array_map(
             static fn(array $airport): array => $airport + [
-                'url' => '/airport/' . Helper::placeSlug(
-                    (string) $airport['title'],
-                    (string) $airport['code'],
-                ),
+                'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
             ],
             $airports,
         );

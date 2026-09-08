@@ -90,7 +90,7 @@ class CountryController extends AbstractController
                 'breadcrumbs' => self::trailFor($country),
                 'country' => $country,
                 'country_cities' => self::cityAddresses($cities->inCountry($code)),
-                'country_airports' => $airports,
+                'country_airports' => self::airportAddresses($airports),
                 'fares' => $this->fares($cities, $country, array_column($airports, 'code')),
             ]);
         } catch (Throwable $e) {
@@ -205,6 +205,25 @@ class CountryController extends AbstractController
                 'url' => '/city/' . Helper::placeSlug((string) $city['name'], (string) $city['code']),
             ],
             $cities,
+        );
+    }
+
+    /**
+     * The airports of this country, each with its own page's address.
+     *
+     * Same reason the cities above are links: an airport has a page now, and a
+     * country page that names one without reaching it is a dead end.
+     *
+     * @param list<array<string, mixed>> $airports
+     * @return list<array<string, mixed>>
+     */
+    private static function airportAddresses(array $airports): array
+    {
+        return array_map(
+            static fn(array $airport): array => $airport + [
+                'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
+            ],
+            $airports,
         );
     }
 

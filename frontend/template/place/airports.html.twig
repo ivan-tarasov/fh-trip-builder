@@ -11,13 +11,16 @@
     {% set points = points|merge([airport.longitude ~ ',' ~ airport.latitude ~ ',pm2blm' ~ loop.index]) %}
 {% endfor %}
 
+{# Links, not labels. These were labels while there was nowhere to send anyone;
+   there is now, and 324 of these pages were naming an airport that has its own
+   page without reaching it. #}
 <ul class="chips">
     {% for airport in airports %}
         <li>
-            <span class="chip">
+            <a class="chip chip--link" href="{{ airport.url }}">
                 <i class="fas fa-plane-departure chip__icon" aria-hidden="true"></i>
                 {{ airport.title }} ({{ airport.code }})
-            </span>
+            </a>
         </li>
     {% endfor %}
 </ul>

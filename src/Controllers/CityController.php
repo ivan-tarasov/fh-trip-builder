@@ -90,7 +90,7 @@ class CityController extends AbstractController
             echo new TwigRenderer()->renderPage('city/view.html.twig', [
                 'breadcrumbs' => self::trailFor($city),
                 'city' => $city,
-                'city_airports' => $cities->airports($code),
+                'city_airports' => self::addressableAirports($cities->airports($code)),
                 'nearby' => self::addressable($cities->nearby($code, self::NEARBY_LIMIT, self::NEARBY_MAX_KM)),
                 'fares' => $this->fares($cities, $city),
             ]);
@@ -211,6 +211,26 @@ class CityController extends AbstractController
                 'url' => '/city/' . Helper::placeSlug((string) $city['name'], (string) $city['code']),
             ],
             $cities,
+        );
+    }
+
+    /**
+     * Give each airport the address it is reached at.
+     *
+     * The block that lists these was printing names: on 231 city pages and 93
+     * country pages, 1,091 airports that each have a page of their own sat
+     * there as plain text. Where an airport lives is Helper::airportUrl().
+     *
+     * @param list<array<string, mixed>> $airports
+     * @return list<array<string, mixed>>
+     */
+    private static function addressableAirports(array $airports): array
+    {
+        return array_map(
+            static fn(array $airport): array => $airport + [
+                'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
+            ],
+            $airports,
         );
     }
 

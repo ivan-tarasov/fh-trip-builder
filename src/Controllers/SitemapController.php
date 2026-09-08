@@ -148,7 +148,7 @@ class SitemapController extends AbstractController
     private function airportPaths(): array
     {
         return array_map(
-            static fn(array $airport): string => '/airport/' . Helper::placeSlug(
+            static fn(array $airport): string => Helper::airportUrl(
                 (string) $airport['title'],
                 (string) $airport['code'],
             ),

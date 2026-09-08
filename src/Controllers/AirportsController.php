@@ -60,7 +60,7 @@ class AirportsController extends AbstractController
                 return [
                     'name' => $title,
                     'code' => $code,
-                    'url' => '/airport/' . Helper::placeSlug($title, $code),
+                    'url' => Helper::airportUrl($title, $code),
                     'note' => $airport['city'] . ', ' . $airport['country'],
                     'search' => $title . ' ' . $airport['city'] . ' ' . $airport['country'],
                 ];

@@ -475,6 +475,19 @@ class Helper
     }
 
     /**
+     * Where an airport's page lives.
+     *
+     * The whole path and not just the slug, because four callers were spelling
+     * "/airport/" in front of one -- two controllers, the sitemap and now the
+     * blocks that list a city's and a country's airports. A fifth would have
+     * been a fifth place to change the day the prefix does.
+     */
+    public static function airportUrl(string $title, string $code): string
+    {
+        return '/airport/' . self::placeSlug($title, $code);
+    }
+
+    /**
      * The code off the end of a place slug, or null when there is not one.
      *
      * The inverse of placeSlug(), and read from the end rather than the start,
