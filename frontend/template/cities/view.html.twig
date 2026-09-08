@@ -20,6 +20,15 @@
         'when': true
     },
     {
+        'id': 'fares',
+        'title': 'Cheap tickets to ' ~ city.name,
+        'nav': 'Cheap tickets',
+        'icon': 'fa-tag',
+        'tone': 'blue',
+        'template': 'cities/blocks/fares.html.twig',
+        'when': fares is not empty
+    },
+    {
         'id': 'airports',
         'title': 'Airports of ' ~ city.name,
         'nav': 'Airports',
@@ -73,7 +82,8 @@
                         {% include block.template with {
                             'city': city,
                             'city_airports': city_airports,
-                            'nearby': nearby
+                            'nearby': nearby,
+                            'fares': fares
                         } only %}
                     </section>
                 {% endif %}

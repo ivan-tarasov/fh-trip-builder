@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
+use TripBuilder\CabinClass;
 use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\FlightRepository;
+use TripBuilder\SearchUrl;
 use TripBuilder\View\TwigRenderer;
 
 class CitiesController extends AbstractController
@@ -23,6 +26,9 @@ class CitiesController extends AbstractController
      */
     private const int NEARBY_LIMIT = 8;
     private const int NEARBY_MAX_KM = 1000;
+
+    /** Origin cities per tab. Each is one row in the fares strip. */
+    private const int FARE_ORIGINS = 8;
 
     public function show(): void
     {
@@ -62,11 +68,63 @@ class CitiesController extends AbstractController
                 'city' => $city,
                 'city_airports' => $cities->airports($code),
                 'nearby' => self::addressable($cities->nearby($code, self::NEARBY_LIMIT, self::NEARBY_MAX_KM)),
+                'fares' => $this->fares($cities, $city),
             ]);
         } catch (Throwable $e) {
             error_log('City page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this city. Please try again later.';
         }
+    }
+
+    /**
+     * The cheapest way in, from home and from abroad.
+     *
+     * Two tabs because they answer different questions: a domestic hop and an
+     * intercontinental fare are not comparable, and sorted together the cheap
+     * short ones bury everything else. Either can come back empty -- a city
+     * whose country has no other airport we sell, most obviously -- and the
+     * block drops a tab that has nothing rather than showing an empty strip.
+     *
+     * @param array<string, mixed> $city
+     * @return list<array<string, mixed>>
+     */
+    private function fares(CityRepository $cities, array $city): array
+    {
+        $code = (string) $city['code'];
+        $country = (string) $city['country_code'];
+        $destinations = array_column($cities->airports($code), 'code');
+        $flights = new FlightRepository($this->connection());
+
+        $tabs = [];
+
+        foreach ([true, false] as $domestic) {
+            $origins = $cities->busiestOriginAirports($code, $country, $domestic, self::FARE_ORIGINS);
+            $found = $flights->cheapestDirectPerOrigin($origins, $destinations, CabinClass::Economy);
+
+            if ($found === []) {
+                continue;
+            }
+
+            $tabs[] = [
+                'id' => $domestic ? 'home' : 'away',
+                'label' => $domestic ? 'From ' . $city['country'] : 'Other countries',
+                'fares' => array_map(
+                    fn(array $fare): array => $fare + [
+                        // Where the card goes: the same search anybody would
+                        // have run to find this fare, already filled in.
+                        'search' => new SearchUrl(
+                            from: (string) $fare['from_city_code'],
+                            to: $code,
+                            depart: substr((string) $fare['departure_time'], 0, 10),
+                            return: null,
+                        )->path(),
+                    ],
+                    $found,
+                ),
+            ];
+        }
+
+        return $tabs;
     }
 
     /**

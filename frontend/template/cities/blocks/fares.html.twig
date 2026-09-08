@@ -1,0 +1,47 @@
+{# The cheapest direct way in, from home and from abroad.
+
+   Tabs without JavaScript. A radio group and sibling selectors do the whole
+   job: it is keyboard-operable because radios are, it is announced because
+   radios are, and it works with scripting off -- which matters on a page whose
+   entire purpose is to be arrived at cold from a search engine.
+
+   The name is scoped to the block rather than the page so a second strip could
+   be added without the two fighting over which is checked. #}
+<div class="fares">
+    {% if fares|length > 1 %}
+        <div class="fares__tabs" role="radiogroup" aria-label="Where the fare starts from">
+            {% for tab in fares %}
+                <input class="fares__radio" type="radio" name="fares-origin"
+                       id="fares-{{ tab.id }}" {{ loop.first ? 'checked' : '' }}>
+                <label class="fares__tab" for="fares-{{ tab.id }}">{{ tab.label }}</label>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% for tab in fares %}
+        <ul class="fares__strip" id="fares-panel-{{ tab.id }}"
+            aria-label="{{ tab.label }}">
+            {% for fare in tab.fares %}
+                <li class="fares__item">
+                    <a class="fare" href="{{ fare.search }}">
+                        <span class="fare__price">${{ fare.total|round(0, 'floor') }}<span class="fare__currency">CAD</span></span>
+                        <span class="fare__route">{{ fare.from_city }} &mdash; {{ city.name }}</span>
+
+                        <span class="fare__detail">
+                            <img class="fare__airline"
+                                 src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ fare.airline ~ '.png') }}"
+                                 width="28" height="28" loading="lazy" alt="">
+                            <span class="fare__when">{{ fare.departure_time|date('j M, D') }}</span>
+                            {# "direct" is not a claim about this row so much as
+                                the reason it is here: the block only asks for
+                                flights that do not connect. #}
+                            <span class="fare__legs">{{ duration(fare.duration) }} &middot; direct</span>
+                        </span>
+
+                        <span class="fare__times">{{ fare.departure_time|date('H:i') }} &ndash; {{ fare.arrival_time|date('H:i') }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+</div>

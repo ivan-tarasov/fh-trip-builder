@@ -152,6 +152,60 @@ final readonly class CityRepository
     }
 
     /**
+     * Airports of the cities somebody is most likely to be flying from.
+     *
+     * "Most likely" is traffic weight, not distance: the cheap-fares block is
+     * about where the market is, and the nearest city to Montreal is Ottawa
+     * while the one people actually fly in from is New York. Nearby cities have
+     * their own block.
+     *
+     * Split by country because the page offers the two as tabs -- domestic
+     * fares and everything else are different questions, and mixing them buries
+     * the short cheap hops under the long expensive ones.
+     *
+     * Airport codes rather than city codes, because the flights table is keyed
+     * on airports and only `departure_airport` can drive its index. Resolving
+     * the cities to their airports here is what lets the fare query seek
+     * instead of scanning 683,760 rows.
+     *
+     * @return list<string>
+     */
+    public function busiestOriginAirports(
+        string $exceptCityCode,
+        string $countryCode,
+        bool $domestic,
+        int $cityLimit,
+    ): array {
+        $cities = $this->connection->fetchAll(
+            'SELECT a.city_code AS code, SUM(a.traffic_weight) AS weight, MIN(a.city) AS name'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' AND a.city_code <> ?'
+            . ' AND a.country_code ' . ($domestic ? '=' : '<>') . ' ?'
+            . ' GROUP BY a.city_code'
+            . ' ORDER BY weight DESC, name ASC'
+            . ' LIMIT ' . max(1, $cityLimit),
+            [strtoupper($exceptCityCode), strtoupper($countryCode)],
+        );
+
+        if ($cities === []) {
+            return [];
+        }
+
+        $codes = array_column($cities, 'code');
+
+        return array_column(
+            $this->connection->fetchAll(
+                'SELECT a.code FROM ' . Table::Airports->value . ' a'
+                . ' WHERE' . self::ONLY_SELLABLE
+                . ' AND a.city_code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')',
+                $codes,
+            ),
+            'code',
+        );
+    }
+
+    /**
      * Every sellable city as one point. 231 rows over a 1,091-row table, which
      * is why this can be grouped on the fly instead of stored.
      */

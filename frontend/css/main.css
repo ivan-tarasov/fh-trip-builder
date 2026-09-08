@@ -5461,6 +5461,13 @@ body:has(.hero) header#top {
   padding: 1.75rem;
   background-color: #fff;
   border-radius: 1rem;
+  /* A grid item is min-width:auto, which means "at least as wide as what is
+     inside me" -- and inside one of these is a strip of eight fare cards that
+     would rather be 1,520px. Without this the widest block sets the width of
+     the column and every other block is dragged out with it, off the side of
+     the page. The strip's own overflow-x can only work once this lets the
+     block be narrower than its contents. */
+  min-width: 0;
   /* Clear of the sticky rail's top edge, so an anchored jump does not land
      with the heading tucked under it. */
   scroll-margin-top: 1.5rem;
@@ -5554,4 +5561,134 @@ body:has(.hero) header#top {
 @media (max-width: 767.98px) {
   .facts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .city__block { padding: 1.25rem; }
+}
+
+/* ---------- Cheap fares ---------- */
+
+/* The radios do the switching. They are the control -- kept off screen rather
+   than display:none, which would take them out of the tab order and leave the
+   labels operable by mouse only. */
+.fares__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.fares__tabs {
+  display: flex;
+  gap: .25rem;
+  margin-bottom: 1.25rem;
+}
+
+.fares__tab {
+  padding: .5rem 1rem;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  font-weight: 600;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.fares__radio:checked + .fares__tab {
+  color: var(--ink-body);
+  background-color: var(--surface-sunken);
+}
+
+/* Focus lands on the radio, which cannot be seen, so the label wears the ring
+   on its behalf -- otherwise tabbing to this control shows nothing at all. */
+.fares__radio:focus-visible + .fares__tab {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .fares__tab:hover { background-color: var(--surface-sunken); }
+}
+
+/* Every strip is hidden, then the one whose radio is checked is shown. The
+   selector walks from the radio across its label, the rest of the tabs, and
+   into the panel list -- which is why the panels are siblings of .fares__tabs
+   and not nested inside it. */
+.fares__strip { display: none; }
+.fares:has(#fares-home:checked) #fares-panel-home,
+.fares:has(#fares-away:checked) #fares-panel-away { display: grid; }
+
+/* One tab and no radios to check: show it. */
+.fares:not(:has(.fares__radio)) .fares__strip { display: grid; }
+
+.fares__strip {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(16.5rem, 1fr);
+  gap: 1rem;
+  margin: 0;
+  padding: 0 0 .5rem;
+  list-style: none;
+  /* A strip rather than a wrap: eight fares in a row of cards would be four
+     lines of the same shape, and the horizontal run says "there are more"
+     without a control that has to be built and explained. */
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+
+.fares__item { scroll-snap-align: start; }
+
+.fare {
+  display: grid;
+  gap: .375rem;
+  height: 100%;
+  padding: 1.25rem;
+  background-color: var(--surface-sunken);
+  border-radius: .75rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .fare:hover { background-color: var(--line); }
+}
+
+.fare__price {
+  color: var(--ink-body);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* Beside the figure, not above it: the number is what is being compared and the
+   currency is the same on every card. */
+.fare__currency {
+  margin-left: .25rem;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+  font-weight: 400;
+}
+
+.fare__route { color: var(--ink-body); font-size: .9375rem; font-weight: 600; }
+
+.fare__detail {
+  display: flex;
+  align-items: center;
+  /* Wrapping, because the row holds four things of unpredictable width -- a
+     logo, a date, a duration and the word direct -- and "17 Nov," on one line
+     with "Tue" under it is what a row that cannot wrap does instead. */
+  flex-wrap: wrap;
+  gap: .25rem .5rem;
+  margin-top: .25rem;
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+}
+
+.fare__when { white-space: nowrap; }
+
+.fare__airline { flex: 0 0 auto; border-radius: 50%; }
+.fare__legs { margin-left: auto; white-space: nowrap; }
+.fare__times { color: var(--ink-muted); font-size: .8125rem; }
+
+.city__rail-icon--blue { background-color: #1971C2; }
+
+@media (max-width: 575.98px) {
+  .fares__strip { grid-auto-columns: minmax(13rem, 1fr); }
 }

@@ -49,6 +49,7 @@ final readonly class TwigRenderer
         // as though they were days.
         $this->twig->addFunction(new TwigFunction('date_label', Helper::dateLabel(...)));
         $this->twig->addFunction(new TwigFunction('gmt_offset', Helper::gmtOffset(...)));
+        $this->twig->addFunction(new TwigFunction('duration', Helper::hoursAndMinutes(...)));
         // What each passenger type pays, so the calendar can price a party in
         // the browser without a second definition of it living there.
         $this->twig->addFunction(new TwigFunction('party_shares', Party::shares(...)));
