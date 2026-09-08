@@ -33,7 +33,7 @@ final class Polyline
     private const int ASCII_OFFSET = 63;
 
     /**
-     * @param list<array{lat: float, lon: float}> $points
+     * @param list<array{lat: float|string, lon: float|string}> $points
      */
     public static function encode(array $points): string
     {
@@ -42,8 +42,10 @@ final class Polyline
         $lastLon = 0;
 
         foreach ($points as $point) {
-            $lat = (int) round($point['lat'] * self::PRECISION);
-            $lon = (int) round($point['lon'] * self::PRECISION);
+            // Cast, because these arrive from PDO as strings on the pages
+            // that read them out of the database.
+            $lat = (int) round((float) $point['lat'] * self::PRECISION);
+            $lon = (int) round((float) $point['lon'] * self::PRECISION);
 
             // Latitude first, which is the opposite order to the rest of this
             // codebase -- a map URL takes lon,lat and this format takes

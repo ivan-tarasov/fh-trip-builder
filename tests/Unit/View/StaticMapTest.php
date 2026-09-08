@@ -205,6 +205,47 @@ final class StaticMapTest extends TestCase
     }
 
     /**
+     * Coordinates arrive as strings, and this is the test that was missing.
+     *
+     * PDO returns a DECIMAL column as a string, so every latitude and longitude
+     * on these five pages is "51.47060000" and not 51.4706. The first version
+     * of this class typed them `float`, which threw on all five pages -- and
+     * every test above passed, because they are written with float literals.
+     * A fixture that does not look like the data is a test of something else.
+     */
+    public function testCoordinatesMayArriveAsStringsFromTheDatabase(): void
+    {
+        $asStrings = StaticMap::url(
+            [
+                ['lat' => '40.70190000', 'lon' => '-73.94620000', 'colour' => '0EB600'],
+                ['lat' => '51.50323333', 'lon' => '-0.12276667', 'colour' => 'EC3735'],
+            ],
+            [[
+                ['lat' => '40.70190000', 'lon' => '-73.94620000'],
+                ['lat' => '51.50323333', 'lon' => '-0.12276667'],
+            ]],
+        );
+
+        self::assertStringContainsString('pin-s+0EB600(-73.9462,40.7019)', $asStrings);
+        self::assertStringContainsString('path-5+', $asStrings);
+
+        // And the same numbers as floats give the same picture.
+        self::assertSame(
+            StaticMap::url(
+                [
+                    ['lat' => 40.7019, 'lon' => -73.9462, 'colour' => '0EB600'],
+                    ['lat' => 51.50323333, 'lon' => -0.12276667, 'colour' => 'EC3735'],
+                ],
+                [[
+                    ['lat' => 40.7019, 'lon' => -73.9462],
+                    ['lat' => 51.50323333, 'lon' => -0.12276667],
+                ]],
+            ),
+            $asStrings,
+        );
+    }
+
+    /**
      * The picture's shape comes from config, so it is one edit and not five.
      */
     public function testTheStyleAndSizeComeFromConfig(): void

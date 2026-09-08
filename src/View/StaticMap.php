@@ -41,8 +41,8 @@ final class StaticMap
      * passes a zoom, because one pin frames to nothing and what that page wants
      * to show is which part of its city the airport sits in.
      *
-     * @param list<array{lat: float, lon: float, colour?: string}> $markers
-     * @param list<list<array{lat: float, lon: float}>> $paths drawn under the markers
+     * @param list<array{lat: float|string, lon: float|string, colour?: string}> $markers
+     * @param list<list<array{lat: float|string, lon: float|string}>> $paths drawn under the markers
      */
     public static function url(array $markers, array $paths = [], ?int $zoom = null): string
     {
@@ -95,7 +95,7 @@ final class StaticMap
      * No label. The size in config is the small pin, and small pins carry
      * none -- see the note there.
      *
-     * @param array{lat: float, lon: float, colour?: string} $marker
+     * @param array{lat: float|string, lon: float|string, colour?: string} $marker
      */
     private static function pin(array $marker): string
     {
@@ -117,7 +117,7 @@ final class StaticMap
      * which is not optional in practice: the format emits backslashes and
      * backticks, and a bare one ends the overlay early.
      *
-     * @param list<array{lat: float, lon: float}> $path
+     * @param list<array{lat: float|string, lon: float|string}> $path
      */
     private static function path(array $path): string
     {
@@ -160,9 +160,15 @@ final class StaticMap
     /**
      * Coordinates at the precision a map can draw, so a URL printed into every
      * page does not carry seventeen significant figures of a float.
+     *
+     * Takes a string as readily as a float, because that is what the callers
+     * actually have: PDO hands back a DECIMAL column as a string, so every
+     * latitude and longitude on these pages arrives as "51.47060000". Declared
+     * `float` only, this threw on every one of the five pages while the tests
+     * -- written with float literals -- passed.
      */
-    private static function round(float $degrees): string
+    private static function round(int|float|string $degrees): string
     {
-        return (string) round($degrees, 4);
+        return (string) round((float) $degrees, 4);
     }
 }
