@@ -289,14 +289,22 @@ return [
             'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
         ],
         [
+            // Counted, like Cities below and unlike the four curated columns.
+            // `source` sends it to LayoutData::popularRoutes().
+            //
+            // These were five hand-written pairs -- Montreal to Toronto,
+            // Montreal to Paris and so on -- which was the right list to write
+            // before there were route pages and the wrong one to keep after.
+            // A route page exists for any of 42,578 city pairs you can fly
+            // nonstop, and no list of five names the busy ones for long.
+            //
+            // What the query has to do that the cities one does not: only
+            // return pairs that have a page. A search is recorded for whatever
+            // anybody asked about, and five of the 163 city pairs searched here
+            // have no nonstop and so no page -- see RouteRepository::popular().
             'title' => 'Directions',
-            'links' => [
-                'Montreal — Toronto' => '/route/YMQ-YTO',
-                'Montreal — Vancouver' => '/route/YMQ-YVR',
-                'Montreal — Paris' => '/route/YMQ-PAR',
-                'Toronto — New York' => '/route/YTO-NYC',
-                'Toronto — London' => '/route/YTO-LON',
-            ],
+            'source' => 'popular-routes',
+            'count' => 5,
         ],
         [
             // Curated rather than counted, unlike Cities beside it: nothing in

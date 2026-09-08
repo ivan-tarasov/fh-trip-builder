@@ -6,12 +6,13 @@
 <nav class="footer__columns" aria-label="More on {{ config('app.name') }}">
     {% for column in config('site.footer-columns') %}
         {# A column either lists what config says or asks for what the data
-           says. `source` is the second: the cities column is the only part of
-           this footer whose pages exist, so it is the only one worth filling
-           from what people actually searched for rather than from a list
-           somebody has to remember to edit. #}
+           says. `source` is the second, and names which question to ask --
+           cities and routes are both counted from what people have actually
+           searched for, rather than from a list somebody has to remember to
+           edit. Which source means what is LayoutData::footerLinks(); a
+           conditional here would grow by a line per column. #}
         {% set links = column.source is defined
-            ? most_searched_cities(column.count ?? 5)
+            ? footer_links(column.source, column.count ?? 5)
             : column.links %}
 
         {# A data-driven column can come back empty -- an unseeded database, or

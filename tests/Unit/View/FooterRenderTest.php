@@ -102,10 +102,16 @@ final class FooterRenderTest extends TestCase
         $html = $this->render('/airlines');
 
         foreach ($columns as $column) {
-            $cities = new LayoutData()->mostSearchedCities($column['count'] ?? 5);
+            // Asked for by its own source, through the same dispatcher the
+            // template calls. This used to ask mostSearchedCities() for every
+            // data-driven column, which was right while there was one -- with
+            // two it checked the routes column against the city links, and
+            // passed, because those links are on the page in the column next
+            // door. Scoping below is the other half of that fix.
+            $links = new LayoutData()->footerLinks($column['source'], $column['count'] ?? 5);
             $heading = '>' . $column['title'] . '</h2>';
 
-            if ($cities === []) {
+            if ($links === []) {
                 self::assertStringNotContainsString($heading, $html, 'an empty column should not be headed');
 
                 continue;
@@ -113,17 +119,39 @@ final class FooterRenderTest extends TestCase
 
             self::assertStringContainsString($heading, $html);
 
-            foreach ($cities as $name => $url) {
-                self::assertStringContainsString('href="' . $url . '"', $html);
-                self::assertStringContainsString('>' . $name . '</a>', $html);
+            $own = self::columnMarkup($html, $column['title']);
+
+            foreach ($links as $name => $url) {
+                self::assertStringContainsString('href="' . $url . '"', $own, $url . ' should be in ' . $column['title']);
+                self::assertStringContainsString('>' . $name . '</a>', $own, $name . ' should be in ' . $column['title']);
             }
         }
     }
 
     /**
+     * One column's own list, so an assertion about it cannot be satisfied by
+     * the column beside it.
+     *
+     * Cut from the heading to the end of the list that follows it, which is the
+     * shape partials/footer/column.html.twig renders: an h2 and then one ul.
+     */
+    private static function columnMarkup(string $html, string $title): string
+    {
+        $at = strpos($html, '>' . $title . '</h2>');
+        self::assertNotFalse($at, $title . ' should head a column');
+
+        $end = strpos($html, '</ul>', $at);
+        self::assertNotFalse($end, $title . ' should be followed by a list');
+
+        return substr($html, $at, $end - $at);
+    }
+
+    /**
      * A "more" link only where there is somewhere for it to go. Two of the six
-     * columns lead to pages that do not exist yet, and offering to show more of
-     * them is a dead end offering more dead ends.
+     * columns have none, for two different reasons: Help & tips leads to pages
+     * that do not exist yet, and Directions leads to real ones that no index
+     * could list -- 42,578 city pairs can be flown nonstop, so there is no
+     * /routes page and there should not be one.
      *
      * Counted against the columns that were actually drawn, not against every
      * column configured: a data-driven column takes its more-link with it when
@@ -235,13 +263,14 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
-     * City links are held to a standard two of the columns are not.
+     * City links are held to a standard one column still is not.
      *
-     * Directions and Help still name pages that are to be built and answer 404
-     * on purpose. Cities was the first column to stop being one of those: the
-     * pages exist, so a link into them that does not resolve is a bug and not a
-     * plan. This covers the curated destinations block; the column beside it is
-     * built from the database and cannot name a city that is not there.
+     * Help & tips is the last one naming pages that are to be built, and it
+     * answers 404 on purpose. Cities was the first column to stop being one of
+     * those: the pages exist, so a link into them that does not resolve is a bug
+     * and not a plan. This covers the curated destinations block; the column
+     * beside it is built from the database and cannot name a city that is not
+     * there.
      */
     public function testEveryCityLinkResolves(): void
     {
@@ -355,6 +384,51 @@ final class FooterRenderTest extends TestCase
             self::assertNotNull(
                 Helper::placeCode(substr($href, strlen('/airline/')), 2),
                 $href . ' is not a canonical airline address',
+            );
+        }
+    }
+
+    /**
+     * And the route links, which are the only ones nothing curates.
+     *
+     * Held to the standard the other columns are, and it matters more here:
+     * every other column is a list somebody wrote and could check by eye, and
+     * this one is whatever people have searched for. A search is recorded for
+     * any pair anybody asked about and only the pairs you can fly nonstop have
+     * a page, so the query is the only thing standing between this column and a
+     * 404 on every page of the site.
+     *
+     * Written to hold either way round, like the data-driven column test above,
+     * because whether this suite sees any of these depends on whether a
+     * database is reachable. With none, the assertion that matters is that the
+     * column took its heading with it.
+     */
+    public function testEveryRouteLinkResolves(): void
+    {
+        $html = $this->render('/');
+
+        preg_match_all('#href="(/route/[^"]+)"#', $html, $links);
+
+        if ($links[1] === []) {
+            self::assertStringNotContainsString('>Directions</h2>', $html, 'an empty column should not be headed');
+
+            return;
+        }
+
+        foreach (array_unique($links[1]) as $href) {
+            self::assertNotNull(
+                Routes::resolve($href),
+                $href . ' is linked in the footer but is not a route',
+            );
+
+            // The route pattern would pass /route/YMQ-YTO, which is how these
+            // were written before the pages existed. What turns that away is
+            // RouteAddress::read(), so the shape is asserted here: two names
+            // with the join between them, and no code on either end.
+            self::assertMatchesRegularExpression(
+                '#^/route/[a-z0-9]+(?:-[a-z0-9]+)*-to-[a-z0-9]+(?:-[a-z0-9]+)*$#',
+                $href,
+                $href . ' is not a canonical route address',
             );
         }
     }

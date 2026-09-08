@@ -12,6 +12,8 @@ use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\RouteRepository;
+use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
 use TripBuilder\Timer;
 
@@ -225,6 +227,63 @@ final class LayoutData
         }
 
         return $links;
+    }
+
+    /**
+     * The most-searched routes, ready for the footer's link column.
+     *
+     * The label is both city names, which is what the page is called and what
+     * somebody scanning a footer is looking for. Same shape and same fallback
+     * as the cities above it.
+     *
+     * Every one of these resolves. RouteRepository::popular() only returns
+     * pairs that can be flown nonstop, because a search is recorded for any
+     * pair anybody asked about and only some of those have a page -- see the
+     * comment there.
+     *
+     * @return array<string, string>
+     */
+    public function popularRoutes(int $limit): array
+    {
+        try {
+            $routes = new RouteRepository($this->connection())->popular($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($routes as $route) {
+            $from = (string) $route['from_name'];
+            $to = (string) $route['to_name'];
+
+            $links[$from . ' — ' . $to] = RouteAddress::path($from, $to);
+        }
+
+        return $links;
+    }
+
+    /**
+     * Whatever a data-driven footer column asked for.
+     *
+     * The template used to call mostSearchedCities() directly, which worked
+     * while one column was counted. Two are, so the template asks by name and
+     * this decides -- otherwise the choice becomes a conditional in a
+     * template, and a third column becomes a longer one.
+     *
+     * An unknown source is an empty list rather than an error: the column then
+     * takes itself out, which is what a column with nothing to show should do
+     * whatever the reason.
+     *
+     * @return array<string, string>
+     */
+    public function footerLinks(string $source, int $limit): array
+    {
+        return match ($source) {
+            'most-searched' => $this->mostSearchedCities($limit),
+            'popular-routes' => $this->popularRoutes($limit),
+            default => [],
+        };
     }
 
     /**

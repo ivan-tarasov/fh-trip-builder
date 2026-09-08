@@ -33,7 +33,112 @@ use TripBuilder\Database\Table;
  */
 final readonly class RouteRepository
 {
+    /**
+     * How many searched pairs to rank before asking which of them can be
+     * flown.
+     *
+     * The filter is the expensive half, so it is applied to a shortlist rather
+     * than to all 213 pairs anybody has searched. Forty is enough to survive
+     * the filter with room to spare -- five of the 163 city pairs searched have
+     * no nonstop, and the reciprocal pairs collapse on top of that.
+     */
+    private const int POPULAR_CANDIDATES = 40;
+
     public function __construct(private Connection $connection) {}
+
+    /**
+     * The routes people actually look for, busiest first.
+     *
+     * Counted, not curated, which for this footer column is the difference
+     * between a list that maintains itself and a list somebody has to remember
+     * to edit. The city column beside it has worked this way since the app's
+     * first search.
+     *
+     * Every row is filtered to a pair that has a page. That is the whole reason
+     * this is not just an ORDER BY over `search`: a search is recorded for any
+     * pair somebody asked about, and the route page only exists where you can
+     * fly it nonstop -- five of the 163 searched city pairs cannot be. Without
+     * the filter this column would put a 404 in the footer of every page on the
+     * site, which is the exact bug FooterRenderTest was written for.
+     *
+     * One direction per city pair. New York to London and London to New York
+     * are two real pages with two real prices, and in a five-line footer they
+     * are also two lines saying nearly the same thing -- so the busier of the
+     * two stands for the pair and the other is reached from the page itself.
+     *
+     * The name is MIN(city) over the city's airports, the same rule
+     * CityRepository::namesSql() states -- grouped here rather than joined to
+     * it, which measured 4.7ms against 9.7ms for the same twelve rows.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function popular(int $limit): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT p.from_code, MIN(o.city) AS from_name,'
+            . ' p.to_code, MIN(d.city) AS to_name, p.searches'
+            . ' FROM ('
+            . '  SELECT from_code, to_code, SUM(search_count) AS searches'
+            . '  FROM ' . Table::Search->value
+            . '  WHERE from_code <> to_code'
+            . '  GROUP BY from_code, to_code'
+            . '  ORDER BY searches DESC'
+            . '  LIMIT ' . self::POPULAR_CANDIDATES
+            . ' ) p'
+            // A search stores whatever the form submitted, which may be an
+            // airport code. Joining on city_code is what keeps this to pairs of
+            // cities -- an airport code matches no city and drops out.
+            . ' JOIN ' . Table::Airports->value . ' o'
+            . '  ON o.city_code = p.from_code AND' . self::sellable('o')
+            . ' JOIN ' . Table::Airports->value . ' d'
+            . '  ON d.city_code = p.to_code AND' . self::sellable('d')
+            . ' WHERE EXISTS ('
+            . '  SELECT 1 FROM ' . Table::Flights->value . ' f'
+            . '  WHERE f.departure_airport IN ('
+            . '   SELECT a.code FROM ' . Table::Airports->value . ' a'
+            . '   WHERE a.city_code = p.from_code AND' . self::sellable('a')
+            . '  ) AND f.arrival_airport IN ('
+            . '   SELECT b.code FROM ' . Table::Airports->value . ' b'
+            . '   WHERE b.city_code = p.to_code AND' . self::sellable('b')
+            . '  ) AND f.departure_time >= NOW()'
+            . ' )'
+            . ' GROUP BY p.from_code, p.to_code, p.searches'
+            . ' ORDER BY p.searches DESC',
+        );
+
+        return array_slice(self::oneDirectionPerPair($rows), 0, max(0, $limit));
+    }
+
+    /**
+     * The busier direction of each city pair, in the order they arrived.
+     *
+     * Done here rather than in SQL because "the same pair either way round" is
+     * not something a GROUP BY expresses without sorting the two codes into a
+     * key, and the rows are already ranked and few.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private static function oneDirectionPerPair(array $rows): array
+    {
+        $seen = [];
+        $kept = [];
+
+        foreach ($rows as $row) {
+            $pair = [(string) $row['from_code'], (string) $row['to_code']];
+            sort($pair);
+            $key = implode('-', $pair);
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $kept[] = $row;
+        }
+
+        return $kept;
+    }
 
     /**
      * What there is to say about the route, or null when there is nothing.
@@ -242,6 +347,18 @@ final readonly class RouteRepository
         return $multiplier === null
             ? $base . ' + ' . $tax
             : $base . ' * ' . $multiplier . ' + ' . $tax . ' * ' . $multiplier;
+    }
+
+    /**
+     * The filter the whole site sells by, for one alias.
+     *
+     * A method where the other repositories carry a constant, because
+     * popular() names the airports table four times over and each copy needs
+     * its own alias.
+     */
+    private static function sellable(string $alias): string
+    {
+        return sprintf(' %s.enabled = 1 AND %s.is_major = 1', $alias, $alias);
     }
 
     /** @param list<string> $values */
