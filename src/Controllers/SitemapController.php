@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Throwable;
 use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Routes;
 
 class SitemapController extends AbstractController
@@ -17,9 +18,10 @@ class SitemapController extends AbstractController
     /**
      * Every page worth finding, for a crawler that would rather be told.
      *
-     * There are 236 of them and 231 are city pages, which is why this is
-     * generated rather than a file on disk: the list is rows in a table, and a
-     * checked-in copy would be wrong the first time a route is added.
+     * There are 330 of them and 324 are city or country pages, which is why
+     * this is generated rather than a file on disk: the list is rows in a
+     * table, and a checked-in copy would be wrong the first time a route is
+     * added.
      *
      * The pages are gathered by inclusion, not exclusion -- ENABLED_ROUTES
      * filtered through Routes::isPublic(), which is the same test the robots
@@ -36,12 +38,12 @@ class SitemapController extends AbstractController
         header('Content-Type: application/xml; charset=utf-8');
 
         try {
-            $urls = [...$this->staticPaths(), ...$this->cityPaths()];
+            $urls = [...$this->staticPaths(), ...$this->cityPaths(), ...$this->countryPaths()];
         } catch (Throwable $e) {
             // The static pages are worth serving even if the database is not
             // answering -- an empty sitemap would tell a crawler the site has
             // no pages, which is worse than an incomplete one.
-            error_log('Sitemap cities failed: ' . $e->getMessage());
+            error_log('Sitemap places failed: ' . $e->getMessage());
             $urls = $this->staticPaths();
         }
 
@@ -117,6 +119,20 @@ class SitemapController extends AbstractController
                 (string) $city['code'],
             ),
             new CityRepository($this->connection())->all(),
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function countryPaths(): array
+    {
+        return array_map(
+            static fn(array $country): string => '/country/' . Helper::placeSlug(
+                (string) $country['name'],
+                (string) $country['code'],
+            ),
+            new CountryRepository($this->connection())->sellable(),
         );
     }
 

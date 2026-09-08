@@ -299,8 +299,8 @@ return [
             'title' => 'Cities',
             'source' => 'most-searched',
             'count' => 5,
-            // The only "more" on this footer that leads anywhere, and the page
-            // it leads to is what gives all 231 city pages a route in.
+            // The page it leads to is what gives all 231 city pages a route
+            // in. Countries below have the same pair.
             'more' => ['text' => 'All cities', 'url' => '/cities'],
         ],
         [
@@ -315,6 +315,10 @@ return [
             'more' => ['text' => 'All airports', 'url' => '/airports/'],
         ],
         [
+            // Curated rather than counted, unlike Cities above: nothing in this
+            // app records how often a country is searched for, only how often
+            // its cities are, and summing those would rank a country by how
+            // many of them we happen to sell.
             'title' => 'Countries',
             'links' => [
                 'Canada' => '/country/canada-ca',
@@ -323,6 +327,7 @@ return [
                 'France' => '/country/france-fr',
                 'Japan' => '/country/japan-jp',
             ],
+            'more' => ['text' => 'All countries', 'url' => '/countries'],
         ],
         [
             'title' => 'Help & tips',

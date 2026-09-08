@@ -6,6 +6,7 @@ namespace TripBuilder\Tests\Unit\View;
 
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
+use TripBuilder\Helper;
 use TripBuilder\Routes;
 use TripBuilder\View\LayoutData;
 use TripBuilder\View\TwigRenderer;
@@ -262,6 +263,38 @@ final class FooterRenderTest extends TestCase
                 '#^/city/[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{3}$#',
                 $href,
                 $href . ' is not a canonical city address',
+            );
+        }
+    }
+
+    /**
+     * And so are the country links, for the same reason.
+     *
+     * These were curated placeholders until the pages existed. They are still
+     * curated -- nothing counts how often a country is searched for -- but they
+     * are no longer placeholders, so a typo in one is now a 404 on every page
+     * of the site rather than a link to a page that was always going to 404.
+     */
+    public function testEveryCountryLinkResolves(): void
+    {
+        $html = $this->render('/');
+
+        preg_match_all('#href="(/country/[^"]+)"#', $html, $links);
+
+        self::assertNotEmpty($links[1], 'the footer should link to countries');
+
+        foreach (array_unique($links[1]) as $href) {
+            self::assertNotNull(
+                Routes::resolve($href),
+                $href . ' is linked in the footer but is not a route',
+            );
+
+            // Two characters on the end, not three: the route pattern would
+            // pass a city address under /country/ and the controller would
+            // answer 404.
+            self::assertNotNull(
+                Helper::placeCode(substr($href, strlen('/country/')), 2),
+                $href . ' is not a canonical country address',
             );
         }
     }
