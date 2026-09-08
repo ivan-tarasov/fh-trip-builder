@@ -61,9 +61,11 @@ final class RouteMapRenderTest extends TestCase
         unset($_ENV['MAPBOX_TOKEN']);
     }
 
-    private function render(): string
+    /** @param array<string, mixed>|null $reverse */
+    private function render(?array $reverse = null): string
     {
         return new TwigRenderer()->render('route/blocks/facts.html.twig', [
+            'reverse' => $reverse,
             'place' => [
                 'cheapest' => 471.76,
                 'typical' => 411,
@@ -74,6 +76,37 @@ final class RouteMapRenderTest extends TestCase
                 'path' => GreatCircle::segments(40.7019, -73.9462, 51.5032, -0.1228),
             ],
         ]);
+    }
+
+    /**
+     * The way home, which is the link this page went without.
+     *
+     * The footer shows one direction of a pair on purpose and only 30 of the
+     * 163 sitemapped routes have their reverse sitemapped, so for 133 of them
+     * this is the only thing on the site that points there. It has to point
+     * the other way -- a link back to the page it sits on would look exactly
+     * as right.
+     */
+    public function testTheReturnLinkGoesTheOtherWay(): void
+    {
+        $html = $this->render([
+            'from' => 'London',
+            'to' => 'New York',
+            'url' => '/route/london-to-new-york',
+            'cheapest' => 464.08,
+        ]);
+
+        self::assertStringContainsString('href="/route/london-to-new-york"', $html);
+        self::assertStringContainsString('London to New York', $html);
+        self::assertStringContainsString('$464', $html);
+    }
+
+    /**
+     * And is absent when there is no way home, rather than guessed at.
+     */
+    public function testThereIsNoReturnLinkWhenThePairCannotBeFlownBack(): void
+    {
+        self::assertStringNotContainsString('route-back', $this->render());
     }
 
     /**

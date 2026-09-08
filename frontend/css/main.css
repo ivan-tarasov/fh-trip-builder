@@ -5473,6 +5473,31 @@ body:has(main.article) .breadcrumbs__list {
   font-weight: 700;
 }
 
+/* The way home, under the route's figures. Quiet: it is an offer rather than
+   the answer this page came to give, and the price is what makes it worth
+   reading at all. */
+.route-back {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .375rem;
+  margin: 1.25rem 0 0;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+}
+
+.route-back__icon { color: var(--ink-muted); }
+
+.route-back__link:any-link {
+  color: var(--brand-accent-700);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: .15em;
+}
+
+.route-back__link:hover { text-decoration-color: currentcolor; }
+
 /* The map, whether it is a live one or the picture inside <noscript>.
 
    `aspect-ratio` rather than a height, and the same 650:300 the picture has:

@@ -27,6 +27,25 @@
     ]
 } only %}
 
+{# The same trip the other way, which is where a reader of this page most
+   often goes next. Above the map rather than at the foot of the block: it
+   belongs with the price and the duration, which are the figures somebody is
+   comparing when they think of the trip back.
+
+   Absent where the pair cannot be flown home nonstop, which is a question
+   RouteController::backAgain() asks rather than assumes.
+
+   `??`, because this block is rendered by tests that hand it a route and no
+   return -- and by anything else that comes to reuse it. #}
+{% if reverse ?? null %}
+    <p class="route-back">
+        <i class="fas fa-left-right route-back__icon" aria-hidden="true"></i>
+        Flying home?
+        <a class="route-back__link" href="{{ reverse.url }}">{{ reverse.from }} to {{ reverse.to }}</a>
+        from ${{ reverse.cheapest|round(0, 'floor') }}
+    </p>
+{% endif %}
+
 {# Both ends on one map, with the flight drawn between them.
 
    The line is a great circle and not a straight one, because on the projection
