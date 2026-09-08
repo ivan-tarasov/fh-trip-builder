@@ -49,7 +49,27 @@
     {% set lines = lines|merge(['c:0F766EFF,w:5,' ~ coordinates|join(',')]) %}
 {% endfor %}
 
+{# The pins carry no number. A "1" and a "2" on a map of two places name
+   neither of them, and this service cannot letter a pin: text where the number
+   goes is rejected outright, and its `text` parameter is accepted and then
+   ignored. Both checked against it.
+
+   So the two ends are told apart by colour -- green for where you leave, red
+   for where you land, which is the one convention nobody has to be taught --
+   and the legend under the map is what says which city each is. #}
 <img class="place__map"
-     src="https://static-maps.yandex.ru/1.x/?l=map&lang=en-US&size=650,300&pt={{ place.from.longitude }},{{ place.from.latitude }},pm2blm1~{{ place.to.longitude }},{{ place.to.latitude }},pm2blm2&pl={{ lines|join('~') }}"
+     src="https://static-maps.yandex.ru/1.x/?l=map&lang=en-US&size=650,300&pt={{ place.from.longitude }},{{ place.from.latitude }},pm2gnm~{{ place.to.longitude }},{{ place.to.latitude }},pm2rdm&pl={{ lines|join('~') }}"
      width="650" height="300" loading="lazy"
      alt="Map of the route from {{ place.from.name }} to {{ place.to.name }}, with the flight path drawn between them">
+
+{# Read as text rather than only seen as colour, so the map is described for
+   somebody who cannot make out the two pins -- or for whom the image never
+   arrives. #}
+<ul class="place__legend">
+    <li class="place__legend-item place__legend-item--from">
+        <span class="place__legend-role">From</span> {{ place.from.name }}
+    </li>
+    <li class="place__legend-item place__legend-item--to">
+        <span class="place__legend-role">To</span> {{ place.to.name }}
+    </li>
+</ul>

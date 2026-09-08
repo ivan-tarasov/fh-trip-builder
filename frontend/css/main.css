@@ -5538,6 +5538,42 @@ body:has(.hero) header#top {
 
 .place__contacts { margin-top: 1.25rem; }
 
+/* ---------- Which pin is which ---------- */
+
+.place__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.5rem;
+  margin: .75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: .9375rem;
+}
+
+.place__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.place__legend-item::before {
+  content: "";
+  width: .625rem;
+  height: .625rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--legend-pin);
+}
+
+/* Sampled from the rendered pins rather than picked to taste, and so
+   deliberately outside this palette: a dot that only nearly matches the pin it
+   stands for is worse than no dot, because the reader has to decide whether
+   they are the same thing. */
+.place__legend-item--from { --legend-pin: #0EB600; }
+.place__legend-item--to { --legend-pin: #EC3735; }
+
+.place__legend-role { color: var(--ink-muted); }
+
 /* ---------- The four figures ---------- */
 
 .facts-grid {
