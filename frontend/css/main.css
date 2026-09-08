@@ -5992,6 +5992,12 @@ body:has(.hero) header#top {
 
 .directory__item[hidden] { display: none; }
 
+/* The list is four columns, and a column break does not care that a name and
+   the line under it are one thing: without this, "Heathrow" sat in column one
+   and "London, United Kingdom" in column two. Harmless while every item was a
+   single line, which is why it was not needed until airports arrived. */
+.directory__item { break-inside: avoid; }
+
 .directory__link {
   display: block;
   padding: .25rem 0;
@@ -6003,6 +6009,18 @@ body:has(.hero) header#top {
 @media (hover: hover) and (pointer: fine) {
   .directory__link:hover { color: var(--brand-accent-700); text-decoration: underline; }
 }
+
+/* A second line under the name, for a caller whose names do not explain
+   themselves. Cities and countries need none -- "Toronto" is Toronto. Airports
+   do: Heathrow, Gatwick and Stansted are all London and none of them says so. */
+.directory__note {
+  display: block;
+  padding-bottom: .25rem;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+}
+
+.directory__item:has(.directory__note) .directory__link { padding-bottom: 0; }
 
 .directory__empty {
   padding: 2rem 0;
