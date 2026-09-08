@@ -235,7 +235,7 @@ final class FooterRenderTest extends TestCase
     {
         $html = $this->render('/');
 
-        preg_match_all('#href="(/cities/[^"]+)"#', $html, $links);
+        preg_match_all('#href="(/city/[^"]+)"#', $html, $links);
 
         self::assertNotEmpty($links[1], 'the footer should link to cities');
 
@@ -245,10 +245,10 @@ final class FooterRenderTest extends TestCase
                 $href . ' is linked in the footer but is not a route',
             );
 
-            // The route pattern alone would pass /cities/YMQ, which is how
+            // The route pattern alone would pass /city/YMQ, which is how
             // these were written before the pages existed and is now a 404.
             self::assertMatchesRegularExpression(
-                '#^/cities/[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{3}$#',
+                '#^/city/[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{3}$#',
                 $href,
                 $href . ' is not a canonical city address',
             );

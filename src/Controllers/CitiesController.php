@@ -59,7 +59,7 @@ class CitiesController extends AbstractController
             $canonical = Helper::citySlug((string) $city['name'], (string) $city['code']);
 
             if ($slug !== $canonical) {
-                $this->bounce('/cities/' . $canonical, 301);
+                $this->bounce('/city/' . $canonical, 301);
 
                 return;
             }
@@ -148,16 +148,16 @@ class CitiesController extends AbstractController
     }
 
     /**
-     * The slug out of /cities/<slug>.
+     * The slug out of /city/<slug>.
      */
     private function slug(): string
     {
         // Returned as written, not folded. A URL that has been through a mail
         // client, a spreadsheet or somebody's capitals still names the city --
         // the lookup lower-cases it -- but the canonical check has to see the
-        // capitals to send them somewhere, or /cities/LONDON-LON quietly serves
+        // capitals to send them somewhere, or /city/LONDON-LON quietly serves
         // the same page at a second address.
-        return preg_match('#^/cities/([A-Za-z0-9-]+)$#', $this->request->path(), $match) === 1
+        return preg_match('#^/city/([A-Za-z0-9-]+)$#', $this->request->path(), $match) === 1
             ? $match[1]
             : '';
     }
