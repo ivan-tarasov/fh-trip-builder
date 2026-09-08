@@ -10,6 +10,8 @@ use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
+use TripBuilder\Repository\RouteRepository;
+use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
 
 class SitemapController extends AbstractController
@@ -20,10 +22,14 @@ class SitemapController extends AbstractController
     /**
      * Every page worth finding, for a crawler that would rather be told.
      *
-     * There are 689 of them and 683 are a city, a country, an airport or an
-     * airline, which is why this is generated rather than a file on disk: the
-     * list is rows in a table, and a checked-in copy would be wrong the first
-     * time a route is added.
+     * There are 847 of them and 841 are a place of some kind, which is why this
+     * is generated rather than a file on disk: the list is rows in a table, and
+     * a checked-in copy would be wrong the first time a route is added.
+     *
+     * Four of the five place families are listed whole -- every city, country,
+     * airport and airline we sell. Routes are not, and cannot be: 42,578 city
+     * pairs in this data can be flown nonstop, which is more URLs than a
+     * sitemap may hold. They are listed by demand instead; see routePaths().
      *
      * The pages are gathered by inclusion, not exclusion -- ENABLED_ROUTES
      * filtered through Routes::isPublic(), which is the same test the robots
@@ -46,6 +52,7 @@ class SitemapController extends AbstractController
                 ...$this->countryPaths(),
                 ...$this->airportPaths(),
                 ...$this->airlinePaths(),
+                ...$this->routePaths(),
             ];
         } catch (Throwable $e) {
             // The static pages are worth serving even if the database is not
@@ -169,6 +176,28 @@ class SitemapController extends AbstractController
                 (string) $airline['code'],
             ),
             new AirlineRepository($this->connection())->sellable(),
+        );
+    }
+
+    /**
+     * The routes worth crawling, which is not all of them.
+     *
+     * The one family with more pages than a sitemap can carry, so what is
+     * listed is what somebody has actually looked for -- 158 pairs, off the
+     * search table. The rest stay reachable and answer perfectly well; they are
+     * simply not advertised, which is the honest thing to do with a page nobody
+     * has ever asked for.
+     *
+     * @return list<string>
+     */
+    private function routePaths(): array
+    {
+        return array_map(
+            static fn(array $route): string => RouteAddress::path(
+                (string) $route['from_name'],
+                (string) $route['to_name'],
+            ),
+            new RouteRepository($this->connection())->searched(),
         );
     }
 

@@ -74,7 +74,49 @@ final readonly class RouteRepository
      */
     public function popular(int $limit): array
     {
-        $rows = $this->connection->fetchAll(
+        return array_slice(
+            self::oneDirectionPerPair($this->searchedWithAPage(self::POPULAR_CANDIDATES)),
+            0,
+            max(0, $limit),
+        );
+    }
+
+    /**
+     * Every route somebody has searched for that has a page, busiest first.
+     *
+     * What the sitemap lists, and the only honest way to list this family at
+     * all: 42,578 ordered city pairs in this data can be flown nonstop, which
+     * is more URLs than a sitemap may carry and far more than are worth
+     * crawling. A search is a person having asked, so the search table is the
+     * demand signal -- 158 pairs of the 213 anybody has looked up, the other 55
+     * being airport codes or pairs with no nonstop.
+     *
+     * Both directions, unlike popular(): New York to London and London to New
+     * York are two pages with two prices, and a sitemap's job is to name pages
+     * rather than to choose between them. That is also why nothing is deduped
+     * here.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function searched(): array
+    {
+        return $this->searchedWithAPage(null);
+    }
+
+    /**
+     * The searched city pairs that have a page.
+     *
+     * `$candidates` caps how many of them are considered before the expensive
+     * half runs -- the EXISTS that asks whether the pair can be flown. The
+     * footer passes a cap because it wants five rows off the top of the
+     * ranking; the sitemap passes none because it wants all of them, and pays
+     * about 40ms for it against 5ms.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function searchedWithAPage(?int $candidates): array
+    {
+        return $this->connection->fetchAll(
             'SELECT p.from_code, MIN(o.city) AS from_name,'
             . ' p.to_code, MIN(d.city) AS to_name, p.searches'
             . ' FROM ('
@@ -83,7 +125,7 @@ final readonly class RouteRepository
             . '  WHERE from_code <> to_code'
             . '  GROUP BY from_code, to_code'
             . '  ORDER BY searches DESC'
-            . '  LIMIT ' . self::POPULAR_CANDIDATES
+            . ($candidates === null ? '' : '  LIMIT ' . $candidates)
             . ' ) p'
             // A search stores whatever the form submitted, which may be an
             // airport code. Joining on city_code is what keeps this to pairs of
@@ -105,8 +147,6 @@ final readonly class RouteRepository
             . ' GROUP BY p.from_code, p.to_code, p.searches'
             . ' ORDER BY p.searches DESC',
         );
-
-        return array_slice(self::oneDirectionPerPair($rows), 0, max(0, $limit));
     }
 
     /**
