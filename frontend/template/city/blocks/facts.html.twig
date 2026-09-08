@@ -6,19 +6,11 @@
    because the column is a decimal and eight of our cities are on a half hour --
    printing it raw says "GMT+5.5" and rounding it lies to everyone flying to
    India. #}
-{% set facts = [
-    { 'icon': 'fa-globe', 'value': city.country, 'label': 'Country' },
-    { 'icon': 'fa-plane', 'value': city.code, 'label': 'IATA code' },
-    { 'icon': 'fa-calendar-days', 'value': city.airports, 'label': 'Airports' },
-    { 'icon': 'fa-clock', 'value': gmt_offset(city.timezone), 'label': 'Time zone' }
-] %}
-
-<ul class="facts-grid">
-    {% for fact in facts %}
-        <li class="facts-grid__item">
-            <i class="fas {{ fact.icon }} facts-grid__icon" aria-hidden="true"></i>
-            <span class="facts-grid__value">{{ fact.value }}</span>
-            <span class="facts-grid__label">{{ fact.label }}</span>
-        </li>
-    {% endfor %}
-</ul>
+{% include 'partials/facts-grid.html.twig' with {
+    'facts': [
+        { 'icon': 'fa-globe', 'value': place.country, 'label': 'Country' },
+        { 'icon': 'fa-plane', 'value': place.code, 'label': 'IATA code' },
+        { 'icon': 'fa-calendar-days', 'value': place.airports, 'label': 'Airports' },
+        { 'icon': 'fa-clock', 'value': gmt_offset(place.timezone), 'label': 'Time zone' }
+    ]
+} only %}

@@ -134,6 +134,11 @@ class CityController extends AbstractController
                 'label' => $domestic ? 'From ' . $city['country'] : 'Other countries',
                 'fares' => array_map(
                     fn(array $fare): array => $fare + [
+                        // The strip is shared with the country page, where the
+                        // arrival city differs per row. Here it is the same one
+                        // every time, and saying so is cheaper than selecting
+                        // it back out of the query.
+                        'to_city' => $city['name'],
                         // Where the card goes: the same search anybody would
                         // have run to find this fare, already filled in.
                         'search' => new SearchUrl(
@@ -224,26 +229,9 @@ class CityController extends AbstractController
             : '';
     }
 
-    /**
-     * The IATA code off the end of a slug, or null when there is not one.
-     *
-     * Read from the end rather than the start, because a city name can hold as
-     * many hyphens as it likes -- "coolangatta-gold-coast-ool" is one of ours.
-     * Three characters, which is what an IATA code is; anything else is not a
-     * mistyped city, it is not a city.
-     */
+    /** Three characters, which is what an IATA code is. */
     private static function codeFrom(string $slug): ?string
     {
-        $slug = mb_strtolower($slug);
-        $code = substr($slug, -3);
-
-        // Each hyphen-separated word, then the code. The first spelling of
-        // this was `[a-z0-9]{2,}-[a-z0-9]{3}`, which allows exactly one word
-        // and so turned away every city whose name has two -- Tel Aviv-Yafo,
-        // Kiev/Kyiv, Coolangatta (Gold Coast) -- while montreal-ymq worked and
-        // hid it.
-        return preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{3}$/', $slug) === 1
-            ? strtoupper($code)
-            : null;
+        return Helper::placeCode($slug, 3);
     }
 }

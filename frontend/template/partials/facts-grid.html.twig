@@ -1,0 +1,14 @@
+{# The few things somebody checks before booking, as a row of tiles.
+
+   Every place page opens with one of these and they hold different facts, so
+   what is shared is the grid and not the list. Each caller builds `facts` as
+   `{ icon, value, label }` and hands it over. #}
+<ul class="facts-grid">
+    {% for fact in facts %}
+        <li class="facts-grid__item">
+            <i class="fas {{ fact.icon }} facts-grid__icon" aria-hidden="true"></i>
+            <span class="facts-grid__value">{{ fact.value }}</span>
+            <span class="facts-grid__label">{{ fact.label }}</span>
+        </li>
+    {% endfor %}
+</ul>

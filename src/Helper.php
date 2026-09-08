@@ -413,6 +413,28 @@ class Helper
         return self::slug($name) . '-' . mb_strtolower($code);
     }
 
+    /**
+     * The code off the end of a place slug, or null when there is not one.
+     *
+     * The inverse of placeSlug(), and read from the end rather than the start,
+     * because a name can hold as many hyphens as it likes -- "tel-aviv-yafo",
+     * "coolangatta-gold-coast" and "cote-d-ivoire" are all ours. The first
+     * spelling of this allowed exactly one word, which turned away every city
+     * whose name has two while montreal-ymq worked and hid it.
+     *
+     * The length is the caller's, and it is the whole difference between a
+     * city's address and a country's: three characters for IATA, two for ISO.
+     * Anything else is not a mistyped place, it is not a place.
+     */
+    public static function placeCode(string $slug, int $length): ?string
+    {
+        $slug = mb_strtolower($slug);
+
+        return preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{' . $length . '}$/', $slug) === 1
+            ? strtoupper(substr($slug, -$length))
+            : null;
+    }
+
     public static function dateLabel(
         string|int $when,
         string $format,

@@ -6,7 +6,11 @@
    entire purpose is to be arrived at cold from a search engine.
 
    The name is scoped to the block rather than the page so a second strip could
-   be added without the two fighting over which is checked. #}
+   be added without the two fighting over which is checked.
+
+   Both ends of the route are printed off the fare. A city page varies the
+   origin and holds the destination; a country page holds neither, because the
+   cheapest way into Canada lands in a different city for every row. #}
 <div class="fares">
     {% if fares|length > 1 %}
         <div class="fares__tabs" role="radiogroup" aria-label="Where the fare starts from">
@@ -25,7 +29,7 @@
                 <li class="fares__item">
                     <a class="fare" href="{{ fare.search }}">
                         <span class="fare__price">${{ fare.total|round(0, 'floor') }}<span class="fare__currency">CAD</span></span>
-                        <span class="fare__route">{{ fare.from_city }} &mdash; {{ city.name }}</span>
+                        <span class="fare__route">{{ fare.from_city }} &mdash; {{ fare.to_city }}</span>
 
                         <span class="fare__detail">
                             <img class="fare__airline"

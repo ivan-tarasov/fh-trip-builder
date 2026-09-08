@@ -1,0 +1,52 @@
+{# A place, as a stack of blocks with a rail beside them.
+
+   Cities today, countries beside them, and an airline or an airport next. All
+   of them read the same way: a page you arrive at cold from a search engine,
+   four or five things you might want, and a rail to jump between them. The
+   shell is here so that shape is stated once.
+
+   What each page brings is its own `blocks` list -- and the list is the rail as
+   well as the content, so an anchor and the section it points at cannot drift
+   apart. `when` is what drops a block: Honolulu has no city within a thousand
+   miles, and a heading over an empty list is worse than no heading.
+
+   `data` is handed to every block whole and each takes what it needs. Passed
+   `only`, so a block cannot quietly come to depend on something the page
+   happened to have in scope. #}
+<main role="main" class="place">
+    <div class="container place__layout">
+
+        {# Sticky, and bounded by the layout it sits in: it follows the blocks
+           down and stops with them rather than riding over the footer. #}
+        <nav class="place__rail" aria-labelledby="place-rail-title">
+            <p class="place__rail-title" id="place-rail-title">{{ rail_title }}</p>
+            <ul class="place__rail-list">
+                {% for block in blocks %}
+                    {% if block.when %}
+                        <li>
+                            <a class="place__rail-link" href="#{{ block.id }}">
+                                <span class="place__rail-icon place__rail-icon--{{ block.tone }}">
+                                    <i class="fas {{ block.icon }}" aria-hidden="true"></i>
+                                </span>
+                                {{ block.nav }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <div class="place__blocks">
+            <h1 class="visually-hidden">{{ heading }}</h1>
+
+            {% for block in blocks %}
+                {% if block.when %}
+                    <section class="place__block" id="{{ block.id }}" aria-labelledby="{{ block.id }}-title">
+                        <h2 class="place__block-title" id="{{ block.id }}-title">{{ block.title }}</h2>
+                        {% include block.template with data only %}
+                    </section>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</main>
