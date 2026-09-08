@@ -1,0 +1,35 @@
+{# Where you leave from and where you land.
+
+   Two tabs, not two lists: it is the same question asked in each direction,
+   which is the shape the airport board already uses. On most routes each side
+   holds one airport, and two standing headings over one chip each would be
+   more furniture than content.
+
+   Ends rather than pairs -- New York to London runs over nine airport pairs and
+   six airports, and naming the pairs would be a list nobody reads. See
+   RouteRepository::ends(). #}
+<div class="tabset">
+    {% if ends|length > 1 %}
+        <div class="tabset__tabs" role="radiogroup" aria-label="Which end of the route">
+            {% for side in ends %}
+                <input class="tabset__radio" type="radio" name="route-ends"
+                       id="ends-{{ side.id }}" {{ loop.first ? 'checked' : '' }}>
+                <label class="tabset__tab" for="ends-{{ side.id }}">{{ side.label }}</label>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% for side in ends %}
+        <ul class="chips tabset__panel" aria-label="{{ side.label }}">
+            {% for airport in side.airports %}
+                <li>
+                    <a class="chip chip--link" href="{{ airport.url }}">
+                        <i class="fas fa-plane-departure chip__icon" aria-hidden="true"></i>
+                        {{ airport.title }} ({{ airport.code }})
+                        <span class="chip__note">{{ airport.flights }} flights</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+</div>

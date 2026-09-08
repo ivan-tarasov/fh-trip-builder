@@ -120,6 +120,12 @@ class Routes
         // "air-canada-ac". Two characters, like a country: an airline's IATA
         // code is two, and the controller is what knows which two.
         '#^/airline/[A-Za-z0-9-]+$#' => 'Airline@show',
+        // "montreal-ymq/toronto-yto" -- a place address on each side. The only
+        // page here that is a pair rather than a record, and the only one with
+        // two segments: each half is read by the same rule a city's is, which
+        // one joined segment could not be, because a name may hold hyphens and
+        // nothing would say where the first one ended.
+        '#^/route/[A-Za-z0-9-]+/[A-Za-z0-9-]+$#' => 'Route@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

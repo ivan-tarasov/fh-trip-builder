@@ -5591,6 +5591,19 @@ body:has(.hero) header#top {
 
 .chip__icon { color: var(--ink-secondary); font-size: .875rem; }
 
+/* An airline's mark, where a chip names an airline rather than a place. Square
+   and small: it stands in for the icon, so it takes the icon's room. */
+.chip__logo {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: .25rem;
+}
+
+/* A row of chips inside a tabset. The shown panel is given whatever display
+   its container names, and .chips is a flex row -- without this it would be
+   handed the `block` default and every chip would take its own line. */
+.chips.tabset__panel { --tabset-panel: flex; }
+
 /* Quieter than the name it follows: the distance qualifies the city, it is not
    a second thing to read. */
 .chip__note { color: var(--ink-muted); font-weight: 400; }

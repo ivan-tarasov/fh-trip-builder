@@ -1,0 +1,38 @@
+{# The four things somebody checks before opening a search, then the shape of
+   the trip.
+
+   The price leads, because it is the one figure the visitor came for and the
+   only one that moves. It is a "from" price and reads as one: the cheapest
+   single economy seat on any upcoming date, which is what the strip below
+   shows the whole of.
+
+   The time in the air is the average and not the fastest -- see
+   RouteRepository::summary(). The distance is the shortest of the airport pairs
+   on the route, which is the one that is a fact about the geography rather than
+   about which airport a carrier happens to use. #}
+{% include 'partials/facts-grid.html.twig' with {
+    'facts': [
+        {
+            'icon': 'fa-tag',
+            'value': '$' ~ place.cheapest|round(0, 'floor'),
+            'label': 'Cheapest fare'
+        },
+        { 'icon': 'fa-clock', 'value': duration(place.typical), 'label': 'Time in the air' },
+        { 'icon': 'fa-ruler', 'value': place.km|number_format ~ ' km', 'label': 'Distance' },
+        {
+            'icon': 'fa-plane',
+            'value': place.carriers,
+            'label': place.carriers > 1 ? 'Airlines' : 'Airline'
+        }
+    ]
+} only %}
+
+{# Both ends on one map, which for a route is the only framing that says
+   anything: the useful fact about Montreal to Toronto is that it is a short
+   hop, and about Montreal to Paris that it is an ocean. Yandex frames two
+   points itself, so no z is given. Marked at the city's own centre -- the mean
+   of its airports -- which is what CityRepository::byCode() returns. #}
+<img class="place__map"
+     src="https://static-maps.yandex.ru/1.x/?l=map&lang=en-US&size=650,300&pt={{ place.from.longitude }},{{ place.from.latitude }},pm2blm1~{{ place.to.longitude }},{{ place.to.latitude }},pm2blm2"
+     width="650" height="300" loading="lazy"
+     alt="Map showing {{ place.from.name }} and {{ place.to.name }} at either end of the route">
