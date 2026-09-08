@@ -353,6 +353,62 @@ class Helper
      * something else to compare against -- the far end of a date range names
      * its own year, so the near end only needs one when the two disagree.
      */
+    /**
+     * An hours-from-UTC offset, written the way a clock is read.
+     *
+     * The column is decimal(4,2) and it means it: eight of our airports sit at
+     * +5.5, Kathmandu at +5.75 and Adelaide at +10.5. Printing the number
+     * straight gives "GMT+5.5", and rounding it to an hour tells everyone
+     * flying to India the wrong time. Minutes are only shown when there are
+     * any, so the common case stays "GMT+3" rather than "GMT+3:00".
+     */
+    public static function gmtOffset(float $hours): string
+    {
+        if ($hours === 0.0) {
+            return 'GMT';
+        }
+
+        $minutes = (int) round(abs($hours) * 60);
+        $whole = intdiv($minutes, 60);
+        $part = $minutes % 60;
+
+        return sprintf(
+            'GMT%s%d%s',
+            $hours < 0 ? '-' : '+',
+            $whole,
+            $part === 0 ? '' : sprintf(':%02d', $part),
+        );
+    }
+
+    /**
+     * A name as it appears in a URL: lower case, words joined by hyphens.
+     *
+     * No transliteration, and no ext-intl. Every one of the 233 major city
+     * names in this database is already ASCII -- checked, not assumed -- so
+     * there is nothing to fold, and reaching for Transliterator would add an
+     * extension the CI image does not install. (iconv's //TRANSLIT is not the
+     * answer either: on macOS it renders Montréal as "Montr'eal".)
+     *
+     * Should a name with an accent ever arrive, this leaves a hyphen where the
+     * letter was. That is untidy and it is not broken: a city URL is resolved
+     * by the IATA code on the end of it, and the canonical redirect rewrites
+     * the name half to whatever this returns.
+     */
+    public static function slug(string $text): string
+    {
+        $slug = preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($text));
+
+        return trim($slug ?? '', '-');
+    }
+
+    /**
+     * "montreal-ymq" -- the name for a reader, the code for the lookup.
+     */
+    public static function citySlug(string $name, string $code): string
+    {
+        return self::slug($name) . '-' . mb_strtolower($code);
+    }
+
     public static function dateLabel(
         string|int $when,
         string $format,

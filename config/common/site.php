@@ -292,14 +292,13 @@ return [
             ],
         ],
         [
+            // The one column whose pages exist, and so the one that is not a
+            // list somebody has to remember to edit. `source` sends it to
+            // LayoutData::mostSearchedCities(), which reads the search counts
+            // the app has been keeping since its first search.
             'title' => 'Cities',
-            'links' => [
-                'Montreal' => '/cities/YMQ',
-                'Toronto' => '/cities/YTO',
-                'Vancouver' => '/cities/YVR',
-                'New York' => '/cities/NYC',
-                'London' => '/cities/LON',
-            ],
+            'source' => 'most-searched',
+            'count' => 5,
         ],
         [
             'title' => 'Airports',
@@ -344,27 +343,30 @@ return [
     |
     | Curated rather than counted. A "most popular" list taken from the search
     | table would be honest and would also be whatever three routes somebody
-    | last clicked on a demo database -- and it would put a query on every page
-    | render, in a footer that currently makes none.
+    | last clicked on a demo database. (The cities column above is counted, and
+    | can be: 254 rows grouped in 0.8ms, in a footer that was already asking the
+    | database for its flight count.)
     |
     | Same cities as the POI cards above, which is deliberate: the cards say
-    | there is something to see there, and these say you can get there.
+    | there is something to see there, and these say you can get there -- and
+    | now they do: every one of these resolves to a real city page, which is
+    | checked by a test rather than left to whoever edits this list next.
     |
     */
 
     'footer-destinations' => [
-        ['city' => 'Istanbul', 'country' => 'Turkey', 'url' => '/cities/IST'],
-        ['city' => 'Miami', 'country' => 'United States', 'url' => '/cities/MIA'],
-        ['city' => 'Montreal', 'country' => 'Canada', 'url' => '/cities/YMQ'],
-        ['city' => 'New York', 'country' => 'United States', 'url' => '/cities/NYC'],
-        ['city' => 'Paris', 'country' => 'France', 'url' => '/cities/PAR'],
-        ['city' => 'Rio de Janeiro', 'country' => 'Brasil', 'url' => '/cities/RIO'],
-        ['city' => 'Sydney', 'country' => 'Australia', 'url' => '/cities/SYD'],
-        ['city' => 'Tokyo', 'country' => 'Japan', 'url' => '/cities/TYO'],
-        ['city' => 'London', 'country' => 'United Kingdom', 'url' => '/cities/LON'],
-        ['city' => 'Toronto', 'country' => 'Canada', 'url' => '/cities/YTO'],
-        ['city' => 'Vancouver', 'country' => 'Canada', 'url' => '/cities/YVR'],
-        ['city' => 'Bangkok', 'country' => 'Thailand', 'url' => '/cities/BKK'],
+        ['city' => 'Istanbul', 'country' => 'Turkey', 'url' => '/cities/istanbul-ist'],
+        ['city' => 'Miami', 'country' => 'United States', 'url' => '/cities/miami-mia'],
+        ['city' => 'Montreal', 'country' => 'Canada', 'url' => '/cities/montreal-ymq'],
+        ['city' => 'New York', 'country' => 'United States', 'url' => '/cities/new-york-nyc'],
+        ['city' => 'Paris', 'country' => 'France', 'url' => '/cities/paris-par'],
+        ['city' => 'Rio de Janeiro', 'country' => 'Brasil', 'url' => '/cities/rio-de-janeiro-rio'],
+        ['city' => 'Sydney', 'country' => 'Australia', 'url' => '/cities/sydney-syd'],
+        ['city' => 'Tokyo', 'country' => 'Japan', 'url' => '/cities/tokyo-tyo'],
+        ['city' => 'London', 'country' => 'United Kingdom', 'url' => '/cities/london-lon'],
+        ['city' => 'Toronto', 'country' => 'Canada', 'url' => '/cities/toronto-yto'],
+        ['city' => 'Vancouver', 'country' => 'Canada', 'url' => '/cities/vancouver-yvr'],
+        ['city' => 'Bangkok', 'country' => 'Thailand', 'url' => '/cities/bangkok-bkk'],
     ],
 
 ];

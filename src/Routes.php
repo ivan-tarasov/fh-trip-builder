@@ -93,6 +93,11 @@ class Routes
         // route below still answers, because that is where the query-string
         // form lands before being redirected here.
         '#^/search/[A-Z0-9]{3}\d{6}(?:x[2-9])?[A-Z0-9]{3}(?:\d{6})?(?:x[2-9])?[YWCF]\d{1,3}$#' => 'Search@index',
+        // "montreal-ymq". The name is for the reader and the code is what the
+        // lookup uses, so the pattern is deliberately loose about the name half
+        // -- a stale or mistyped one still finds the city and is redirected to
+        // the spelling this app would have written.
+        '#^/cities/[A-Za-z0-9-]+$#' => 'Cities@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

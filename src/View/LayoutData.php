@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use Exception;
+use Throwable;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
+use TripBuilder\Repository\CityRepository;
 use TripBuilder\Routes;
 use TripBuilder\Timer;
 
@@ -148,6 +150,38 @@ final class LayoutData
      * To the nearest thousand, so the digits that are shown are ones the
      * estimate can stand behind.
      */
+    /**
+     * The most-searched cities, ready for the footer's link column.
+     *
+     * Returned as `name => url` because that is the shape the column partial
+     * draws, and slugged here because the URL spelling is this app's business
+     * rather than the database's.
+     *
+     * A failure here is not worth a broken page. The footer already depends on
+     * the database for its flight count, so this is not a new risk -- but that
+     * one has a fallback and so does this: an empty list, and the column takes
+     * itself out.
+     *
+     * @return array<string, string>
+     */
+    public function mostSearchedCities(int $limit): array
+    {
+        try {
+            $cities = new CityRepository($this->connection())->mostSearched($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($cities as $city) {
+            $name = (string) $city['name'];
+            $links[$name] = '/cities/' . Helper::citySlug($name, (string) $city['code']);
+        }
+
+        return $links;
+    }
+
     /**
      * The answer to a form post, once, from whoever left it in the session.
      *

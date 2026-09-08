@@ -5372,3 +5372,186 @@ body:has(.hero) header#top {
   .footer__destinations,
   .footer__bottom { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   #CITY PAGE
+   ==========================================================================
+   A rail and a stack of blocks. The rail is a table of contents for a page
+   that is long by design -- somebody who came for the airports should not have
+   to scroll past the fares to find them. */
+
+.city {
+  padding: 2rem 0 4rem;
+  background-color: var(--surface);
+}
+
+.city__layout {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Sticky, and bounded by .city__layout rather than by the page: it travels
+   down beside the blocks and stops where they stop, instead of riding on over
+   the footer. Same reason the search bar is bounded by .page. */
+.city__rail {
+  position: sticky;
+  top: 1.5rem;
+  padding: 1.25rem;
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+.city__rail-title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.city__rail-list {
+  display: grid;
+  gap: .25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.city__rail-link {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .5rem;
+  color: var(--ink-body);
+  font-size: .9375rem;
+  text-decoration: none;
+  border-radius: .625rem;
+  transition: background-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .city__rail-link:hover { background-color: var(--surface-sunken); }
+}
+
+/* The icon tile is what makes a list of eight grey rows scannable: the colour
+   is the thing the eye comes back to, not the word. */
+.city__rail-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  color: #fff;
+  font-size: .8125rem;
+  border-radius: 50%;
+}
+
+.city__rail-icon--green  { background-color: #2F9E44; }
+.city__rail-icon--orange { background-color: #E8590C; }
+.city__rail-icon--red    { background-color: #C2255C; }
+
+.city__blocks {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.city__block {
+  padding: 1.75rem;
+  background-color: #fff;
+  border-radius: 1rem;
+  /* Clear of the sticky rail's top edge, so an anchored jump does not land
+     with the heading tucked under it. */
+  scroll-margin-top: 1.5rem;
+}
+
+.city__block-title {
+  margin: 0 0 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.city__map {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 1.25rem;
+  border-radius: .75rem;
+}
+
+/* ---------- The four figures ---------- */
+
+.facts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts-grid__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  background-color: var(--surface-sunken);
+  border-radius: .75rem;
+}
+
+.facts-grid__icon { color: var(--brand-accent); font-size: 1.25rem; }
+.facts-grid__value { font-size: 1.0625rem; font-weight: 700; }
+.facts-grid__label { color: var(--ink-muted); font-size: .875rem; }
+
+/* ---------- Chips ---------- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .625rem 1rem;
+  color: var(--ink-body);
+  font-size: .9375rem;
+  font-weight: 600;
+  background-color: var(--surface-sunken);
+  border-radius: 2rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.chip__icon { color: var(--ink-secondary); font-size: .875rem; }
+
+/* Quieter than the name it follows: the distance qualifies the city, it is not
+   a second thing to read. */
+.chip__note { color: var(--ink-muted); font-weight: 400; }
+
+@media (hover: hover) and (pointer: fine) {
+  .chip--link:hover { background-color: var(--line); }
+}
+
+/* ---------- Narrowing ---------- */
+
+@media (max-width: 991.98px) {
+  /* The rail stops leading and becomes a strip across the top: a sticky column
+     is worth a screen's width only while there is a screen's width to spare. */
+  .city__layout { grid-template-columns: minmax(0, 1fr); }
+  .city__rail { position: static; }
+  .city__rail-list { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; }
+}
+
+@media (max-width: 767.98px) {
+  .facts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .city__block { padding: 1.25rem; }
+}

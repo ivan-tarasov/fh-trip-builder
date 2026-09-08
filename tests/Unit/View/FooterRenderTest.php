@@ -61,6 +61,12 @@ final class FooterRenderTest extends TestCase
         $html = $this->render('/airlines');
 
         foreach (Config::get('site.footer-columns') as $column) {
+            // A column that draws itself from the database is covered below;
+            // this one is about the config-driven five.
+            if (!isset($column['links'])) {
+                continue;
+            }
+
             self::assertStringContainsString(
                 '>' . $column['title'] . '</h2>',
                 $html,
@@ -70,6 +76,45 @@ final class FooterRenderTest extends TestCase
             foreach ($column['links'] as $label => $url) {
                 self::assertStringContainsString('href="' . $url . '"', $html, $url . ' should be linked');
                 self::assertStringContainsString('>' . $label . '</a>', $html, $label . ' should be named');
+            }
+        }
+    }
+
+    /**
+     * The data-driven column appears when it has something and not when it does
+     * not.
+     *
+     * Written to hold either way round, because which one this suite sees is
+     * decided by whether a database happens to be reachable -- and the answer
+     * that matters is that an empty result takes the heading with it rather
+     * than leaving one standing over nothing.
+     */
+    public function testADataDrivenColumnFollowsItsData(): void
+    {
+        $columns = array_filter(
+            Config::get('site.footer-columns'),
+            static fn(array $column): bool => isset($column['source']),
+        );
+
+        self::assertNotEmpty($columns, 'one column should be drawn from the data');
+
+        $html = $this->render('/airlines');
+
+        foreach ($columns as $column) {
+            $cities = new LayoutData()->mostSearchedCities($column['count'] ?? 5);
+            $heading = '>' . $column['title'] . '</h2>';
+
+            if ($cities === []) {
+                self::assertStringNotContainsString($heading, $html, 'an empty column should not be headed');
+
+                continue;
+            }
+
+            self::assertStringContainsString($heading, $html);
+
+            foreach ($cities as $name => $url) {
+                self::assertStringContainsString('href="' . $url . '"', $html);
+                self::assertStringContainsString('>' . $name . '</a>', $html);
             }
         }
     }
@@ -173,6 +218,39 @@ final class FooterRenderTest extends TestCase
             self::assertNotNull(
                 Routes::resolve(rtrim($href, '/') ?: '/'),
                 $href . ' is linked in the footer but is not a route',
+            );
+        }
+    }
+
+    /**
+     * City links are held to the standard the other five columns are not.
+     *
+     * Airlines, Directions, Countries and Help name pages that are still to be
+     * built and answer 404 on purpose. Cities is no longer one of those: the
+     * pages exist, so a link into them that does not resolve is a bug and not a
+     * plan. This covers the curated destinations block; the column beside it is
+     * built from the database and cannot name a city that is not there.
+     */
+    public function testEveryCityLinkResolves(): void
+    {
+        $html = $this->render('/');
+
+        preg_match_all('#href="(/cities/[^"]+)"#', $html, $links);
+
+        self::assertNotEmpty($links[1], 'the footer should link to cities');
+
+        foreach (array_unique($links[1]) as $href) {
+            self::assertNotNull(
+                Routes::resolve($href),
+                $href . ' is linked in the footer but is not a route',
+            );
+
+            // The route pattern alone would pass /cities/YMQ, which is how
+            // these were written before the pages existed and is now a 404.
+            self::assertMatchesRegularExpression(
+                '#^/cities/[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{3}$#',
+                $href,
+                $href . ' is not a canonical city address',
             );
         }
     }

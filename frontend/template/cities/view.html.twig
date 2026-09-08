@@ -1,0 +1,84 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Flights to {{ city.name }}{% endblock %}
+
+{# A city, as a stack of blocks with a rail beside them.
+
+   The rail is declared here and nowhere else: each entry names the block it
+   scrolls to, so a block and its anchor cannot drift apart, and a block that
+   has nothing to say takes its rail entry with it. `when` is what decides that
+   -- Honolulu has no city within a thousand miles, and a heading over an empty
+   list is worse than no heading. #}
+{% set blocks = [
+    {
+        'id': 'general',
+        'title': 'General information about ' ~ city.name,
+        'nav': 'General information',
+        'icon': 'fa-circle-info',
+        'tone': 'green',
+        'template': 'cities/blocks/facts.html.twig',
+        'when': true
+    },
+    {
+        'id': 'airports',
+        'title': 'Airports of ' ~ city.name,
+        'nav': 'Airports',
+        'icon': 'fa-plane-departure',
+        'tone': 'orange',
+        'template': 'cities/blocks/airports.html.twig',
+        'when': city_airports is not empty
+    },
+    {
+        'id': 'nearby',
+        'title': 'Cities near ' ~ city.name,
+        'nav': 'Cities nearby',
+        'icon': 'fa-location-dot',
+        'tone': 'red',
+        'template': 'cities/blocks/nearby.html.twig',
+        'when': nearby is not empty
+    }
+] %}
+
+{% block content %}
+<main role="main" class="city">
+    <div class="container city__layout">
+
+        {# Sticky, and bounded by the layout it sits in: it follows the blocks
+           down and stops with them rather than riding over the footer. #}
+        <nav class="city__rail" aria-labelledby="city-rail-title">
+            <p class="city__rail-title" id="city-rail-title">{{ city.name }}</p>
+            <ul class="city__rail-list">
+                {% for block in blocks %}
+                    {% if block.when %}
+                        <li>
+                            <a class="city__rail-link" href="#{{ block.id }}">
+                                <span class="city__rail-icon city__rail-icon--{{ block.tone }}">
+                                    <i class="fas {{ block.icon }}" aria-hidden="true"></i>
+                                </span>
+                                {{ block.nav }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+
+        <div class="city__blocks">
+            <h1 class="visually-hidden">Flights to {{ city.name }}, {{ city.country }}</h1>
+
+            {% for block in blocks %}
+                {% if block.when %}
+                    <section class="city__block" id="{{ block.id }}" aria-labelledby="{{ block.id }}-title">
+                        <h2 class="city__block-title" id="{{ block.id }}-title">{{ block.title }}</h2>
+                        {% include block.template with {
+                            'city': city,
+                            'city_airports': city_airports,
+                            'nearby': nearby
+                        } only %}
+                    </section>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</main>
+{% endblock %}
