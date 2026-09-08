@@ -1,0 +1,47 @@
+{# A page that is prose rather than rows.
+
+   Two families use it. /about is the repository README rendered; /help is five
+   articles somebody wrote. They were built far apart and looked it -- the
+   README page in Bootstrap's `display-4` and `.lead` straight on the grey
+   background, the help pages on a white sheet with an icon and a measure. The
+   same kind of page twice, with nothing shared above them but the layout.
+
+   Embedded rather than included, because a page has to be able to fill `body`
+   with whatever it has: /about holds already-safe HTML in a variable and an
+   article has a template of its own, and a block inside a plain `{% include %}`
+   cannot be overridden by the page including it. Same reason the search
+   sidebar's sections are embedded.
+
+   `note` is for a line that belongs to the document -- where the README came
+   from -- and `aside` for a panel beside it, which is where an article puts its
+   siblings. Both are empty unless a page fills them. #}
+<main role="main" class="article">
+    <div class="container article__layout">
+        <div class="article__sheet">
+            <h1 class="article__title">
+                <i class="fas {{ icon }} article__title-icon" aria-hidden="true"></i>
+                {{ title }}
+            </h1>
+
+            {# The sentence the page is about, set apart from the answer rather
+               than run into it. On an article it is also the meta description,
+               so somebody arriving from a search result reads the sentence that
+               brought them. #}
+            {% if lead is defined and lead is not empty %}
+                <p class="article__lead">{{ lead }}</p>
+            {% endif %}
+
+            {# `body_class` is for prose nobody here wrote. The README arrives as
+               generic markdown with no classes to hook, so `.readme` carries
+               the levels and the blocks only it has -- code, tables, an image.
+               An article needs none of that and passes nothing. #}
+            <div class="article__body{{ body_class is defined and body_class ? ' ' ~ body_class : '' }}">
+                {% block body %}{% endblock %}
+            </div>
+
+            {% block note %}{% endblock %}
+        </div>
+
+        {% block aside %}{% endblock %}
+    </div>
+</main>

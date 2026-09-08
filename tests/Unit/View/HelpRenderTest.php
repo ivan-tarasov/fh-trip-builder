@@ -108,10 +108,10 @@ final class HelpRenderTest extends TestCase
     {
         $html = $this->article($slug);
 
-        self::assertStringContainsString('help__body', $html);
+        self::assertStringContainsString('article__body', $html);
         // A heading of its own, so an article that rendered an empty body
         // cannot pass on the strength of the shell around it.
-        self::assertMatchesRegularExpression('#<div class="help__body">.*?<h2>#s', $html);
+        self::assertMatchesRegularExpression('#<div class="article__body">.*?<h2>#s', $html);
     }
 
     /**
@@ -123,7 +123,7 @@ final class HelpRenderTest extends TestCase
         $html = $this->article($slug);
         $summary = (string) self::articles()[$slug]['summary'];
 
-        preg_match('#<p class="help__lead">(.*?)</p>#s', $html, $lead);
+        preg_match('#<p class="article__lead">(.*?)</p>#s', $html, $lead);
         self::assertNotEmpty($lead, 'the lead should be findable');
 
         // Collapsed, because the template wraps the sentence across lines and
@@ -154,7 +154,7 @@ final class HelpRenderTest extends TestCase
     {
         $html = $this->article($slug);
 
-        preg_match('#<aside class="help__more".*?</aside>#s', $html, $aside);
+        preg_match('#<aside class="article__aside".*?</aside>#s', $html, $aside);
         self::assertNotEmpty($aside, 'the more-help list should be findable');
 
         preg_match_all('#href="(/help/[^"]+)"#', $aside[0], $links);
@@ -175,7 +175,7 @@ final class HelpRenderTest extends TestCase
     #[\PHPUnit\Framework\Attributes\DataProvider('articleProvider')]
     public function testEveryLinkInTheProseResolves(string $slug): void
     {
-        preg_match('#<div class="help__body">.*?</div>#s', $this->article($slug), $body);
+        preg_match('#<div class="article__body">.*?</div>#s', $this->article($slug), $body);
         self::assertNotEmpty($body, 'the article body should be findable');
 
         preg_match_all('#href="([^"]+)"#', $body[0], $links);

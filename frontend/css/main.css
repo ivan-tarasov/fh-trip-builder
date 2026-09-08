@@ -2041,59 +2041,23 @@ input[type=number]::-webkit-outer-spin-button {
    CommonMark, with no classes to hook. Everything is scoped under .readme so
    these bare element selectors cannot reach the rest of the app.
 
-   Measure is capped rather than left to the container: the README is prose, and
-   a 1,300px line of it is unreadable. */
-/* A sheet of its own, now that the page behind it is grey. This is the one
-   page whose content is prose rather than cards, so there was nothing to give
-   it an edge and it read as text dropped on the floor. */
-.readme {
-  max-width: 64ch;
-  padding: 2rem 2.25rem;
-  color: var(--ink-body);
-  font-size: 1rem;
-  line-height: 1.7;
-  background-color: #fff;
-  border-radius: 1rem;
-}
+   Only the markdown is here. The sheet it sits on, the measure, and the
+   headings, paragraphs, lists and links that any prose page has are under
+   #ARTICLE, shared with /help -- `.readme` is the extra a document nobody here
+   wrote needs on top: the heading levels the help articles have no use for, and
+   the blocks only a README produces. Nothing below overlaps that section, so
+   which of the two comes first in this file does not matter. */
 
-@media (max-width: 575.98px) {
-  .readme { padding: 1.25rem; }
-}
-
-.readme > :first-child {
-  margin-top: 0;
-}
-
-/* The ladder never drops below the 1rem body text: a heading smaller than the
-   paragraph it introduces reads as a caption. Below h3 there is no room left to
-   shrink, so the deeper levels separate on weight, colour and letter-spacing
-   instead of size. */
+/* h1 is one of those levels, and one the file no longer reaches: the page
+   supplies its own heading, so the README's title sits above the about:start
+   marker. Kept because a README can grow another one, and an unstyled heading
+   here does not fail harmlessly -- see the note on h4. */
 .readme h1 {
   margin-bottom: .75rem;
   color: var(--brand-ink);
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -.01em;
-}
-
-/* The section headings carry the page's structure, so they get a rule above to
-   separate one section from the last. */
-.readme h2 {
-  margin-top: 2.5rem;
-  margin-bottom: 1rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
-  color: var(--brand-ink);
-  font-size: 1.375rem;
-  font-weight: 700;
-}
-
-.readme h3 {
-  margin-top: 1.75rem;
-  margin-bottom: .35rem;
-  color: var(--brand-ink);
-  font-size: 1.125rem;
-  font-weight: 700;
 }
 
 /* Every level the file can reach, not only the levels it uses today. Bootstrap
@@ -2147,26 +2111,16 @@ input[type=number]::-webkit-outer-spin-button {
   margin-top: .5rem;
 }
 
-/* One rhythm for every block the file can produce, not only the text ones.
-   Missing pre and table here left a code block with no bottom margin at all,
-   so the paragraph after it sat flush against the block and read as part of
-   it -- while the gap going in was a full 1rem, which made the asymmetry look
-   deliberate. Anything block-level a README can grow belongs in this list. */
-.readme p,
-.readme ul,
-.readme ol,
+/* The same rhythm the shared body gives a paragraph or a list, for the blocks
+   only a README produces. Missing pre and table here once left a code block
+   with no bottom margin at all, so the paragraph after it sat flush against the
+   block and read as part of it -- while the gap going in was a full 1rem, which
+   made the asymmetry look deliberate. Anything block-level a README can grow
+   belongs in this list. */
 .readme pre,
 .readme table,
 .readme blockquote {
   margin-bottom: 1rem;
-}
-
-/* Bootstrap's reboot zeroes list padding, and the markers are drawn outside the
-   box, so an unpadded list hung its numbers to the left of the text column.
-   Enough room for a two-digit marker to stay inside the measure. */
-.readme ul,
-.readme ol {
-  padding-left: 1.75rem;
 }
 
 .readme li > ul,
@@ -2179,20 +2133,6 @@ input[type=number]::-webkit-outer-spin-button {
    step's text rather than starting a new indent. */
 .readme li > pre {
   margin-top: .5rem;
-}
-
-.readme li + li {
-  margin-top: .35rem;
-}
-
-.readme a {
-  color: var(--brand-accent-700);
-  text-decoration: underline;
-  text-underline-offset: .15em;
-}
-
-.readme a:hover {
-  color: var(--brand-accent);
 }
 
 /* The "Built With" badges are inline images inside links; without this they sit
@@ -2325,15 +2265,6 @@ input[type=number]::-webkit-outer-spin-button {
 .readme img {
   max-width: 100%;
   height: auto;
-}
-
-.readme__source {
-  max-width: 64ch;
-  margin-top: 2.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
-  color: var(--ink-muted);
-  font-size: .875rem;
 }
 
 button,
@@ -5962,28 +5893,33 @@ body:has(.hero) header#top {
 }
 
 /* ==========================================================================
-   #HELP ARTICLES
+   #ARTICLE
    ==========================================================================
-   Five pages of prose, which is a shape this stylesheet did not have. Every
-   other content family is a grid of things and takes the container; these are
-   read a line at a time, so they take a measure instead.
+   A page of prose, which is a shape this stylesheet did not have. Every other
+   content family is a grid of things and takes the container; these are read a
+   line at a time, so they take a measure instead.
+
+   Shared by /about and the five /help articles -- see
+   partials/article.html.twig. The README-only parts of markdown are under
+   #README further up: code, tables, an image, and the heading levels the help
+   articles have no use for.
    ========================================================================== */
 
 /* Prose, not a record, so this is the one content family with no rail beside
    it. The place shell earns its rail by having four or five blocks a reader
    jumps between; an article is read top to bottom, and an anchor list over five
    headings is furniture. */
-.help {
+.article {
   padding-bottom: 3rem;
 }
 
-.help__layout {
+.article__layout {
   display: grid;
   gap: 1.5rem;
   justify-content: center;
 }
 
-.help__article {
+.article__sheet {
   padding: 2rem 2.25rem;
   /* Wide enough for a line of prose and no wider. Everything else on this site
      is a grid of things and takes the container; a paragraph read at 100
@@ -5993,7 +5929,7 @@ body:has(.hero) header#top {
   border-radius: 1rem;
 }
 
-.help__title {
+.article__title {
   display: flex;
   align-items: center;
   gap: .75rem;
@@ -6004,7 +5940,7 @@ body:has(.hero) header#top {
   letter-spacing: -.01em;
 }
 
-.help__title-icon {
+.article__title-icon {
   color: var(--cat-blue);
   font-size: 1.5rem;
 }
@@ -6013,7 +5949,7 @@ body:has(.hero) header#top {
    description, so a reader arriving from a search result sees the sentence that
    brought them. Set apart from the body so it reads as the promise rather than
    as the first paragraph of the answer. */
-.help__lead {
+.article__lead {
   margin: 0 0 1.75rem;
   padding-bottom: 1.25rem;
   color: var(--ink-secondary);
@@ -6022,57 +5958,90 @@ body:has(.hero) header#top {
   border-bottom: 1px solid var(--line);
 }
 
-.help__body {
+.article__body {
   color: var(--ink-body);
   font-size: 1rem;
   line-height: 1.7;
 }
 
-.help__body > :first-child {
+.article__body > :first-child {
   margin-top: 0;
 }
 
-/* Headings hold the body size at the smallest step: a heading smaller than the
-   paragraph under it reads as a caption. Same ladder the README page uses. */
-.help__body h2 {
-  margin: 2rem 0 .625rem;
+/* The ladder never drops below the 1rem body text: a heading smaller than the
+   paragraph it introduces reads as a caption. It is the README page's ladder,
+   which was the considered one of the two -- the help pages had invented a
+   flatter h2 with no rule above it, and one of them had to go. Below h3 there
+   is no room left to shrink, so the deeper levels separate on weight, colour
+   and letter-spacing instead of size; those live under #README, because they
+   are levels only generic markdown reaches. */
+
+/* Section headings carry the page's structure, so they take a rule above to
+   separate one section from the last. */
+.article__body h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
   color: var(--brand-ink);
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
 }
 
-.help__body p {
-  margin: 0 0 1rem;
-}
-
-.help__body ul {
-  margin: 0 0 1rem;
-  padding-left: 1.25rem;
-}
-
-.help__body li {
-  margin-bottom: .5rem;
-}
-
-.help__body a {
+.article__body h3 {
+  margin-top: 1.75rem;
+  margin-bottom: .35rem;
   color: var(--brand-ink);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.article__body p,
+.article__body ul,
+.article__body ol {
+  margin-bottom: 1rem;
+}
+
+/* Bootstrap's reboot zeroes list padding, and the markers are drawn outside the
+   box, so an unpadded list hangs its numbers to the left of the text column.
+   Enough room for a two-digit marker to stay inside the measure. */
+.article__body ul,
+.article__body ol {
+  padding-left: 1.75rem;
+}
+
+.article__body li + li {
+  margin-top: .35rem;
+}
+
+.article__body a {
+  color: var(--brand-accent-700);
   text-decoration: underline;
-  text-decoration-color: var(--line-strong);
-  text-underline-offset: .1875em;
+  text-underline-offset: .15em;
 }
 
-.help__body a:hover {
-  text-decoration-color: currentcolor;
+.article__body a:hover {
+  color: var(--brand-accent);
 }
 
-.help__more {
+/* A line that belongs to the document rather than to the page: where the README
+   came from, and when it last changed. */
+.article__note {
+  margin: 2.5rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: .875rem;
+}
+
+.article__aside {
   max-width: 68ch;
   padding: 1.5rem 2.25rem 1.75rem;
   background-color: #fff;
   border-radius: 1rem;
 }
 
-.help__more-title {
+.article__aside-title {
   margin: 0 0 1rem;
   font-size: 1.125rem;
   font-weight: 700;
@@ -6081,7 +6050,7 @@ body:has(.hero) header#top {
 /* The hub. One card per article, and the card carries the summary: the line is
    the half that tells somebody which of five pages they want, and a list of
    five titles alone makes them open two to find out. */
-.help-list {
+.article-list {
   display: grid;
   gap: .75rem;
   margin: 0;
@@ -6089,7 +6058,7 @@ body:has(.hero) header#top {
   list-style: none;
 }
 
-.help-card {
+.article-card {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
@@ -6100,7 +6069,7 @@ body:has(.hero) header#top {
   transition: background-color var(--dur-fast) ease;
 }
 
-.help-card__icon {
+.article-card__icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6113,31 +6082,31 @@ body:has(.hero) header#top {
   border-radius: 50%;
 }
 
-.help-card__text {
+.article-card__text {
   display: grid;
   gap: .1875rem;
   min-width: 0;
 }
 
-.help-card__title {
+.article-card__title {
   color: var(--brand-ink);
   font-size: 1rem;
   font-weight: 700;
 }
 
-.help-card__summary {
+.article-card__summary {
   color: var(--ink-secondary);
   font-size: .9375rem;
   line-height: 1.5;
 }
 
 @media (hover: hover) {
-  .help-card:hover { background-color: var(--line); }
+  .article-card:hover { background-color: var(--line); }
 }
 
 @media (max-width: 47.9375em) {
-  .help__article,
-  .help__more {
+  .article__sheet,
+  .article__aside {
     padding-right: 1.25rem;
     padding-left: 1.25rem;
   }

@@ -28,7 +28,7 @@ final class ReadmeTest extends TestCase
 
     public function testRendersWhatTheProjectSaysAboutItself(): void
     {
-        self::assertStringContainsString('<h1>Trip Builder</h1>', $this->html);
+        self::assertStringContainsString('The Air Trips Builder is an application', $this->html);
         self::assertStringContainsString('About The Project', $this->html);
         self::assertStringContainsString('Features', $this->html);
         self::assertStringContainsString('Flight Search', $this->html);
@@ -97,6 +97,20 @@ final class ReadmeTest extends TestCase
         self::assertStringNotContainsString('http://', str_replace('https://', '', $this->html));
     }
 
+    /**
+     * The page's heading is the page's, and there is only one of it.
+     *
+     * The README's own title sits above the start marker, so the document
+     * begins at its first paragraph. Left in, it put a second <h1> immediately
+     * under the page's -- naming the project where the page had just said what
+     * the page is. The marker is one line in a file anybody may edit, which is
+     * why this is asserted rather than trusted.
+     */
+    public function testTheProjectTitleIsLeftToThePage(): void
+    {
+        self::assertStringNotContainsString('<h1', $this->html);
+    }
+
     public function testEveryHeadingLevelTheReadmeUsesIsStyled(): void
     {
         // The README drives this page, so it can grow a heading level at any
@@ -113,13 +127,18 @@ final class ReadmeTest extends TestCase
 
         foreach ($levels as $level) {
             self::assertMatchesRegularExpression(
+                // Either prefix will do, and which one depends on the level:
+                // the page shares its shell with /help, so the levels prose has
+                // in common are styled under `.article__body` and only the ones
+                // markdown alone reaches are left to `.readme`.
+                //
                 // The selector has to end at the heading -- `{` for a rule of
                 // its own or `,` for one shared with another level. A looser
                 // match would be satisfied by `.readme h4 + p`, which styles
                 // the paragraph after the heading and not the heading itself.
-                sprintf('/^\.readme h%d\s*[,{]/m', $level),
+                sprintf('/^(?:\.readme|\.article__body) h%d\s*[,{]/m', $level),
                 $css,
-                sprintf('The README uses <h%1$d> but main.css has no `.readme h%1$d` rule', $level),
+                sprintf('The README uses <h%1$d> but nothing in main.css styles it', $level),
             );
         }
     }
