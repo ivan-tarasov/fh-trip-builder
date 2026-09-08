@@ -23,10 +23,10 @@
 {% block content %}
 <main role="main" class="flex-shrink-0 mb-5">
     <div class="container bookings">
-        <div class="py-5 mx-auto">
-            <h1 class="display-4">My bookings</h1>
-            <p class="lead">Every trip booked in this browser, with its reference and the full itinerary.</p>
-        </div>
+        {% include 'partials/page-head.html.twig' with {
+            'title': 'My bookings',
+            'lead': 'Every trip booked in this browser, with its reference and the full itinerary.'
+        } only %}
 
         <nav class="bookings-tabs" aria-label="Booking status">
             {% for item in tabs %}

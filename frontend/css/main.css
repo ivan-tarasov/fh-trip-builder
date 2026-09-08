@@ -5949,13 +5949,20 @@ body:has(main.article) .breadcrumbs__list {
   border-radius: 1rem;
 }
 
+/* 2rem, the same as .directory__title and .page-head__title. It was 1.875rem
+   for no reason anybody could have given -- and once every page title on the
+   site came from one of these three rules, the odd 2px was the last thing
+   between them and one scale. */
 .article__title {
   display: flex;
-  align-items: center;
+  /* Baseline, not centre: "Changing passenger details" wraps to two lines below
+     about 430px, and centred the icon floated between them like a bullet for
+     the whole block instead of sitting with the first line. */
+  align-items: baseline;
   gap: .75rem;
   margin: 0 0 .75rem;
   color: var(--brand-ink);
-  font-size: 1.875rem;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: -.01em;
 }
@@ -6154,6 +6161,33 @@ body:has(main.article) .breadcrumbs__list {
    and, next, the country list -- both are read the same way. */
 
 .page-list { padding: 2rem 0 4rem; }
+
+/* A page's title and the line under it, where the page is neither prose nor a
+   directory. Those two carry their own header inside their sheet; a page whose
+   content is cards has nowhere to put one, so /my/bookings and /my/saved had
+   been borrowing Bootstrap's `display-4` and `.lead`. Measured, that was 56px
+   at weight 300 against the 28-32px at 700 every other title in the app uses --
+   the largest and lightest heading on the site, on the only two pages nobody
+   had given a header of their own.
+
+   The type is .directory__title's, because these pages are its kin: a title, a
+   line saying what the list is, and then the list. Less room under it than the
+   48px `py-5` left, which was air sized for a heading half as big again. */
+.page-head {
+  padding: 3rem 0 2rem;
+}
+
+.page-head__title {
+  margin: 0 0 .375rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.page-head__lead {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 1.0625rem;
+}
 
 .directory {
   padding: 2rem 2.25rem;

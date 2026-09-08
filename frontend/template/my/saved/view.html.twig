@@ -5,13 +5,11 @@
 {% block content %}
 <main role="main" class="flex-shrink-0 mb-5">
     <div class="container">
-        <div class="py-5 mx-auto">
-            <h1 class="display-4">Saved flights</h1>
-            <p class="lead">
-                The flights you kept for later, priced as they are today.
-                They are remembered in this browser only.
-            </p>
-        </div>
+        {% include 'partials/page-head.html.twig' with {
+            'title': 'Saved flights',
+            'lead': 'The flights you kept for later, priced as they are today.'
+                ~ ' They are remembered in this browser only.'
+        } only %}
 
         {% if has_rows %}
             <div class="js-saved-list">
