@@ -40,6 +40,15 @@
         'when': fares is not empty
     },
     {
+        'id': 'routes',
+        'title': 'Popular routes from ' ~ airport.city,
+        'nav': 'Popular routes',
+        'icon': 'fa-route',
+        'tone': 'pink',
+        'template': 'place/routes.html.twig',
+        'when': routes is not empty
+    },
+    {
         'id': 'nearby',
         'title': 'Airports near ' ~ airport.title,
         'nav': 'Airports nearby',
@@ -60,7 +69,8 @@
         'schedule': schedule,
         'local_now': local_now,
         'nearby': nearby,
-        'fares': fares
+        'fares': fares,
+        'routes': routes
     }
 } only %}
 {% endblock %}

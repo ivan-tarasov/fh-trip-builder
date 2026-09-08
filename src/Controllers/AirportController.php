@@ -13,6 +13,8 @@ use TripBuilder\Helper;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
+use TripBuilder\Repository\RouteRepository;
+use TripBuilder\RouteAddress;
 use TripBuilder\SearchUrl;
 use TripBuilder\View\TwigRenderer;
 
@@ -80,6 +82,10 @@ class AirportController extends AbstractController
                 'local_now' => $now->format('Y-m-d H:i:s'),
                 'nearby' => self::addressable($airports->nearby($code, self::NEARBY_LIMIT, self::NEARBY_MAX_KM)),
                 'fares' => $this->fares($airports, $code),
+                'routes' => self::addressableRoutes(
+                    new RouteRepository($this->connection())
+                        ->departing((string) $airport['city_code'], RouteRepository::PLACE_LINKS),
+                ),
             ]);
         } catch (Throwable $e) {
             error_log('Airport page failed: ' . $e->getMessage());
@@ -233,6 +239,31 @@ class AirportController extends AbstractController
                 'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
             ],
             $airports,
+        );
+    }
+
+    /**
+     * Give each route the address its page is at.
+     *
+     * The city's routes and not the airport's, because a route is a pair of
+     * cities: London has six airports we sell and one set of routes, so all six
+     * pages carry it -- the same way they all carry the fares strip, which is
+     * also counted from the city.
+     *
+     * Leaving and not arriving, because this page is called "Flights from
+     * Heathrow". The routes into a city are listed on the city's own page,
+     * which is the one called "Flights to".
+     *
+     * @param list<array<string, mixed>> $routes
+     * @return list<array<string, mixed>>
+     */
+    private static function addressableRoutes(array $routes): array
+    {
+        return array_map(
+            static fn(array $route): array => $route + [
+                'url' => RouteAddress::path((string) $route['from_name'], (string) $route['to_name']),
+            ],
+            $routes,
         );
     }
 

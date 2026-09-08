@@ -1,0 +1,28 @@
+{# The routes through here that have a page of their own.
+
+   Anchor text, mostly. Until this block existed nothing on the site linked a
+   route page except the footer's five, so 153 of the 158 were pages only the
+   sitemap mentioned -- and a page nothing links to is a page nothing vouches
+   for. These say the whole pair rather than just the far end: under a heading
+   about Montreal, "Paris" is a weaker thing to read than "Paris to Montreal",
+   and the pair is both what the page it opens is about and the phrase somebody
+   types to look for it.
+
+   Counted, not curated. RouteRepository ranks these by how often the pair has
+   been searched and offers only pairs that can be flown nonstop, which is the
+   rule the footer's five follow and the reason none of these is a 404.
+
+   One direction per page, the direction the page is already about: a city page
+   reads "Flights to Montreal" and lists the routes arriving, an airport page
+   reads "Flights from Heathrow" and lists the ones leaving. Between the two,
+   every route page is linked from somewhere. #}
+<ul class="chips">
+    {% for route in routes %}
+        <li>
+            <a class="chip chip--link" href="{{ route.url }}">
+                <i class="fas fa-route chip__icon" aria-hidden="true"></i>
+                {{ route.from_name }} to {{ route.to_name }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>

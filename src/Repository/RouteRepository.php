@@ -44,6 +44,18 @@ final readonly class RouteRepository
      */
     private const int POPULAR_CANDIDATES = 40;
 
+    /**
+     * How many routes one place page lists.
+     *
+     * Twelve, because twelve is what covers the family. Ranked per city and
+     * capped there, every one of the 158 route pages is linked from at least
+     * one place page; at ten one is missed and at eight two are. It cuts almost
+     * nothing to do it -- one city is searched to more than twelve
+     * destinations, London with 29, and four are searched from more than
+     * twelve, the longest being sixteen.
+     */
+    public const int PLACE_LINKS = 12;
+
     public function __construct(private Connection $connection) {}
 
     /**
@@ -64,7 +76,8 @@ final readonly class RouteRepository
      * One direction per city pair. New York to London and London to New York
      * are two real pages with two real prices, and in a five-line footer they
      * are also two lines saying nearly the same thing -- so the busier of the
-     * two stands for the pair and the other is reached from the page itself.
+     * two stands for the pair, and the other is reached from the city and
+     * airport pages instead. See departing().
      *
      * The name is MIN(city) over the city's airports, the same rule
      * CityRepository::namesSql() states -- grouped here rather than joined to
@@ -104,6 +117,42 @@ final readonly class RouteRepository
     }
 
     /**
+     * The busiest routes out of one city, ranked the way the footer's are.
+     *
+     * This and arriving() are what give the route family a way in. Nothing on
+     * the site linked a route page except the footer's five: the sitemap names
+     * all 158, and a page that only a sitemap mentions is a page nothing
+     * vouches for. Between them these two put every one of the 158 on a page
+     * that is already crawled -- they pair 37 origin cities with 56
+     * destination cities, so every route is at one end or the other.
+     *
+     * Split by direction rather than mixed, because the page each one fills is
+     * already about a direction. An airport page reads "Flights from Heathrow"
+     * and takes this; a city page reads "Flights to Montreal" and takes
+     * arriving(). One list per page, saying what that page is about.
+     *
+     * No candidate cap, unlike popular(): one city has few searched pairs, so
+     * the expensive half runs over tens of rows rather than 213. Measured at
+     * 1.6 to 6.3ms, the worst of it London.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function departing(string $city, int $limit): array
+    {
+        return array_slice($this->searchedWithAPage(null, 'from_code', $city), 0, max(0, $limit));
+    }
+
+    /**
+     * The same the other way round: the busiest routes into one city.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function arriving(string $city, int $limit): array
+    {
+        return array_slice($this->searchedWithAPage(null, 'to_code', $city), 0, max(0, $limit));
+    }
+
+    /**
      * The searched city pairs that have a page.
      *
      * `$candidates` caps how many of them are considered before the expensive
@@ -112,9 +161,15 @@ final readonly class RouteRepository
      * ranking; the sitemap passes none because it wants all of them, and pays
      * about 40ms for it against 5ms.
      *
+     * `$endColumn` pins one end of the pair to `$city`, which is what the two
+     * place-page methods above want and what makes a cap unnecessary for them.
+     * It is written into the SQL rather than bound, so it may only ever be one
+     * of the two column names this class passes it -- never anything that came
+     * from a request.
+     *
      * @return list<array<string, mixed>>
      */
-    private function searchedWithAPage(?int $candidates): array
+    private function searchedWithAPage(?int $candidates, ?string $endColumn = null, string $city = ''): array
     {
         return $this->connection->fetchAll(
             'SELECT p.from_code, MIN(o.city) AS from_name,'
@@ -123,6 +178,7 @@ final readonly class RouteRepository
             . '  SELECT from_code, to_code, SUM(search_count) AS searches'
             . '  FROM ' . Table::Search->value
             . '  WHERE from_code <> to_code'
+            . ($endColumn === null ? '' : ' AND ' . $endColumn . ' = ?')
             . '  GROUP BY from_code, to_code'
             . '  ORDER BY searches DESC'
             . ($candidates === null ? '' : '  LIMIT ' . $candidates)
@@ -145,7 +201,13 @@ final readonly class RouteRepository
             . '  ) AND f.departure_time >= NOW()'
             . ' )'
             . ' GROUP BY p.from_code, p.to_code, p.searches'
-            . ' ORDER BY p.searches DESC',
+            // Named after the count, because the count runs out. 133 of the 158
+            // pairs have been searched exactly once -- London has 29 routes
+            // leaving and 23 of them are tied there -- so a list cut at twelve
+            // would otherwise hold whichever twelve MySQL happened to hand
+            // back, and hold different ones tomorrow.
+            . ' ORDER BY p.searches DESC, from_name ASC, to_name ASC',
+            $endColumn === null ? [] : [$city],
         );
     }
 

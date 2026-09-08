@@ -134,6 +134,7 @@
   --cat-blue:          #1971C2;
   --cat-orange:        #E8590C;
   --cat-violet:        #7048E8;
+  --cat-pink:          #C2255C;
 
   --success-tint:      #E4F2EA;
   --success-tint-edge: #B2E2C4;
@@ -5484,11 +5485,16 @@ body:has(.hero) header#top {
    from this palette. Flattening them was the wrong answer -- a rail you can
    find by colour is easier to come back to than one you have to read -- and so
    was muting them. They are those four colours again, named this time, and
-   measured. */
+   measured.
+
+   Five now that the city and airport pages have a routes block, and the fifth
+   is the crimson those four started out with -- the one violet replaced. Same
+   ramp as the rest of the set, at the same step. */
 .place__rail-icon--green  { background-color: var(--cat-green); }
 .place__rail-icon--blue   { background-color: var(--cat-blue); }
 .place__rail-icon--orange { background-color: var(--cat-orange); }
 .place__rail-icon--violet { background-color: var(--cat-violet); }
+.place__rail-icon--pink   { background-color: var(--cat-pink); }
 
 .place__blocks {
   display: grid;

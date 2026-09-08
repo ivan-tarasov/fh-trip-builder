@@ -10,6 +10,8 @@ use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
+use TripBuilder\Repository\RouteRepository;
+use TripBuilder\RouteAddress;
 use TripBuilder\SearchUrl;
 use TripBuilder\View\Directory;
 use TripBuilder\View\TwigRenderer;
@@ -93,6 +95,10 @@ class CityController extends AbstractController
                 'city_airports' => self::addressableAirports($cities->airports($code)),
                 'nearby' => self::addressable($cities->nearby($code, self::NEARBY_LIMIT, self::NEARBY_MAX_KM)),
                 'fares' => $this->fares($cities, $city),
+                'routes' => self::addressableRoutes(
+                    new RouteRepository($this->connection())
+                        ->arriving($code, RouteRepository::PLACE_LINKS),
+                ),
             ]);
         } catch (Throwable $e) {
             error_log('City page failed: ' . $e->getMessage());
@@ -231,6 +237,28 @@ class CityController extends AbstractController
                 'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
             ],
             $airports,
+        );
+    }
+
+    /**
+     * Give each route the address its page is at.
+     *
+     * Arriving and not leaving, because this page is called "Flights to
+     * Montreal" and every other block on it answers that question. The routes
+     * out of a city are listed on its airport pages, which are the pages
+     * called "Flights from". Between the two, no route page is left with
+     * nothing linking to it -- see RouteRepository::departing().
+     *
+     * @param list<array<string, mixed>> $routes
+     * @return list<array<string, mixed>>
+     */
+    private static function addressableRoutes(array $routes): array
+    {
+        return array_map(
+            static fn(array $route): array => $route + [
+                'url' => RouteAddress::path((string) $route['from_name'], (string) $route['to_name']),
+            ],
+            $routes,
         );
     }
 
