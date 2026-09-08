@@ -5497,13 +5497,64 @@ body:has(main.article) .breadcrumbs__list {
 
 /* An airline's mark. The one place page with no map of its own to lead with,
    and the one whose subject has a face people recognise faster than its name. */
-.place__mark {
-  display: block;
+/* The airline masthead: the mark and the two things that identify the carrier,
+   on one line. Both used to be tiles in the grid below -- a code and a country
+   sitting among counted figures, where they read as statistics and are not.
+   The mark was on a line of its own above them, belonging to nothing. */
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.masthead__mark {
+  flex: 0 0 auto;
   width: 3.5rem;
   height: 3.5rem;
-  margin-bottom: 1.25rem;
   border-radius: .75rem;
 }
+
+.masthead__identity { min-width: 0; }
+
+.masthead__name {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.masthead__meta {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .25rem 0 0;
+  color: var(--ink-muted);
+  font-size: .9375rem;
+}
+
+/* The code set apart, because it is an identifier rather than a word: two
+   capitals in running text read as an abbreviation of the name beside them. */
+.masthead__code {
+  padding: .0625rem .375rem;
+  color: var(--ink-secondary);
+  font-weight: 700;
+  letter-spacing: .04em;
+  background-color: var(--surface-sunken);
+  border-radius: .25rem;
+}
+
+.masthead__sep { color: var(--line-strongest); }
+
+.masthead__country {
+  color: var(--ink-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: .15em;
+}
+
+.masthead__country:hover { color: var(--brand-accent-700); }
 
 .place__contacts { margin-top: 1.25rem; }
 
@@ -5625,6 +5676,30 @@ body:has(main.article) .breadcrumbs__list {
 }
 
 .chip__icon { color: var(--ink-secondary); font-size: .875rem; }
+
+/* A widebody, on the aircraft list. The one attribute of an aircraft a
+   passenger feels, and the thing that makes two airlines' lists look different
+   at a glance rather than only to somebody who knows what a Dash 8 is.
+
+   Below .chip and not above it: both are one class, so the background it sets
+   wins on source order alone. */
+.chip--wide {
+  color: var(--brand-ink);
+  background-color: var(--brand-tint);
+  box-shadow: inset 0 0 0 1px var(--brand-tint-edge);
+}
+
+.chip--wide .chip__icon { color: var(--brand-accent); }
+
+/* What a count of flights is a count of. Two blocks on the airline page look a
+   fortnight ahead rather than over the whole schedule, and a number with no
+   period behind it is not a number. */
+.chips__note {
+  margin: .875rem 0 0;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+}
+
 
 /* An airline's mark, where a chip names an airline rather than a place. Square
    and small: it stands in for the icon, so it takes the icon's room. */

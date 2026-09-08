@@ -10,9 +10,10 @@
    thirteen do not; see the `map` block in layout.html.twig. #}
 {% block map %}yes{% endblock %}
 
-{# Three blocks, not four. The two an airline page would obviously carry -- a
-   fleet and a fare table -- are the same on all 105 in this data; see
-   AirlineController for the measurements. #}
+{# Five blocks. A fare table is still not one of them: all five brands are on
+   all 105 airlines, so the table would be the same table every time. The fleet
+   was in that same category until it was measured a second time -- see
+   AirlineController. #}
 {% set blocks = [
     {
         'id': 'general',
@@ -40,6 +41,24 @@
         'tone': 'violet',
         'template': 'airline/blocks/hubs.html.twig',
         'when': hubs is not empty
+    },
+    {
+        'id': 'aircraft',
+        'title': 'Aircraft ' ~ airline.name ~ ' flies most',
+        'nav': 'Aircraft',
+        'icon': 'fa-plane-up',
+        'tone': 'orange',
+        'template': 'airline/blocks/aircraft.html.twig',
+        'when': aircraft is not empty
+    },
+    {
+        'id': 'peers',
+        'title': 'Other airlines at the same airports',
+        'nav': 'Other airlines',
+        'icon': 'fa-user-group',
+        'tone': 'pink',
+        'template': 'airline/blocks/peers.html.twig',
+        'when': peers is not empty
     }
 ] %}
 
@@ -51,7 +70,10 @@
     'data': {
         'place': airline,
         'hubs': hubs,
-        'fares': fares
+        'fares': fares,
+        'aircraft': aircraft,
+        'peers': peers,
+        'window_days': window_days
     }
 } only %}
 {% endblock %}

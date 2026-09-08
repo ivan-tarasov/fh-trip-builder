@@ -68,8 +68,11 @@ final class TwigRendererTest extends TestCase
             'code' => 'AC',
             'name' => '<b>Air & Co</b>',
             'country' => 'Canada',
+            'country_url' => '/country/canada-ca',
             'hub_count' => 3,
             'destinations' => 228,
+            'per_day' => 61,
+            'widebody_share' => 56,
             'phone' => '123',
             'url' => 'https://example.test/?a=1&b=2',
         ];

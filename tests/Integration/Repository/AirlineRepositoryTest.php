@@ -139,6 +139,112 @@ final class AirlineRepositoryTest extends IntegrationTestCase
         self::assertSame(array_column($canonical, 'title'), $names);
     }
 
+    /**
+     * The two figures the page's tiles are built from.
+     *
+     * Both are shares or rates rather than totals, so both have to be inside
+     * their own bounds whatever the data does.
+     */
+    public function testNetworkReportsARateAndAShare(): void
+    {
+        $network = $this->repository()->network(...$this->anAirlineWithHubs());
+
+        self::assertNotNull($network);
+        self::assertGreaterThanOrEqual(1, $network['per_day']);
+        self::assertGreaterThanOrEqual(0, $network['widebody_share']);
+        self::assertLessThanOrEqual(100, $network['widebody_share']);
+    }
+
+    /**
+     * An airline with nowhere to fly from has no network to describe.
+     */
+    public function testNetworkIsNullWithoutHubs(): void
+    {
+        self::assertNull($this->repository()->network('AC', []));
+        self::assertSame([], $this->repository()->peers('AC', [], 6));
+    }
+
+    public function testAircraftIsCappedAndOrderedByFlights(): void
+    {
+        $types = $this->repository()->aircraft($this->anAirlineWithHubs()[0], 5);
+
+        self::assertNotEmpty($types);
+        self::assertLessThanOrEqual(5, count($types));
+
+        $flights = array_map(static fn(array $t): int => (int) $t['flights'], $types);
+        $sorted = $flights;
+        rsort($sorted);
+
+        self::assertSame($sorted, $flights);
+    }
+
+    /**
+     * The claim the block rests on: the order is not the same list every time.
+     *
+     * Every airline in this data flies all 28 types, so a fleet as a *set*
+     * would be one sentence repeated 105 times. What makes it worth drawing is
+     * that the seeder picks an aircraft by whether its range covers the leg, so
+     * the order follows an airline's route lengths -- turboprops at the top for
+     * a short-haul carrier, widebodies for a long-haul one. Flatten that and
+     * this fails.
+     */
+    public function testTheAircraftOrderDiffersBetweenAirlines(): void
+    {
+        $seen = [];
+
+        foreach (array_slice($this->repository()->sellable(), 0, 12) as $airline) {
+            $top = $this->repository()->aircraft((string) $airline['code'], 3);
+
+            if ($top !== []) {
+                $seen[] = implode('|', array_column($top, 'title'));
+            }
+        }
+
+        self::assertNotEmpty($seen);
+        self::assertGreaterThan(1, count(array_unique($seen)), 'every airline led with the same aircraft');
+    }
+
+    /**
+     * Never the airline whose page it is, and never one we do not sell.
+     */
+    public function testPeersExcludeTheAirlineItselfAndAnythingUnsold(): void
+    {
+        [$code, $hubs] = $this->anAirlineWithHubs();
+
+        $peers = $this->repository()->peers($code, $hubs, 6);
+
+        self::assertNotEmpty($peers);
+        self::assertLessThanOrEqual(6, count($peers));
+
+        $sellable = array_column($this->repository()->sellable(), 'code');
+
+        foreach ($peers as $peer) {
+            self::assertNotSame($code, $peer['code']);
+            self::assertContains($peer['code'], $sellable);
+        }
+    }
+
+    /**
+     * The busiest airline at those airports, and the code that finds its page.
+     *
+     * @return array{string, list<string>}
+     */
+    private function anAirlineWithHubs(): array
+    {
+        // byCode(), not sellable(): the directory list carries no hubs, which
+        // is the whole reason this helper exists rather than a one-liner.
+        foreach ($this->repository()->sellable() as $airline) {
+            $row = $this->repository()->byCode((string) $airline['code']);
+            $hubs = AirlineRepository::hubCodes((string) ($row['hubs'] ?? ''));
+
+            if ($hubs !== []) {
+                return [(string) $airline['code'], $hubs];
+            }
+        }
+
+        self::fail('No sellable airline has a hub');
+    }
+
     private function repository(): AirlineRepository
     {
         return new AirlineRepository($this->connection());

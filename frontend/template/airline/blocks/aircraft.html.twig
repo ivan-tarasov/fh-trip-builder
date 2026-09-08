@@ -1,0 +1,32 @@
+{# What you are most likely to be sitting in, and how often.
+
+   Flights, never airframes. This page has no idea how many aircraft an airline
+   owns; it knows how many of its upcoming departures are flown by each type,
+   which is a different fact and the one a passenger is actually asking. The
+   note says "flights" on every chip so the number cannot be read as a fleet
+   count.
+
+   Ordered by that count, which is the whole reason the block is worth drawing:
+   every airline in this data flies all 28 types, so the list is only
+   interesting in its order -- and the order is set by how long the airline's
+   legs are, because an aircraft is chosen by whether its range covers the leg.
+   See AirlineRepository::aircraft().
+
+   Widebodies are marked. It is the one attribute of an aircraft a passenger
+   feels -- two aisles, and a long flight -- and it is what makes the
+   difference between two airlines visible at a glance rather than only to
+   somebody who knows what a Dash 8 is. #}
+<ul class="chips">
+    {% for type in aircraft %}
+        <li>
+            <span class="chip{{ type.is_widebody ? ' chip--wide' : '' }}">
+                <i class="fas {{ type.is_widebody ? 'fa-plane' : 'fa-plane-up' }} chip__icon"
+                   aria-hidden="true"></i>
+                {{ type.title }}
+                <span class="chip__note">{{ type.flights|number_format }} flights</span>
+            </span>
+        </li>
+    {% endfor %}
+</ul>
+
+<p class="chips__note">Counted over departures in the next {{ window_days }} days.</p>

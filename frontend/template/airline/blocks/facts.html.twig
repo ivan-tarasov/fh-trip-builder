@@ -1,36 +1,75 @@
-{# The airline's own mark, four figures, then how to reach it.
+{# Who the airline is, then what its network measures.
 
-   Where it is based rather than a second copy of its code: the country is the
-   one fact here that sends a reader somewhere else, and the code is already in
-   the tile beside it and in the page's own address.
+   The mark used to sit on a line of its own above four tiles, two of which
+   were not figures at all: the code, which is in the page's title and its
+   address, and the country, which is a link rather than a number. A tile is
+   for something counted, so the two that identify the airline now sit with the
+   mark, where a masthead says in one line what the page is about.
 
-   Destinations is what its hubs can reach direct today, which is the same
-   number the fares strip below is the front of. Not "routes" -- an airline
-   flying 3,923 of them is not offering a traveller 3,923 choices, it is
-   offering the 231 places they end up. #}
-{# Empty alt: the heading directly above this says "Air Canada", so a reader
-   that cannot see the mark has already been told whose page it is, and an alt
-   of "Air Canada" would only say it twice. The width and height are on the tag
-   as well as in the CSS so the tile below does not move when it arrives. #}
-<img class="place__mark"
-     src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ place.code ~ '.png') }}"
-     width="56" height="56" loading="lazy" alt="">
+   The country is the one identity fact that goes somewhere else, so it stays a
+   link. #}
+<div class="masthead">
+    {# Empty alt: the heading directly above says "Air Canada", so a reader who
+       cannot see the mark has already been told whose page this is. Width and
+       height on the tag as well as in the CSS, so nothing moves when it
+       arrives. #}
+    <img class="masthead__mark"
+         src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ place.code ~ '.png') }}"
+         width="56" height="56" loading="lazy" alt="">
 
+    <div class="masthead__identity">
+        <p class="masthead__name">{{ place.name }}</p>
+        <p class="masthead__meta">
+            <span class="masthead__code">{{ place.code }}</span>
+            {% if place.country is not empty %}
+                <span class="masthead__sep" aria-hidden="true">·</span>
+                {# `??`, not `|default`: a row that never had the key is the
+                   case to survive, and the footer's columns give the same
+                   reason for the same choice. #}
+                {% if place.country_url ?? null %}
+                    <a class="masthead__country" href="{{ place.country_url }}">{{ place.country }}</a>
+                {% else %}
+                    {{ place.country }}
+                {% endif %}
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+{# Four counted things, and two of them had to earn their place.
+
+   Destinations is top-heavy in this data -- almost every airline reaches
+   almost everywhere -- but it is still the figure a traveller opens an airline
+   page for. The two beside it are the ones that actually separate the 105:
+   departures a day runs from 2 to 157, and the widebody share from 34% to 95%.
+
+   A day rather than a total, because a total counts whatever the schedule
+   happens to hold. See AirlineRepository::network(), which also says what was
+   dropped and why -- the longest flight is about 15,000km for every airline
+   here, so the tile would have said the same thing 105 times. #}
 {% include 'partials/facts-grid.html.twig' with {
     'facts': [
-        { 'icon': 'fa-plane', 'value': place.code, 'label': 'Airline code' },
-        { 'icon': 'fa-location-dot', 'value': place.country|default('—'), 'label': 'Based in' },
+        { 'icon': 'fa-earth-americas', 'value': place.destinations, 'label': 'Destinations' },
         {
             'icon': 'fa-plane-departure',
             'value': place.hub_count,
             'label': place.hub_count > 1 ? 'Hubs' : 'Hub'
         },
-        { 'icon': 'fa-earth-americas', 'value': place.destinations, 'label': 'Destinations' }
+        {
+            'icon': 'fa-clock',
+            'value': place.per_day ?? '—',
+            'label': 'Departures a day'
+        },
+        {
+            'icon': 'fa-plane',
+            'value': (place.widebody_share ?? null) is null ? '—' : place.widebody_share ~ '%',
+            'label': 'Widebody flights'
+        }
     ]
 } only %}
 
 {# Both are seed data and both can be missing -- 11 of the 105 have no website
-   and 6 no phone number -- so each row appears only where there is one.
+   and 6 no phone number -- so each appears only where there is one.
 
    The number is text and not a tel: link on purpose. These are written every
    way the airlines write them: "800-433-7300" is a North American toll-free
@@ -44,6 +83,7 @@
                 <a class="chip chip--link" href="{{ place.url }}" target="_blank" rel="noopener">
                     <i class="fas fa-globe chip__icon" aria-hidden="true"></i>
                     {{ place.name }} website
+                    <i class="fas fa-arrow-up-right-from-square chip__note" aria-hidden="true"></i>
                 </a>
             </li>
         {% endif %}

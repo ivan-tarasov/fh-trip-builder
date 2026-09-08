@@ -23,21 +23,34 @@ use TripBuilder\View\TwigRenderer;
  * -- where it is based, what it flies out of, how to telephone it -- and the
  * flights table has less to add than it looks like it should.
  *
- * Two blocks were measured and dropped rather than built:
+ * Fare brands are still left out: all five, on all 105, so a table of them
+ * would be the same table on every page.
  *
- * - A fleet. There are 28 aircraft types in this data and 104 of the 105
- *   airlines fly all 28 of them, so "Fleet: 28 types" would be the same
- *   sentence on every page.
- * - Fare brands. All five, on all 105.
- *
- * Both would have looked like real information and been an artefact of how the
- * schedules were generated. What does vary is the network -- 197 routes at the
- * quiet end to 3,923 at the busy one -- which is what the fares strip shows.
+ * A fleet was left out for the same reason and has since been put back, on a
+ * second look that changed the answer. The *set* of aircraft says nothing --
+ * 104 of the 105 airlines fly all 28 types in this data -- but the seeder
+ * picks an aircraft by whether its range covers the leg, so the types an
+ * airline flies *most* restate how long its legs are, and that differs
+ * sharply: easyJet is 44% widebody with turboprops at the top, Qantas 86% with
+ * A350s and A380s. See AirlineRepository::aircraft(), which also says why the
+ * block counts flights and never airframes.
  */
 class AirlineController extends AbstractController
 {
     /** Destinations in the fares strip. */
     private const int FARE_DESTINATIONS = 8;
+
+    /**
+     * Aircraft types listed, of the 28 in this data.
+     *
+     * Ten, because the tail is noise: every airline flies all 28, and past the
+     * tenth the counts sit close enough together that the order between them
+     * says nothing. The ten that lead are the ones its route lengths chose.
+     */
+    private const int AIRCRAFT_TYPES = 10;
+
+    /** Other airlines offered at the foot of the page. */
+    private const int PEER_AIRLINES = 6;
 
     public function show(): void
     {
@@ -75,9 +88,26 @@ class AirlineController extends AbstractController
 
             echo new TwigRenderer()->renderPage('airline/view.html.twig', [
                 'breadcrumbs' => self::trailFor($airline),
-                'airline' => $airline + ['hub_count' => count($hubs), 'destinations' => count($reached)],
+                'airline' => $airline
+                    + [
+                        'hub_count' => count($hubs),
+                        'destinations' => count($reached),
+                        // The one fact in the masthead that sends a reader
+                        // somewhere else, so it is built where the other
+                        // addresses on this page are.
+                        'country_url' => $airline['country'] === null ? null : '/country/' . Helper::placeSlug(
+                            (string) $airline['country'],
+                            (string) $airline['country_code'],
+                        ),
+                    ]
+                    + ($airlines->network($code, $hubs) ?? []),
                 'hubs' => self::addressable(new AirportRepository($this->connection())->byCodes($hubs)),
                 'fares' => self::strip($reached),
+                'aircraft' => $airlines->aircraft($code, self::AIRCRAFT_TYPES),
+                'peers' => self::addressableAirlines($airlines->peers($code, $hubs, self::PEER_AIRLINES)),
+                // Both counted blocks look this far ahead, and both say so --
+                // a count with no period is not a count.
+                'window_days' => AirlineRepository::WINDOW_DAYS,
             ]);
         } catch (Throwable $e) {
             error_log('Airline page failed: ' . $e->getMessage());
@@ -170,6 +200,22 @@ class AirlineController extends AbstractController
             ['label' => $pages['/airlines'] ?? 'Airlines', 'url' => '/airlines', 'current' => false],
             ['label' => (string) $airline['name'], 'url' => null, 'current' => true],
         ];
+    }
+
+    /**
+     * Give each of the other airlines the address of its own page.
+     *
+     * @param list<array<string, mixed>> $airlines
+     * @return list<array<string, mixed>>
+     */
+    private static function addressableAirlines(array $airlines): array
+    {
+        return array_map(
+            static fn(array $airline): array => $airline + [
+                'url' => Helper::airlineUrl((string) $airline['name'], (string) $airline['code']),
+            ],
+            $airlines,
+        );
     }
 
     /**

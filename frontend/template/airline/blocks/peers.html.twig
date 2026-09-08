@@ -1,0 +1,28 @@
+{# Who else you could fly, from the same airports.
+
+   Not "similar airlines", which this data cannot tell you, and not a random
+   handful either: these are the carriers with the most departures from this
+   airline's own hubs, so the list is competition rather than decoration. It
+   reads true because hubs carry geography -- Air Canada gets WestJet, Air
+   France gets easyJet and Lufthansa, Philippine Airlines gets Cebu Pacific.
+
+   The count is their departures from those same airports, which is what says
+   who is actually there: WestJet flies 1,578 out of Air Canada's three hubs
+   and Alaska 111, and a list in any other order would present them as equals.
+
+   Same chip the route page uses for its carriers, mark and all. #}
+<ul class="chips">
+    {% for peer in peers %}
+        <li>
+            <a class="chip chip--link" href="{{ peer.url }}">
+                <img class="chip__logo"
+                     src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ peer.code ~ '.png') }}"
+                     width="20" height="20" loading="lazy" alt="">
+                {{ peer.name }}
+                <span class="chip__note">{{ peer.flights|number_format }} flights</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+
+<p class="chips__note">Departures from the same airports in the next {{ window_days }} days.</p>
