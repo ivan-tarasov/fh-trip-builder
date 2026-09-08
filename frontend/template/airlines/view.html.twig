@@ -1,22 +1,21 @@
 {% extends 'layout.html.twig' %}
 
-{% block title %}Airlines{% endblock %}
+{% block title %}Airlines we sell{% endblock %}
 
-{% block description %}Every airline we sell seats on, with the phone number and website for each.{% endblock %}
+{% block description %}Every airline in our schedules, A to Z, with its hubs, its cheapest fares and how to contact it.{% endblock %}
 
+{# Every airline, as a directory -- the fourth page built on the component the
+   cities, countries and airports use. #}
 {% block content %}
-<main role="main" class="flex-shrink-0 mb-5">
+<main role="main" class="page-list">
     <div class="container">
-        <div class="pt-5 pb-5 mx-auto">
-            <h1 class="display-4">Airlines</h1>
-            <p class="lead">Here you can see all added airlines.</p>
-        </div>
-
-        <div class="row g-4 py-5 row-cols-1 row-cols-lg-3">
-            {% for airline in airlines %}
-                {% include 'airlines/card.html.twig' %}
-            {% endfor %}
-        </div>
+        {% include 'partials/directory.html.twig' with {
+            'title': 'Airlines we sell',
+            'lead': 'Every airline in our schedules, with its hubs and the cheapest fares on each.',
+            'placeholder': 'Start typing an airline, a country or a code',
+            'label': 'Filter airlines',
+            'groups': groups
+        } only %}
     </div>
 </main>
 {% endblock %}
