@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
+use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
@@ -22,9 +23,11 @@ class SitemapController extends AbstractController
     /**
      * Every page worth finding, for a crawler that would rather be told.
      *
-     * There are 847 of them and 841 are a place of some kind, which is why this
-     * is generated rather than a file on disk: the list is rows in a table, and
-     * a checked-in copy would be wrong the first time a route is added.
+     * All but twelve of them are a place of some kind, which is why this is
+     * generated rather than a file on disk: the list is rows in a table, and a
+     * checked-in copy would be wrong the first time a route is added. The
+     * twelve are the homepage, the four directories, the README page, and the
+     * help hub with its five articles.
      *
      * Four of the five place families are listed whole -- every city, country,
      * airport and airline we sell. Routes are not, and cannot be: 42,578 city
@@ -108,6 +111,16 @@ class SitemapController extends AbstractController
      * The fixed pages, taken from the route table so a new one is listed by
      * having been routed rather than by being remembered here.
      *
+     * The help articles are the exception and have to be named: they are the
+     * one family the route table holds only as a pattern, because an article is
+     * identified by its slug and there is no record to look one up in. They are
+     * read from the same config the pages themselves are, so a sixth article is
+     * listed by existing.
+     *
+     * They belong in here rather than beside the place families because they
+     * need no database, which is what makes them worth serving when index()
+     * falls back on this method alone.
+     *
      * @return list<string>
      */
     private function staticPaths(): array
@@ -116,6 +129,13 @@ class SitemapController extends AbstractController
             array_keys(Routes::ENABLED_ROUTES),
             static fn(string $path): bool => Routes::isPublic($path),
         );
+
+        /** @var array<string, array<string, mixed>> $articles */
+        $articles = Config::get('help.articles', []);
+
+        foreach (array_keys($articles) as $slug) {
+            $paths[] = '/help/' . $slug;
+        }
 
         // Neither of these is a page. They are public and they are routed, so
         // the filter above keeps them; a sitemap listing itself and a robots
@@ -183,10 +203,12 @@ class SitemapController extends AbstractController
      * The routes worth crawling, which is not all of them.
      *
      * The one family with more pages than a sitemap can carry, so what is
-     * listed is what somebody has actually looked for -- 158 pairs, off the
-     * search table. The rest stay reachable and answer perfectly well; they are
-     * simply not advertised, which is the honest thing to do with a page nobody
-     * has ever asked for.
+     * listed is what somebody has actually looked for, off the search table.
+     * The rest stay reachable and answer perfectly well; they are simply not
+     * advertised, which is the honest thing to do with a page nobody has ever
+     * asked for.
+     *
+     * The only count here that moves on its own, which is the point of it.
      *
      * @return list<string>
      */

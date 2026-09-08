@@ -48,11 +48,15 @@ final readonly class RouteRepository
      * How many routes one place page lists.
      *
      * Twelve, because twelve is what covers the family. Ranked per city and
-     * capped there, every one of the 158 route pages is linked from at least
-     * one place page; at ten one is missed and at eight two are. It cuts almost
-     * nothing to do it -- one city is searched to more than twelve
-     * destinations, London with 29, and four are searched from more than
-     * twelve, the longest being sixteen.
+     * capped there, every route page is linked from at least one place page; at
+     * ten one is missed and at eight four are. It cuts almost nothing to do it
+     * -- one city is searched to more than twelve destinations, London with 29,
+     * and four are searched from more than twelve, the longest at seventeen.
+     *
+     * Which pairs have a page moves with demand -- searched() is counted, not
+     * curated -- so the number that matters is not the one written here.
+     * RouteRepositoryTest walks the whole family and fails if twelve stops
+     * being enough.
      */
     public const int PLACE_LINKS = 12;
 
@@ -101,8 +105,9 @@ final readonly class RouteRepository
      * all: 42,578 ordered city pairs in this data can be flown nonstop, which
      * is more URLs than a sitemap may carry and far more than are worth
      * crawling. A search is a person having asked, so the search table is the
-     * demand signal -- 158 pairs of the 213 anybody has looked up, the other 55
-     * being airport codes or pairs with no nonstop.
+     * demand signal -- 163 pairs of the 218 anybody has looked up, the other 55
+     * being airport codes or pairs with no nonstop. Both halves of that move on
+     * their own: a search adds to the second and may add to the first.
      *
      * Both directions, unlike popular(): New York to London and London to New
      * York are two pages with two prices, and a sitemap's job is to name pages
@@ -120,10 +125,10 @@ final readonly class RouteRepository
      * The busiest routes out of one city, ranked the way the footer's are.
      *
      * This and arriving() are what give the route family a way in. Nothing on
-     * the site linked a route page except the footer's five: the sitemap names
-     * all 158, and a page that only a sitemap mentions is a page nothing
-     * vouches for. Between them these two put every one of the 158 on a page
-     * that is already crawled -- they pair 37 origin cities with 56
+     * the site linked a route page except the footer's five: the sitemap named
+     * the rest and nothing else did, and a page that only a sitemap mentions is
+     * a page nothing vouches for. Between them these two put every route page
+     * on a page that is already crawled -- they pair 37 origin cities with 56
      * destination cities, so every route is at one end or the other.
      *
      * Split by direction rather than mixed, because the page each one fills is
@@ -201,9 +206,9 @@ final readonly class RouteRepository
             . '  ) AND f.departure_time >= NOW()'
             . ' )'
             . ' GROUP BY p.from_code, p.to_code, p.searches'
-            // Named after the count, because the count runs out. 133 of the 158
+            // Named after the count, because the count runs out. Most of these
             // pairs have been searched exactly once -- London has 29 routes
-            // leaving and 23 of them are tied there -- so a list cut at twelve
+            // leaving and 22 of them are tied there -- so a list cut at twelve
             // would otherwise hold whichever twelve MySQL happened to hand
             // back, and hold different ones tomorrow.
             . ' ORDER BY p.searches DESC, from_name ASC, to_name ASC',

@@ -24,6 +24,10 @@ class Routes
         // And every country. Same page, different rows: both are a few hundred
         // names somebody arrives already knowing.
         '/countries' => 'Country@index',
+        // The five help topics the footer has always linked to. A hub rather
+        // than five loose pages, so the family has somewhere to be listed and
+        // each article has its siblings to point at.
+        '/help' => 'Help@index',
 
         // Not a page. It is here rather than as a file on disk because its
         // contents are the 231 city pages, which are rows in a table.
@@ -126,6 +130,11 @@ class Routes
         // is whether it names two cities, which is a question for
         // RouteAddress::read() and not for a pattern.
         '#^/route/[A-Za-z0-9-]+$#' => 'Route@show',
+        // "baggage". No code on the end, like the route above it -- and unlike
+        // it, no record behind the slug either. The slug is the whole identity,
+        // so a pattern is all the router can do; which five words are real is
+        // in config/common/help.php, and HelpController's question.
+        '#^/help/[A-Za-z-]+$#' => 'Help@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

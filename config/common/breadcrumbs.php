@@ -43,5 +43,8 @@ return [
         // A country's parent is this list, and a city's is its country -- see
         // above. Neither trail mirrors its URL, and neither needs to.
         '/countries' => 'Countries',
+        // The articles under this are deliberately absent: each is named by its
+        // title rather than by its slug, so HelpController passes the label.
+        '/help' => 'Help',
     ],
 ];

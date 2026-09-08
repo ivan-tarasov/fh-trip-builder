@@ -5962,6 +5962,189 @@ body:has(.hero) header#top {
 }
 
 /* ==========================================================================
+   #HELP ARTICLES
+   ==========================================================================
+   Five pages of prose, which is a shape this stylesheet did not have. Every
+   other content family is a grid of things and takes the container; these are
+   read a line at a time, so they take a measure instead.
+   ========================================================================== */
+
+/* Prose, not a record, so this is the one content family with no rail beside
+   it. The place shell earns its rail by having four or five blocks a reader
+   jumps between; an article is read top to bottom, and an anchor list over five
+   headings is furniture. */
+.help {
+  padding-bottom: 3rem;
+}
+
+.help__layout {
+  display: grid;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.help__article {
+  padding: 2rem 2.25rem;
+  /* Wide enough for a line of prose and no wider. Everything else on this site
+     is a grid of things and takes the container; a paragraph read at 100
+     characters a line loses its place coming back to the left margin. */
+  max-width: 68ch;
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+.help__title {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 0 0 .75rem;
+  color: var(--brand-ink);
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.help__title-icon {
+  color: var(--cat-blue);
+  font-size: 1.5rem;
+}
+
+/* The summary again, as the first thing under the title -- it is also the meta
+   description, so a reader arriving from a search result sees the sentence that
+   brought them. Set apart from the body so it reads as the promise rather than
+   as the first paragraph of the answer. */
+.help__lead {
+  margin: 0 0 1.75rem;
+  padding-bottom: 1.25rem;
+  color: var(--ink-secondary);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  border-bottom: 1px solid var(--line);
+}
+
+.help__body {
+  color: var(--ink-body);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.help__body > :first-child {
+  margin-top: 0;
+}
+
+/* Headings hold the body size at the smallest step: a heading smaller than the
+   paragraph under it reads as a caption. Same ladder the README page uses. */
+.help__body h2 {
+  margin: 2rem 0 .625rem;
+  color: var(--brand-ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.help__body p {
+  margin: 0 0 1rem;
+}
+
+.help__body ul {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.help__body li {
+  margin-bottom: .5rem;
+}
+
+.help__body a {
+  color: var(--brand-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: .1875em;
+}
+
+.help__body a:hover {
+  text-decoration-color: currentcolor;
+}
+
+.help__more {
+  max-width: 68ch;
+  padding: 1.5rem 2.25rem 1.75rem;
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+.help__more-title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* The hub. One card per article, and the card carries the summary: the line is
+   the half that tells somebody which of five pages they want, and a list of
+   five titles alone makes them open two to find out. */
+.help-list {
+  display: grid;
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  background-color: var(--surface-sunken);
+  border-radius: .75rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.help-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #fff;
+  font-size: .9375rem;
+  background-color: var(--cat-blue);
+  border-radius: 50%;
+}
+
+.help-card__text {
+  display: grid;
+  gap: .1875rem;
+  min-width: 0;
+}
+
+.help-card__title {
+  color: var(--brand-ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.help-card__summary {
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  line-height: 1.5;
+}
+
+@media (hover: hover) {
+  .help-card:hover { background-color: var(--line); }
+}
+
+@media (max-width: 47.9375em) {
+  .help__article,
+  .help__more {
+    padding-right: 1.25rem;
+    padding-left: 1.25rem;
+  }
+}
+
+
+/* ==========================================================================
    #DIRECTORY
    ==========================================================================
    A few hundred named places, arranged to be found in. Shared by the city list

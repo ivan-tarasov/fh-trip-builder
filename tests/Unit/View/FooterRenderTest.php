@@ -239,8 +239,9 @@ final class FooterRenderTest extends TestCase
      * flips the expectation with it and the mutation goes unnoticed -- which is
      * exactly the change that shipped the original bug. This asks the router
      * instead: whatever the navigation column links to has to be a page that
-     * resolves. The six curated columns are deliberately not held to this; they
-     * name pages that are still to be built and answer 404 meanwhile.
+     * resolves. Every curated column is now held to the same standard in a test
+     * of its own -- Help & tips was the last one naming pages that did not
+     * exist.
      */
     public function testNavigationOnlyLinksToRoutesThatResolve(): void
     {
@@ -263,11 +264,10 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
-     * City links are held to a standard one column still is not.
+     * City links are held to a standard the whole footer now meets.
      *
-     * Help & tips is the last one naming pages that are to be built, and it
-     * answers 404 on purpose. Cities was the first column to stop being one of
-     * those: the pages exist, so a link into them that does not resolve is a bug
+     * Cities was the first column to stop naming pages that were still to be
+     * built: the pages exist, so a link into them that does not resolve is a bug
      * and not a plan. This covers the curated destinations block; the column
      * beside it is built from the database and cannot name a city that is not
      * there.
@@ -429,6 +429,44 @@ final class FooterRenderTest extends TestCase
                 '#^/route/[a-z0-9]+(?:-[a-z0-9]+)*-to-[a-z0-9]+(?:-[a-z0-9]+)*$#',
                 $href,
                 $href . ' is not a canonical route address',
+            );
+        }
+    }
+
+    /**
+     * The help column, which was the reason the exemption above existed.
+     *
+     * Five links on every page of the site, answering 404 on every one of them,
+     * for as long as the footer has been written. They resolve now, and each is
+     * checked against the article index as well as against the router: the
+     * pattern would pass `/help/anything`, and what makes a slug real is being
+     * one of the five words in config/common/help.php.
+     */
+    public function testEveryHelpLinkResolves(): void
+    {
+        $html = $this->render('/');
+
+        preg_match_all('#href="(/help[^"]*)"#', $html, $links);
+
+        self::assertNotEmpty($links[1], 'the help column should have links');
+
+        /** @var array<string, array<string, mixed>> $articles */
+        $articles = Config::get('help.articles', []);
+
+        foreach (array_unique($links[1]) as $href) {
+            self::assertNotNull(
+                Routes::resolve($href),
+                $href . ' is linked in the footer but is not a route',
+            );
+
+            if ($href === '/help') {
+                continue;
+            }
+
+            self::assertArrayHasKey(
+                substr($href, strlen('/help/')),
+                $articles,
+                $href . ' is linked in the footer but names no article',
             );
         }
     }

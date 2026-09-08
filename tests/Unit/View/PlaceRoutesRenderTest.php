@@ -13,7 +13,7 @@ use TripBuilder\View\TwigRenderer;
  *
  * The block exists to be linked from, so what it is tested for is the link.
  * Until it was added, nothing on the site linked a route page except the
- * footer's five, and 153 of the 158 were pages only the sitemap mentioned.
+ * footer's five, and all the rest were pages only the sitemap mentioned.
  *
  * The words in the link are the part worth pinning down. Each chip says both
  * cities, in order -- "Paris to Montreal" and not "Paris" -- because that is

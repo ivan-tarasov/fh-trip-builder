@@ -75,7 +75,7 @@ final class RouteRepositoryTest extends IntegrationTestCase
      * The same filter searched() applies, because a search is recorded for any
      * pair anybody asked about and only the ones that can be flown nonstop
      * have a page. A chip here for a pair that has none would be a link to a
-     * 404 on 107 pages.
+     * 404 on every city and airport page that carries the block.
      */
     public function testEveryRouteOfferedHasAPage(): void
     {
@@ -118,8 +118,9 @@ final class RouteRepositoryTest extends IntegrationTestCase
      * Walks every city that is at either end of a route and collects what its
      * pages would offer, which is what a crawler coming through the city and
      * airport pages would find. Ten leaves one route unlinked in this data and
-     * eight leaves two, so this is the assertion that says why the number is
-     * twelve.
+     * eight leaves four, so this is the assertion that says why the number is
+     * twelve -- and the one that will say so again when demand has moved the
+     * family.
      */
     public function testTwelveLinksPerDirectionCoverEveryRoutePage(): void
     {

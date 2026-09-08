@@ -361,6 +361,7 @@ return [
                 'Changing passenger details' => '/help/passenger-details',
                 'Flying with children' => '/help/flying-with-children',
             ],
+            'more' => ['text' => 'All help topics', 'url' => '/help'],
         ],
     ],
 

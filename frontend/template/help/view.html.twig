@@ -1,0 +1,51 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{# The summary out of config/common/help.php, unchanged. It is the description,
+   the card's line on the hub and the lead below -- one sentence in one place,
+   because three copies of it are three chances for them to stop agreeing. #}
+{% block description %}{{ article.summary }}{% endblock %}
+
+{% block content %}
+<main role="main" class="help">
+    <div class="container help__layout">
+        <article class="help__article">
+            <h1 class="help__title">
+                <i class="fas {{ article.icon }} help__title-icon" aria-hidden="true"></i>
+                {{ article.title }}
+            </h1>
+            <p class="help__lead">{{ article.summary }}</p>
+
+            {# The prose, from the one template named after this slug.
+
+               Derived rather than written out, unlike the block lists on the
+               place and booking pages: there the paths are spelled so a
+               template can be found by searching for where it is used, and here
+               there is one line to find -- this one. The slug reaching it has
+               already been matched against the article index, so it is one of
+               five words and not something off a URL. #}
+            <div class="help__body">
+                {% include 'help/articles/' ~ article.slug ~ '.html.twig' %}
+            </div>
+        </article>
+
+        {# The other four. An article has no data of its own to link out with,
+           so its siblings are what it offers -- and they are what keep each of
+           these reachable from somewhere other than the footer. #}
+        <aside class="help__more" aria-labelledby="help-more-title">
+            <h2 class="help__more-title" id="help-more-title">More help</h2>
+            <ul class="chips">
+                {% for topic in more %}
+                    <li>
+                        <a class="chip chip--link" href="{{ topic.url }}">
+                            <i class="fas {{ topic.icon }} chip__icon" aria-hidden="true"></i>
+                            {{ topic.title }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </aside>
+    </div>
+</main>
+{% endblock %}
