@@ -37,9 +37,6 @@ final class LayoutData
      * after a deploy — the markup and the code it needs then disagree, which
      * shows up as controls that quietly do nothing.
      */
-    /** Paths whose pages are transient, personal, or both. */
-    private const array PRIVATE_PREFIXES = ['/search', '/checkout', '/my'];
-
     public function asset(string $path): string
     {
         $file = Helper::getRootDir() . '/' . ltrim($path, '/');
@@ -193,15 +190,9 @@ final class LayoutData
             return false;
         }
 
-        $path = $this->currentPage();
-
-        foreach (self::PRIVATE_PREFIXES as $prefix) {
-            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
-                return false;
-            }
-        }
-
-        return true;
+        // Routes::isPublic() and not a second list here: the sitemap asks the
+        // same question, and two copies of the answer would drift.
+        return Routes::isPublic($this->currentPage());
     }
 
     /**

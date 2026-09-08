@@ -22,6 +22,11 @@ class Routes
         // no inbound link before this existed -- see CityRepository::allByCountry().
         '/cities' => 'City@index',
 
+        // Not a page. It is here rather than as a file on disk because its
+        // contents are the 231 city pages, which are rows in a table.
+        '/sitemap.xml' => 'Sitemap@index',
+        '/robots.txt' => 'Sitemap@robots',
+
         /*
         |--------------------------------------------------------------------------
         | Personal user pages
@@ -109,6 +114,41 @@ class Routes
     ];
 
     /**
+     * Paths whose pages are transient, personal, or both.
+     *
+     * A search result is a snapshot of prices that will be wrong tomorrow, and
+     * there are more possible search URLs than there are flights. A checkout is
+     * a step in a transaction. /my is one browser's own bookings.
+     *
+     * Two things read this and they must agree: the robots meta tag that keeps
+     * these out of an index, and the sitemap that would otherwise invite a
+     * crawler in. It lives here because this class is what already knows what a
+     * path is.
+     */
+    public const array PRIVATE_PREFIXES = ['/search', '/checkout', '/my'];
+
+    /**
+     * Whether a path is a page worth a stranger arriving at.
+     */
+    public static function isPublic(string $path): bool
+    {
+        foreach (self::PRIVATE_PREFIXES as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+                return false;
+            }
+        }
+
+        $route = self::resolve($path);
+
+        if ($route === null) {
+            return false;
+        }
+
+        // An endpoint answers with JSON, not with a page.
+        return !in_array(explode('@', $route)[0], self::EXCLUDE_HEADER_FOOTER, true);
+    }
+
+    /**
      * Routes that emit their own payload from a controller that otherwise
      * renders pages.
      *
@@ -119,6 +159,8 @@ class Routes
      */
     public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
         '#^/my/bookings/\d+/calendar$#',
+        '#^/sitemap\.xml$#',
+        '#^/robots\.txt$#',
     ];
 
     /**
