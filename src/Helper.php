@@ -493,24 +493,9 @@ class Helper
         return '/airline/' . self::placeSlug($name, $code);
     }
 
-    /**
-     * Where a route's page lives: two place slugs, one segment each.
-     *
-     * "/route/montreal-ymq/toronto-yto". Two segments rather than one joined
-     * pair, because each half is then exactly a place address and is read back
-     * by the same placeCode() the other four pages use. Joined into one segment
-     * -- "montreal-ymq-toronto-yto" -- nothing could tell where the first name
-     * ended, since a name may hold as many hyphens as it likes.
-     */
-    public static function routeUrl(
-        string $fromName,
-        string $fromCode,
-        string $toName,
-        string $toCode,
-    ): string {
-        return '/route/' . self::placeSlug($fromName, $fromCode)
-            . '/' . self::placeSlug($toName, $toCode);
-    }
+    // A route's address is not here, unlike the four above it. It is the one
+    // that has to be read as well as written, which is more than a helper --
+    // see TripBuilder\RouteAddress.
 
     /**
      * The code off the end of a place slug, or null when there is not one.

@@ -10,6 +10,7 @@ use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\RouteRepository;
+use TripBuilder\RouteAddress;
 use TripBuilder\SearchUrl;
 use TripBuilder\View\TwigRenderer;
 
@@ -44,15 +45,9 @@ class RouteController extends AbstractController
 
     public function show(): void
     {
-        [$fromSlug, $toSlug] = $this->slugs();
-        $fromCode = Helper::placeCode($fromSlug, 3);
-        $toCode = Helper::placeCode($toSlug, 3);
+        $slug = $this->slug();
 
-        // A route to where you already are is not a route. Nothing generates
-        // one, but the address can be typed, and the queries would answer it
-        // with whatever intra-city hop exists -- Heathrow to Gatwick as
-        // "flights from London to London".
-        if ($fromCode === null || $toCode === null || $fromCode === $toCode) {
+        if ($slug === '') {
             $this->notFound();
 
             return;
@@ -60,6 +55,31 @@ class RouteController extends AbstractController
 
         try {
             $cities = new CityRepository($this->connection());
+
+            // The names are what the address is spelled with, so resolving one
+            // takes the whole set. It is the same map the airport board asks
+            // for, and the same canonical names: MIN(city) over a city's
+            // airports -- see CityRepository::names().
+            $pair = RouteAddress::read($slug, RouteAddress::index($cities->names()));
+
+            if ($pair === null) {
+                $this->notFound();
+
+                return;
+            }
+
+            [$fromCode, $toCode] = $pair;
+
+            // A route to where you already are is not a route. Nothing
+            // generates one, but the address can be typed, and the queries
+            // would answer it with whatever intra-city hop exists -- Heathrow
+            // to Gatwick as "flights from London to London".
+            if ($fromCode === $toCode) {
+                $this->notFound();
+
+                return;
+            }
+
             $from = $cities->byCode($fromCode);
             $to = $cities->byCode($toCode);
 
@@ -69,14 +89,12 @@ class RouteController extends AbstractController
                 return;
             }
 
-            $canonical = Helper::routeUrl(
-                (string) $from['name'],
-                (string) $from['code'],
-                (string) $to['name'],
-                (string) $to['code'],
-            );
+            // One route, one address. read() is deliberately case-insensitive
+            // and so finds this route under any capitalisation, which is two
+            // spellings of one page unless one is sent to the other.
+            $canonical = RouteAddress::path((string) $from['name'], (string) $to['name']);
 
-            if ('/route/' . $fromSlug . '/' . $toSlug !== $canonical) {
+            if ($this->request->path() !== $canonical) {
                 $this->bounce($canonical, 301);
 
                 return;
@@ -219,18 +237,14 @@ class RouteController extends AbstractController
     }
 
     /**
-     * The two slugs out of /route/<from>/<to>.
-     *
-     * @return array{string, string}
+     * The slug out of /route/<slug>.
      */
-    private function slugs(): array
+    private function slug(): string
     {
         // As written, not folded -- the canonical check has to see the capitals
         // to be able to send them somewhere.
-        return preg_match(
-            '#^/route/([A-Za-z0-9-]+)/([A-Za-z0-9-]+)$#',
-            $this->request->path(),
-            $match,
-        ) === 1 ? [$match[1], $match[2]] : ['', ''];
+        return preg_match('#^/route/([A-Za-z0-9-]+)$#', $this->request->path(), $match) === 1
+            ? $match[1]
+            : '';
     }
 }
