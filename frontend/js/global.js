@@ -2696,4 +2696,82 @@
         });
     }());
 
+    /*[ Directory: filter and alphabet ]
+    ===========================================================*/
+    (function () {
+        const root = document.querySelector('.directory');
+
+        if (!root) {
+            return;
+        }
+
+        const search = root.querySelector('[data-directory-search]');
+        const field = root.querySelector('.js-directory-filter');
+        const letters = [...root.querySelectorAll('.js-directory-letter')];
+        const groups = [...root.querySelectorAll('.js-directory-group')];
+        const items = [...root.querySelectorAll('.js-directory-item')];
+        const empty = root.querySelector('.js-directory-empty');
+
+        // The field is rendered hidden and unhidden here, so it never exists
+        // for somebody whose browser would leave it inert.
+        search.hidden = false;
+
+        let letter = null;
+
+        const apply = () => {
+            const term = field.value.trim().toLowerCase();
+            let shown = 0;
+
+            items.forEach((item) => {
+                // A name or a code: people type "YMQ" as readily as "Montreal",
+                // and the code is not on screen to be read.
+                const hit = term === ''
+                    || item.dataset.name.includes(term)
+                    || item.dataset.code.includes(term);
+
+                item.hidden = !hit;
+
+                if (hit) {
+                    shown++;
+                }
+            });
+
+            groups.forEach((group) => {
+                const wanted = letter === null || group.dataset.letter === letter;
+                // A heading with nothing under it is worse than no heading, so a
+                // group goes when its last row does.
+                const has = [...group.querySelectorAll('.js-directory-item')]
+                    .some((item) => !item.hidden);
+
+                group.hidden = !wanted || !has;
+            });
+
+            letters.forEach((link) => {
+                link.classList.toggle('is-current', link.dataset.letter === letter);
+            });
+
+            // Counted rather than announced as a bare "nothing found": the
+            // number is what tells somebody whether to keep typing.
+            empty.hidden = shown > 0;
+            empty.textContent = shown > 0 ? '' : 'Nothing matches “' + field.value.trim() + '”.';
+        };
+
+        field.addEventListener('input', () => {
+            // Typing is a fresh question; a letter chosen a moment ago would
+            // otherwise hide the thing being searched for.
+            letter = null;
+            apply();
+        });
+
+        letters.forEach((link) => {
+            link.addEventListener('click', function (event) {
+                event.preventDefault();
+                // Clicking the current letter again clears it, which is the only
+                // way back to the whole list without reaching for the field.
+                letter = letter === this.dataset.letter ? null : this.dataset.letter;
+                apply();
+            });
+        });
+    }());
+
 })(jQuery);

@@ -11,6 +11,7 @@ use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\SearchUrl;
+use TripBuilder\View\Directory;
 use TripBuilder\View\TwigRenderer;
 
 class CityController extends AbstractController
@@ -42,8 +43,8 @@ class CityController extends AbstractController
     {
         try {
             echo new TwigRenderer()->renderPage('city/index.html.twig', [
-                'countries' => self::addressableGroups(
-                    new CityRepository($this->connection())->allByCountry(),
+                'groups' => Directory::byLetter(
+                    self::addressable(new CityRepository($this->connection())->all()),
                 ),
             ]);
         } catch (Throwable $e) {
@@ -187,22 +188,13 @@ class CityController extends AbstractController
     }
 
     /**
-     * The same as addressable(), a country at a time.
-     *
-     * @param array<string, list<array<string, mixed>>> $groups
-     * @return array<string, list<array<string, mixed>>>
-     */
-    private static function addressableGroups(array $groups): array
-    {
-        return array_map(self::addressable(...), $groups);
-    }
-
-    /**
      * Give each city the address it is reached at.
      *
      * Built here rather than selected: a slug is how this app spells a name,
      * which is a view concern and not something the database should be asked
-     * to store a second copy of.
+     * to store a second copy of. The whole path and not just the slug, so the
+     * one place that knows where a city lives is this method -- a template that
+     * writes "/city/" in front of a slug is a second place to change.
      *
      * @param list<array<string, mixed>> $cities
      * @return list<array<string, mixed>>
@@ -211,7 +203,7 @@ class CityController extends AbstractController
     {
         return array_map(
             static fn(array $city): array => $city + [
-                'slug' => Helper::placeSlug((string) $city['name'], (string) $city['code']),
+                'url' => '/city/' . Helper::placeSlug((string) $city['name'], (string) $city['code']),
             ],
             $cities,
         );

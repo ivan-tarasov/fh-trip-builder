@@ -123,22 +123,22 @@ final readonly class CityRepository
     }
 
     /**
-     * Every city we sell flights to, by country.
+     * Every city we sell flights to, in one flat list.
      *
      * The index exists because of a measurement rather than a wish: crawling
      * the link graph from the homepage reached 171 of the 231 city pages, and
      * the furthest took six hops. Sixty had no inbound link at all -- they were
-     * reachable only by typing the URL. One page listing all of them puts every
-     * city one hop from the footer.
+     * reachable only by typing the URL.
      *
-     * Grouped in PHP rather than by the query, because the grouping is only for
-     * display and a second query per country would be 60 of them.
+     * Flat and name-ordered, because the page groups by first letter and the
+     * grouping is a view concern. It was grouped by country here first, which
+     * pushed a decision about how the page reads into the query.
      *
-     * @return array<string, list<array<string, mixed>>>
+     * @return list<array<string, mixed>>
      */
-    public function allByCountry(): array
+    public function all(): array
     {
-        $rows = $this->connection->fetchAll(
+        return $this->connection->fetchAll(
             'SELECT a.city_code AS code, MIN(a.city) AS name,'
             . ' MIN(a.country_code) AS country_code, MIN(c.title) AS country,'
             . ' COUNT(*) AS airports'
@@ -146,16 +146,8 @@ final readonly class CityRepository
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
             . ' WHERE' . self::ONLY_SELLABLE
             . ' GROUP BY a.city_code'
-            . ' ORDER BY country ASC, name ASC',
+            . ' ORDER BY name ASC',
         );
-
-        $byCountry = [];
-
-        foreach ($rows as $row) {
-            $byCountry[(string) $row['country']][] = $row;
-        }
-
-        return $byCountry;
     }
 
     /**

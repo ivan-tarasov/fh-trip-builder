@@ -7,7 +7,7 @@
 <ul class="chips">
     {% for place in nearby %}
         <li>
-            <a class="chip chip--link" href="/city/{{ place.slug }}">
+            <a class="chip chip--link" href="{{ place.url }}">
                 <i class="fas fa-plane-departure chip__icon" aria-hidden="true"></i>
                 {{ place.name }}
                 <span class="chip__note">{{ (place.km / 10)|round * 10 }} km</span>
