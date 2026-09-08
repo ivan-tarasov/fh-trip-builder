@@ -47,15 +47,28 @@ return [
         // outside it.
         'padding' => 40,
 
-        // Small pins. The medium and large ones are the only sizes that can
-        // carry a label, and none of these maps has one to carry — no
-        // mainstream provider can put a name on a pin, so the route page names
-        // its two ends in a legend underneath instead.
+        // Small pins, for the flat <noscript> picture. The picture endpoint can
+        // put at most one character on a pin, so it carries none; the live map
+        // has no such limit and labels its pins properly. See 'label' below.
         'pin' => 'pin-s',
 
         // The site's own accent, and the width the flight path was drawn at
         // when it was measured against the map.
         'path_colour' => '0F766E',
         'path_width' => 5,
+
+        // Pin labels on the live map, drawn as a symbol layer.
+        //
+        // The font has to be one the style ships or the labels render as
+        // nothing at all, silently — so this is a stack Mapbox Streets already
+        // uses in four of its own layers, checked against the glyph endpoint
+        // rather than assumed.
+        //
+        // Ink with a white halo, because a label crosses land, water and roads
+        // on the same map and no single colour reads on all three.
+        'label_font' => ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+        'label_colour' => '10243F',
+        'label_halo' => 'FFFFFF',
+        'label_size' => 14,
     ],
 ];

@@ -14,17 +14,18 @@ use TripBuilder\View\TwigRenderer;
  * The route map: two pins, a flight path, and a legend saying which pin is
  * which.
  *
- * The pins carry no number. They used to carry "1" and "2", which name neither
- * of the two places on a map of two places -- and no mainstream map service can
- * letter a pin, so what tells them apart is colour and what names them is the
- * legend.
+ * The pins carry their cities' names and a colour each. They used to read "1"
+ * and "2", which named neither place: the flat picture's endpoint takes a
+ * single character on a pin and still cannot do better, but the live map has no
+ * such limit and labels them properly.
  *
- * That makes the legend load-bearing rather than decorative: with it gone, or
- * with its two entries the wrong way round, the map says nothing at all. It
- * also holds the one coupling that spans two files -- the dot colours in the
- * stylesheet stand for the pin colours the map is given, and nothing but
- * agreement makes them mean anything. The pin colours moved from a URL into a
- * JSON payload when the map became interactive; the coupling did not.
+ * The legend stays, and not as a duplicate. The live map draws its labels into
+ * a canvas that a screen reader cannot read, and the picture behind
+ * `<noscript>` has unlabelled pins -- so the legend is the text those two cases
+ * have, and the colour key for everyone else. It also holds the one coupling
+ * that spans two files: the dot colours in the stylesheet stand for the pin
+ * colours the map is given, and nothing but agreement makes them mean
+ * anything.
  */
 final class RouteMapRenderTest extends TestCase
 {
@@ -105,10 +106,50 @@ final class RouteMapRenderTest extends TestCase
         self::assertCount(2, $config['markers'], 'a route has two ends');
         self::assertSame(self::ORIGIN_PIN, $config['markers'][0]['colour'], 'green where you leave');
         self::assertSame(self::DESTINATION_PIN, $config['markers'][1]['colour'], 'red where you land');
+    }
 
-        // Nothing in the payload numbers a pin, and there is nowhere left for a
-        // number to be written: a Mapbox marker takes a colour, not a label.
-        self::assertArrayNotHasKey('label', $config['markers'][0]);
+    /**
+     * Each pin says which city it is, in the order the route reads.
+     *
+     * The order matters as much as the names: swapped, the map would name both
+     * places and put them the wrong way round, which is worse than the "1" and
+     * "2" this replaced.
+     */
+    public function testEachPinIsNamed(): void
+    {
+        $config = $this->payload();
+
+        self::assertSame('New York', $config['markers'][0]['label'], 'the origin pin');
+        self::assertSame('London', $config['markers'][1]['label'], 'the destination pin');
+    }
+
+    /**
+     * The label's font has to be one the map's style ships.
+     *
+     * This is the failure worth a test because it is silent: given a font the
+     * style has no glyphs for, Mapbox draws no label at all and reports
+     * nothing. The stack asserted here is one Mapbox Streets uses in four of
+     * its own layers, and it was checked against the glyph endpoint -- 200, and
+     * 43KB of glyphs -- rather than assumed.
+     */
+    public function testTheLabelAsksForAFontTheStyleHas(): void
+    {
+        $config = $this->payload();
+
+        self::assertSame(
+            ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+            $config['label']['font'],
+            'a font the style does not ship draws nothing, silently',
+        );
+
+        // A halo, because a label crosses land, water and roads on one map and
+        // no single colour reads on all three.
+        self::assertNotSame(
+            $config['label']['colour'],
+            $config['label']['halo'],
+            'the halo has to contrast with the text it outlines',
+        );
+        self::assertGreaterThan(0, $config['label']['size']);
     }
 
     public function testTheLegendNamesBothEndsInOrder(): void

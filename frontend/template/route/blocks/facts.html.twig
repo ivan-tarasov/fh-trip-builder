@@ -42,23 +42,36 @@
    two ends alone, a route bowing a thousand kilometres north of them loses its
    top.
 
-   Green for where you leave and red for where you land, which is the one
-   convention nobody has to be taught. It replaces a "1" and a "2", which named
-   neither place: no mainstream map service can letter a pin, so the legend
-   below is what says which city each is. #}
+   Each pin carries its city's name, and green for where you leave and red for
+   where you land -- the one convention nobody has to be taught. The pins used
+   to read "1" and "2", which named neither place; the flat picture still cannot
+   do better, because that endpoint takes a single character on a pin, but the
+   live map has no such limit. #}
 {% include 'partials/map.html.twig' with {
     'markers': [
-        { 'lat': place.from.latitude, 'lon': place.from.longitude, 'colour': '0EB600' },
-        { 'lat': place.to.latitude, 'lon': place.to.longitude, 'colour': 'EC3735' }
+        {
+            'lat': place.from.latitude,
+            'lon': place.from.longitude,
+            'colour': '0EB600',
+            'label': place.from.name
+        },
+        {
+            'lat': place.to.latitude,
+            'lon': place.to.longitude,
+            'colour': 'EC3735',
+            'label': place.to.name
+        }
     ],
     'paths': place.path,
     'label': 'Map of the route from ' ~ place.from.name ~ ' to ' ~ place.to.name
         ~ ', with the flight path drawn between them'
 } only %}
 
-{# Read as text rather than only seen as colour, so the map is described for
-   somebody who cannot make out the two pins -- or for whom the image never
-   arrives. #}
+{# Kept now that the pins carry names, because it is not saying the same thing
+   twice to the people who need it. The live map draws its labels into a canvas,
+   which a screen reader cannot read at all, and the flat picture behind
+   `<noscript>` has unlabelled pins because its endpoint cannot label them. This
+   is the text those two cases have, and the colour key for everyone else. #}
 <ul class="place__legend">
     <li class="place__legend-item place__legend-item--from">
         <span class="place__legend-role">From</span> {{ place.from.name }}

@@ -105,7 +105,12 @@ final class MapView
      * escaped as an attribute and parsed as JSON, which is a path that has no
      * quoting to get wrong.
      *
-     * @param list<array{lat: float|string, lon: float|string, colour?: string}> $markers
+     * A marker may carry a `label`, which the live map writes beside its pin.
+     * Only the live map can: the picture endpoint takes a single character
+     * there, which names nothing, so the picture goes unlabelled and the page
+     * that wants names says them in text as well.
+     *
+     * @param list<array{lat: float|string, lon: float|string, colour?: string, label?: string}> $markers
      * @param list<list<array{lat: float|string, lon: float|string}>> $paths
      */
     public static function config(array $markers, array $paths = [], ?int $zoom = null): string
@@ -131,6 +136,10 @@ final class MapView
                     // is [lon, lat].
                     'at' => [(float) $marker['lon'], (float) $marker['lat']],
                     'colour' => '#' . ltrim($marker['colour'] ?? '2A5CAA', '#'),
+                    // Null where a page has nothing to call a pin. The flat
+                    // picture ignores it either way: that endpoint takes one
+                    // character on a pin, so it carries none.
+                    'label' => $marker['label'] ?? null,
                 ],
                 $markers,
             ),
@@ -145,16 +154,23 @@ final class MapView
                 'colour' => '#' . ltrim((string) self::setting('path_colour', '0F766E'), '#'),
                 'width' => (int) self::setting('path_width', 5),
             ],
+            'label' => [
+                'font' => self::setting('label_font', ['DIN Pro Bold', 'Arial Unicode MS Bold']),
+                'colour' => '#' . ltrim((string) self::setting('label_colour', '10243F'), '#'),
+                'halo' => '#' . ltrim((string) self::setting('label_halo', 'FFFFFF'), '#'),
+                'size' => (int) self::setting('label_size', 14),
+            ],
         ], JSON_THROW_ON_ERROR);
     }
 
     /**
      * One marker: "pin-s+0EB600(lon,lat)".
      *
-     * No label. The size in config is the small pin, and small pins carry
-     * none -- see the note there.
+     * No label, because this endpoint cannot carry one: a marker here takes a
+     * single character, which names neither of two places. The live map labels
+     * its pins properly -- see config().
      *
-     * @param array{lat: float|string, lon: float|string, colour?: string} $marker
+     * @param array{lat: float|string, lon: float|string, colour?: string, label?: string} $marker
      */
     private static function pin(array $marker): string
     {
