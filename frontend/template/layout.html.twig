@@ -12,6 +12,20 @@
    declares none falls back to that, so nothing is left without one. #}
 {% set page_description %}{% block description %}{% endblock %}{% endset %}
 
+{# Whether this page draws a map, captured the same way and for the same
+   reason: the stylesheet goes in the header, which is included before the
+   content that would know.
+
+   Worth the trouble because Mapbox GL is 503KB gzipped -- measured, not
+   estimated -- and five page types out of eighteen draw a map. Loading it
+   everywhere would put half a megabyte of JavaScript on the checkout.
+
+   A page opts in with `{% block map %}yes{% endblock %}`; the marker itself is
+   never printed. Both includes below inherit the context, so setting it here is
+   enough for the header's stylesheet and the footer's script. #}
+{% set page_map %}{% block map %}{% endblock %}{% endset %}
+{% set needs_map = page_map|trim is not empty %}
+
 {% include 'partials/header.html.twig' with {
     'page_title': page_title|trim,
     'page_description': page_description|trim

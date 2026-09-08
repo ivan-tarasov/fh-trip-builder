@@ -42,6 +42,11 @@
 <script src="//use.fontawesome.com/releases/v6.1.1/js/all.js" type="text/javascript" defer integrity="sha384-xBXmu0dk1bEoiwd71wOonQLyH+VpgR1XcDH3rtxrLww5ajNTuMvBdL5SOiFZnNdp" crossorigin="anonymous"></script>
 <script src="{{ asset(config('site.directory.js') ~ '/datepicker.js') }}"></script>
 <script src="{{ asset(config('site.directory.js') ~ '/global.js') }}"></script>
+{# Half a megabyte of it, so only on the five page types that draw a map. #}
+{% if needs_map|default(false) %}
+    <script src="https://api.mapbox.com/mapbox-gl-js/{{ config('maps.gl_version') }}/mapbox-gl.js"></script>
+    <script src="{{ asset(config('site.directory.js') ~ '/map.js') }}"></script>
+{% endif %}
 
 </body>
 </html>

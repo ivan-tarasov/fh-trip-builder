@@ -15,10 +15,15 @@ return [
     | The access token is deliberately not here. It is a credential, it differs
     | per environment, and this file is committed: it comes from MAPBOX_TOKEN in
     | the environment, the same way the database credentials do. With no token
-    | set, StaticMap returns no URL and the pages simply render without a map —
-    | which is a page missing a picture rather than a page full of broken ones.
+    | set, MapView returns nothing and the pages simply render without a map —
+    | which is a page missing a map rather than a page full of broken ones.
     |
     */
+
+    // Pinned, not floating: this is half a megabyte of third-party JavaScript
+    // that draws every map on the site, and "whatever is newest today" is not
+    // a thing to discover from a visitor's browser.
+    'gl_version' => 'v3.30.0',
 
     'static' => [
 

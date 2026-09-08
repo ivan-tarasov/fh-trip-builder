@@ -7,6 +7,10 @@
    Reads off the same figures the page shows. #}
 {% block description %}Cheap flights to {{ city.name }}, {{ city.country }} — the cheapest direct fares from {{ city.airports > 1 ? city.airports ~ ' airports' : 'its airport' }}, and the cities nearby to fly from instead.{% endblock %}
 
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
 {# What this city has to say, in the order it is worth saying. The shell that
    draws it -- the rail, the anchors, the dropping of an empty block -- is in
    partials/place.html.twig and is shared with the country page. #}

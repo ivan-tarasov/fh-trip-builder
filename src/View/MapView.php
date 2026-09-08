@@ -8,32 +8,39 @@ use TripBuilder\Config;
 use TripBuilder\Polyline;
 
 /**
- * The one place that knows what a map picture's address is.
+ * The map on a page, in the two forms a page needs it.
  *
- * Five pages draw a map and each used to build its own URL in its own template
- * -- the same host, the same size and four different spellings of a marker.
- * That is why moving off Yandex was a four-template edit rather than a one-line
- * one, and it is the actual reason this class exists: the provider is a detail
- * and it had leaked into the views.
+ * config() is the live map: a blob of JSON that frontend/js/map.js turns into a
+ * Mapbox GL map you can pan and zoom. image() is the same map as a flat
+ * picture, which the templates put inside `<noscript>` -- a browser running
+ * scripts never fetches it, so it costs no request, and it is what a crawler
+ * and a scriptless client get instead of an empty canvas. Both are fed the same
+ * markers and paths by the same template, which is the point of them living
+ * together: two renderings of one map, not two maps.
  *
- * Mapbox Static Images, because the endpoint the site was using -- Yandex's
- * `1.x`, with no API key -- is not in Yandex's current documentation, which
- * documents `v1` with a mandatory key. Measured: `1.x` unkeyed answers 200 with
- * a PNG, `v1` unkeyed answers 400. So it works, is undocumented, and can stop
- * without notice, at which point every map on 580-odd pages shows nothing and
- * says nothing.
+ * Five pages draw one and each used to build its own Yandex URL in its own
+ * template -- the same host, the same size, four spellings of a marker. That is
+ * what made changing provider a four-template edit, and why the provider now
+ * stops here instead of reaching into the views.
  *
- * No token, no URL. An empty string is returned and the templates draw no map,
- * which is what makes a missing or revoked token a page without a picture
- * rather than a page of broken images. It is also what lets all of this be
- * built and tested before a token exists.
+ * Mapbox, because the endpoint the site was using -- Yandex's `1.x`, with no
+ * API key -- is not in Yandex's current documentation, which documents `v1`
+ * with a mandatory key. Measured: `1.x` unkeyed answers 200 with a PNG, `v1`
+ * unkeyed answers 400. So it worked, was undocumented, and could stop without
+ * notice, at which point every map on 580-odd pages showed nothing and said
+ * nothing.
+ *
+ * No token, nothing at all -- both return an empty string and the templates
+ * draw no map. That is what makes a missing or revoked token a page without a
+ * map rather than a page of broken images, and it is what let all of this be
+ * built before a token existed.
  */
-final class StaticMap
+final class MapView
 {
-    private const string ENDPOINT = 'https://api.mapbox.com/styles/v1';
+    private const string PICTURE_ENDPOINT = 'https://api.mapbox.com/styles/v1';
 
     /**
-     * A map of the given markers and paths, or '' when there is no token.
+     * The same map as a flat picture, or '' when there is no token.
      *
      * Framing is automatic unless a zoom is given: Mapbox's `auto` fits the
      * overlays, which is what four of the five maps want -- a city with three
@@ -44,7 +51,7 @@ final class StaticMap
      * @param list<array{lat: float|string, lon: float|string, colour?: string}> $markers
      * @param list<list<array{lat: float|string, lon: float|string}>> $paths drawn under the markers
      */
-    public static function url(array $markers, array $paths = [], ?int $zoom = null): string
+    public static function image(array $markers, array $paths = [], ?int $zoom = null): string
     {
         $token = self::token();
 
@@ -69,7 +76,7 @@ final class StaticMap
 
         $url = sprintf(
             '%s/%s/static/%s/%s/%dx%d%s',
-            self::ENDPOINT,
+            self::PICTURE_ENDPOINT,
             self::setting('style', 'mapbox/streets-v12'),
             implode(',', array_filter($overlays)),
             $position,
@@ -87,6 +94,58 @@ final class StaticMap
         }
 
         return $url . '?' . http_build_query($query);
+    }
+
+    /**
+     * The live map, as the JSON frontend/js/map.js reads, or '' with no token.
+     *
+     * Handed over in a data attribute rather than written into a script tag,
+     * because a place name can hold an apostrophe and a script tag is the one
+     * context Twig's escaping cannot make safe on its own. The attribute is
+     * escaped as an attribute and parsed as JSON, which is a path that has no
+     * quoting to get wrong.
+     *
+     * @param list<array{lat: float|string, lon: float|string, colour?: string}> $markers
+     * @param list<list<array{lat: float|string, lon: float|string}>> $paths
+     */
+    public static function config(array $markers, array $paths = [], ?int $zoom = null): string
+    {
+        $token = self::token();
+
+        if ($token === '' || ($markers === [] && $paths === [])) {
+            return '';
+        }
+
+        return (string) json_encode([
+            'token' => $token,
+            // GL JS wants the mapbox:// form of the same style the picture
+            // endpoint takes bare.
+            'style' => 'mapbox://styles/' . self::setting('style', 'mapbox/streets-v12'),
+            'zoom' => $zoom,
+            'padding' => (int) self::setting('padding', 40),
+            'markers' => array_map(
+                static fn(array $marker): array => [
+                    // GeoJSON order, which is the opposite of the order the
+                    // encoded polyline takes and of how these read in English.
+                    // Every coordinate that crosses into JavaScript from here
+                    // is [lon, lat].
+                    'at' => [(float) $marker['lon'], (float) $marker['lat']],
+                    'colour' => '#' . ltrim($marker['colour'] ?? '2A5CAA', '#'),
+                ],
+                $markers,
+            ),
+            'paths' => array_map(
+                static fn(array $path): array => array_map(
+                    static fn(array $point): array => [(float) $point['lon'], (float) $point['lat']],
+                    $path,
+                ),
+                $paths,
+            ),
+            'path' => [
+                'colour' => '#' . ltrim((string) self::setting('path_colour', '0F766E'), '#'),
+                'width' => (int) self::setting('path_width', 5),
+            ],
+        ], JSON_THROW_ON_ERROR);
     }
 
     /**

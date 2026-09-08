@@ -2,16 +2,14 @@
 
    One map for the airline rather than one per hub, the same way a country's
    airports are drawn: the useful fact about Delta's seven is the shape they
-   make across the United States, which seven separate maps cannot show. Same
-   markers as place/airports.html.twig -- comma-separated within a point,
-   tilde-separated between them.
+   make across the United States, which seven separate maps cannot show.
 
    The chips name the city as well as the airport, which the country page's do
    not need to: "Hartsfield-Jackson Atlanta" says where it is, and "Stansted"
    does not say London. #}
-{% set points = [] %}
+{% set pins = [] %}
 {% for hub in hubs %}
-    {% set points = points|merge([hub.longitude ~ ',' ~ hub.latitude ~ ',pm2blm' ~ loop.index]) %}
+    {% set pins = pins|merge([{ 'lat': hub.latitude, 'lon': hub.longitude }]) %}
 {% endfor %}
 
 <ul class="chips">
@@ -26,10 +24,8 @@
     {% endfor %}
 </ul>
 
-{# Zoomed out for an airline whose hubs are spread, in close for one flying out
-   of a single field. Yandex frames it itself when no z is given, but only with
-   more than one point to frame. #}
-<img class="place__map"
-     src="https://static-maps.yandex.ru/1.x/?l=map&lang=en-US&size=650,300{{ hubs|length > 1 ? '' : '&z=10' }}&pt={{ points|join('~') }}"
-     width="650" height="300" loading="lazy"
-     alt="Map showing the {{ hubs|length > 1 ? hubs|length ~ ' airports' : 'airport' }} {{ place.name }} is based at">
+{% include 'partials/map.html.twig' with {
+    'markers': pins,
+    'label': 'Map showing the ' ~ (hubs|length > 1 ? hubs|length ~ ' airports' : 'airport')
+        ~ ' ' ~ place.name ~ ' is based at'
+} only %}

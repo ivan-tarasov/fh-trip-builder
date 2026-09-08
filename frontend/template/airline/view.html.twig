@@ -6,6 +6,10 @@
    claim to be about the same thing. #}
 {% block description %}{{ airline.name }} ({{ airline.code }}) flights — the cheapest fares out of {{ airline.hub_count > 1 ? 'its ' ~ airline.hub_count ~ ' hubs' : 'its hub' }}, and the {{ airline.destinations }} places it flies to.{% endblock %}
 
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
 {# Three blocks, not four. The two an airline page would obviously carry -- a
    fleet and a fare table -- are the same on all 105 in this data; see
    AirlineController for the measurements. #}

@@ -32,35 +32,29 @@
    The line is a great circle and not a straight one, because on the projection
    a map draws, straight is the wrong shape: New York to London leaves the coast
    heading north-east over Newfoundland, and a straight line sends it across the
-   middle of the Atlantic. GreatCircle works out the points; a route crossing
-   the antimeridian comes back as two runs, drawn as two lines, which is why
-   this joins them with "~" rather than assuming one.
+   middle of the Atlantic. GreatCircle works out the points, and a route
+   crossing the antimeridian comes back as two runs -- two lines, because joined
+   into one the map draws the join straight back around the world.
 
-   Marked at each city's own centre -- the mean of its airports -- which is what
-   CityRepository::byCode() returns. Yandex frames two points itself, so no z is
-   given. #}
-{% set lines = [] %}
-{% for run in place.path %}
-    {% set coordinates = [] %}
-    {% for point in run %}
-        {% set coordinates = coordinates|merge([point.lon ~ ',' ~ point.lat]) %}
-    {% endfor %}
-    {# The site's own accent, which reads on both the water and the land. #}
-    {% set lines = lines|merge(['c:0F766EFF,w:5,' ~ coordinates|join(',')]) %}
-{% endfor %}
+   Marked at each city's own centre, the mean of its airports, which is what
+   CityRepository::byCode() returns. No zoom: the frame is fitted to the pins
+   and to the arc, which matters here more than anywhere else -- framed on its
+   two ends alone, a route bowing a thousand kilometres north of them loses its
+   top.
 
-{# The pins carry no number. A "1" and a "2" on a map of two places name
-   neither of them, and this service cannot letter a pin: text where the number
-   goes is rejected outright, and its `text` parameter is accepted and then
-   ignored. Both checked against it.
-
-   So the two ends are told apart by colour -- green for where you leave, red
-   for where you land, which is the one convention nobody has to be taught --
-   and the legend under the map is what says which city each is. #}
-<img class="place__map"
-     src="https://static-maps.yandex.ru/1.x/?l=map&lang=en-US&size=650,300&pt={{ place.from.longitude }},{{ place.from.latitude }},pm2gnm~{{ place.to.longitude }},{{ place.to.latitude }},pm2rdm&pl={{ lines|join('~') }}"
-     width="650" height="300" loading="lazy"
-     alt="Map of the route from {{ place.from.name }} to {{ place.to.name }}, with the flight path drawn between them">
+   Green for where you leave and red for where you land, which is the one
+   convention nobody has to be taught. It replaces a "1" and a "2", which named
+   neither place: no mainstream map service can letter a pin, so the legend
+   below is what says which city each is. #}
+{% include 'partials/map.html.twig' with {
+    'markers': [
+        { 'lat': place.from.latitude, 'lon': place.from.longitude, 'colour': '0EB600' },
+        { 'lat': place.to.latitude, 'lon': place.to.longitude, 'colour': 'EC3735' }
+    ],
+    'paths': place.path,
+    'label': 'Map of the route from ' ~ place.from.name ~ ' to ' ~ place.to.name
+        ~ ', with the flight path drawn between them'
+} only %}
 
 {# Read as text rather than only seen as colour, so the map is described for
    somebody who cannot make out the two pins -- or for whom the image never

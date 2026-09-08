@@ -6,6 +6,10 @@
    about the same thing. #}
 {% block description %}Cheap flights from {{ route.from.name }} to {{ route.to.name }} — from ${{ route.cheapest|round(0, 'floor') }} CAD, {{ duration(route.typical) }} in the air, {{ route.carriers > 1 ? route.carriers ~ ' airlines' : '1 airline' }} flying it direct.{% endblock %}
 
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
 {# The one page here that is a pair rather than a record. Four blocks, and the
    two in the middle are the ones a route is actually asked about: when is it
    cheap, and who flies it. #}

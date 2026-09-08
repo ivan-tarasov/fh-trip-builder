@@ -4,6 +4,10 @@
 
 {% block description %}{{ airport.title }} ({{ airport.code }}) in {{ airport.city }}, {{ airport.country }} — today's departures and arrivals, and the cheapest direct fares out of it.{% endblock %}
 
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
 {# What this airport has to say. The shell that draws it -- the rail, the
    anchors, the dropping of an empty block -- is shared with the city and
    country pages. #}

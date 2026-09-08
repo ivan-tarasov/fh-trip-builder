@@ -11,17 +11,20 @@ use TripBuilder\Helper;
 use TripBuilder\View\TwigRenderer;
 
 /**
- * The route map: two pins, a line, and a legend saying which pin is which.
+ * The route map: two pins, a flight path, and a legend saying which pin is
+ * which.
  *
  * The pins carry no number. They used to carry "1" and "2", which name neither
- * of the two places on a map of two places -- and the map service cannot letter
- * a pin, so what tells them apart is colour and what names them is the legend.
+ * of the two places on a map of two places -- and no mainstream map service can
+ * letter a pin, so what tells them apart is colour and what names them is the
+ * legend.
  *
  * That makes the legend load-bearing rather than decorative: with it gone, or
- * with its two entries the wrong way round, the map says nothing at all. Hence
- * a test, which also holds the one coupling that spans two files -- the dot
- * colours in the stylesheet stand for the pin colours in this template, and
- * nothing but agreement makes them mean anything.
+ * with its two entries the wrong way round, the map says nothing at all. It
+ * also holds the one coupling that spans two files -- the dot colours in the
+ * stylesheet stand for the pin colours the map is given, and nothing but
+ * agreement makes them mean anything. The pin colours moved from a URL into a
+ * JSON payload when the map became interactive; the coupling did not.
  */
 final class RouteMapRenderTest extends TestCase
 {
@@ -29,9 +32,32 @@ final class RouteMapRenderTest extends TestCase
     private const string ORIGIN_PIN = '#0EB600';
     private const string DESTINATION_PIN = '#EC3735';
 
+    private const string DUMMY_TOKEN = 'pk.dummy-token-for-tests';
+
+    private string|false $realToken = false;
+
     protected function setUp(): void
     {
         new Config('common');
+
+        // A map needs a token or it is not drawn at all, so this test supplies
+        // one and puts the real one back -- see MapViewTest.
+        $this->realToken = getenv('MAPBOX_TOKEN');
+        putenv('MAPBOX_TOKEN=' . self::DUMMY_TOKEN);
+        $_ENV['MAPBOX_TOKEN'] = self::DUMMY_TOKEN;
+    }
+
+    protected function tearDown(): void
+    {
+        if (is_string($this->realToken)) {
+            putenv('MAPBOX_TOKEN=' . $this->realToken);
+            $_ENV['MAPBOX_TOKEN'] = $this->realToken;
+
+            return;
+        }
+
+        putenv('MAPBOX_TOKEN');
+        unset($_ENV['MAPBOX_TOKEN']);
     }
 
     private function render(): string
@@ -49,21 +75,40 @@ final class RouteMapRenderTest extends TestCase
         ]);
     }
 
-    public function testThePinsAreColouredAndNotNumbered(): void
+    /**
+     * What the browser is handed, out of the attribute it is handed it in.
+     *
+     * @return array<string, mixed>
+     */
+    private function payload(): array
     {
         $html = $this->render();
 
-        self::assertStringContainsString('pm2gnm~', $html, 'the origin should be the green pin');
-        self::assertStringContainsString('pm2rdm&', $html, 'the destination should be the red pin');
+        self::assertMatchesRegularExpression('/data-map="[^"]+"/', $html, 'the map should be configured');
+        preg_match('/data-map="([^"]+)"/', $html, $found);
 
-        // "pm2blm1" and "pm2blm2" were what this drew before. A number on the
-        // end of a marker style is the thing being removed, so it is asserted
-        // gone rather than merely not written.
-        self::assertDoesNotMatchRegularExpression(
-            '/pm2[a-z]{2}m\d/',
-            $html,
-            'a pin should carry no number',
+        /** @var array<string, mixed> $config */
+        $config = json_decode(
+            html_entity_decode($found[1], ENT_QUOTES | ENT_HTML5),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
         );
+
+        return $config;
+    }
+
+    public function testThePinsAreColouredAndNotNumbered(): void
+    {
+        $config = $this->payload();
+
+        self::assertCount(2, $config['markers'], 'a route has two ends');
+        self::assertSame(self::ORIGIN_PIN, $config['markers'][0]['colour'], 'green where you leave');
+        self::assertSame(self::DESTINATION_PIN, $config['markers'][1]['colour'], 'red where you land');
+
+        // Nothing in the payload numbers a pin, and there is nowhere left for a
+        // number to be written: a Mapbox marker takes a colour, not a label.
+        self::assertArrayNotHasKey('label', $config['markers'][0]);
     }
 
     public function testTheLegendNamesBothEndsInOrder(): void
@@ -87,29 +132,48 @@ final class RouteMapRenderTest extends TestCase
     }
 
     /**
-     * The line is drawn, and drawn as a curve.
+     * The path reaches the map whole, and as a curve.
      *
      * Two points would be a straight line, which is the wrong shape on this
-     * projection -- see GreatCircleTest. Here the only question is whether the
-     * template passed the whole path to the map or just its ends.
+     * projection -- see GreatCircleTest. The only question here is whether the
+     * template handed over the arc or just its ends.
      */
     public function testTheFlightPathIsDrawnAsACurve(): void
     {
-        $html = $this->render();
+        $config = $this->payload();
 
-        self::assertStringContainsString('&pl=c:0F766EFF,w:5,', $html, 'the path should be drawn');
-
-        preg_match('/&pl=([^"&]*)/', $html, $found);
-        self::assertNotEmpty($found, 'the polyline should be findable');
-
-        $coordinates = explode(',', $found[1]);
-        // Two style fields, then a longitude and a latitude per point.
-        $points = (count($coordinates) - 2) / 2;
-
+        self::assertNotEmpty($config['paths'], 'the flight path should be drawn');
         self::assertGreaterThan(
             2,
-            $points,
-            'a curve needs more than the two ends; ' . $points . ' points is a straight line',
+            count($config['paths'][0]),
+            'a curve needs more than the two ends',
+        );
+
+        // And in the order the map reads them, which is not the order the rest
+        // of this codebase does.
+        self::assertSame([-73.9462, 40.7019], $config['paths'][0][0], 'a path point is [lon, lat]');
+    }
+
+    /**
+     * A page that never runs the script still has a map, and a describable one.
+     *
+     * This is what a crawler gets now that the map is a canvas, and it is why
+     * the flat picture was kept when the map became interactive.
+     */
+    public function testAScriptlessPageStillGetsADescribedMap(): void
+    {
+        $html = $this->render();
+
+        self::assertStringContainsString('<noscript>', $html);
+
+        preg_match('#<noscript>(.*?)</noscript>#s', $html, $fallback);
+        self::assertNotEmpty($fallback, 'the fallback should be findable');
+
+        self::assertStringContainsString('api.mapbox.com', $fallback[1], 'a flat picture of the same map');
+        self::assertMatchesRegularExpression(
+            '/alt="[^"]*New York[^"]*London[^"]*"/',
+            $fallback[1],
+            'and it should say what it shows',
         );
     }
 
@@ -117,26 +181,27 @@ final class RouteMapRenderTest extends TestCase
      * The legend's dots stand for the pins, so they have to be the pins'
      * colours.
      *
-     * The two live in different files -- the marker style in this template, the
-     * dot in the stylesheet -- and a dot that only nearly matches is worse than
-     * none, because the reader has to work out whether they are the same thing.
-     * Nothing else would catch that drift: both files would still be valid and
-     * the page would still render.
+     * The two live in different files -- the marker colour in the template that
+     * feeds the map, the dot in the stylesheet -- and a dot that only nearly
+     * matches is worse than none, because the reader has to work out whether
+     * they are the same thing. Nothing else would catch that drift: both files
+     * would still be valid and the page would still render.
      */
     public function testTheLegendDotsAreThePinColours(): void
     {
+        $config = $this->payload();
         $css = (string) file_get_contents(Helper::getRootDir() . '/frontend/css/main.css');
 
-        foreach (
-            [
-                'place__legend-item--from' => self::ORIGIN_PIN,
-                'place__legend-item--to' => self::DESTINATION_PIN,
-            ] as $class => $colour
-        ) {
+        $pairs = [
+            'place__legend-item--from' => $config['markers'][0]['colour'],
+            'place__legend-item--to' => $config['markers'][1]['colour'],
+        ];
+
+        foreach ($pairs as $class => $colour) {
             self::assertMatchesRegularExpression(
-                '/\.' . $class . '\s*\{[^}]*' . $colour . '/i',
+                '/\.' . $class . '\s*\{[^}]*' . ltrim($colour, '#') . '/i',
                 $css,
-                $class . ' should be drawn in ' . $colour,
+                $class . ' should be drawn in the colour its pin is: ' . $colour,
             );
         }
     }

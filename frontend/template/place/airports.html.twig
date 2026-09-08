@@ -1,17 +1,6 @@
 {# The airports, then where they are.
 
-   One map for the place rather than one per airport, because the useful fact
-   about Moscow's three is how far apart they are -- which a row of three
-   separate maps cannot show. It holds for a country too: Canada's seven read as
-   a shape, not a list. Same static-map service the airport cards already use;
-   the markers are the `pt` list, comma-separated within a point and
-   tilde-separated between them. #}
-{% set points = [] %}
-{% for airport in airports %}
-    {% set points = points|merge([airport.longitude ~ ',' ~ airport.latitude ~ ',pm2blm' ~ loop.index]) %}
-{% endfor %}
-
-{# Links, not labels. These were labels while there was nowhere to send anyone;
+   Links, not labels. These were labels while there was nowhere to send anyone;
    there is now, and 324 of these pages were naming an airport that has its own
    page without reaching it. #}
 <ul class="chips">
@@ -25,10 +14,21 @@
     {% endfor %}
 </ul>
 
-{# Zoomed out for a place whose airports are spread, in close for one that has a
-   single field. Yandex picks the frame itself when no z is given, but only when
-   there is more than one point to frame. #}
-<img class="place__map"
-     src="https://static-maps.yandex.ru/1.x/?l=map&lang=en-US&size=650,300{{ airports|length > 1 ? '' : '&z=10' }}&pt={{ points|join('~') }}"
-     width="650" height="300" loading="lazy"
-     alt="Map showing the {{ airports|length > 1 ? airports|length ~ ' airports' : 'airport' }} serving {{ place.name }}">
+{# One map for the place rather than one per airport, because the useful fact
+   about Moscow's three is how far apart they are -- which a row of three
+   separate maps cannot show. It holds for a country too: Canada's seven read as
+   a shape, not a list.
+
+   No zoom, so the frame is fitted to the pins. A place with one airport still
+   gets a sensible view: the map falls back to a close zoom when there is only
+   one point to frame. #}
+{% set pins = [] %}
+{% for airport in airports %}
+    {% set pins = pins|merge([{ 'lat': airport.latitude, 'lon': airport.longitude }]) %}
+{% endfor %}
+
+{% include 'partials/map.html.twig' with {
+    'markers': pins,
+    'label': 'Map showing the ' ~ (airports|length > 1 ? airports|length ~ ' airports' : 'airport')
+        ~ ' serving ' ~ place.name
+} only %}

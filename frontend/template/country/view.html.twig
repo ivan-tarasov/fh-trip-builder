@@ -6,6 +6,10 @@
    pages claim to be about the same thing. #}
 {% block description %}Cheap flights to {{ country.name }} — the cheapest direct fares into {{ country.cities > 1 ? 'its ' ~ country.cities ~ ' cities' : 'its city' }}, and every airport we sell a seat to.{% endblock %}
 
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
 {# What this country has to say, in the order it is worth saying: the facts, the
    price, then where in it you can land. The shell that draws it -- the rail, the
    anchors, the dropping of an empty block -- is shared with the city page. #}

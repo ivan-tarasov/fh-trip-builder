@@ -5518,12 +5518,26 @@ body:has(.hero) header#top {
   font-weight: 700;
 }
 
+/* The map, whether it is a live one or the picture inside <noscript>.
+
+   `aspect-ratio` rather than a height, and the same 650:300 the picture has:
+   the box then has its final shape before Mapbox GL loads, so the page does not
+   jump when half a megabyte of JavaScript arrives and fills it. It is also what
+   gives the map a size to initialise into -- GL JS measures its container, and
+   a container with no height renders nothing at all.
+
+   `overflow: hidden` because the live map draws its own canvas and controls,
+   which would otherwise sit square over the rounded corners. */
 .place__map {
   display: block;
   width: 100%;
+  aspect-ratio: 650 / 300;
   height: auto;
   margin-top: 1.25rem;
   border-radius: .75rem;
+  overflow: hidden;
+  /* Something to look at while the tiles arrive, in place of a white hole. */
+  background-color: var(--surface-sunken);
 }
 
 /* An airline's mark. The one place page with no map of its own to lead with,

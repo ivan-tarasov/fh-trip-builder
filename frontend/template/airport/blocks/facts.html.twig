@@ -23,18 +23,9 @@
 
 {# Close in with an explicit zoom, because there is one point here and a frame
    fitted to one point has no size -- and what this map is for is showing which
-   part of the city the airport sits in.
-
-   `{% if %}`, because a map needs a token and an app without one should show a
-   page with no picture rather than a page with a broken one. See
-   View\StaticMap. #}
-{% set map = static_map(
-    markers = [{ 'lat': place.latitude, 'lon': place.longitude }],
-    zoom = 10
-) %}
-
-{% if map %}
-    <img class="place__map" src="{{ map }}"
-         width="650" height="300" loading="lazy"
-         alt="Map showing where {{ place.title }} sits in {{ place.city }}">
-{% endif %}
+   part of the city the airport sits in. #}
+{% include 'partials/map.html.twig' with {
+    'markers': [{ 'lat': place.latitude, 'lon': place.longitude }],
+    'zoom': 10,
+    'label': 'Map showing where ' ~ place.title ~ ' sits in ' ~ place.city
+} only %}
