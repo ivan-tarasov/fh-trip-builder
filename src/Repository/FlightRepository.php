@@ -1043,12 +1043,20 @@ final readonly class FlightRepository
      * flight; it is not a fare anybody is looking for, and it took the cheapest
      * row on the tab.
      *
+     * One carrier or all of them. An airline page asks the same question of its
+     * own hubs -- where is it cheap to go from here -- and the answer has to be
+     * a flight that airline actually operates, or the page recommends a rival.
+     *
      * @param list<string> $fromAirports
      * @param list<string> $toAirports
      * @return list<array<string, mixed>>
      */
-    public function cheapestPerDestinationCity(array $fromAirports, array $toAirports, CabinClass $cabin): array
-    {
+    public function cheapestPerDestinationCity(
+        array $fromAirports,
+        array $toAirports,
+        CabinClass $cabin,
+        ?string $airline = null,
+    ): array {
         if ($fromAirports === [] || $toAirports === []) {
             return [];
         }
@@ -1076,10 +1084,16 @@ final readonly class FlightRepository
             . ' WHERE f.departure_airport IN (' . $from . ')'
             . '  AND f.arrival_airport IN (' . $to . ')'
             . '  AND d.city_code <> o.city_code'
+            . ($airline === null ? '' : '  AND f.airline = ?')
             . '  AND f.departure_time >= NOW()'
             . '  AND (f.cabins & ?)'
             . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
-            [...$fromAirports, ...$toAirports, $cabin->bit()],
+            [
+                ...$fromAirports,
+                ...$toAirports,
+                ...($airline === null ? [] : [$airline]),
+                $cabin->bit(),
+            ],
         );
     }
 

@@ -1,0 +1,53 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ airline.name }} ({{ airline.code }}){% endblock %}
+
+{# Counted off the figures the page prints, so no two of the 105 airline pages
+   claim to be about the same thing. #}
+{% block description %}{{ airline.name }} ({{ airline.code }}) flights — the cheapest fares out of {{ airline.hub_count > 1 ? 'its ' ~ airline.hub_count ~ ' hubs' : 'its hub' }}, and the {{ airline.destinations }} places it flies to.{% endblock %}
+
+{# Three blocks, not four. The two an airline page would obviously carry -- a
+   fleet and a fare table -- are the same on all 105 in this data; see
+   AirlineController for the measurements. #}
+{% set blocks = [
+    {
+        'id': 'general',
+        'title': 'General information about ' ~ airline.name,
+        'nav': 'General information',
+        'icon': 'fa-circle-info',
+        'tone': 'green',
+        'template': 'airline/blocks/facts.html.twig',
+        'when': true
+    },
+    {
+        'id': 'fares',
+        'title': 'Cheap tickets on ' ~ airline.name,
+        'nav': 'Cheap tickets',
+        'icon': 'fa-tag',
+        'tone': 'blue',
+        'template': 'place/fares.html.twig',
+        'when': fares is not empty
+    },
+    {
+        'id': 'hubs',
+        'title': airline.hub_count > 1 ? 'Hubs of ' ~ airline.name : 'Hub of ' ~ airline.name,
+        'nav': airline.hub_count > 1 ? 'Hubs' : 'Hub',
+        'icon': 'fa-plane-departure',
+        'tone': 'violet',
+        'template': 'airline/blocks/hubs.html.twig',
+        'when': hubs is not empty
+    }
+] %}
+
+{% block content %}
+{% include 'partials/place.html.twig' with {
+    'heading': 'Flights on ' ~ airline.name,
+    'rail_title': airline.name,
+    'blocks': blocks,
+    'data': {
+        'place': airline,
+        'hubs': hubs,
+        'fares': fares
+    }
+} only %}
+{% endblock %}

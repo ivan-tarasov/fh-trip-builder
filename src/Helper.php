@@ -487,6 +487,12 @@ class Helper
         return '/airport/' . self::placeSlug($title, $code);
     }
 
+    /** Where an airline's page lives. */
+    public static function airlineUrl(string $name, string $code): string
+    {
+        return '/airline/' . self::placeSlug($name, $code);
+    }
+
     /**
      * The code off the end of a place slug, or null when there is not one.
      *

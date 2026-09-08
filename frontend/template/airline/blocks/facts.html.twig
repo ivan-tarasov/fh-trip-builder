@@ -1,0 +1,59 @@
+{# The airline's own mark, four figures, then how to reach it.
+
+   Where it is based rather than a second copy of its code: the country is the
+   one fact here that sends a reader somewhere else, and the code is already in
+   the tile beside it and in the page's own address.
+
+   Destinations is what its hubs can reach direct today, which is the same
+   number the fares strip below is the front of. Not "routes" -- an airline
+   flying 3,923 of them is not offering a traveller 3,923 choices, it is
+   offering the 231 places they end up. #}
+{# Empty alt: the heading directly above this says "Air Canada", so a reader
+   that cannot see the mark has already been told whose page it is, and an alt
+   of "Air Canada" would only say it twice. The width and height are on the tag
+   as well as in the CSS so the tile below does not move when it arrives. #}
+<img class="place__mark"
+     src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ place.code ~ '.png') }}"
+     width="56" height="56" loading="lazy" alt="">
+
+{% include 'partials/facts-grid.html.twig' with {
+    'facts': [
+        { 'icon': 'fa-plane', 'value': place.code, 'label': 'Airline code' },
+        { 'icon': 'fa-location-dot', 'value': place.country|default('—'), 'label': 'Based in' },
+        {
+            'icon': 'fa-plane-departure',
+            'value': place.hub_count,
+            'label': place.hub_count > 1 ? 'Hubs' : 'Hub'
+        },
+        { 'icon': 'fa-earth-americas', 'value': place.destinations, 'label': 'Destinations' }
+    ]
+} only %}
+
+{# Both are seed data and both can be missing -- 11 of the 105 have no website
+   and 6 no phone number -- so each row appears only where there is one.
+
+   The number is text and not a tel: link on purpose. These are written every
+   way the airlines write them: "800-433-7300" is a North American toll-free
+   with no country code, "+91 (0)124 435 2500" carries one, and one row ends in
+   a stray dash. A tel: built from that dials the wrong number as often as the
+   right one, and a wrong number is worse than a number you copy yourself. #}
+{% if place.url is not empty or place.phone is not empty %}
+    <ul class="chips place__contacts">
+        {% if place.url is not empty %}
+            <li>
+                <a class="chip chip--link" href="{{ place.url }}" target="_blank" rel="noopener">
+                    <i class="fas fa-globe chip__icon" aria-hidden="true"></i>
+                    {{ place.name }} website
+                </a>
+            </li>
+        {% endif %}
+        {% if place.phone is not empty %}
+            <li>
+                <span class="chip">
+                    <i class="fas fa-phone chip__icon" aria-hidden="true"></i>
+                    {{ place.phone }}
+                </span>
+            </li>
+        {% endif %}
+    </ul>
+{% endif %}

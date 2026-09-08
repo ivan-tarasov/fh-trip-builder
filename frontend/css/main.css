@@ -5526,6 +5526,18 @@ body:has(.hero) header#top {
   border-radius: .75rem;
 }
 
+/* An airline's mark. The one place page with no map of its own to lead with,
+   and the one whose subject has a face people recognise faster than its name. */
+.place__mark {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 1.25rem;
+  border-radius: .75rem;
+}
+
+.place__contacts { margin-top: 1.25rem; }
+
 /* ---------- The four figures ---------- */
 
 .facts-grid {

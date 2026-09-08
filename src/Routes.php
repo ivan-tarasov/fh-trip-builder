@@ -117,6 +117,9 @@ class Routes
         // "heathrow-lhr". Three characters again, like a city -- an IATA code
         // is an IATA code whether it names an airport or the city around it.
         '#^/airport/[A-Za-z0-9-]+$#' => 'Airport@show',
+        // "air-canada-ac". Two characters, like a country: an airline's IATA
+        // code is two, and the controller is what knows which two.
+        '#^/airline/[A-Za-z0-9-]+$#' => 'Airline@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [
