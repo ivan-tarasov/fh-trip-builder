@@ -5921,10 +5921,11 @@ body:has(.hero) header#top {
 
 .article__sheet {
   padding: 2rem 2.25rem;
-  /* Wide enough for a line of prose and no wider. Everything else on this site
-     is a grid of things and takes the container; a paragraph read at 100
-     characters a line loses its place coming back to the left margin. */
-  max-width: 68ch;
+  /* The width every other content page gives its blocks: 80ch lands on 820px
+     here, which is what .place__blocks measures inside the 1140px container. So
+     a help article and a city page hold their text in the same column, and the
+     only page family that was narrower than the rest no longer is. */
+  max-width: 80ch;
   background-color: #fff;
   border-radius: 1rem;
 }
@@ -5988,6 +5989,15 @@ body:has(.hero) header#top {
   font-weight: 700;
 }
 
+/* The lead already draws a rule under itself, so a section heading that opens
+   the body must not draw a second one below it. Left in, the two hairlines sat
+   28px apart -- the lead's bottom margin -- and read as a mistake, which is
+   what they were. */
+.article__body > h2:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .article__body h3 {
   margin-top: 1.75rem;
   margin-bottom: .35rem;
@@ -6014,13 +6024,18 @@ body:has(.hero) header#top {
   margin-top: .35rem;
 }
 
-.article__body a {
+/* Underlined because they sit in running text, where colour alone is not
+   enough to mark a link. Unclassed on purpose: a link that carries a class is a
+   component -- a card on the hub, a button on the unavailable page -- and it
+   says how it looks itself. Written as a plain `a` this beat `.article-card` on
+   specificity and underlined all five topics on /help. */
+.article__body a:not([class]) {
   color: var(--brand-accent-700);
   text-decoration: underline;
   text-underline-offset: .15em;
 }
 
-.article__body a:hover {
+.article__body a:not([class]):hover {
   color: var(--brand-accent);
 }
 
@@ -6035,7 +6050,7 @@ body:has(.hero) header#top {
 }
 
 .article__aside {
-  max-width: 68ch;
+  max-width: 80ch;
   padding: 1.5rem 2.25rem 1.75rem;
   background-color: #fff;
   border-radius: 1rem;
