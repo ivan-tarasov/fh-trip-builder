@@ -2,6 +2,20 @@
 
 {% set titles = { 'active': 'My bookings', 'past': 'Past bookings', 'cancelled': 'Cancelled bookings' } %}
 
+{# One per tab, like the empty states below. The heading used to read "My
+   bookings" on all three, which the browser title and the breadcrumb had
+   already stopped agreeing with -- and a page whose tab strip says Cancelled
+   under a heading that says My bookings is naming the wrong one of the two.
+
+   The lead follows it, because the old one described the active list and was
+   printed over the other two as well. The cancelled line is the sentence the
+   booking's own page uses, so a trip reads the same either place. #}
+{% set leads = {
+    'active': 'Every trip booked in this browser, with its reference and the full itinerary.',
+    'past': 'Trips you have already flown. They move here once the last flight has landed.',
+    'cancelled': 'Trips you called off. The flights are no longer held and the reference will not check in.'
+} %}
+
 {% block title %}{{ titles[tab] }}{% endblock %}
 
 {# Three addresses, drawn as a tab strip.
@@ -24,8 +38,8 @@
 <main role="main" class="flex-shrink-0 mb-5">
     <div class="container bookings">
         {% include 'partials/page-head.html.twig' with {
-            'title': 'My bookings',
-            'lead': 'Every trip booked in this browser, with its reference and the full itinerary.'
+            'title': titles[tab],
+            'lead': leads[tab]
         } only %}
 
         <nav class="bookings-tabs" aria-label="Booking status">
