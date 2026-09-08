@@ -43,9 +43,19 @@ return [
         'retina' => true,
 
         // Room between the framed overlays and the edge, for the auto-framed
-        // maps. Without it a pin at the edge of the frame is drawn half
-        // outside it.
-        'padding' => 40,
+        // maps. Not just so a pin is not clipped: the point of the map is what
+        // is *around* the places it marks, and a frame drawn tight to them
+        // shows the pins and nothing else.
+        'padding' => 72,
+
+        // How far out a map opens when it has a single place to show.
+        //
+        // One point cannot be framed -- a box around it has no size -- so this
+        // is the number that decides what "around here" means. 10 was too
+        // close: Heathrow filled the picture and the map stopped at Slough one
+        // way and Richmond the other. Each step out doubles the ground covered
+        // in each direction.
+        'zoom_single' => 9,
 
         // Small pins, for the flat <noscript> picture. The picture endpoint can
         // put at most one character on a pin, so it carries none; the live map
@@ -57,18 +67,11 @@ return [
         'path_colour' => '0F766E',
         'path_width' => 5,
 
-        // Pin labels on the live map, drawn as a symbol layer.
-        //
-        // The font has to be one the style ships or the labels render as
-        // nothing at all, silently — so this is a stack Mapbox Streets already
-        // uses in four of its own layers, checked against the glyph endpoint
-        // rather than assumed.
-        //
-        // Ink with a white halo, because a label crosses land, water and roads
-        // on the same map and no single colour reads on all three.
-        'label_font' => ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-        'label_colour' => '10243F',
-        'label_halo' => 'FFFFFF',
-        'label_size' => 14,
+        // Pin labels are drawn as their own elements on top of the map, so what
+        // they look like is in main.css with the rest of the site's type — see
+        // `.map-label`. A symbol layer was the other option and would have put
+        // the label inside the map's own rendering, but its background needs a
+        // sprite image built at runtime, and it draws nothing at all, silently,
+        // if the font it asks for is not one the style ships.
     ],
 ];

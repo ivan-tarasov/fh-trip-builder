@@ -124,32 +124,18 @@ final class RouteMapRenderTest extends TestCase
     }
 
     /**
-     * The label's font has to be one the map's style ships.
+     * A route frames itself rather than opening at a fixed zoom.
      *
-     * This is the failure worth a test because it is silent: given a font the
-     * style has no glyphs for, Mapbox draws no label at all and reports
-     * nothing. The stack asserted here is one Mapbox Streets uses in four of
-     * its own layers, and it was checked against the glyph endpoint -- 200, and
-     * 43KB of glyphs -- rather than assumed.
+     * Two pins and an arc are exactly what an automatic frame is for, and the
+     * padding is what keeps them off the edge -- the map is there to show what
+     * is around the two places, which a frame drawn tight to them does not.
      */
-    public function testTheLabelAsksForAFontTheStyleHas(): void
+    public function testTheRouteFramesItselfWithRoomToSpare(): void
     {
         $config = $this->payload();
 
-        self::assertSame(
-            ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-            $config['label']['font'],
-            'a font the style does not ship draws nothing, silently',
-        );
-
-        // A halo, because a label crosses land, water and roads on one map and
-        // no single colour reads on all three.
-        self::assertNotSame(
-            $config['label']['colour'],
-            $config['label']['halo'],
-            'the halo has to contrast with the text it outlines',
-        );
-        self::assertGreaterThan(0, $config['label']['size']);
+        self::assertNull($config['zoom'], 'a route has two ends and an arc to frame');
+        self::assertGreaterThanOrEqual(64, $config['padding'], 'the frame needs air around it');
     }
 
     public function testTheLegendNamesBothEndsInOrder(): void

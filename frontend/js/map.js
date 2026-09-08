@@ -60,79 +60,48 @@
 
         frame(map, config);
 
+        // Paths need the style; markers and labels do not, so they go up now
+        // and are on the page whether or not the tiles ever arrive.
         map.on('load', function () {
             drawPaths(map, config);
-            drawLabels(map, config);
         });
 
         config.markers.forEach(function (marker) {
             new mapboxgl.Marker({ color: marker.colour }).setLngLat(marker.at).addTo(map);
         });
+
+        drawLabels(map, config);
     });
 
     /**
      * The names beside the pins.
      *
-     * A symbol layer rather than HTML, so the labels are drawn by the map
-     * engine and sit in the map's own visual language -- and so they scale and
-     * move with the pins rather than being positioned over them.
+     * Their own elements on top of the map rather than a symbol layer inside
+     * it. The layer was the first attempt and is the more native answer, but
+     * the label wanted a background, and a box behind a symbol layer's text
+     * means building a stretchable sprite at runtime -- while an element takes
+     * the site's own type and a `background` in the stylesheet. It also cannot
+     * fail quietly: a symbol layer asking for a font the style does not ship
+     * draws nothing at all and reports nothing.
      *
-     * `text-font` has to name a font the style ships or the labels render as
-     * nothing at all, with no error: it is a stack Mapbox Streets already uses,
-     * checked against the glyph endpoint. See config/common/maps.php.
-     *
-     * `text-allow-overlap` is on because these labels are the point of the
-     * layer. Left off, Mapbox drops whichever collides -- and a route page
-     * silently naming one of its two ends is worse than two labels that touch.
-     * `text-ignore-placement` stays off, so ours still push the map's own
-     * labels out of the way rather than being drawn through them.
+     * A second marker rather than a custom pin, so the pin stays Mapbox's own
+     * and keeps its colour. Offset in pixels, unlike a symbol layer's ems: a
+     * marker is 41px tall with its tip on the coordinate, so the label clears
+     * it at 46 and sits just above the head.
      */
     function drawLabels(map, config) {
-        var labelled = config.markers.filter(function (marker) {
-            return marker.label;
-        });
+        config.markers.forEach(function (marker) {
+            if (!marker.label) {
+                return;
+            }
 
-        if (!labelled.length) {
-            return;
-        }
+            var element = document.createElement('span');
+            element.className = 'map-label';
+            element.textContent = marker.label;
 
-        map.addSource('map-labels', {
-            type: 'geojson',
-            data: {
-                type: 'FeatureCollection',
-                features: labelled.map(function (marker) {
-                    return {
-                        type: 'Feature',
-                        properties: { label: marker.label },
-                        geometry: { type: 'Point', coordinates: marker.at },
-                    };
-                }),
-            },
-        });
-
-        map.addLayer({
-            id: 'map-labels',
-            type: 'symbol',
-            source: 'map-labels',
-            layout: {
-                'text-field': ['get', 'label'],
-                'text-font': config.label.font,
-                'text-size': config.label.size,
-                /* Above the pin, not on it. `text-offset` is in ems of
-                   `text-size`, and a default Mapbox marker is 41px tall with
-                   its tip at the coordinate -- so clearing it takes 41/14 =
-                   2.93em, and 3.2 leaves a few pixels of air. Anchored at the
-                   text's bottom so the lift is away from the pin. */
-                'text-anchor': 'bottom',
-                'text-offset': [0, -3.2],
-                'text-allow-overlap': true,
-                'text-padding': 2,
-            },
-            paint: {
-                'text-color': config.label.colour,
-                'text-halo-color': config.label.halo,
-                'text-halo-width': 1.5,
-            },
+            new mapboxgl.Marker({ element: element, anchor: 'bottom', offset: [0, -46] })
+                .setLngLat(marker.at)
+                .addTo(map);
         });
     }
 
@@ -160,12 +129,6 @@
 
         if (config.zoom !== null && config.zoom !== undefined) {
             map.jumpTo({ center: points[0], zoom: config.zoom });
-
-            return;
-        }
-
-        if (points.length === 1) {
-            map.jumpTo({ center: points[0], zoom: 10 });
 
             return;
         }

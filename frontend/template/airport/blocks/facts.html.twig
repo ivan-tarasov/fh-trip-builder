@@ -21,11 +21,11 @@
     ]
 } only %}
 
-{# Close in with an explicit zoom, because there is one point here and a frame
-   fitted to one point has no size -- and what this map is for is showing which
-   part of the city the airport sits in. #}
+{# No zoom named here. One point cannot be framed, so how far out a single-pin
+   map opens is one decision for the whole site and it lives in
+   config/common/maps.php -- see MapView::zoomFor(). What this map is for is
+   showing which part of the city the airport sits in, and what is around it. #}
 {% include 'partials/map.html.twig' with {
     'markers': [{ 'lat': place.latitude, 'lon': place.longitude }],
-    'zoom': 10,
     'label': 'Map showing where ' ~ place.title ~ ' sits in ' ~ place.city
 } only %}

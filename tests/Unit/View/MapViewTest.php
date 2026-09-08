@@ -118,8 +118,59 @@ final class MapViewTest extends TestCase
         ]);
 
         self::assertStringContainsString('/auto/', $url);
-        self::assertStringContainsString('padding=40', $url);
+        // Read from config, not written out here: the number is a design
+        // decision that moved once already, and a test repeating it just has to
+        // be edited alongside.
+        self::assertStringContainsString('padding=' . (int) Config::get('maps.static.padding'), $url);
         self::assertSame(3, substr_count($url, 'pin-s('), 'one pin per airport');
+    }
+
+    /**
+     * One pin and no zoom asked for gets the configured one.
+     *
+     * This is the airport page, which no longer names a zoom: a single point
+     * cannot be framed -- a box around it has no size -- so what "around here"
+     * means is one decision for the whole site. Both halves have to reach the
+     * same answer, or the picture and the live map open on different views.
+     */
+    public function testASinglePinFallsBackToTheConfiguredZoom(): void
+    {
+        $expected = (int) Config::get('maps.static.zoom_single');
+
+        self::assertStringContainsString(
+            ',' . $expected . '/',
+            MapView::image(self::oneMarker()),
+            'the picture should open at the configured zoom',
+        );
+
+        $config = json_decode(MapView::config(self::oneMarker()), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame($expected, $config['zoom'], 'and so should the live map');
+    }
+
+    /**
+     * Two pins frame themselves, and a caller's own zoom still wins.
+     */
+    public function testTheFallbackAppliesOnlyToASinglePinWithNoPath(): void
+    {
+        $two = [['lat' => 51.4706, 'lon' => -0.4619], ['lat' => 51.1537, 'lon' => -0.1821]];
+
+        $framed = json_decode(MapView::config($two), true, 512, JSON_THROW_ON_ERROR);
+        self::assertNull($framed['zoom'], 'two pins frame themselves');
+
+        $withPath = json_decode(
+            MapView::config(
+                self::oneMarker(),
+                [[['lat' => 51.5, 'lon' => -0.1], ['lat' => 40.7, 'lon' => -73.9]]],
+            ),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+        self::assertNull($withPath['zoom'], 'a path is something to frame');
+
+        $asked = json_decode(MapView::config(self::oneMarker(), [], 12), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(12, $asked['zoom'], "a caller's own zoom wins");
     }
 
     /**

@@ -5552,6 +5552,36 @@ body:has(.hero) header#top {
 
 .place__contacts { margin-top: 1.25rem; }
 
+/* A pin's name, sitting above it on the map.
+
+   White ground rather than a text halo, because a label here crosses coastline,
+   motorway and parkland within its own width and no outline reads on all
+   three. The map is what it sits on, so it takes the map's job of being legible
+   seriously: solid ground, ink text, and a shadow to lift it off the tiles.
+
+   `pointer-events: none` so the label never eats a drag: a map you cannot pan
+   because you grabbed a word is worse than an unlabelled one. `!important`
+   because Mapbox writes `pointer-events: auto` as an inline style onto the
+   element it is handed -- which is this one -- and an inline style beats any
+   rule here however specific. Measured: without it the computed value is
+   `auto`, whatever this file says. */
+.map-label {
+  display: block;
+  max-width: 12rem;
+  padding: .1875rem .4375rem;
+  overflow: hidden;
+  color: var(--brand-ink);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: #fff;
+  border-radius: .3125rem;
+  box-shadow: 0 1px 3px rgb(16 36 63 / 28%);
+  pointer-events: none !important;
+}
+
 /* ---------- Which pin is which ---------- */
 
 .place__legend {

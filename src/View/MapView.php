@@ -70,6 +70,8 @@ final class MapView
             ...array_map(static fn(array $marker): string => self::pin($marker), $markers),
         ];
 
+        $zoom = self::zoomFor($markers, $paths, $zoom);
+
         $position = $zoom === null
             ? 'auto'
             : sprintf('%s,%s,%d', self::round($markers[0]['lon']), self::round($markers[0]['lat']), $zoom);
@@ -123,11 +125,13 @@ final class MapView
 
         return (string) json_encode([
             'token' => $token,
+            // Resolved here rather than in the browser, so the live map and the
+            // flat picture open on the same view.
             // GL JS wants the mapbox:// form of the same style the picture
             // endpoint takes bare.
             'style' => 'mapbox://styles/' . self::setting('style', 'mapbox/streets-v12'),
-            'zoom' => $zoom,
-            'padding' => (int) self::setting('padding', 40),
+            'zoom' => self::zoomFor($markers, $paths, $zoom),
+            'padding' => (int) self::setting('padding', 72),
             'markers' => array_map(
                 static fn(array $marker): array => [
                     // GeoJSON order, which is the opposite of the order the
@@ -154,13 +158,30 @@ final class MapView
                 'colour' => '#' . ltrim((string) self::setting('path_colour', '0F766E'), '#'),
                 'width' => (int) self::setting('path_width', 5),
             ],
-            'label' => [
-                'font' => self::setting('label_font', ['DIN Pro Bold', 'Arial Unicode MS Bold']),
-                'colour' => '#' . ltrim((string) self::setting('label_colour', '10243F'), '#'),
-                'halo' => '#' . ltrim((string) self::setting('label_halo', 'FFFFFF'), '#'),
-                'size' => (int) self::setting('label_size', 14),
-            ],
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * How far out the map opens, or null to let it frame itself.
+     *
+     * A caller's own zoom wins. Otherwise a map with one place and no path gets
+     * the configured single-pin zoom, because there is nothing to frame: a box
+     * drawn round one point has no size, and both the picture endpoint and the
+     * live map need telling what "around here" means. Anything with two points
+     * or a path frames itself, which is better than any fixed number could be.
+     *
+     * @param list<array{lat: float|string, lon: float|string, colour?: string, label?: string}> $markers
+     * @param list<list<array{lat: float|string, lon: float|string}>> $paths
+     */
+    private static function zoomFor(array $markers, array $paths, ?int $zoom): ?int
+    {
+        if ($zoom !== null) {
+            return $zoom;
+        }
+
+        return count($markers) === 1 && $paths === []
+            ? (int) self::setting('zoom_single', 9)
+            : null;
     }
 
     /**
