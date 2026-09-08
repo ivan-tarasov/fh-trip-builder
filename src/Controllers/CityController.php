@@ -6,13 +6,14 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\CabinClass;
+use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\SearchUrl;
 use TripBuilder\View\TwigRenderer;
 
-class CitiesController extends AbstractController
+class CityController extends AbstractController
 {
     /**
      * How many neighbours to offer, and how far away one may be.
@@ -56,7 +57,7 @@ class CitiesController extends AbstractController
             // URLs for one thing unless one of them is made to point at the
             // other. 301 rather than 302: this is how the page is spelled, not
             // where it happens to be today.
-            $canonical = Helper::citySlug((string) $city['name'], (string) $city['code']);
+            $canonical = Helper::placeSlug((string) $city['name'], (string) $city['code']);
 
             if ($slug !== $canonical) {
                 $this->bounce('/city/' . $canonical, 301);
@@ -64,7 +65,8 @@ class CitiesController extends AbstractController
                 return;
             }
 
-            echo new TwigRenderer()->renderPage('cities/view.html.twig', [
+            echo new TwigRenderer()->renderPage('city/view.html.twig', [
+                'breadcrumbs' => self::trailFor($city),
                 'city' => $city,
                 'city_airports' => $cities->airports($code),
                 'nearby' => self::addressable($cities->nearby($code, self::NEARBY_LIMIT, self::NEARBY_MAX_KM)),
@@ -128,6 +130,42 @@ class CitiesController extends AbstractController
     }
 
     /**
+     * Home, then the country, then the city.
+     *
+     * The URL is not the trail here and does not need to be. /city/montreal-ymq
+     * has no ancestor in its own path -- there is no /city page and there
+     * should not be one, because the parent of a city is not a list of every
+     * city we sell, it is the country it is in. Breadcrumbs::trail() reads
+     * ancestors off the path and so finds nothing to say; renderPage() lets a
+     * controller hand over a trail instead, which is what the booking page and
+     * the 404 already do.
+     *
+     * The same shape the reference uses: its Moscow page reads Home / Russia /
+     * Moscow, not Home / Cities / Moscow.
+     *
+     * The country link answers 404 for now, like the other pages still to be
+     * built. It is spelled the way the city above it is -- name then code -- so
+     * it will work the day that page exists.
+     *
+     * @param array<string, mixed> $city
+     * @return list<array{label: string, url: string|null, current: bool}>
+     */
+    private static function trailFor(array $city): array
+    {
+        $country = (string) $city['country'];
+
+        return [
+            ['label' => (string) Config::get('breadcrumbs.home', 'Home'), 'url' => '/', 'current' => false],
+            [
+                'label' => $country,
+                'url' => '/country/' . Helper::placeSlug($country, (string) $city['country_code']),
+                'current' => false,
+            ],
+            ['label' => (string) $city['name'], 'url' => null, 'current' => true],
+        ];
+    }
+
+    /**
      * Give each city the address it is reached at.
      *
      * Built here rather than selected: a slug is how this app spells a name,
@@ -141,7 +179,7 @@ class CitiesController extends AbstractController
     {
         return array_map(
             static fn(array $city): array => $city + [
-                'slug' => Helper::citySlug((string) $city['name'], (string) $city['code']),
+                'slug' => Helper::placeSlug((string) $city['name'], (string) $city['code']),
             ],
             $cities,
         );

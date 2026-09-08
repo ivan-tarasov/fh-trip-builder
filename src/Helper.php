@@ -403,8 +403,12 @@ class Helper
 
     /**
      * "montreal-ymq" -- the name for a reader, the code for the lookup.
+     *
+     * Not city-specific: a country, an airport and an airline are all a name
+     * with a code, and spelling their addresses two different ways would be a
+     * second rule to remember for no gain.
      */
-    public static function citySlug(string $name, string $code): string
+    public static function placeSlug(string $name, string $code): string
     {
         return self::slug($name) . '-' . mb_strtolower($code);
     }

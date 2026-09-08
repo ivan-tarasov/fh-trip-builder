@@ -176,7 +176,7 @@ final class LayoutData
 
         foreach ($cities as $city) {
             $name = (string) $city['name'];
-            $links[$name] = '/city/' . Helper::citySlug($name, (string) $city['code']);
+            $links[$name] = '/city/' . Helper::placeSlug($name, (string) $city['code']);
         }
 
         return $links;

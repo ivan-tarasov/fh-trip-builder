@@ -97,7 +97,7 @@ class Routes
         // lookup uses, so the pattern is deliberately loose about the name half
         // -- a stale or mistyped one still finds the city and is redirected to
         // the spelling this app would have written.
-        '#^/city/[A-Za-z0-9-]+$#' => 'Cities@show',
+        '#^/city/[A-Za-z0-9-]+$#' => 'City@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

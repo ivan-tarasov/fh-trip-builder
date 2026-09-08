@@ -314,11 +314,11 @@ return [
         [
             'title' => 'Countries',
             'links' => [
-                'Canada' => '/country/CA',
-                'United States' => '/country/US',
-                'United Kingdom' => '/country/GB',
-                'France' => '/country/FR',
-                'Japan' => '/country/JP',
+                'Canada' => '/country/canada-ca',
+                'United States' => '/country/united-states-us',
+                'United Kingdom' => '/country/united-kingdom-gb',
+                'France' => '/country/france-fr',
+                'Japan' => '/country/japan-jp',
             ],
         ],
         [
