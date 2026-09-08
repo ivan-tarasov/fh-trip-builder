@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\Helper;
+use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
@@ -19,10 +20,10 @@ class SitemapController extends AbstractController
     /**
      * Every page worth finding, for a crawler that would rather be told.
      *
-     * There are 584 of them and 578 are a city, a country or an airport, which
-     * is why this is generated rather than a file on disk: the list is rows in
-     * a table, and a checked-in copy would be wrong the first time a route is
-     * added.
+     * There are 689 of them and 683 are a city, a country, an airport or an
+     * airline, which is why this is generated rather than a file on disk: the
+     * list is rows in a table, and a checked-in copy would be wrong the first
+     * time a route is added.
      *
      * The pages are gathered by inclusion, not exclusion -- ENABLED_ROUTES
      * filtered through Routes::isPublic(), which is the same test the robots
@@ -44,6 +45,7 @@ class SitemapController extends AbstractController
                 ...$this->cityPaths(),
                 ...$this->countryPaths(),
                 ...$this->airportPaths(),
+                ...$this->airlinePaths(),
             ];
         } catch (Throwable $e) {
             // The static pages are worth serving even if the database is not
@@ -153,6 +155,20 @@ class SitemapController extends AbstractController
                 (string) $airport['code'],
             ),
             new AirportRepository($this->connection())->enabled(true),
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function airlinePaths(): array
+    {
+        return array_map(
+            static fn(array $airline): string => Helper::airlineUrl(
+                (string) $airline['name'],
+                (string) $airline['code'],
+            ),
+            new AirlineRepository($this->connection())->sellable(),
         );
     }
 

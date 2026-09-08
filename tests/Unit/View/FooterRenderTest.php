@@ -121,7 +121,7 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
-     * A "more" link only where there is somewhere for it to go. Three of the six
+     * A "more" link only where there is somewhere for it to go. Two of the six
      * columns lead to pages that do not exist yet, and offering to show more of
      * them is a dead end offering more dead ends.
      *
@@ -235,10 +235,10 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
-     * City links are held to the standard the other five columns are not.
+     * City links are held to a standard two of the columns are not.
      *
-     * Airlines, Directions, Countries and Help name pages that are still to be
-     * built and answer 404 on purpose. Cities is no longer one of those: the
+     * Directions and Help still name pages that are to be built and answer 404
+     * on purpose. Cities was the first column to stop being one of those: the
      * pages exist, so a link into them that does not resolve is a bug and not a
      * plan. This covers the curated destinations block; the column beside it is
      * built from the database and cannot name a city that is not there.
@@ -325,6 +325,36 @@ final class FooterRenderTest extends TestCase
             self::assertNotNull(
                 Helper::placeCode(substr($href, strlen('/airport/')), 3),
                 $href . ' is not a canonical airport address',
+            );
+        }
+    }
+
+    /**
+     * And the airline links, which changed shape the same way the airports did.
+     *
+     * Two characters on the end rather than three, because that is what an IATA
+     * airline code is. These shipped as /airline/AC on the theory that a real
+     * code would start working the day the page did; it did not, because an
+     * address is a name and a code together. Every column has now learned that
+     * the same way, which is why each has a test of its own.
+     */
+    public function testEveryAirlineLinkResolves(): void
+    {
+        $html = $this->render('/');
+
+        preg_match_all('#href="(/airline/[^"]+)"#', $html, $links);
+
+        self::assertNotEmpty($links[1], 'the footer should link to airlines');
+
+        foreach (array_unique($links[1]) as $href) {
+            self::assertNotNull(
+                Routes::resolve($href),
+                $href . ' is linked in the footer but is not a route',
+            );
+
+            self::assertNotNull(
+                Helper::placeCode(substr($href, strlen('/airline/')), 2),
+                $href . ' is not a canonical airline address',
             );
         }
     }

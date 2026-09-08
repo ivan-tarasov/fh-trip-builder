@@ -253,11 +253,18 @@ return [
     | The way into the site for somebody arriving from a search engine, and the
     | way around it for somebody who has scrolled to the bottom looking for one.
     |
-    | Every one of these leads to a page that does not exist yet and answers 404
-    | today. That is deliberate and it is the whole point of writing them down:
-    | the list is the specification for what gets built next, and the codes are
-    | real ones checked against the seeders, so the links start working the day
-    | the pages do rather than needing to be rewritten.
+    | Written before the pages existed, deliberately: the list was the
+    | specification for what got built next. Four of the six columns now lead
+    | somewhere -- airlines, cities, countries and airports -- and Directions is
+    | the one still waiting.
+    |
+    | What that experiment got wrong is worth keeping. The codes here were real
+    | ones checked against the seeders, on the theory that the links would start
+    | working the day the pages did. They did not: a place's address is its name
+    | and its code together -- "air-canada-ac", not "AC" -- so every column has
+    | had to be respelled as its pages arrived. A code is not an address, and a
+    | link written before there is anything to link to cannot know the
+    | difference. A test walks these now instead.
     |
     | One shape for every column, so a single partial renders all of them. The
     | old footer had three loops over three different shapes, which is exactly
@@ -273,11 +280,11 @@ return [
         [
             'title' => 'Airlines',
             'links' => [
-                'Air Canada' => '/airline/AC',
-                'WestJet' => '/airline/WS',
-                'Delta Air Lines' => '/airline/DL',
-                'American Airlines' => '/airline/AA',
-                'United Airlines' => '/airline/UA',
+                'Air Canada' => '/airline/air-canada-ac',
+                'WestJet' => '/airline/westjet-ws',
+                'Delta Air Lines' => '/airline/delta-air-lines-dl',
+                'American Airlines' => '/airline/american-airlines-aa',
+                'United Airlines' => '/airline/united-airlines-ua',
             ],
             'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
         ],
