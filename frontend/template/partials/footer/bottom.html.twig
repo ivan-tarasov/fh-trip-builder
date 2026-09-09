@@ -133,6 +133,20 @@
 </div>
 
 <div class="footer__legal">
+    {# Looped over config rather than three links written out, so the row and the
+       pages cannot disagree about what exists -- the same config LegalController
+       reads. The order is the order they are meant to be read in.
+
+       A list and not a <nav>. Three links are worth grouping, which is what the
+       <ul> does, but not worth a third landmark in a footer that deliberately
+       holds two -- see FooterRenderTest, which is where that decision is
+       written down. #}
+    <ul class="footer__legal-links">
+        {% for slug, document in config('legal.documents') %}
+            <li><a href="/{{ slug }}">{{ document.title }}</a></li>
+        {% endfor %}
+    </ul>
+
     <p>
         Software made by
         <a href="{{ config('meta.author.website') }}" target="_blank" rel="noopener">{{ config('meta.author.name') }}</a>

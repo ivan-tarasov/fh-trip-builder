@@ -1,0 +1,124 @@
+{# Every claim here was checked against the code rather than adapted from a
+   template, because a privacy page is a statement about behaviour and this one
+   is easy to check: the columns are in config/noah/db/tables/bookings.php, the
+   card handling is CheckoutController::persist() and ::validate(), the cookies
+   are RecentSearches::remember(), global.js storeSavedFlights() and index.php's
+   session_set_cookie_params(), and the two vendors are partials/counters.html.twig.
+
+   Three places where the usual boilerplate would have lied, and does not:
+   the card number does reach the server, no email is ever sent, and nothing is
+   ever deleted. Each of those is a section rather than a footnote. #}
+<h2>A demonstration that collects real data</h2>
+<p>
+    {{ config('app.name') }} sells nothing. No ticket is issued, no money moves,
+    and the flights are generated rather than real. What is real is the data you
+    type into it: if you fill in the checkout form, a name, a date of birth and
+    a phone number go into a database, and they are as much about you as they
+    would be on any other site.
+</p>
+<p>
+    So this page is written the way it would be for a site that did sell
+    tickets. There are no accounts. Everything the site knows you did is tied to
+    a session cookie in your browser, and to nothing else.
+</p>
+
+<h2>What is recorded when you book</h2>
+<p>
+    Completing the checkout form writes one row, holding:
+</p>
+<ul>
+    <li>the passenger&rsquo;s first and last name, date of birth and gender;</li>
+    <li>a contact email address and phone number;</li>
+    <li>the flights chosen, the fare, and the price;</li>
+    <li>the card&rsquo;s brand and its last four digits;</li>
+    <li>the identifier of the browser session that made it.</li>
+</ul>
+<p>
+    That last one is what <a href="/my/bookings">My bookings</a> looks you up
+    by. Clear your cookies and the booking stays in the database, but this site
+    can no longer connect it to you &mdash; and neither can you.
+</p>
+
+<h2>Your card number does reach this server</h2>
+<p>
+    It has to be said plainly, because the opposite is what most sites say. When
+    you submit the checkout form, the card number, the expiry date and the
+    security code are sent to the server. They are checked there.
+</p>
+<p>
+    What is kept is the brand and the last four digits. The number itself, the
+    expiry and the security code are never written to the database and never
+    written to a log. If the form comes back with an error, the page is drawn
+    again with what you typed still in the fields, including the number &mdash;
+    that is the browser showing you your own form, not the site storing it.
+</p>
+<p>
+    Nothing is charged, because there is no payment processor here at all.
+    Please do not type a real card number into it.
+</p>
+
+<h2>Nothing is emailed, ever</h2>
+<p>
+    There is no mailer in this project. No confirmation, no ticket, no receipt
+    and no fare alert will arrive, however long you wait. The contact address
+    you give at checkout is stored and never used. See
+    <a href="/help/ticket-not-received">ticket did not arrive</a>.
+</p>
+
+<h2>The fare-alert list</h2>
+<p>
+    The subscribe box in the footer stores the address you type and the time you
+    typed it. Nothing else, and nothing is sent to it. There is no unsubscribe
+    link, because there is nothing to unsubscribe from.
+</p>
+
+<h2>What is recorded when you search</h2>
+<p>
+    Every search adds to a count: the two airports, the dates, the trip type and
+    the cabin, with a running total of how often that combination has been
+    looked for. It is what the footer&rsquo;s popular routes and most-searched
+    cities are built from.
+</p>
+<p>
+    No identifier is stored beside it. A search cannot be traced back to the
+    browser that ran it.
+</p>
+
+<h2>Google and Yandex see every page you open</h2>
+<p>
+    Two analytics scripts load on every page: Google Analytics and Yandex
+    Metrika. Both set their own cookies and both send data to their own
+    companies, under their own policies rather than this one.
+</p>
+<p>
+    Yandex Metrika is configured here with <strong>Webvisor</strong> switched
+    on, which records what you do on the page &mdash; mouse movement, scrolling,
+    clicks and keystrokes &mdash; and replays it. That is more than page counting
+    and it is worth knowing about. <a href="/cookies">The cookies page</a> lists
+    what each one is.
+</p>
+
+<h2>Nothing is deleted</h2>
+<p>
+    There is no retention schedule. Rows are written and they stay. Cancelling a
+    booking sets it to cancelled and keeps everything in it; the only deletions
+    anywhere in this app are housekeeping on generated flight data.
+</p>
+
+<h2>What this page does not have</h2>
+<p>
+    A real privacy policy names a company that answers for the data, gives you a
+    way to ask what is held about you, and says how long it is kept. This
+    project has none of those, and inventing them here would be worse than
+    saying so:
+</p>
+<ul>
+    <li>there is no named data controller, and no address to write to;</li>
+    <li>there is no route in this app to request, correct or erase your data;</li>
+    <li>there is no retention period, because nothing expires.</li>
+</ul>
+<p>
+    The practical consequence is simple, and it is the one thing worth taking
+    from this page: treat anything you type into
+    {{ config('app.name') }} as permanent, and use made-up details.
+</p>

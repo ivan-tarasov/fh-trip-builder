@@ -1,0 +1,50 @@
+{# The short one, and the only one of the three that is mostly about what does
+   not happen. Checked against the same code the privacy page was: no carrier
+   relationship exists anywhere in this project, DECLINE_CARD is a constant in
+   CheckoutController, and the flight rows are written by `noah flights:add`. #}
+<h2>What this is</h2>
+<p>
+    {{ config('app.name') }} is a demonstration of how a flight search and
+    booking site is built. It was written as a PHP coding assessment and it is
+    kept online so the code has something to point at. It is not a travel agency
+    and it is not a business.
+</p>
+
+<h2>Nothing here is a sale</h2>
+<p>
+    No ticket is issued and no money changes hands. Completing the checkout
+    writes a row in a database and shows you a reference number. That reference
+    means nothing to any airline. There is no contract of carriage, with us or
+    with anyone else, and no booking made here will get you onto an aeroplane.
+</p>
+<p>
+    There is no payment processor either. Card details are checked for shape and
+    then discarded &mdash; see <a href="/privacy">privacy</a> for exactly what
+    happens to them. One card number is wired to be declined on purpose, to
+    demonstrate the error path.
+</p>
+
+<h2>The flights are invented</h2>
+<p>
+    Airlines, airports, cities and countries are real names. Everything else is
+    generated: the schedules, the prices, the seat availability, the aircraft on
+    each route and the fare rules. Times and prices here do not describe any
+    real flight and should not be used to plan one.
+</p>
+
+<h2>Use it however you like</h2>
+<p>
+    Browse it, search it, book an imaginary trip, read the source. The code is
+    published under the
+    <a href="{{ config('app.license.url') }}" target="_blank" rel="license noopener">{{ config('app.license.type') }}</a>
+    licence, and <a href="/about">about</a> explains how the project fits
+    together. The only thing asked in return is that you do not put real
+    personal or card details into the forms.
+</p>
+
+<h2>No warranty</h2>
+<p>
+    The site is provided as it is. It may be wrong, it may be down, and it may
+    change or disappear without notice. Nothing here is advice of any kind, and
+    no liability is accepted for anything done on the strength of it.
+</p>

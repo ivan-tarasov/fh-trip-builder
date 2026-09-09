@@ -1,0 +1,49 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ document.title }}{% endblock %}
+
+{# The summary out of config/common/legal.php, unchanged -- the description, the
+   lead below, and the line the footer row's title attribute would use. One
+   sentence in one place. #}
+{% block description %}{{ document.summary }}{% endblock %}
+
+{% block content %}
+{% embed 'partials/article.html.twig' with {
+    'title': document.title,
+    'icon': document.icon,
+    'lead': document.summary
+} %}
+    {# The prose, from the one template named after this slug. The slug has
+       already been matched against the document index, so it is one of three
+       words and not something off a URL. #}
+    {% block body %}{% include 'legal/documents/' ~ document.slug ~ '.html.twig' %}{% endblock %}
+
+    {# Said once, on all three, rather than worked into each document's prose.
+       These pages describe this codebase accurately; that is not the same as
+       being sufficient, and a reader deciding whether to trust the site should
+       not have to infer the difference. #}
+    {% block note %}
+        <p class="article__note">
+            Written to describe what this code actually does, and checked against it.
+            {{ config('app.name') }} is a demonstration project, not a business, and
+            these pages have had no legal review.
+        </p>
+    {% endblock %}
+
+    {% block aside %}
+        <aside class="article__aside" aria-labelledby="more-legal-title">
+            <h2 class="article__aside-title" id="more-legal-title">The others</h2>
+            <ul class="chips">
+                {% for other in more %}
+                    <li>
+                        <a class="chip chip--link" href="{{ other.url }}">
+                            <i class="fas {{ other.icon }} chip__icon" aria-hidden="true"></i>
+                            {{ other.title }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </aside>
+    {% endblock %}
+{% endembed %}
+{% endblock %}

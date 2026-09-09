@@ -50,6 +50,27 @@ final class PromisesTest extends TestCase
     ];
 
     /**
+     * Said of a card number this app does in fact receive.
+     *
+     * The privacy page is why this is here. `bookings.php` used to state that
+     * the number "is validated in the browser and never sent here", and that
+     * was false the whole time: CheckoutController reads card_number,
+     * card_expiry and card_cvv straight off the posted form. A privacy page
+     * repeating it would be the ticket email again, on the one claim a reader
+     * is most entitled to rely on.
+     *
+     * What is true is narrower, and is what the page says instead: the number
+     * arrives, it is checked, and only the brand and last four are kept.
+     */
+    private const array UNTRUE_OF_THE_CARD = [
+        'never reach',
+        'never sent to',
+        'never leaves your browser',
+        'never see your card',
+        'stays in your browser',
+    ];
+
+    /**
      * "spam folder" is not on that list, and the first draft had it there.
      *
      * It caught the replacement copy -- "there is no spam folder worth
@@ -65,6 +86,7 @@ final class PromisesTest extends TestCase
         self::assertSame([], self::offences(
             self::templates(),
             static fn(string $path): string => self::withoutComments((string) file_get_contents($path)),
+            self::UNKEEPABLE,
         ));
     }
 
@@ -82,22 +104,43 @@ final class PromisesTest extends TestCase
      */
     public function testNoServerMessagePromisesMailEither(): void
     {
-        self::assertSame([], self::offences(self::sources(), self::stringLiterals(...)));
+        self::assertSame([], self::offences(self::sources(), self::stringLiterals(...), self::UNKEEPABLE));
+    }
+
+    /**
+     * And nothing tells a reader their card stays in the browser.
+     *
+     * Both halves are checked, for the reason the mail guard checks both: the
+     * claim is as damaging in a validation message as it is in a paragraph.
+     */
+    public function testNothingClaimsTheCardNeverArrives(): void
+    {
+        self::assertSame([], self::offences(
+            self::templates(),
+            static fn(string $path): string => self::withoutComments((string) file_get_contents($path)),
+            self::UNTRUE_OF_THE_CARD,
+        ));
+
+        self::assertSame(
+            [],
+            self::offences(self::sources(), self::stringLiterals(...), self::UNTRUE_OF_THE_CARD),
+        );
     }
 
     /**
      * @param list<string> $paths
      * @param callable(string): string $read
+     * @param list<string> $phrases
      * @return list<string>
      */
-    private static function offences(array $paths, callable $read): array
+    private static function offences(array $paths, callable $read, array $phrases): array
     {
         $found = [];
 
         foreach ($paths as $path) {
             $prose = $read($path);
 
-            foreach (self::UNKEEPABLE as $phrase) {
+            foreach ($phrases as $phrase) {
                 if (stripos($prose, $phrase) !== false) {
                     $found[] = basename($path) . ' says "' . $phrase . '"';
                 }

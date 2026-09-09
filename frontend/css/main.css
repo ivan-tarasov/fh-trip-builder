@@ -5369,6 +5369,27 @@ body:has(main.article) .breadcrumbs__list {
 .footer__legal p { margin: 0 0 .5rem; }
 .footer__legal a { color: var(--ink-on-dark-lead); }
 
+/* Underline alone, and gated like every other footer hover -- on a touchscreen
+   :hover latches on tap. The colour lift that marks a column link has nothing
+   left to do down here: these already sit at the lead colour. Covers the prose
+   line too, which had no hover state at all. */
+@media (hover: hover) and (pointer: fine) {
+  .footer__legal a:hover { text-decoration: underline; }
+}
+
+/* The three legal pages, above the prose line rather than inside it. A row of
+   its own because that is where a reader looks for them, and because a link
+   buried in a sentence about who built the site does not read as one. */
+.footer__legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem 1.25rem;
+  margin: 0 0 .75rem;
+  padding: 0;
+  list-style: none;
+  font-weight: 500;
+}
+
 /* A step quieter than the line above it. This is a note to whoever is curious
    about the build, not something the page is trying to tell anyone. */
 .footer__stats {
