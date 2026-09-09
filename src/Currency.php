@@ -20,6 +20,19 @@ use RuntimeException;
  */
 final readonly class Currency
 {
+    /**
+     * Where a visitor's choice is kept.
+     *
+     * A cookie and not the URL: a currency in the path would multiply all 485
+     * place pages and the sitemap's 858 entries by thirty, for a preference
+     * that is not part of what the page is about. Read in PHP so a page renders
+     * in the chosen currency first time, with no flash of Canadian dollars.
+     *
+     * A year and the `tb_` prefix, like the other three cookies here.
+     */
+    public const string COOKIE = 'tb_currency';
+    public const int MAX_AGE = 60 * 60 * 24 * 365;
+
     public function __construct(
         public string $code,
         public string $name,
@@ -77,6 +90,22 @@ final readonly class Currency
         }
 
         return $currency;
+    }
+
+    /**
+     * What this visitor is being shown.
+     *
+     * `$_COOKIE` directly, for the reason Consent gives for the same thing:
+     * this is request-scoped state every page needs and no controller has any
+     * business threading down to a presenter.
+     *
+     * Anything unrecognised is the base currency rather than an error. The
+     * cookie is whatever the browser sent, and a hand-edited one should leave
+     * somebody looking at ordinary prices rather than at a stack trace.
+     */
+    public static function active(): self
+    {
+        return self::tryFrom($_COOKIE[self::COOKIE] ?? null) ?? self::base();
     }
 
     /**

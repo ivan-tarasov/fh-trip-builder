@@ -252,7 +252,7 @@ class Helper
         // "Up to ¥5,425" rather than a round number. Correct and odd beats
         // round and off by a step.
         $show = static fn(int $value): string => $kind === 'money'
-            ? Money::base()->rounded($value)['text']
+            ? Money::active()->rounded($value)['text']
             : self::hoursAndMinutes($value);
 
         if ($to === null) {

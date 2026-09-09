@@ -8,6 +8,7 @@ use Exception;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Consent;
+use TripBuilder\Currency;
 use TripBuilder\Helper;
 use TripBuilder\Money;
 use TripBuilder\Party;
@@ -80,9 +81,21 @@ final readonly class TwigRenderer
         // float rather than a pre-split one. `price_whole` is the fare strips
         // and facts tiles, which quote to the dollar -- they used
         // `|round(0, 'floor')` on the float and a literal `$` beside it.
-        $money = Money::base();
+        $money = Money::active();
         $this->twig->addFunction(new TwigFunction('price', $money->parts(...)));
         $this->twig->addFunction(new TwigFunction('price_whole', $money->whole(...)));
+
+        // What the switcher will need, and what global.js needs to write the
+        // cookie: a global rather than page context, because the header's
+        // partials are included with `only` -- the same reason `consent` and
+        // `max_seats` are globals. Keeps src/Currency.php the only place the
+        // cookie's name is spelled.
+        $this->twig->addGlobal('currency', [
+            'cookie' => Currency::COOKIE,
+            'max_age' => Currency::MAX_AGE,
+            'active' => $money->currency()->code,
+            'list' => Currency::all(),
+        ]);
 
         $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));
         // Given the trail the partial is about to draw, so the two agree.

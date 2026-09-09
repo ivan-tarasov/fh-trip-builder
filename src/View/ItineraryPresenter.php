@@ -416,7 +416,7 @@ class ItineraryPresenter
         // hundred of these, and building the catalogue for each one cost 2ms of
         // nothing -- measured, not guessed. An instance field rather than a
         // static, so no test has to remember to reset it.
-        return ($this->money ??= Money::base())->parts($amount);
+        return ($this->money ??= Money::active())->parts($amount);
     }
 
     /**
@@ -426,7 +426,7 @@ class ItineraryPresenter
      */
     public function priceRounded(float $amount): array
     {
-        return ($this->money ??= Money::base())->rounded($amount);
+        return ($this->money ??= Money::active())->rounded($amount);
     }
 
     public function stopsLabel(int $stops): string

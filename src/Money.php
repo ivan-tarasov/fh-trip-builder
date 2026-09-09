@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace TripBuilder;
 
+use Throwable;
+use TripBuilder\Database\Connection;
+use TripBuilder\Repository\CurrencyRateRepository;
+
 /**
  * A CAD amount, written in one currency at one rate.
  *
@@ -19,13 +23,92 @@ namespace TripBuilder;
  * the currency and at the rate it was made at, years after both have moved, so
  * a class that fetched today's rate for itself could not draw a receipt.
  */
-final readonly class Money
+final class Money
 {
+    /**
+     * The request's currency, resolved once.
+     *
+     * Static because the callers are static themselves -- Helper::sliderCaption
+     * is, and ItineraryPresenter is built with `new` in a dozen places -- and
+     * threading a currency through all of them would be a constructor argument
+     * in every class between here and a controller. Tests reset it.
+     */
+    private static ?self $active = null;
+
     public function __construct(
-        private Currency $currency,
+        private readonly Currency $currency,
         /** Units of $currency per 1 CAD. Always a multiplication -- see the catalogue. */
-        private float $rate,
+        private readonly float $rate,
     ) {}
+
+    /**
+     * The currency this visitor is being shown, at today's rate.
+     *
+     * Memoised for the request. Resolving it costs one query returning thirty
+     * rows, and a search page asks for a price two hundred times.
+     *
+     * A visitor on the base currency -- the default, and every crawler, and
+     * anybody who has never touched the switcher -- takes the early return and
+     * makes **no query at all**. The rates table is only read once somebody has
+     * actually chosen something else.
+     *
+     * The rate is looked up here rather than in the constructor because this is
+     * the one place that may: a booking is drawn at the rate it was made at,
+     * years after that rate stopped being current, and it passes its own pair
+     * in. See BookingPresenter.
+     *
+     * No rate for the chosen currency means the base currency, not an
+     * unconverted number wearing a foreign symbol. A missing row is a table
+     * nobody has refreshed, and showing Canadian dollars honestly beats showing
+     * yen figures that are secretly dollars.
+     */
+    public static function active(): self
+    {
+        if (self::$active instanceof self) {
+            return self::$active;
+        }
+
+        $currency = Currency::active();
+
+        if ($currency->code === Currency::base()->code) {
+            return self::$active = self::base();
+        }
+
+        $rate = self::rateFor($currency);
+
+        // Null and not zero, and this is worth being careful about: a rate of
+        // zero would multiply every price on the site to nothing and render
+        // perfectly, so "no rate" has to be a different value from "a rate".
+        return self::$active = $rate === null ? self::base() : new self($currency, $rate);
+    }
+
+    /**
+     * Today's rate for one currency, or null if there is not one to be had.
+     *
+     * A database that will not answer costs the conversion, not the page --
+     * the same fallback every counted footer column takes.
+     */
+    private static function rateFor(Currency $currency): ?float
+    {
+        try {
+            $rate = new CurrencyRateRepository(Connection::fromEnv())->latest()[$currency->code] ?? null;
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $rate !== null && $rate > 0 ? $rate : null;
+    }
+
+    /**
+     * Drop the memoised currency.
+     *
+     * For tests, which change the cookie between cases inside one process. A
+     * request only ever resolves this once.
+     */
+    public static function forget(): void
+    {
+        self::$active = null;
+    }
 
     /**
      * The base currency, which is what an unconverted page uses.
