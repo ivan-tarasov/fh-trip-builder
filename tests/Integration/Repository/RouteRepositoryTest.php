@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration\Repository;
 
+use TripBuilder\CabinClass;
 use TripBuilder\Repository\RouteRepository;
+use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -20,9 +22,141 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * page is left unlinked. That is true of this table and could stop being true
  * of another, which is why it is asserted here rather than written down in a
  * comment and hoped for.
+ *
+ * Which route pages exist comes from the `search` table, and that is the trap
+ * these tests fell into first. A developer's database has been used, so it has
+ * hundreds of searched pairs; CI's has been installed, and `app:install` seeds
+ * six CSVs of which none is searches. Written against the first, every
+ * assertion here passed locally and every one failed the first time CI ran
+ * them -- on nothing more interesting than an empty table.
+ *
+ * So the demand is the test's own now. setUp() records a handful of searches
+ * for pairs it has checked can be flown, tearDown() removes them, and the
+ * assertions hold whether the database underneath has been used or only
+ * installed. Same write-then-clean-up shape SearchRepositoryTest uses.
  */
 final class RouteRepositoryTest extends IntegrationTestCase
 {
+    /**
+     * Enough searched pairs for one origin to have a list worth cutting.
+     *
+     * Four, because testTheLimitIsHonoured asks for three of them and a limit
+     * that cannot bite proves nothing.
+     */
+    private const int SEEDED_ROUTES = 4;
+
+    /** @var list<string> hashes written by setUp, for tearDown to take back */
+    private array $seeded = [];
+
+    protected function setUp(): void
+    {
+        $searches = new SearchRepository($this->connection());
+        $pairs = $this->flyablePairs();
+
+        // Loud, and early. The failure this replaces was six assertions all
+        // saying "array is not empty", which told nobody that the table they
+        // depend on had never been written to.
+        self::assertNotEmpty(
+            $pairs,
+            'No city flies to ' . self::SEEDED_ROUTES . ' others in the sampled flights, so this'
+            . ' suite has no route pages to assert about. Check the flights table is populated.',
+        );
+
+        foreach ($pairs as [$fromCode, $fromName, $toCode, $toName]) {
+            // char(32), and the column is the primary key. Prefixed so a run
+            // killed between setUp and tearDown leaves something recognisable
+            // behind; tearDown deletes by the exact hash either way.
+            $hash = 'rr' . substr(md5(uniqid('', true)), 0, 30);
+
+            $searches->record(
+                $hash,
+                $fromCode,
+                $fromName,
+                $toCode,
+                $toName,
+                date('Y-m-d', strtotime('+7 days')),
+                null,
+                'oneway',
+                CabinClass::Economy,
+            );
+
+            $this->seeded[] = $hash;
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->seeded as $hash) {
+            $this->connection()->execute('DELETE FROM search WHERE hash = ?', [$hash]);
+        }
+
+        $this->seeded = [];
+    }
+
+    /**
+     * City pairs one city flies to nonstop, taken from the flights themselves.
+     *
+     * Off a bounded slice of the table rather than the whole of it: what is
+     * wanted is any origin with a few destinations, not the busiest one, and
+     * grouping 683,760 rows to find it would cost more than every assertion
+     * here put together.
+     *
+     * @return list<array{string, string, string, string}>
+     */
+    private function flyablePairs(): array
+    {
+        // Widening rather than one big sample: 4,000 departures is enough on
+        // any database anybody runs this against, and the second pass is there
+        // so a thin one fails slowly rather than wrongly.
+        foreach ([4000, 40000] as $sample) {
+            $found = $this->originWithSeveralDestinations($sample);
+
+            if ($found !== []) {
+                return $found;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @return list<array{string, string, string, string}>
+     */
+    private function originWithSeveralDestinations(int $sample): array
+    {
+        $rows = $this->connection()->fetchAll(
+            'SELECT o.city_code AS from_code, MIN(o.city) AS from_name,'
+            . ' d.city_code AS to_code, MIN(d.city) AS to_name'
+            . ' FROM ('
+            . '  SELECT departure_airport, arrival_airport FROM flights'
+            . '  WHERE departure_time >= NOW() LIMIT ' . $sample
+            . ' ) f'
+            . ' JOIN airports o ON o.code = f.departure_airport AND o.enabled = 1 AND o.is_major = 1'
+            . ' JOIN airports d ON d.code = f.arrival_airport AND d.enabled = 1 AND d.is_major = 1'
+            . ' WHERE o.city_code <> d.city_code'
+            . ' GROUP BY o.city_code, d.city_code',
+        );
+
+        $byOrigin = [];
+
+        foreach ($rows as $row) {
+            $byOrigin[(string) $row['from_code']][] = [
+                (string) $row['from_code'],
+                (string) $row['from_name'],
+                (string) $row['to_code'],
+                (string) $row['to_name'],
+            ];
+        }
+
+        foreach ($byOrigin as $pairs) {
+            if (count($pairs) >= self::SEEDED_ROUTES) {
+                return array_slice($pairs, 0, self::SEEDED_ROUTES);
+            }
+        }
+
+        return [];
+    }
+
     private function repository(): RouteRepository
     {
         return new RouteRepository($this->connection());
