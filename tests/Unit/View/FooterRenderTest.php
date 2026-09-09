@@ -61,30 +61,6 @@ final class FooterRenderTest extends TestCase
         return html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
     }
 
-    public function testEveryConfiguredColumnIsDrawn(): void
-    {
-        $html = $this->render('/airlines');
-
-        foreach (Config::get('site.footer-columns') as $column) {
-            // A column that draws itself from the database is covered below;
-            // this one is about the config-driven five.
-            if (!isset($column['links'])) {
-                continue;
-            }
-
-            self::assertStringContainsString(
-                '>' . $column['title'] . '</h2>',
-                $html,
-                $column['title'] . ' should head a column',
-            );
-
-            foreach ($column['links'] as $label => $url) {
-                self::assertStringContainsString('href="' . $url . '"', $html, $url . ' should be linked');
-                self::assertStringContainsString('>' . $label . '</a>', $html, $label . ' should be named');
-            }
-        }
-    }
-
     /**
      * The data-driven column appears when it has something and not when it does
      * not.
@@ -458,6 +434,67 @@ final class FooterRenderTest extends TestCase
                 $href . ' is not a canonical route address',
             );
         }
+    }
+
+    /**
+     * The help column uses each article's short name, not its title.
+     *
+     * Two of the five titles are wider than this column: "Refunds and
+     * exchanges" measured 170px against the 166 it has, and "Changing
+     * passenger details" is two lines. Those labels used to be written out in
+     * site.php and moved to help.php as `short` when the column stopped being
+     * a hand-written list -- so this asserts the measurement survived the move,
+     * which is the thing that would have quietly regressed.
+     */
+    public function testTheHelpColumnUsesTheShortNamesAndNotTheTitles(): void
+    {
+        $html = $this->render('/');
+
+        // The plain form: render() decodes entities on purpose, and its own
+        // comment warns that asserting `&amp;` here would be testing Twig's
+        // escaping rather than the label.
+        self::assertStringContainsString('Refunds & exchanges', $html);
+        self::assertStringNotContainsString('Refunds and exchanges', $html);
+
+        self::assertStringContainsString('>Passenger details<', $html);
+        self::assertStringNotContainsString('Changing passenger details', $html);
+    }
+
+    /**
+     * With nothing to rank by, the order config wrote them in stands.
+     *
+     * Not a fallback nobody hits: there is no seeder for article_votes, so
+     * every article scores nought until a reader clicks, and this is what the
+     * column looks like on a fresh install. The unit suite has no database, so
+     * this is also the path a failed query takes -- both land here, which is
+     * the point.
+     */
+    public function testWithNoVotesTheHelpColumnKeepsTheOrderConfigWroteIt(): void
+    {
+        $links = new LayoutData()->topRatedHelp(5);
+
+        /** @var array<string, array<string, mixed>> $articles */
+        $articles = Config::get('help.articles', []);
+        $expected = [];
+
+        foreach ($articles as $slug => $article) {
+            $expected[] = '/help/' . $slug;
+        }
+
+        self::assertSame($expected, array_values($links), 'config order is the tiebreaker');
+    }
+
+    /**
+     * An article nobody has voted on is still in the column.
+     *
+     * The set comes from config and the votes only rank it, so a new article
+     * appears the day it is written rather than the day somebody rates it.
+     */
+    public function testEveryArticleIsOfferedWhateverTheVotesSay(): void
+    {
+        $links = new LayoutData()->topRatedHelp(5);
+
+        self::assertCount(count(Config::get('help.articles', [])), $links);
     }
 
     /**

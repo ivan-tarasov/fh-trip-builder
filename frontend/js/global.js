@@ -2858,6 +2858,87 @@
         });
     }());
 
+    /*[ Article: did this help? ]
+    ===========================================================*/
+    (function () {
+        const form = document.querySelector('.js-article-vote');
+
+        if (!form) {
+            return;
+        }
+
+        const block = form.closest('.article__verdict');
+        const status = block.querySelector('.js-vote-status');
+        const tally = block.querySelector('.js-vote-tally');
+        const buttons = [...form.querySelectorAll('[type="submit"]')];
+        const slug = form.querySelector('[name="slug"]');
+
+        const say = (message, tone) => {
+            status.textContent = message;
+            status.dataset.tone = tone;
+        };
+
+        form.addEventListener('submit', function (event) {
+            // Which of the two was pressed. They differ only by value, so
+            // without this there is nothing to send -- and if the browser does
+            // not name the submitter, the post is left to happen normally
+            // rather than sent without a verdict.
+            const pressed = event.submitter;
+
+            if (!pressed || !pressed.value) {
+                return;
+            }
+
+            event.preventDefault();
+            buttons.forEach((button) => { button.disabled = true; });
+            say('Saving…', 'quiet');
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-Token': csrfToken(),
+                    // What asks for JSON. Without it this same form posts
+                    // itself and the browser is sent back to the page, which
+                    // is what happens when this script is not running.
+                    'Accept': 'application/json'
+                },
+                body: new URLSearchParams({slug: slug.value, helpful: pressed.value})
+            })
+                .then((response) => response.json().then((data) => ({ok: response.ok, data: data})))
+                .then(({ok, data}) => {
+                    if (!ok) {
+                        say(data.message || 'That did not work. Try again in a moment.', 'bad');
+
+                        return;
+                    }
+
+                    say(data.message, data.helpful ? 'good' : 'quiet');
+
+                    // Mark the one that was pressed and clear the other, so
+                    // changing your mind moves the tick rather than lighting
+                    // both. The server has already replaced the row.
+                    buttons.forEach((button) => {
+                        button.classList.toggle('article__verdict-button--chosen', button === pressed);
+                    });
+
+                    // Whether figures may be shown is the server's answer, not
+                    // a threshold repeated here.
+                    if (data.shown) {
+                        tally.textContent = tally.dataset.template
+                            .replace('%yes%', data.yes)
+                            .replace('%votes%', data.votes);
+                    }
+
+                    tally.hidden = !data.shown;
+                })
+                .catch(() => say('That did not work. Try again in a moment.', 'bad'))
+                .finally(() => {
+                    buttons.forEach((button) => { button.disabled = false; });
+                });
+        });
+    }());
+
     /*[ Directory: filter and alphabet ]
     ===========================================================*/
     (function () {

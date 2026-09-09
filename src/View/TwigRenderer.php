@@ -116,6 +116,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('git_repo', $this->layout->gitRepo(...)));
         $this->twig->addFunction(new TwigFunction('copyright_years', $this->layout->copyrightYears(...)));
         $this->twig->addFunction(new TwigFunction('subscribe_notice', $this->layout->subscribeNotice(...)));
+        $this->twig->addFunction(new TwigFunction('article_vote_notice', $this->layout->articleVoteNotice(...)));
         $this->twig->addFunction(new TwigFunction('most_searched_cities', $this->layout->mostSearchedCities(...)));
         $this->twig->addFunction(new TwigFunction('footer_links', $this->layout->footerLinks(...)));
         $this->twig->addFunction(new TwigFunction('footer_more', $this->layout->footerMore(...)));

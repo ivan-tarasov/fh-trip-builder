@@ -262,9 +262,9 @@ return [
     | way around it for somebody who has scrolled to the bottom looking for one.
     |
     | Written before the pages existed, deliberately: the list was the
-    | specification for what got built next. Four of the six columns now lead
-    | somewhere -- airlines, cities, countries and airports -- and Directions is
-    | the one still waiting.
+    | specification for what got built next. All six columns lead somewhere now,
+    | and none of them is a hand-written list any more -- Help & tips was the
+    | last, and it went when articles gained something to be ranked by.
     |
     | What that experiment got wrong is worth keeping. The codes here were real
     | ones checked against the seeders, on the theory that the links would start
@@ -286,8 +286,8 @@ return [
 
     'footer-columns' => [
         [
-            // Counted, like Cities below and unlike the four curated columns.
-            // `source` sends it to LayoutData::popularRoutes().
+            // Counted, like every column here now. `source` sends it to
+            // LayoutData::popularRoutes().
             //
             // These were five hand-written pairs -- Montreal to Toronto,
             // Montreal to Paris and so on -- which was the right list to write
@@ -363,23 +363,24 @@ return [
             'more' => ['text' => 'All %s airlines', 'url' => '/airlines', 'total' => 'airlines'],
         ],
         [
+            // The last column to stop being a hand-written list, and the only
+            // one whose ranking comes from readers saying so rather than from
+            // what they searched or booked. `source` sends it to
+            // LayoutData::topRatedHelp().
+            //
+            // The five labels that used to be written out here live in
+            // config/common/help.php now, as each article's optional `short`.
+            // They were measured for this column's width and are still needed
+            // -- two of the titles do not fit -- but they are facts about the
+            // articles, and this column is built from that list now.
+            //
+            // Ordered by the votes on each article, with the order they are
+            // written in as the tiebreaker. On a database nobody has voted on
+            // every article is level, so the tiebreaker is what shows -- which
+            // is bags and money first, the order the list was already in.
             'title' => 'Help & tips',
-            'links' => [
-                'Baggage' => '/help/baggage',
-                // "&", not "and": measured in the real face at 15px, the
-                // spelled-out version is 170px against the 166 a column gives
-                // it and the ampersand brings it to 153. The heading above it
-                // is "Help & tips", so the column was already written this way.
-                'Refunds & exchanges' => '/help/refunds',
-                'Ticket did not arrive' => '/help/ticket-not-received',
-                // Shorter than the article's own heading, which is "Changing
-                // passenger details" and is two lines in a column this narrow.
-                // The footer has never promised to repeat a page's title --
-                // the Airports column beside it says "London (LHR)" where the
-                // page says "Heathrow".
-                'Passenger details' => '/help/passenger-details',
-                'Flying with children' => '/help/flying-with-children',
-            ],
+            'source' => 'top-rated-help',
+            'count' => 5,
             'more' => ['text' => 'All help topics', 'url' => '/help'],
         ],
     ],

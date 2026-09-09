@@ -27,8 +27,15 @@ return [
     | heading. Three copies of a sentence that has to say the same thing are
     | three chances for it to stop saying it.
     |
-    | The order is the order the footer lists them in, which puts the two people
-    | actually arrive asking about -- bags and money -- first.
+    | The order here is no longer the order the footer lists them in -- that is
+    | decided by the votes readers leave, and this is only what breaks a tie.
+    | It still puts the two people actually arrive asking about, bags and money,
+    | first, which is what an unvoted database shows.
+    |
+    | `short` is the article's name where a column is too narrow for its title,
+    | and is optional: without one the footer uses `title`. It lives here rather
+    | than in the footer's own config because it is a fact about the article,
+    | and because the footer column is now built from this list.
     |
     */
 
@@ -41,6 +48,11 @@ return [
         ],
         'refunds' => [
             'title' => 'Refunds and exchanges',
+            // "&", not "and": measured in the real face at 15px, the spelled
+            // out version is 170px against the 166 a footer column gives it,
+            // and the ampersand brings it to 153. The heading above it is
+            // "Help & tips", so the column was already written this way.
+            'short' => 'Refunds & exchanges',
             'icon' => 'fa-rotate-left',
             'summary' => 'Whether a ticket can be changed or given back is fixed by the'
                 . ' fare when it is bought, not decided afterwards.',
@@ -53,6 +65,11 @@ return [
         ],
         'passenger-details' => [
             'title' => 'Changing passenger details',
+            // Two lines in a column that narrow, spelled in full. The footer
+            // has never promised to repeat a page's title -- the Airports
+            // column beside it says "London (LHR)" where the page says
+            // "Heathrow".
+            'short' => 'Passenger details',
             'icon' => 'fa-passport',
             'summary' => 'Names are checked against the document you travel on, so'
                 . ' checkout is the moment to get them right.',
