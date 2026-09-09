@@ -225,24 +225,33 @@ final class AirlineRepositoryTest extends IntegrationTestCase
     }
 
     /**
-     * The busiest airline at those airports, and the code that finds its page.
+     * An airline this suite can actually assert about: hubs, and flights out of
+     * them inside the window the counted methods look at.
+     *
+     * Both halves are checked rather than assumed. byCode(), not sellable(),
+     * because the directory list carries no hubs. And network() rather than
+     * stopping at the first airline that has any, because how much flying
+     * there is in a fortnight depends on how the database was filled -- CI
+     * generates 200,000 flights where this developer's holds 683,760, so the
+     * quietest carriers thin out to nothing there and the first name in the
+     * alphabet is no guarantee of anything.
      *
      * @return array{string, list<string>}
      */
     private function anAirlineWithHubs(): array
     {
-        // byCode(), not sellable(): the directory list carries no hubs, which
-        // is the whole reason this helper exists rather than a one-liner.
         foreach ($this->repository()->sellable() as $airline) {
-            $row = $this->repository()->byCode((string) $airline['code']);
+            $code = (string) $airline['code'];
+            $row = $this->repository()->byCode($code);
             $hubs = AirlineRepository::hubCodes((string) ($row['hubs'] ?? ''));
 
-            if ($hubs !== []) {
-                return [(string) $airline['code'], $hubs];
+            if ($hubs !== [] && $this->repository()->network($code, $hubs) !== null) {
+                return [$code, $hubs];
             }
         }
 
-        self::fail('No sellable airline has a hub');
+        self::fail('No sellable airline has a hub it flies out of in the next '
+            . AirlineRepository::WINDOW_DAYS . ' days');
     }
 
     private function repository(): AirlineRepository
