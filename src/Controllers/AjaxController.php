@@ -289,8 +289,11 @@ class AjaxController extends AbstractController
         $this->answerSubscribe($asJson, 200, [
             'status' => 'ok',
             'added' => $added,
+            // "We will write when a fare drops" was the strongest promise in
+            // the app and the last one standing: there is no mailer here, so
+            // nothing writes to anybody. The list is real; the sending is not.
             'message' => $added
-                ? 'Done. We will write when a fare drops.'
+                ? 'Done. You are on the list.'
                 : 'That address is already on the list.',
         ], $added ? 'good' : 'quiet');
     }

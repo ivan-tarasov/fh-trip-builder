@@ -83,8 +83,21 @@
     {% set notice = subscribe_notice() %}
     <form class="footer__subscribe js-subscribe" id="fare-alerts"
           action="/ajax/subscribe" method="post" novalidate>
-        <h2 class="footer__title">Cheap tickets in your inbox</h2>
-        <p class="footer__subscribe-text">A note when a fare on a route you searched drops.</p>
+        {# What this form does is keep an address. What it does not do is send
+           anything to it -- there is no mailer in this project -- and the copy
+           used to say otherwise three times over: a heading promising an inbox,
+           a line promising a note when a fare dropped, and a consent line
+           saying the address was stored "to send those alerts".
+
+           The form is still worth having, for exactly the reason its own
+           comment above gives: the version before it accepted an address and
+           dropped it, and `subscribers` is somewhere to put one. Collecting is
+           the thing it can honestly claim, so that is what it claims. #}
+        <h2 class="footer__title">The fare-alert list</h2>
+        <p class="footer__subscribe-text">
+            Leave your address and it goes on the list. Nothing is sent yet
+            &mdash; there is no mail behind this demonstration.
+        </p>
 
         {# Both carried in the form, because without scripting there is no
            fetch to put the token in a header and no way to know afterwards
@@ -98,7 +111,7 @@
             <input class="footer__subscribe-input js-subscribe-email"
                    id="subscribe-email" type="email" name="email" required
                    autocomplete="email" placeholder="you@example.com">
-            <button class="footer__subscribe-submit" type="submit">Subscribe</button>
+            <button class="footer__subscribe-submit" type="submit">Join the list</button>
         </div>
 
         {# aria-live, because with the script running the answer arrives after
@@ -107,7 +120,7 @@
            only for a browser that posted the form and was sent back here. #}
         <p class="footer__subscribe-note js-subscribe-note" role="status" aria-live="polite"
            {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>{{ notice ? notice.message : '' }}</p>
-        <p class="footer__subscribe-consent">We store the address to send those alerts, nothing else.</p>
+        <p class="footer__subscribe-consent">We store the address, and nothing else.</p>
     </form>
 </div>
 

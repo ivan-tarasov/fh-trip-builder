@@ -42,6 +42,8 @@ final class PromisesTest extends TestCase
         'we sent',
         'we have sent',
         'we will send',
+        'we will write',
+        'we will email',
         'we emailed',
         'check your inbox',
         'confirmation email',
@@ -60,19 +62,75 @@ final class PromisesTest extends TestCase
 
     public function testNoTemplatePromisesMailNothingCanSend(): void
     {
-        $offences = [];
+        self::assertSame([], self::offences(
+            self::templates(),
+            static fn(string $path): string => self::withoutComments((string) file_get_contents($path)),
+        ));
+    }
 
-        foreach (self::templates() as $path) {
-            $prose = self::withoutComments((string) file_get_contents($path));
+    /**
+     * And nor does anything the server says back.
+     *
+     * The first version of this test read templates only, and missed the worst
+     * one in the app: the subscribe endpoint answered "Done. We will write when
+     * a fare drops." A promise is a promise wherever the string lives, and the
+     * strings a controller hands to a page are exactly as visible as the ones
+     * in the markup.
+     *
+     * Only string literals are searched, via the tokenizer, so the phrases stay
+     * usable in the comments that explain why they were removed.
+     */
+    public function testNoServerMessagePromisesMailEither(): void
+    {
+        self::assertSame([], self::offences(self::sources(), self::stringLiterals(...)));
+    }
+
+    /**
+     * @param list<string> $paths
+     * @param callable(string): string $read
+     * @return list<string>
+     */
+    private static function offences(array $paths, callable $read): array
+    {
+        $found = [];
+
+        foreach ($paths as $path) {
+            $prose = $read($path);
 
             foreach (self::UNKEEPABLE as $phrase) {
                 if (stripos($prose, $phrase) !== false) {
-                    $offences[] = basename($path) . ' says "' . $phrase . '"';
+                    $found[] = basename($path) . ' says "' . $phrase . '"';
                 }
             }
         }
 
-        self::assertSame([], $offences, 'templates promising mail: ' . implode('; ', $offences));
+        return $found;
+    }
+
+    /**
+     * Every quoted string in a PHP file, and nothing else.
+     *
+     * token_get_all() rather than a regex over the source: a regex cannot tell
+     * a sentence in a docblock from one in a message, and this test needs to
+     * allow the first while catching the second.
+     */
+    private static function stringLiterals(string $path): string
+    {
+        $strings = [];
+
+        foreach (token_get_all((string) file_get_contents($path)) as $token) {
+            if (is_array($token) && in_array($token[0], [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE], true)) {
+                $strings[] = $token[1];
+            }
+        }
+
+        return implode(' ', $strings);
+    }
+
+    /** @return list<string> */
+    private static function sources(): array
+    {
+        return self::filesUnder(__DIR__ . '/../../../src', '.php');
     }
 
     /**
@@ -88,14 +146,19 @@ final class PromisesTest extends TestCase
     /** @return list<string> */
     private static function templates(): array
     {
-        $root = __DIR__ . '/../../../frontend/template';
+        return self::filesUnder(__DIR__ . '/../../../frontend/template', '.twig');
+    }
+
+    /** @return list<string> */
+    private static function filesUnder(string $root, string $extension): array
+    {
         $found = [];
 
         /** @var iterable<SplFileInfo> $files */
         $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
 
         foreach ($files as $file) {
-            if ($file->isFile() && str_ends_with($file->getFilename(), '.twig')) {
+            if ($file->isFile() && str_ends_with($file->getFilename(), $extension)) {
                 $found[] = $file->getPathname();
             }
         }
