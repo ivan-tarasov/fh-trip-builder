@@ -408,15 +408,22 @@ class ItineraryPresenter
      * shape is nullable and why templates ask before printing a separator. It
      * used to explode on '.', and at zero decimals number_format writes none.
      *
+     * `$in` is how a booking escapes the ambient currency, and it is the whole
+     * reason this parameter exists. BookingPresenter shares one instance of
+     * this class, so a purely ambient lookup would re-render every past booking
+     * in whatever the visitor's cookie says today -- which is exactly what
+     * recording the currency on the row exists to prevent. A booking passes its
+     * own frozen pair; everything else takes the default.
+     *
      * @return array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}
      */
-    public function priceParts(float $amount): array
+    public function priceParts(float $amount, ?Money $in = null): array
     {
         // Held rather than rebuilt per price. A search page draws roughly two
         // hundred of these, and building the catalogue for each one cost 2ms of
         // nothing -- measured, not guessed. An instance field rather than a
         // static, so no test has to remember to reset it.
-        return ($this->money ??= Money::active())->parts($amount);
+        return ($in ?? $this->money ??= Money::active())->parts($amount);
     }
 
     /**

@@ -13,6 +13,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Http\Input;
+use TripBuilder\Money;
 use TripBuilder\Party;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
@@ -349,6 +350,8 @@ class CheckoutController extends AbstractController
         // in checkout that writes more than one row.
         $this->connection()->beginTransaction();
 
+        $money = Money::active();
+
         try {
             $bookingId = $bookings->create([
                 'session_id' => session_id(),
@@ -371,8 +374,27 @@ class CheckoutController extends AbstractController
                 // deletes a leg once it has flown, so this is the only place the
                 // terms a traveller bought survive.
                 'fare_rules' => $strictest === null ? null : json_encode($strictest->toArray()),
+                // Canadian dollars, as every price in this application is.
                 'price_base' => $trip['raw_base'],
                 'price_tax' => $trip['raw_tax'],
+                // And the currency those two are to be *read* in, frozen with
+                // the rate that produced the figure on the Pay button.
+                //
+                // Taken from the cookie as it stands now, when the POST is
+                // handled, rather than from whatever the button was rendered
+                // in. The two differ only if somebody switched currency between
+                // seeing the total and pressing it -- and the confirmation page
+                // that comes next reads the cookie too, so the row and the page
+                // agree by construction. Freezing the render-time currency
+                // instead would show a confirmation in a currency the buyer had
+                // just switched away from.
+                //
+                // Nothing about the amount depends on this: the money above is
+                // dollars either way, and the currency is how it gets written
+                // down. Which is why it stays out of the URL and out of the
+                // POST body -- see resolveTrip() on a total the buyer chose.
+                'currency' => $money->currency()->code,
+                'currency_rate' => $money->rate(),
                 'card_brand' => Helper::cardScheme($form['card_number']),
                 // All of the card that is ever stored.
                 'card_last4' => substr(preg_replace('/\D+/', '', $form['card_number']) ?? '', -4),

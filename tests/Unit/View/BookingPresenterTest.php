@@ -7,6 +7,8 @@ namespace TripBuilder\Tests\Unit\View;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
+use TripBuilder\Currency;
+use TripBuilder\Money;
 use TripBuilder\View\BookingPresenter;
 
 final class BookingPresenterTest extends TestCase
@@ -16,6 +18,14 @@ final class BookingPresenterTest extends TestCase
         // carrierLogo() and the layover notices read config.
         $_ENV['AWS_CLOUDFRONT'] = 'cdn.example.test';
         new Config('common');
+        unset($_COOKIE[Currency::COOKIE]);
+        Money::forget();
+    }
+
+    protected function tearDown(): void
+    {
+        unset($_COOKIE[Currency::COOKIE]);
+        Money::forget();
     }
 
     /**
@@ -72,6 +82,109 @@ final class BookingPresenterTest extends TestCase
     private static function presenter(string $now = '2026-09-04 12:00:00'): BookingPresenter
     {
         return new BookingPresenter(now: new DateTimeImmutable($now));
+    }
+
+    /**
+     * A booking reads in the currency it was made in, whatever the visitor has
+     * chosen since.
+     *
+     * The most important assertion in the currency work, and the reason the
+     * booking carries its own two columns. BookingPresenter shares one
+     * ItineraryPresenter, so a purely ambient lookup would have re-rendered
+     * every past booking at today's cookie and today's rate -- restating what
+     * somebody agreed to pay, on the page headed "Total paid".
+     *
+     * The cookie is set to something else on purpose. If it ever leaks through,
+     * this fails.
+     */
+    public function testABookingReadsInItsOwnCurrencyAndNotTheVisitorsCookie(): void
+    {
+        $_COOKIE[Currency::COOKIE] = 'EUR';
+        Money::forget();
+
+        $booking = self::presenter()->booking(self::row([
+            'currency' => 'JPY',
+            'currency_rate' => 111.32,
+        ]));
+
+        self::assertSame('JPY', $booking['price_total']['code']);
+        self::assertSame('¥', $booking['price_total']['symbol']);
+        self::assertNull($booking['price_total']['cents'], 'yen has no minor unit');
+        // 1000 CAD at the frozen rate, not at whatever EUR is worth today.
+        self::assertSame('111,320', $booking['price_total']['whole']);
+    }
+
+    /**
+     * And it reads at the rate it was made at, not today's.
+     *
+     * Two bookings for the same dollar amount at different rates have to report
+     * different figures; a presenter that looked the rate up would collapse
+     * them onto one.
+     */
+    public function testTwoBookingsAtDifferentRatesReportDifferentTotals(): void
+    {
+        $march = self::presenter()->booking(self::row(['currency' => 'JPY', 'currency_rate' => 95.0]));
+        $today = self::presenter()->booking(self::row(['currency' => 'JPY', 'currency_rate' => 111.32]));
+
+        self::assertSame('95,000', $march['price_total']['whole']);
+        self::assertSame('111,320', $today['price_total']['whole']);
+    }
+
+    /**
+     * A row written before the columns existed reads in Canadian dollars.
+     *
+     * Not in the cookie's currency, which would be the tempting default and
+     * would silently convert a figure that was never converted. Those rows
+     * genuinely were dollars, which is why the column defaults say so.
+     */
+    public function testALegacyRowWithoutTheColumnsReadsAsCanadianDollars(): void
+    {
+        $_COOKIE[Currency::COOKIE] = 'JPY';
+        Money::forget();
+
+        $row = self::row();
+        unset($row['currency'], $row['currency_rate']);
+
+        $booking = self::presenter()->booking($row);
+
+        self::assertSame('CAD', $booking['price_total']['code']);
+        self::assertSame('1,000', $booking['price_total']['whole']);
+    }
+
+    /**
+     * A currency dropped from the catalogue after somebody booked in it.
+     *
+     * The figures on the row are dollars either way, so falling back reads as
+     * an unconverted price rather than a wrong one -- and it does not throw,
+     * which is what matters on somebody's own bookings page.
+     */
+    public function testACurrencyNoLongerOfferedFallsBackRatherThanFailing(): void
+    {
+        $booking = self::presenter()->booking(self::row([
+            'currency' => 'RUB',
+            'currency_rate' => 62.45,
+        ]));
+
+        self::assertSame('CAD', $booking['price_total']['code']);
+        self::assertSame('1,000', $booking['price_total']['whole']);
+    }
+
+    /**
+     * Base, tax and total in a booking's own currency still add up.
+     */
+    public function testTheReceiptAddsUpInTheBookingsCurrency(): void
+    {
+        $booking = self::presenter()->booking(self::row([
+            'currency' => 'JPY',
+            'currency_rate' => 111.32,
+        ]));
+
+        $whole = static fn(array $part): int => (int) str_replace(',', '', $part['whole']);
+
+        self::assertSame(
+            $whole($booking['price_total']),
+            $whole($booking['price_base']) + $whole($booking['price_tax']),
+        );
     }
 
     public function testPriceComesFromTheColumnsNotTheStoredSegments(): void

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration;
 
+use DateTimeImmutable;
 use TripBuilder\Currency;
 use TripBuilder\Money;
+use TripBuilder\View\BookingPresenter;
 
 /**
  * The chosen currency, against the rates actually on the table.
@@ -62,6 +64,78 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
             str_replace(',', '', $money->parts(100.0)['whole']),
             'the rate used should be the rate stored',
         );
+    }
+
+    /**
+     * A booking ignores the cookie even when the cookie would work.
+     *
+     * BookingPresenterTest asserts this too, and passes without a database --
+     * but only because `Money::active()` cannot resolve a rate there, so the
+     * ambient currency and the fallback are the same thing and the assertion
+     * cannot tell them apart. Mutating `Money::base()` to `Money::active()` in
+     * the presenter's fallback went green locally and red in CI.
+     *
+     * So the precondition below is the point of this test: it proves the cookie
+     * *does* resolve, which means Canadian dollars can only have come from the
+     * booking's own columns.
+     */
+    public function testABookingIgnoresTheCookieEvenWhenTheCookieResolves(): void
+    {
+        $_COOKIE[Currency::COOKIE] = 'JPY';
+        Money::forget();
+
+        self::assertSame(
+            'JPY',
+            Money::active()->currency()->code,
+            'precondition: JPY must be resolvable, or this test proves nothing',
+        );
+
+        // A row from before the currency columns existed.
+        $booking = new BookingPresenter(now: new DateTimeImmutable('2026-09-04 12:00:00'))
+            ->booking(self::legacyRow());
+
+        self::assertSame('CAD', $booking['price_total']['code']);
+        self::assertSame('1,000', $booking['price_total']['whole']);
+    }
+
+    /**
+     * The smallest booking row the presenter will read, with no currency on it.
+     *
+     * @return array<string, mixed>
+     */
+    private static function legacyRow(): array
+    {
+        $segment = [
+            'id' => 1, 'carrier' => 'AC', 'carrier_name' => 'Air Canada', 'number' => 'AC-100',
+            'duration' => 120, 'cabin_code' => 'Y', 'price_base' => 500.0, 'price_tax' => 50.0,
+            'depart' => [
+                'airport_code' => 'YUL', 'airport_name' => 'YUL', 'airport_city' => 'Montreal',
+                'airport_country' => 'Canada', 'date_time' => '2026-09-08 07:00',
+            ],
+            'arrive' => [
+                'airport_code' => 'LHR', 'airport_name' => 'LHR', 'airport_city' => 'London',
+                'airport_country' => 'United Kingdom', 'date_time' => '2026-09-08 19:00',
+            ],
+        ];
+
+        return [
+            'id' => 100001,
+            'reference' => 'K7PQ2M',
+            'status' => 'confirmed',
+            'created' => '2026-09-01 10:00:00',
+            'departure_time' => '2026-09-08 07:00:00',
+            'passenger_first' => 'Ada',
+            'passenger_last' => 'Lovelace',
+            'contact_email' => 'ada@example.test',
+            'contact_phone' => '+15145550100',
+            'fare_brand' => 'Flex',
+            'card_brand' => 'Visa',
+            'card_last4' => '4242',
+            'price_base' => 900.00,
+            'price_tax' => 100.00,
+            'flight_outbound' => json_encode([$segment]),
+            'flight_return' => null,
+        ];
     }
 
     /**

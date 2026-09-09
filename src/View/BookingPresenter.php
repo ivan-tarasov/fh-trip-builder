@@ -9,6 +9,8 @@ use Throwable;
 use TripBuilder\Api\Flights\FareRules;
 use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
+use TripBuilder\Currency;
+use TripBuilder\Money;
 use TripBuilder\TripType;
 
 /**
@@ -76,6 +78,16 @@ final readonly class BookingPresenter
         $base = (float) ($row['price_base'] ?? 0);
         $tax = (float) ($row['price_tax'] ?? 0);
 
+        // The currency the buyer was quoted in, at the rate they were quoted
+        // at, both off the row. Not the visitor's cookie: a booking made in
+        // yen last March reads in yen forever, and re-pricing it at today's
+        // rate would quietly restate what somebody agreed to pay. This is the
+        // one place on the site that must ignore the switcher.
+        //
+        // A row written before those columns existed defaults to CAD at 1,
+        // which is the truth about it rather than a fallback.
+        $money = self::moneyFor($row);
+
         return [
             'id' => (int) $row['id'],
             // Empty on rows written before checkout issued one. Absent, not
@@ -117,9 +129,9 @@ final readonly class BookingPresenter
             // the JSON are a search price from an older pricing pass and no card
             // was ever charged against them, so a row that predates the columns
             // reports no price rather than a total nobody paid.
-            'price_total' => $base + $tax > 0 ? $this->itinerary->priceParts($base + $tax) : null,
-            'price_base' => $this->itinerary->priceParts($base),
-            'price_tax' => $this->itinerary->priceParts($tax),
+            'price_total' => $base + $tax > 0 ? $this->itinerary->priceParts($base + $tax, $money) : null,
+            'price_base' => $this->itinerary->priceParts($base, $money),
+            'price_tax' => $this->itinerary->priceParts($tax, $money),
             'outbound' => $outbound,
             'return' => $return,
             'starts_at' => $startsAt,
@@ -175,6 +187,26 @@ final readonly class BookingPresenter
         }
 
         return sprintf('%s + %d', $lead, $travellers - 1);
+    }
+
+    /**
+     * The booking's own currency, rebuilt from its two columns.
+     *
+     * A code the catalogue no longer lists -- a currency dropped from the menu
+     * after somebody booked in it -- falls back to the base currency rather
+     * than throwing. The figures on the row are Canadian dollars either way, so
+     * that reads as an unconverted price rather than a wrong one.
+     *
+     * @param array<string, mixed> $row
+     */
+    private static function moneyFor(array $row): Money
+    {
+        $currency = Currency::tryFrom($row['currency'] ?? null);
+        $rate = (float) ($row['currency_rate'] ?? 1);
+
+        return $currency === null || $rate <= 0
+            ? Money::base()
+            : new Money($currency, $rate);
     }
 
     /**
