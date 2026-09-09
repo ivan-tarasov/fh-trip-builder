@@ -55,7 +55,12 @@
 
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>
 
-    {% include 'partials/counters.html.twig' %}
+    {# Nothing loads until somebody has said yes. Both vendors set their own
+       cookies and Metrika records the session, so loading them first would make
+       the notice at the bottom of the page decoration. See src/Consent.php. #}
+    {% if consent.accepted %}
+        {% include 'partials/counters.html.twig' %}
+    {% endif %}
 </head>
 
 <body class="d-flex flex-column">

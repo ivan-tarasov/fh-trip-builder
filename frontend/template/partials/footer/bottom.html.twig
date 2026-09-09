@@ -12,14 +12,30 @@
 {% set git = git_info() %}
 
 <div class="footer__bottom">
+    {# The mark to the left of both lines, the way the reference has it: the
+       name on the first and the years on the second, and the logo centred
+       against the pair rather than against the name alone.
+
+       Which means the two lines are their own block. Indenting the years by the
+       tile's width instead -- the first attempt -- lines them up under the name
+       but leaves them below the tile, so the logo still belongs to one line.
+
+       Two links to "/" and only one of them announced. The name is the link; the
+       tile repeats it so the logo is clickable with a mouse, and is hidden from
+       assistive tech and taken out of the tab order so nobody has to hear the
+       same destination twice or tab through it to reach the socials. #}
     <div class="footer__brand">
-        <a class="footer__brand-mark" href="/">
-            <i class="fas fa-plane-departure" aria-hidden="true"></i>
-            <strong>{{ config('app.name') }}</strong>
-        </a>
-        <p class="footer__copyright">
-            <i class="far fa-copyright" aria-hidden="true"></i> {{ copyright_years() }}
-        </p>
+        <div class="footer__brand-head">
+            <a class="footer__brand-icon" href="/" aria-hidden="true" tabindex="-1">
+                <i class="fas fa-plane-departure"></i>
+            </a>
+            <div class="footer__brand-lines">
+                <a class="footer__brand-name" href="/">{{ config('app.name') }}</a>
+                <p class="footer__copyright">
+                    <i class="far fa-copyright" aria-hidden="true"></i> {{ copyright_years() }}
+                </p>
+            </div>
+        </div>
 
         {# Icons alone, the way the reference has them. Each one still needs a
            name for anyone who cannot see which brand it is. #}
@@ -27,7 +43,7 @@
             {% for title, item in config('site.footer-social') %}
                 <li>
                     <a class="footer__social" href="{{ item.url }}"
-                       target="_blank" rel="noopener" aria-label="{{ title }}">
+                       target="_blank" rel="noopener" aria-label="{{ title }} (opens in a new tab)">
                         <i class="fa-brands fa-{{ item.ico }}" aria-hidden="true"></i>
                     </a>
                 </li>
@@ -38,7 +54,8 @@
     {% include 'partials/footer/column.html.twig' with {
         'id': 'nav',
         'title': 'Navigation',
-        'links': navigation
+        'links': navigation,
+        'landmark': 'Pages of ' ~ config('app.name')
     } only %}
 
     {% include 'partials/footer/column.html.twig' with {
@@ -58,19 +75,43 @@
        novalidate: the browser's own bubble says "Please enter an email address"
        in a tooltip that vanishes and is not announced. The field is still
        type="email", so the right keyboard comes up on a phone; the message is
-       ours to place and to keep on screen. #}
-    {% set notice = subscribe_notice() %}
+       ours to place and to keep on screen.
 
+       The id stays `fare-alerts` whatever the heading is called. It is where
+       AjaxController sends a scriptless browser back to after the form posts,
+       so renaming it to match the words above would land that redirect on a
+       page with no such anchor and no message in sight. #}
+    {% set notice = subscribe_notice() %}
+    {# aria-labelledby, so the form is a landmark with a name.
+
+       It has a visible <h2> and had no accessible name, which means it was not
+       exposed as a form landmark at all -- the heading was there for the eye
+       and nothing else. Pointing at the heading it already has costs one
+       attribute and an id. #}
     <form class="footer__subscribe js-subscribe" id="fare-alerts"
-          action="/ajax/subscribe" method="post" novalidate>
-        <h2 class="footer__title">Fare alerts</h2>
-        <p class="footer__subscribe-text">A note when a fare on a route you searched drops.</p>
+          action="/ajax/subscribe" method="post" novalidate
+          aria-labelledby="subscribe-title">
+        {# What this form does is keep an address. What it does not do is send
+           anything to it -- there is no mailer in this project -- and the copy
+           used to say otherwise three times over: a heading promising an inbox,
+           a line promising a note when a fare dropped, and a consent line
+           saying the address was stored "to send those alerts".
+
+           The form is still worth having, for exactly the reason its own
+           comment above gives: the version before it accepted an address and
+           dropped it, and `subscribers` is somewhere to put one. Collecting is
+           the thing it can honestly claim, so that is what it claims. #}
+        <h2 class="footer__title" id="subscribe-title">The fare-alert list</h2>
+        <p class="footer__subscribe-text">
+            Leave your address and it goes on the list. Nothing is sent yet
+            &mdash; there is no mail behind this demonstration.
+        </p>
 
         {# Both carried in the form, because without scripting there is no
            fetch to put the token in a header and no way to know afterwards
            which page the visitor was on. The endpoint refuses a return_to that
            is not one of our own paths. #}
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
         <input type="hidden" name="return_to" value="{{ current_page() }}">
 
         <div class="footer__subscribe-row">
@@ -78,7 +119,7 @@
             <input class="footer__subscribe-input js-subscribe-email"
                    id="subscribe-email" type="email" name="email" required
                    autocomplete="email" placeholder="you@example.com">
-            <button class="footer__subscribe-submit" type="submit">Subscribe</button>
+            <button class="footer__subscribe-submit" type="submit">Join the list</button>
         </div>
 
         {# aria-live, because with the script running the answer arrives after
@@ -87,19 +128,55 @@
            only for a browser that posted the form and was sent back here. #}
         <p class="footer__subscribe-note js-subscribe-note" role="status" aria-live="polite"
            {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>{{ notice ? notice.message : '' }}</p>
-        <p class="footer__subscribe-consent">We store the address to send those alerts, nothing else.</p>
+        <p class="footer__subscribe-consent">We store the address, and nothing else.</p>
     </form>
 </div>
 
 <div class="footer__legal">
+    {# Looped over config rather than three links written out, so the row and the
+       pages cannot disagree about what exists -- the same config LegalController
+       reads. The order is the order they are meant to be read in.
+
+       A list and not a <nav>. Three links are worth grouping, which is what the
+       <ul> does, but not worth a third landmark in a footer that deliberately
+       holds two -- see FooterRenderTest, which is where that decision is
+       written down. #}
+    {# Six documents in one row: the three pages this site owns, then the three
+       the project is described by. They were a sentence -- "Software made by X
+       as Y PHP Coding Assessment. Code licensed MIT, documentation here." --
+       which put five links inside one line of prose and made the last of them
+       "here". A row says what each one is before you click it.
+
+       Ours first, and no divider between the halves: the order carries the
+       grouping and a rule between six links is decoration. #}
+    <ul class="footer__legal-links">
+        {% for slug, document in config('legal.documents') %}
+            <li><a href="/{{ slug }}">{{ document.title }}</a></li>
+        {% endfor %}
+        <li>
+            <a href="/Trip_Builder_1.pdf" target="_blank" rel="noopener">Assessment<span
+                class="visually-hidden"> (PDF, opens in a new tab)</span></a>
+        </li>
+        <li>
+            <a href="{{ config('app.documentation') }}" target="_blank" rel="noopener">Documentation<span
+                class="visually-hidden"> (opens in a new tab)</span></a>
+        </li>
+        <li>
+            <a href="{{ config('app.license.url') }}" target="_blank" rel="license noopener">{{ config('app.license.type') }} licence<span
+                class="visually-hidden"> (opens in a new tab)</span></a>
+        </li>
+    </ul>
+
+    {# The credit stays a sentence. Who made this and why is a relationship, and
+       "Ivan Tarasov &middot; FlightHub" in the row above would have lost it. #}
     <p>
-        Software made by
-        <a href="{{ config('meta.author.website') }}" target="_blank" rel="noopener">{{ config('meta.author.name') }}</a>
-        as <a href="https://www.flighthub.com/" target="_blank" rel="noopener">FlightHub</a>
-        PHP Coding <a href="/Trip_Builder_1.pdf" target="_blank" rel="noopener">Assessment</a>.
-        Code licensed
-        <a href="{{ config('app.license.url') }}" target="_blank" rel="license noopener">{{ config('app.license.type') }}</a>,
-        documentation <a href="{{ config('app.documentation') }}" target="_blank" rel="noopener">here</a>.
+        Made by
+        <a href="{{ config('meta.author.website') }}" target="_blank" rel="noopener">{{ config('meta.author.name') }}<span
+            class="visually-hidden"> (opens in a new tab)</span></a>
+        as a
+        <a href="https://www.flighthub.com/" target="_blank" rel="noopener">FlightHub<span
+            class="visually-hidden"> (opens in a new tab)</span></a>
+        PHP coding assessment.
     </p>
 
     {# What the page cost to build. It used to sit in a column of its own beside
@@ -110,7 +187,12 @@
         {{ execution_time }}s &middot;
         {{ database_requests }} quer{{ database_requests == 1 ? 'y' : 'ies' }} &middot;
         {{ flights_count }} flights &middot;
-        <a href="{{ git_repo() }}/commit/{{ git.commit_hash }}" target="_blank" rel="noopener">{{ git.tag }}-{{ git.branch }}-{{ git.commit_hash }}</a>
+        {# Appended rather than an aria-label, which would have replaced the
+           visible text instead of explaining it. Read on its own this link
+           announced "v2.21.0-fix/footer-improvements-89414d3" and nothing
+           else. #}
+        <a href="{{ git_repo() }}/commit/{{ git.commit_hash }}" target="_blank" rel="noopener">{{ git.tag }}-{{ git.branch }}-{{ git.commit_hash }}<span
+            class="visually-hidden"> &mdash; the commit this build was made from, on GitHub (opens in a new tab)</span></a>
         posted {{ git.commit_date }}
     </p>
 </div>

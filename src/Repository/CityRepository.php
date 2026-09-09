@@ -150,6 +150,16 @@ final readonly class CityRepository
         );
     }
 
+    /** Counts what all() lists, so the grouping into cities has to be repeated. */
+    public function countAll(): int
+    {
+        return (int) $this->connection->fetchValue(
+            'SELECT COUNT(DISTINCT a.city_code)'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' WHERE' . self::ONLY_SELLABLE,
+        );
+    }
+
     /**
      * The cities of one country, busiest first.
      *

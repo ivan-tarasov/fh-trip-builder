@@ -44,6 +44,47 @@ final readonly class AirportRepository
     public function __construct(private Connection $connection) {}
 
     /**
+     * The airports people search for, one per city, busiest first.
+     *
+     * `search_count` is written by the place picker every time somebody picks
+     * an airport, so this is demand rather than a list to keep up to date.
+     *
+     * One per city, which is the part worth explaining. London has three of the
+     * four most-searched airports in this data -- Heathrow, Gatwick, Stansted
+     * -- so ranked airport by airport the column would be a list of London.
+     * Taking each city's busiest gives Heathrow, Trudeau, Vancouver, Newark,
+     * Tullamarine, Charles De Gaulle: six places rather than two. Same rule the
+     * Directions column uses to keep both halves of a pair off one list.
+     *
+     * `traffic_weight` behind the count, so a database nobody has searched yet
+     * still opens on the airports worth naming instead of on whatever the table
+     * hands back first.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function mostSearched(int $limit): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT x.* FROM ('
+            . ' SELECT ' . self::COLUMNS . ', a.search_count, a.traffic_weight,'
+            // Ranked inside the city rather than filtered against its maximum.
+            // The filter looks equivalent and is not: on a database nobody has
+            // searched yet every airport in a city is level on nought, they all
+            // match their own maximum, and the column fills with one city's
+            // airports again -- which is the thing this rule exists to stop.
+            . '  ROW_NUMBER() OVER ('
+            . '   PARTITION BY a.city_code'
+            . '   ORDER BY a.search_count DESC, a.traffic_weight DESC, a.title ASC'
+            . '  ) AS rn'
+            . self::source()
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' ) x WHERE x.rn = 1'
+            . ' ORDER BY x.search_count DESC, x.traffic_weight DESC, x.title ASC'
+            . ' LIMIT ' . max(1, $limit),
+        );
+    }
+
+    /**
      * Enabled airports (optionally major only), joined to their country,
      * ordered by title.
      *
@@ -61,6 +102,17 @@ final readonly class AirportRepository
         $sql .= ' ORDER BY a.title ASC';
 
         return $this->connection->fetchAll($sql);
+    }
+
+    public function countEnabled(bool $majorOnly): int
+    {
+        $sql = 'SELECT COUNT(*) FROM ' . Table::Airports->value . ' a WHERE a.enabled = 1';
+
+        if ($majorOnly) {
+            $sql .= ' AND is_major = 1';
+        }
+
+        return (int) $this->connection->fetchValue($sql);
     }
 
     /**

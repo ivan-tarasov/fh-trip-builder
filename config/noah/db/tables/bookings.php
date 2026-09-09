@@ -16,8 +16,19 @@ return [
     | looked up again later — `fare_brand` holds the name the fare was sold
     | under, not a key back into `fare_brands`.
     |
-    | `card_brand` and `card_last4` are all the card that is ever kept. The
-    | number itself is validated in the browser and never sent here.
+    | `card_brand` and `card_last4` are all the card that is ever kept.
+    |
+    | Not because the number never arrives -- it does. CheckoutController reads
+    | `card_number`, `card_expiry` and `card_cvv` off the posted form, checks
+    | the number with Helper::isLuhnValid() and reads the brand off its issuer
+    | range with Helper::cardScheme(). What happens after that is nothing: the
+    | brand and the last four digits are written here and the rest is dropped
+    | with the request, because there is no payment provider to forward it to.
+    |
+    | This comment used to say the number was "validated in the browser and
+    | never sent here", which was false and is the kind of false a reader
+    | believes. It is also validated in the browser -- see frontend/js -- but
+    | that is a convenience, not the boundary it claimed to be.
     |
     */
 

@@ -119,7 +119,11 @@
                 body.append('from', from);
                 body.append('to', to);
                 body.append('class', cabin);
-                body.append('csrf_token', csrfToken());
+                // Csrf::FIELD. The header name below is mirrored from
+                // Csrf::HEADER the same way -- JavaScript cannot read a PHP
+                // constant, so these two strings are the contract, and the
+                // constants are where it is defined.
+                body.append('_csrf', csrfToken());
 
                 fetch('/ajax/day-prices', {method: 'POST', body: body})
                     .then((response) => response.ok ? response.json() : null)
@@ -1425,6 +1429,51 @@
     $(function () {
         initTooltips(document);
     });
+
+    /*[ Cookie notice ]
+    ===========================================================*/
+    // The whole of it: write the answer, take the bar away. The counters are
+    // rendered by the server, so analytics begins on the next page rather than
+    // this one -- a reload would start it a few seconds sooner and throw away
+    // whatever the visitor had already typed into the search form.
+    //
+    // The cookie's name, lifetime and two values come off the element's own
+    // data attributes, so src/Consent.php remains the only place they are
+    // spelled. Nothing here runs when the bar is absent, which is every page
+    // view after the first answer.
+    (function cookieNotice() {
+        const notice = document.querySelector('.js-cookie-notice');
+
+        if (!notice) {
+            return;
+        }
+
+        notice.querySelectorAll('.js-cookie-choice').forEach((button) => {
+            button.addEventListener('click', function () {
+                document.cookie = notice.dataset.cookie + '=' + encodeURIComponent(this.dataset.consent)
+                    + ';path=/;max-age=' + notice.dataset.maxAge + ';samesite=lax'
+                    + (window.location.protocol === 'https:' ? ';secure' : '');
+
+                notice.remove();
+            });
+        });
+    }());
+
+    // And the way back out of that answer, on the cookies page. A reload rather
+    // than a redraw: the counters are rendered by the server, so the page has
+    // to be built again to stop carrying them.
+    (function cookieReset() {
+        const button = document.querySelector('.js-cookie-reset');
+
+        if (!button) {
+            return;
+        }
+
+        button.addEventListener('click', function () {
+            document.cookie = this.dataset.cookie + '=;path=/;max-age=0';
+            window.location.reload();
+        });
+    }());
 
     /*[ Saved flights ]
     ===========================================================*/

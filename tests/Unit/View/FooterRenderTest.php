@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Unit\View;
 
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
+use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
 use TripBuilder\View\LayoutData;
@@ -175,7 +179,10 @@ final class FooterRenderTest extends TestCase
             }
 
             $drawn++;
-            self::assertStringContainsString('>' . $column['more']['text'] . '</a>', $html);
+            // The configured text is a format string -- "All %s airlines" --
+            // so what the page should show is what footer_more() makes of it.
+            $text = new LayoutData()->footerMore($column['more'])['text'];
+            self::assertStringContainsString('>' . $text . '</a>', $html);
         }
 
         self::assertGreaterThan(0, $drawn, 'at least one more-link should be drawn');
@@ -299,10 +306,12 @@ final class FooterRenderTest extends TestCase
     /**
      * And so are the country links, for the same reason.
      *
-     * These were curated placeholders until the pages existed. They are still
-     * curated -- nothing counts how often a country is searched for -- but they
-     * are no longer placeholders, so a typo in one is now a 404 on every page
-     * of the site rather than a link to a page that was always going to 404.
+     * Counted since the column stopped being curated: a country ranks by its
+     * busiest airport's searches, so whether this suite sees any of these
+     * depends on whether a database is reachable. Written to hold either way,
+     * like the routes column below -- with none, the assertion that matters is
+     * that the column took its heading with it rather than leaving an empty
+     * one behind.
      */
     public function testEveryCountryLinkResolves(): void
     {
@@ -310,7 +319,11 @@ final class FooterRenderTest extends TestCase
 
         preg_match_all('#href="(/country/[^"]+)"#', $html, $links);
 
-        self::assertNotEmpty($links[1], 'the footer should link to countries');
+        if ($links[1] === []) {
+            self::assertStringNotContainsString('>Countries</h2>', $html, 'an empty column should not be headed');
+
+            return;
+        }
 
         foreach (array_unique($links[1]) as $href) {
             self::assertNotNull(
@@ -336,6 +349,9 @@ final class FooterRenderTest extends TestCase
      * bare code away is the controller, so a link left in the old spelling
      * would pass every check except the only one that matters and 404 on every
      * page of the site.
+     *
+     * Counted since the column stopped being curated, so it holds either way
+     * round -- see the country column above.
      */
     public function testEveryAirportLinkResolves(): void
     {
@@ -343,7 +359,11 @@ final class FooterRenderTest extends TestCase
 
         preg_match_all('#href="(/airport/[^"]+)"#', $html, $links);
 
-        self::assertNotEmpty($links[1], 'the footer should link to airports');
+        if ($links[1] === []) {
+            self::assertStringNotContainsString('>Airports</h2>', $html, 'an empty column should not be headed');
+
+            return;
+        }
 
         foreach (array_unique($links[1]) as $href) {
             self::assertNotNull(
@@ -366,6 +386,9 @@ final class FooterRenderTest extends TestCase
      * code would start working the day the page did; it did not, because an
      * address is a name and a code together. Every column has now learned that
      * the same way, which is why each has a test of its own.
+     *
+     * Counted since the column stopped being curated -- it ranks by bookings --
+     * so it holds either way round, like the two above it.
      */
     public function testEveryAirlineLinkResolves(): void
     {
@@ -373,7 +396,11 @@ final class FooterRenderTest extends TestCase
 
         preg_match_all('#href="(/airline/[^"]+)"#', $html, $links);
 
-        self::assertNotEmpty($links[1], 'the footer should link to airlines');
+        if ($links[1] === []) {
+            self::assertStringNotContainsString('>Airlines</h2>', $html, 'an empty column should not be headed');
+
+            return;
+        }
 
         foreach (array_unique($links[1]) as $href) {
             self::assertNotNull(
@@ -469,6 +496,292 @@ final class FooterRenderTest extends TestCase
                 $href . ' is linked in the footer but names no article',
             );
         }
+    }
+
+    /**
+     * Every way into the footer by keyboard shows where you are.
+     *
+     * The footer is the densest keyboard surface on the site -- 73 tab stops on
+     * the homepage, 70 of them links -- and for a long time exactly one of them
+     * had a focus ring: the subscribe input. The other 72 fell back to whatever
+     * the browser draws, over a navy band, while ten other components in this
+     * stylesheet have a ring designed for them.
+     *
+     * Asserted against the stylesheet rather than the render, the way
+     * ReadmeTest checks its heading rules: what can be read off the page is the
+     * markup, and the thing that broke here was the CSS.
+     *
+     * The colour matters as much as the rule. --brand-accent is a dark teal and
+     * the band is a dark blue; --ink-on-dark-lead is the 11.98-contrast ink the
+     * footer already used for the one ring it had.
+     */
+    public function testEveryFocusableThingInTheFooterHasARing(): void
+    {
+        $css = (string) file_get_contents(__DIR__ . '/../../../frontend/css/main.css');
+
+        foreach (['a', 'button', 'input'] as $element) {
+            self::assertStringContainsString(
+                '.footer ' . $element . ':focus-visible',
+                $css,
+                'footer <' . $element . '> has no focus ring',
+            );
+        }
+
+        self::assertMatchesRegularExpression(
+            '/\.footer a:focus-visible,\s*\.footer button:focus-visible,\s*\.footer input:focus-visible \{'
+            . '\s*outline: 2px solid var\(--ink-on-dark-lead\);/',
+            $css,
+            'the footer ring should use the on-dark ink, not the light-page accent',
+        );
+
+        // The back-to-top button is fixed over the page rather than in the
+        // band, so it takes the other colour -- and it is easy to sweep into
+        // the footer rule by accident, where it would be invisible.
+        self::assertMatchesRegularExpression(
+            '/\.to-top:focus-visible \{\s*outline: 2px solid var\(--brand-accent\);/',
+            $css,
+        );
+    }
+
+    /**
+     * Every icon in the footer is decoration, and says so.
+     *
+     * They all carried aria-hidden except one -- the back-to-top chevron --
+     * which is the shape this kind of bug takes: not a decision, an omission in
+     * the one element written before the convention settled. Asserted over all
+     * of them rather than that one, because the next one will be an omission
+     * too.
+     *
+     * Ancestors count, which is why this reads the tree rather than matching
+     * tags. The first version did match tags and failed on the brand mark --
+     * whose <i> carries nothing because the <a> around it is already
+     * aria-hidden, so the icon is not announced and does not need saying twice.
+     * A test that made it say so would have been asking for noise.
+     */
+    public function testEveryIconInTheFooterIsHiddenFromAssistiveTech(): void
+    {
+        $document = new DOMDocument();
+        // The fragment is not a whole document and uses named entities; both
+        // are warnings we do not want and neither changes the tree.
+        @$document->loadHTML('<?xml encoding="utf-8"?><body>' . $this->render('/') . '</body>');
+
+        $announced = (new DOMXPath($document))
+            ->query('//i[not(ancestor-or-self::*[@aria-hidden="true"])]');
+
+        self::assertNotFalse($announced);
+        self::assertGreaterThan(0, $document->getElementsByTagName('i')->length, 'no icons to check');
+
+        $names = [];
+
+        foreach ($announced as $icon) {
+            $names[] = $icon instanceof DOMElement ? $icon->getAttribute('class') : '?';
+        }
+
+        self::assertSame([], $names, 'icons a screen reader would announce: ' . implode(', ', $names));
+    }
+
+    /**
+     * The subscribe form is a landmark, and its name is not a dangling id.
+     *
+     * It had a visible heading and no accessible name, so it was not exposed as
+     * a form landmark at all. What replaced that is a reference, and a
+     * reference can rot quietly: rename the heading's id and the form loses its
+     * name again with nothing to show for it. So this follows the pointer.
+     */
+    public function testTheSubscribeFormIsNamedByItsOwnHeading(): void
+    {
+        $html = $this->render('/');
+
+        self::assertMatchesRegularExpression(
+            '/<form[^>]*class="footer__subscribe[^"]*"[^>]*aria-labelledby="([^"]+)"/s',
+            $html,
+        );
+
+        preg_match('/<form[^>]*class="footer__subscribe[^"]*"[^>]*aria-labelledby="([^"]+)"/s', $html, $named);
+
+        self::assertStringContainsString(
+            'id="' . $named[1] . '"',
+            $html,
+            'the form is named by an id that is not on the page',
+        );
+    }
+
+    /**
+     * Every "All ..." link is spelled the way the router spells that page.
+     *
+     * An exact key of ENABLED_ROUTES, not a path that merely resolves. Both
+     * forms return 200 -- Request::path() rtrims -- so `/airlines/` worked
+     * while pointing at a URL whose canonical is `/airlines` and which the
+     * sitemap publishes without the slash. Four entries had drifted into two
+     * spellings, and nothing could see it.
+     *
+     * Doubles as the cheapest possible check that these links are not 404s:
+     * a `more` URL that is not a route is a dead end offering more dead ends.
+     */
+    public function testEveryMoreLinkIsSpelledAsItsRoute(): void
+    {
+        $checked = 0;
+
+        foreach (Config::get('site.footer-columns') as $column) {
+            $url = $column['more']['url'] ?? null;
+
+            if ($url === null) {
+                continue;
+            }
+
+            self::assertArrayHasKey(
+                $url,
+                Routes::ENABLED_ROUTES,
+                $url . ' is not how the router spells that page',
+            );
+
+            $checked++;
+        }
+
+        self::assertGreaterThan(0, $checked, 'no more-links to check');
+    }
+
+    /**
+     * Every link that leaves the page says so.
+     *
+     * Fifteen of them down here open a new tab and none of them used to
+     * mention it, which is the kind of thing that costs nothing to see and
+     * everything to not see: the page you were reading is suddenly not the
+     * page you are on, with no back button that returns to it.
+     *
+     * The worst was the build link in the stats line. Its whole accessible
+     * name was the raw version string -- "v1.2-fix/footer-improvements-3e0a6bf"
+     * -- read out character by character, describing nothing.
+     *
+     * The name is built the way a screen reader builds it: an aria-label wins
+     * outright, and otherwise the text content, which is why a
+     * `.visually-hidden` span appended inside the link is enough.
+     */
+    public function testEveryExternalLinkSaysItOpensANewTab(): void
+    {
+        $external = $this->externalLinks();
+
+        self::assertGreaterThan(0, count($external), 'no external links to check');
+
+        $silent = [];
+
+        foreach ($external as $link) {
+            if (stripos(self::accessibleName($link), 'new tab') === false) {
+                $silent[] = self::accessibleName($link);
+            }
+        }
+
+        self::assertSame([], $silent);
+    }
+
+    /**
+     * And the build link says what it is, not just that it opens elsewhere.
+     *
+     * Asserted separately so the explanation cannot be trimmed back to the
+     * bare "(opens in a new tab)" that the test above would still accept,
+     * leaving the name a version string again.
+     */
+    public function testTheBuildLinkExplainsItself(): void
+    {
+        $commit = null;
+
+        foreach ($this->externalLinks() as $link) {
+            if (str_contains($link->getAttribute('href'), '/commit/')) {
+                $commit = $link;
+            }
+        }
+
+        self::assertNotNull($commit, 'the stats line should link the build');
+
+        $name = self::accessibleName($commit);
+
+        self::assertStringContainsString('commit', $name, 'the name should say what it points at');
+
+        // And the visible version string is still part of that name, which is
+        // what an aria-label here would have thrown away -- WCAG's Label in
+        // Name wants the two to agree, not to compete.
+        $visible = '';
+
+        foreach ($commit->childNodes as $node) {
+            if ($node->nodeType === XML_TEXT_NODE) {
+                $visible .= $node->textContent;
+            }
+        }
+
+        self::assertNotSame('', trim($visible), 'the link should have visible text');
+        self::assertStringContainsString(trim($visible), $name);
+    }
+
+    /** @return list<DOMElement> */
+    private function externalLinks(): array
+    {
+        $document = new DOMDocument();
+        @$document->loadHTML('<?xml encoding="utf-8"?><body>' . $this->render('/') . '</body>');
+
+        $found = new DOMXPath($document)->query('//a[@target="_blank"]');
+
+        self::assertNotFalse($found);
+
+        $links = [];
+
+        foreach ($found as $link) {
+            if ($link instanceof DOMElement) {
+                $links[] = $link;
+            }
+        }
+
+        return $links;
+    }
+
+    /** The name a screen reader would announce: aria-label if set, else the text. */
+    private static function accessibleName(DOMElement $link): string
+    {
+        $label = $link->getAttribute('aria-label');
+
+        return trim((string) preg_replace('/\s+/', ' ', $label !== '' ? $label : $link->textContent));
+    }
+
+    /**
+     * Two navigation landmarks in the footer: no more, and not none.
+     *
+     * The six columns share one, for the reason links.html.twig gives -- six
+     * landmarks at the bottom of every page is a lot to page through. The
+     * Navigation column is the second, because it is the only other thing down
+     * here that is a way around this site; Repository is four links to GitHub
+     * and stays a plain list on purpose.
+     */
+    public function testOnlyTheNavigationColumnIsALandmarkOfItsOwn(): void
+    {
+        $html = $this->render('/');
+
+        self::assertSame(2, substr_count($html, '<nav'), 'the footer should hold exactly two navs');
+
+        // The one around the columns, and the one that is a column.
+        self::assertStringContainsString('<nav class="footer__columns"', $html);
+        self::assertMatchesRegularExpression('/<nav class="footer__column" aria-label="[^"]+"/', $html);
+
+        // Repository is deliberately not one of them.
+        preg_match('#<nav class="footer__column"[^>]*>(.*?)</nav>#s', $html, $landmark);
+        self::assertStringNotContainsString('Repository', $landmark[1]);
+    }
+
+    /**
+     * The subscribe form names its token field after the constant.
+     *
+     * It used to write out `csrf_token`, which is what Csrf calls its *session
+     * key*, not its field -- so the one form in the footer that posts a token
+     * disagreed with the class that checks it. It worked only because the
+     * endpoint wrote the same wrong name out a second time.
+     */
+    public function testTheSubscribeFormNamesTheTokenFieldAfterTheConstant(): void
+    {
+        $html = $this->render('/');
+
+        self::assertStringContainsString(
+            'name="' . Csrf::FIELD . '" value="',
+            $html,
+            'the hidden token input is not named after Csrf::FIELD',
+        );
     }
 
     /**

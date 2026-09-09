@@ -16,9 +16,23 @@
         <div class="done">
             <i class="fas fa-circle-check done__icon"></i>
             <h1 class="done__title">You&rsquo;re booked</h1>
+            {# No email is sent, and this line used to say one was.
+
+               There is no mailer in this project -- composer requires dotenv,
+               console, twig and commonmark, and nothing else -- so "We sent the
+               ticket to you@example.com" was a promise the app had no way to
+               keep, and it sent people off to wait for it and then to look in a
+               spam folder. See help/articles/ticket-not-received.html.twig,
+               which had picked the claim up and repeated it.
+
+               The address is still worth printing: it is what was typed, it is
+               what is stored against the booking, and seeing it is how somebody
+               notices they mistyped it. #}
             <p class="done__lead">
-                We sent the ticket to <strong>{{ email }}</strong>. It can take a few minutes
-                to arrive.
+                Kept under <a href="/my/bookings">My bookings</a> in this browser, with
+                <strong>{{ email }}</strong> as the contact address. Nothing is emailed
+                &mdash; {{ config('app.name') }} issues no ticket &mdash; so the reference
+                below is the part worth writing down.
             </p>
 
             <div class="done__reference">

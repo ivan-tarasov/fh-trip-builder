@@ -29,6 +29,13 @@ class Routes
         // each article has its siblings to point at.
         '/help' => 'Help@index',
 
+        // Spelled out rather than matched by a pattern: there are three, they
+        // never grow from data, and a route listed here is a route the sitemap
+        // carries and LayoutData::indexable() lets a crawler keep.
+        '/privacy' => 'Legal@show',
+        '/terms' => 'Legal@show',
+        '/cookies' => 'Legal@show',
+
         // Not a page. It is here rather than as a file on disk because its
         // contents are the 231 city pages, which are rows in a table.
         '/sitemap.xml' => 'Sitemap@index',

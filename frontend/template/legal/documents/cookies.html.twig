@@ -1,0 +1,86 @@
+{# A list rather than a table: `.article__body` styles headings, paragraphs and
+   lists, and tables are styled only under `.readme`, which this page does not
+   carry. Each entry is the cookie's real name, so a reader can match it against
+   what their browser shows them.
+
+   The vendors' own cookies are described but not named. This app does not set
+   them and does not control what they are called, and a list copied from a
+   vendor's documentation would be a list this codebase cannot keep true. #}
+<h2>What this site sets</h2>
+<p>
+    Three cookies, all first-party, none of them shared with anybody:
+</p>
+<ul>
+    <li>
+        <strong>PHPSESSID</strong> &mdash; the session. It is what holds a
+        booking together across the checkout pages, and what
+        <a href="/my/bookings">My bookings</a> recognises you by. It carries no
+        data itself, only an identifier. Gone when you close the browser.
+    </li>
+    <li>
+        <strong>tb_recent_searches</strong> &mdash; the last few searches you
+        ran, so the search form can offer them back. It holds the search
+        addresses and nothing else. Lasts a year.
+    </li>
+    <li>
+        <strong>tb_saved_flights</strong> &mdash; the flights you starred, which
+        is what <a href="/my/saved">saved flights</a> lists. Written by this
+        site&rsquo;s own script in your browser rather than by the server, and
+        sent back with every request so the pages can mark what you saved. Lasts
+        a year.
+    </li>
+</ul>
+<p>
+    All three are limited to this site, and the first two cannot be read by
+    scripts at all. None of them is used for advertising.
+</p>
+
+<h2>What the analytics vendors set</h2>
+<p>
+    Two scripts, and neither one loads unless you have allowed it. Until you
+    answer the notice, nothing below runs and none of these cookies exists:
+</p>
+<ul>
+    <li>
+        <strong>Google Analytics</strong> &mdash; counts pages and visits.
+    </li>
+    <li>
+        <strong>Yandex Metrika</strong> &mdash; counts the same things, and is
+        configured here with <strong>Webvisor</strong> on, which records
+        movement, scrolling, clicks and typing on the page and plays them back.
+    </li>
+</ul>
+<p>
+    Those cookies belong to Google and Yandex, not to this site. What they are
+    called, how long they last and what is done with them is set by those
+    companies under their own policies.
+</p>
+
+<h2>Your answer, and changing it</h2>
+<p>
+    {% if not consent.answered %}
+        You have not answered yet, so no analytics is running.
+    {% elseif consent.accepted %}
+        You have allowed analytics. Both scripts are loading.
+    {% else %}
+        You have declined analytics. Neither script is loading.
+    {% endif %}
+    The answer is kept in a cookie of its own,
+    <strong>{{ consent.cookie }}</strong>, and in nothing else &mdash; so
+    clearing this site&rsquo;s cookies also clears the answer, and the notice
+    comes back.
+</p>
+<p>
+    <button type="button" class="cookie-reset js-cookie-reset"
+            data-cookie="{{ consent.cookie }}">Ask me again</button>
+</p>
+
+<h2>Turning off the rest</h2>
+<p>
+    The three above are not covered by that answer, because the site stops
+    working without them. Every browser can block or clear cookies for one
+    site. Doing that to {{ config('app.name') }} costs you the session &mdash;
+    the checkout will not hold together, and My bookings and saved flights will
+    be empty &mdash; but the rest works, and search, the place pages and the
+    fare calendar need no cookie at all.
+</p>

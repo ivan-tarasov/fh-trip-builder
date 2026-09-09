@@ -37,7 +37,7 @@
 
         <div class="checkout__grid">
             <form class="checkout__form" method="post" action="{{ form_action }}" novalidate>
-                <input type="hidden" name="_csrf" value="{{ csrf_token }}" />
+                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token }}" />
 
                 {# Nothing here is charged and no card is real, so filling the
                    form by hand to reach the confirmation page is busywork. The

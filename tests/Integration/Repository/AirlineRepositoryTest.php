@@ -140,6 +140,36 @@ final class AirlineRepositoryTest extends IntegrationTestCase
     }
 
     /**
+     * The footer's airline column: only airlines we sell, busiest first.
+     *
+     * The filter is the point. This method used to be `SELECT *` over the whole
+     * table with no `is_major`, so it could rank an airline that has no page --
+     * and the footer is on every page of the site, which is what turns one bad
+     * row into a 404 everywhere. It had no callers when the column was curated;
+     * it has one now.
+     */
+    public function testMostBookedIsOrderedAndOnlyEverSellable(): void
+    {
+        $sellable = array_column($this->repository()->sellable(), 'code');
+        $airlines = $this->repository()->mostBooked(6);
+
+        self::assertNotEmpty($airlines);
+        self::assertLessThanOrEqual(6, count($airlines));
+
+        foreach ($airlines as $airline) {
+            self::assertContains($airline['code'], $sellable, $airline['code'] . ' has no page to link to');
+        }
+
+        // Asking for more than there are is what actually proves the filter.
+        // Checking the top six against the sellable list does not: every
+        // airline anybody has booked here is one we sell, so the six come back
+        // clean whether the filter is there or not. This table holds 1,156
+        // airlines and sells 105 -- ask for 200 and a missing WHERE shows up as
+        // 200 rows.
+        self::assertCount(count($sellable), $this->repository()->mostBooked(count($sellable) + 50));
+    }
+
+    /**
      * The two figures the page's tiles are built from.
      *
      * Both are shares or rates rather than totals, so both have to be inside

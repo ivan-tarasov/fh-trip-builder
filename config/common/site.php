@@ -66,8 +66,19 @@ return [
     | Where a page lives, spelled once. The router normalises a trailing slash
     | either way, so the only thing at stake is which form the app emits -- and
     | it has to be one form, or the same page renders two different actions for
-    | the same destination. Trailing slash, because that is what every link the
-    | app already publishes uses, and what is in anybody's bookmarks.
+    | the same destination.
+    |
+    | These two keep their trailing slash: both are published that way already,
+    | `search` as a GET form's action in three templates and `saved` as a link
+    | in the sections partial, and anybody's bookmarks have that spelling.
+    |
+    | It is not a site-wide rule, and this block used to claim it was. A page's
+    | identity everywhere else is the form the router normalised to, which has
+    | no slash: LayoutData::canonicalPath() returns it, the sitemap publishes it
+    | because SitemapController reads the route keys, and every page emits it as
+    | its canonical whichever spelling was asked for. The `more` links below had
+    | drifted to two spellings across four entries for want of this being
+    | written down.
     |
     */
 
@@ -278,17 +289,6 @@ return [
 
     'footer-columns' => [
         [
-            'title' => 'Airlines',
-            'links' => [
-                'Air Canada' => '/airline/air-canada-ac',
-                'WestJet' => '/airline/westjet-ws',
-                'Delta Air Lines' => '/airline/delta-air-lines-dl',
-                'American Airlines' => '/airline/american-airlines-aa',
-                'United Airlines' => '/airline/united-airlines-ua',
-            ],
-            'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
-        ],
-        [
             // Counted, like Cities below and unlike the four curated columns.
             // `source` sends it to LayoutData::popularRoutes().
             //
@@ -302,24 +302,33 @@ return [
             // return pairs that have a page. A search is recorded for whatever
             // anybody asked about, and five of the 163 city pairs searched here
             // have no nonstop and so no page -- see RouteRepository::popular().
+            //
+            // Six routes where its neighbours show five and a link to the
+            // rest, because this is the one column with nowhere to send
+            // anybody: there is no directory of routes and there cannot be
+            // one, so the row the others spend on "All ..." is spent on
+            // another route.
+            //
+            // Every column comes to the same six rows, which is the point --
+            // this said "seven" for a while after a commit about label lengths
+            // also dropped every count by one, and the number here is the kind
+            // nobody rereads. FooterRenderTest now asserts the columns are the
+            // same length as each other rather than any particular length, so
+            // changing all six together stays easy and changing one does not.
             'title' => 'Directions',
             'source' => 'popular-routes',
-            'count' => 5,
+            'count' => 6,
         ],
         [
-            // Curated rather than counted, unlike Cities beside it: nothing in
-            // this app records how often a country is searched for, only how
-            // often its cities are, and summing those would rank a country by
-            // how many of them we happen to sell.
+            // Counted now, and the objection that kept it curated is answered
+            // rather than ignored: summing a country's airport searches ranks it
+            // by how many airports we sell there, so this takes the *busiest*
+            // one instead. The United Kingdom leads on Heathrow alone.
+            // See CountryRepository::mostSearched().
             'title' => 'Countries',
-            'links' => [
-                'Canada' => '/country/canada-ca',
-                'United States' => '/country/united-states-us',
-                'United Kingdom' => '/country/united-kingdom-gb',
-                'France' => '/country/france-fr',
-                'Japan' => '/country/japan-jp',
-            ],
-            'more' => ['text' => 'All countries', 'url' => '/countries'],
+            'source' => 'most-searched-countries',
+            'count' => 5,
+            'more' => ['text' => 'All %s countries', 'url' => '/countries', 'total' => 'countries'],
         ],
         [
             // The one column whose pages exist and are not a list somebody has
@@ -330,35 +339,48 @@ return [
             'source' => 'most-searched',
             'count' => 5,
             // The page it leads to is what gives all 231 city pages a route in.
-            'more' => ['text' => 'All cities', 'url' => '/cities'],
+            'more' => ['text' => 'All %s cities', 'url' => '/cities', 'total' => 'cities'],
         ],
         [
-            // Curated like Countries, and spelled the way the pages are: name
-            // then code. These were /airport/YUL until the pages existed and
-            // the route pattern would still take that, which is exactly why it
-            // is worth saying -- the controller answers 404 for a bare code,
-            // and a footer link that 404s does it on every page of the site.
+            // Counted, off `search_count`, and one airport per city: London
+            // holds three of the four most-searched in this data, so ranked
+            // airport by airport the column would be a list of London.
             //
-            // The labels are not the airport titles and do not need to be:
-            // "London Heathrow" is how somebody looks for it and "Heathrow" is
-            // what the page is called.
+            // The labels are still not the airport titles. "London (LHR)" fits
+            // a narrow column where "Pierre Elliott Trudeau International" is
+            // three lines of it and does not say Montreal anywhere -- see
+            // LayoutData::mostSearchedAirports().
             'title' => 'Airports',
-            'links' => [
-                'Montréal–Trudeau' => '/airport/pierre-elliott-trudeau-international-yul',
-                'Toronto Pearson' => '/airport/lester-b-pearson-international-yyz',
-                'Vancouver' => '/airport/vancouver-international-yvr',
-                'New York JFK' => '/airport/john-f-kennedy-international-jfk',
-                'London Heathrow' => '/airport/heathrow-lhr',
-            ],
-            'more' => ['text' => 'All airports', 'url' => '/airports/'],
+            'source' => 'most-searched-airports',
+            'count' => 5,
+            'more' => ['text' => 'All %s airports', 'url' => '/airports', 'total' => 'airports'],
+        ],
+        [
+            // Counted, not curated: `book_count` is written every time a
+            // booking is made, so this column keeps itself. Behind the count
+            // sits the curated `traffic` tier, which is what an install nobody
+            // has booked on yet orders by -- see AirlineRepository::mostBooked().
+            'title' => 'Airlines',
+            'source' => 'most-booked-airlines',
+            'count' => 5,
+            'more' => ['text' => 'All %s airlines', 'url' => '/airlines', 'total' => 'airlines'],
         ],
         [
             'title' => 'Help & tips',
             'links' => [
                 'Baggage' => '/help/baggage',
-                'Refunds and exchanges' => '/help/refunds',
+                // "&", not "and": measured in the real face at 15px, the
+                // spelled-out version is 170px against the 166 a column gives
+                // it and the ampersand brings it to 153. The heading above it
+                // is "Help & tips", so the column was already written this way.
+                'Refunds & exchanges' => '/help/refunds',
                 'Ticket did not arrive' => '/help/ticket-not-received',
-                'Changing passenger details' => '/help/passenger-details',
+                // Shorter than the article's own heading, which is "Changing
+                // passenger details" and is two lines in a column this narrow.
+                // The footer has never promised to repeat a page's title --
+                // the Airports column beside it says "London (LHR)" where the
+                // page says "Heathrow".
+                'Passenger details' => '/help/passenger-details',
                 'Flying with children' => '/help/flying-with-children',
             ],
             'more' => ['text' => 'All help topics', 'url' => '/help'],

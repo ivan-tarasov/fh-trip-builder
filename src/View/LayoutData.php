@@ -11,7 +11,10 @@ use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
+use TripBuilder\Repository\AirlineRepository;
+use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\RouteRepository;
 use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
@@ -98,6 +101,18 @@ final class LayoutData
     public function csrfToken(): string
     {
         return Csrf::token();
+    }
+
+    /**
+     * What to call the hidden input that carries the token.
+     *
+     * Beside the token itself so a form can name both from one place. The two
+     * that post one had written the name out, and had written two different
+     * ones -- see the note in AjaxController::guardFailure().
+     */
+    public function csrfField(): string
+    {
+        return Csrf::FIELD;
     }
 
     /**
@@ -257,10 +272,28 @@ final class LayoutData
             $from = (string) $route['from_name'];
             $to = (string) $route['to_name'];
 
-            $links[$from . ' — ' . $to] = RouteAddress::path($from, $to);
+            // Held together by no-break spaces inside each name, so the only
+            // place the label may wrap is the dash between them. "Fort
+            // Lauderdale — San Francisco" does not fit a 190px column and broke
+            // inside "San Francisco", which reads as two entries; broken at the
+            // dash it reads as the one it is. Characters and not markup,
+            // because this is a label in a map the template escapes.
+            $links[self::unbroken($from) . ' — ' . self::unbroken($to)] = RouteAddress::path($from, $to);
         }
 
         return $links;
+    }
+
+    /**
+     * A name with no space a line may break at.
+     *
+     * U+00A0 for every space in it. Only the two spaces around the separator
+     * are left breakable, which is where a pair of city names should come apart
+     * if it has to.
+     */
+    private static function unbroken(string $name): string
+    {
+        return str_replace(' ', "\u{00A0}", $name);
     }
 
     /**
@@ -282,8 +315,136 @@ final class LayoutData
         return match ($source) {
             'most-searched' => $this->mostSearchedCities($limit),
             'popular-routes' => $this->popularRoutes($limit),
+            'most-booked-airlines' => $this->mostBookedAirlines($limit),
+            'most-searched-countries' => $this->mostSearchedCountries($limit),
+            'most-searched-airports' => $this->mostSearchedAirports($limit),
             default => [],
         };
+    }
+
+    /**
+     * A footer "All ..." link with its count filled in.
+     *
+     * The number has to be the one the page behind the link actually lists, so
+     * each count comes from the repository that draws that page and reuses the
+     * same filter. A COUNT written a second time here would agree today and
+     * part company the first time one of those filters changes.
+     *
+     * @param array<string, string> $more
+     *
+     * @return array<string, string>
+     */
+    public function footerMore(array $more): array
+    {
+        $total = isset($more['total']) ? $this->directoryTotal($more['total']) : null;
+
+        // No count: drop the placeholder rather than the link. "All airlines"
+        // still leads where it led before this had a number in it.
+        $more['text'] = $total === null
+            ? str_replace('%s ', '', $more['text'])
+            : sprintf($more['text'], number_format($total));
+
+        return $more;
+    }
+
+    /** How many rows one of the directory pages lists, or null if it will not say. */
+    private function directoryTotal(string $key): ?int
+    {
+        try {
+            return match ($key) {
+                'cities' => new CityRepository($this->connection())->countAll(),
+                'countries' => new CountryRepository($this->connection())->countSellable(),
+                'airports' => new AirportRepository($this->connection())->countEnabled(true),
+                'airlines' => new AirlineRepository($this->connection())->countSellable(),
+                default => null,
+            };
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The airlines people book, ready for the footer's link column.
+     *
+     * Counted rather than curated, like the two columns above it. Same shape
+     * and the same fallback: a database that will not answer costs the column,
+     * not the page.
+     *
+     * @return array<string, string>
+     */
+    public function mostBookedAirlines(int $limit): array
+    {
+        try {
+            $airlines = new AirlineRepository($this->connection())->mostBooked($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($airlines as $airline) {
+            $name = (string) $airline['name'];
+            $links[$name] = Helper::airlineUrl($name, (string) $airline['code']);
+        }
+
+        return $links;
+    }
+
+    /**
+     * The countries whose airports are searched for most.
+     *
+     * @return array<string, string>
+     */
+    public function mostSearchedCountries(int $limit): array
+    {
+        try {
+            $countries = new CountryRepository($this->connection())->mostSearched($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($countries as $country) {
+            $name = (string) $country['name'];
+            $links[$name] = '/country/' . Helper::placeSlug($name, (string) $country['code']);
+        }
+
+        return $links;
+    }
+
+    /**
+     * The busiest airport of each of the most-searched cities.
+     *
+     * Labelled "London (LHR)" rather than "Heathrow", which is what the page is
+     * called. Two reasons, and the second is the one that decided it: half
+     * these titles do not say where they are -- "Pierre Elliott Trudeau
+     * International" names a man, not Montreal -- and the ones that do say it
+     * at length, which in a column 190px wide is two and three lines apiece.
+     * The city and the code are what a traveller reads an airport by anyway,
+     * and they fit on one line every time.
+     *
+     * @return array<string, string>
+     */
+    public function mostSearchedAirports(int $limit): array
+    {
+        try {
+            $airports = new AirportRepository($this->connection())->mostSearched($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($airports as $airport) {
+            $code = (string) $airport['code'];
+            $links[$airport['city'] . ' (' . $code . ')'] = Helper::airportUrl(
+                (string) $airport['title'],
+                $code,
+            );
+        }
+
+        return $links;
     }
 
     /**
