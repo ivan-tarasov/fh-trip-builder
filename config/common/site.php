@@ -303,10 +303,18 @@ return [
             // anybody asked about, and five of the 163 city pairs searched here
             // have no nonstop and so no page -- see RouteRepository::popular().
             //
-            // Seven where its neighbours show six and a link to the rest,
-            // because this is the one column with nowhere to send anybody:
-            // there is no directory of routes and there cannot be one, so the
-            // row the others spend on "All ..." is spent on another route.
+            // Six routes where its neighbours show five and a link to the
+            // rest, because this is the one column with nowhere to send
+            // anybody: there is no directory of routes and there cannot be
+            // one, so the row the others spend on "All ..." is spent on
+            // another route.
+            //
+            // Every column comes to the same six rows, which is the point --
+            // this said "seven" for a while after a commit about label lengths
+            // also dropped every count by one, and the number here is the kind
+            // nobody rereads. FooterRenderTest now asserts the columns are the
+            // same length as each other rather than any particular length, so
+            // changing all six together stays easy and changing one does not.
             'title' => 'Directions',
             'source' => 'popular-routes',
             'count' => 6,
