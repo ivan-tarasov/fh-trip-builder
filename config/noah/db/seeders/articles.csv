@@ -1,0 +1,6 @@
+slug,icon,position,enabled
+baggage,fa-suitcase-rolling,10,1
+refunds,fa-rotate-left,20,1
+ticket-not-received,fa-envelope,30,1
+passenger-details,fa-passport,40,1
+flying-with-children,fa-child,50,1
