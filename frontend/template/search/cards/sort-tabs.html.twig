@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# Sorting above the results, with the outcome on the control: cheapest and
    quickest are rarely the same itinerary, and the choice is blind unless both
    numbers are visible before you make it.
@@ -11,7 +12,7 @@
            {{ tab.current ? 'aria-current="true"' : '' }}>
             <span class="sort-bar__label">{{ tab.title }}</span>
             {% if tab.price %}
-                <span class="sort-bar__price">${{ tab.price.whole }}</span>
+                <span class="sort-bar__price">{{ money.whole(tab.price) }}</span>
                 <span class="sort-bar__meta">{{ tab.duration }}</span>
             {% else %}
                 <span class="sort-bar__price sort-bar__price--none">&mdash;</span>
@@ -27,7 +28,7 @@
                 <option value="">Sort</option>
                 {% for tab in sort_tabs.more %}
                     <option value="{{ tab.url }}"{{ tab.current ? ' selected' : '' }}>
-                        {{ tab.title }}{% if tab.price %} · ${{ tab.price.whole }}{% endif %}
+                        {{ tab.title }}{% if tab.price %} · {{ money.whole(tab.price) }}{% endif %}
                     </option>
                 {% endfor %}
             </select>

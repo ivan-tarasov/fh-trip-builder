@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# One booking, as it appears in the list.
 
    The same shell as a search result, because it is the same object. What
@@ -98,8 +99,8 @@
             <div class="text-end">
                 {% if booking.price_total %}
                     <span class="price price--sm">
-                        <span class="price__symbol">$</span><span class="price__whole">{{ booking.price_total.whole }}</span><span class="price__cents">.{{ booking.price_total.cents }}</span>
-                        <span class="price__currency">CAD</span>
+                        {{ money.rich(booking.price_total) }}
+                        <span class="price__currency">{{ booking.price_total.code }}</span>
                     </span>
                     <span class="small price-note text-muted d-block">
                         paid with {{ booking.card_brand }} ending {{ booking.card_last4 }}

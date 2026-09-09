@@ -8,7 +8,9 @@ use Exception;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Consent;
+use TripBuilder\Currency;
 use TripBuilder\Helper;
+use TripBuilder\Money;
 use TripBuilder\Party;
 use Twig\Environment;
 use Twig\Error\LoaderError;
@@ -75,6 +77,32 @@ final readonly class TwigRenderer
             'accepted' => Consent::granted(),
         ]);
 
+        // A price, for the templates that are handed a raw Canadian-dollar
+        // float rather than a pre-split one. `price_whole` is the fare strips
+        // and facts tiles, which quote to the dollar -- they used
+        // `|round(0, 'floor')` on the float and a literal `$` beside it.
+        $money = Money::active();
+        $this->twig->addFunction(new TwigFunction('price', $money->parts(...)));
+        $this->twig->addFunction(new TwigFunction('price_whole', $money->whole(...)));
+
+        // What the switcher will need, and what global.js needs to write the
+        // cookie: a global rather than page context, because the header's
+        // partials are included with `only` -- the same reason `consent` and
+        // `max_seats` are globals. Keeps src/Currency.php the only place the
+        // cookie's name is spelled.
+        $this->twig->addGlobal('currency', [
+            'cookie' => Currency::COOKIE,
+            'max_age' => Currency::MAX_AGE,
+            'active' => $money->currency()->code,
+            'list' => Currency::all(),
+            // What the browser needs to write a price itself. `rate` is for the
+            // slider, whose values stay Canadian dollars.
+            'symbol' => $money->currency()->symbol,
+            'before' => $money->currency()->symbolFirst,
+            'group' => $money->currency()->group,
+            'rate' => $money->rate(),
+        ]);
+
         $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));
         // Given the trail the partial is about to draw, so the two agree.
         $this->twig->addFunction(new TwigFunction('breadcrumb_jsonld', Breadcrumbs::structuredData(...)));
@@ -91,6 +119,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('most_searched_cities', $this->layout->mostSearchedCities(...)));
         $this->twig->addFunction(new TwigFunction('footer_links', $this->layout->footerLinks(...)));
         $this->twig->addFunction(new TwigFunction('footer_more', $this->layout->footerMore(...)));
+        $this->twig->addFunction(new TwigFunction('rates_date', $this->layout->ratesDate(...)));
     }
 
     /**

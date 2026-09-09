@@ -129,7 +129,12 @@
                     .then((response) => response.ok ? response.json() : null)
                     .then((data) => {
                         if (data && data.prices && Object.keys(data.prices).length) {
-                            picker.setPrices(data.prices, legName);
+                            // The currency the response declared, not the one
+                            // the page was rendered in. They are the same
+                            // almost always, and when they are not it is
+                            // because the cookie changed since -- in which case
+                            // these figures belong to the new one.
+                            picker.setPrices(data.prices, legName, data.currency);
 
                             return;
                         }
@@ -1430,6 +1435,77 @@
         initTooltips(document);
     });
 
+    /*[ Currency switcher ]
+    ===========================================================*/
+    // Open the panel, filter it, choose, reload.
+    //
+    // A reload rather than repainting the prices in place, and not a navigation
+    // either. Every price on the page is rendered by PHP, so the server has to
+    // draw them again -- and going to a URL would throw away the query string
+    // the search pages carry: max_price, the party, the cabin. Reloading keeps
+    // the page somebody was on, in the currency they just picked.
+    //
+    // The cookie's name and lifetime come off the panel's data attributes, so
+    // src/Currency.php stays the only place either is written down.
+    (function currencySwitcher() {
+        const trigger = document.querySelector('.js-currency-trigger');
+        const panel = trigger && document.getElementById(trigger.getAttribute('aria-controls'));
+
+        if (!panel) {
+            return;
+        }
+
+        const filter = panel.querySelector('.js-currency-filter');
+        const options = [...panel.querySelectorAll('.js-currency-choice')];
+
+        const open = (show) => {
+            panel.hidden = !show;
+            trigger.setAttribute('aria-expanded', show ? 'true' : 'false');
+
+            if (show && filter) {
+                // The list is thirty long and somebody opening it usually knows
+                // which one they want.
+                filter.focus();
+            }
+        };
+
+        trigger.addEventListener('click', () => open(panel.hidden));
+
+        document.addEventListener('click', (event) => {
+            if (!panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) {
+                open(false);
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !panel.hidden) {
+                open(false);
+                trigger.focus();
+            }
+        });
+
+        filter?.addEventListener('input', function () {
+            const needle = this.value.trim().toLowerCase();
+
+            options.forEach((option) => {
+                // `hidden` and not a class: a filtered-out currency should leave
+                // the tab order as well as the view.
+                option.closest('.currency__item').hidden =
+                    needle !== '' && !option.dataset.search.includes(needle);
+            });
+        });
+
+        options.forEach((option) => {
+            option.addEventListener('click', function () {
+                document.cookie = panel.dataset.cookie + '=' + encodeURIComponent(this.dataset.code)
+                    + ';path=/;max-age=' + panel.dataset.maxAge + ';samesite=lax'
+                    + (window.location.protocol === 'https:' ? ';secure' : '');
+
+                window.location.reload();
+            });
+        });
+    }());
+
     /*[ Cookie notice ]
     ===========================================================*/
     // The whole of it: write the answer, take the bar away. The counters are
@@ -2424,10 +2500,47 @@
         return minutes === 0 ? hours + 'h' : hours + 'h ' + minutes + 'm';
     }
 
+    /**
+     * The active currency, as the server rendered it onto <body>.
+     *
+     * Read on each call rather than cached, because it is three attribute
+     * lookups and caching it would be one more thing to get stale.
+     */
+    function activeCurrency() {
+        const data = document.body.dataset;
+
+        return {
+            symbol: data.currencySymbol || '$',
+            before: data.currencyBefore !== '0',
+            group: data.currencyGroup || ',',
+            rate: Number(data.currencyRate) || 1
+        };
+    }
+
+    /**
+     * A price slider's caption.
+     *
+     * The value in is Canadian dollars and stays that way: it is what the
+     * filter compares, and what a shared search link carries, so a link means
+     * the same thing whoever opens it and whatever the rate did overnight. Only
+     * the caption converts -- see the note on Helper::sliderCaption, which
+     * paints this same pill on the first render and has to agree with it.
+     *
+     * The steps stay Canadian-dollar shaped, so a yen pill reads "Up to
+     * ¥5,425" rather than a round number. Correct and odd beats round and off
+     * by a step.
+     */
     function sliderLabel(kind, value) {
-        return kind === 'money'
-            ? '$' + Math.round(value).toLocaleString('en-US')
-            : formatMinutes(value);
+        if (kind !== 'money') {
+            return formatMinutes(value);
+        }
+
+        const currency = activeCurrency();
+        const digits = Math.round(value * currency.rate)
+            .toLocaleString('en-US')
+            .replace(/,/g, currency.group);
+
+        return currency.before ? currency.symbol + digits : digits + ' ' + currency.symbol;
     }
 
     // On two handles the end matters: a floor dragged up has to read "From" or

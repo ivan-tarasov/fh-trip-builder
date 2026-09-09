@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# The outbound already chosen, kept in view while the return is picked. The
    body stays white so the route bar reads as clearly as on any other card;
    the green banner carries the "chosen" meaning instead of a tint behind it. #}
@@ -14,7 +15,7 @@
                 {% include 'search/cards/itinerary.html.twig' with { 'direction': selected } %}
             </div>
             <div class="col-lg-3 text-center border-start">
-                <div class="h5 mb-0">${{ selected_price }} <span class="price__currency">CAD</span></div>
+                <div class="h5 mb-0">{{ money.plain(selected_price) }} <span class="price__currency">{{ selected_price.code }}</span></div>
                 <div class="small text-muted">this flight</div>
             </div>
         </div>

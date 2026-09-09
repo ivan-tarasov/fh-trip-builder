@@ -8,6 +8,7 @@ use DateTime;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Money;
 
 /**
  * Turns an itinerary (an ordered list of flight segments plus its layovers)
@@ -35,6 +36,8 @@ class ItineraryPresenter
         'J' => 'Business',
         'F' => 'First',
     ];
+
+    private ?Money $money = null;
 
     private const int LAYOVER_TIGHT_MINUTES = 90;
     private const int LAYOVER_LONG_MINUTES = 300;
@@ -397,13 +400,40 @@ class ItineraryPresenter
      * Split a price so the template can size the parts differently: the whole
      * amount is what people scan, the cents are detail.
      *
-     * @return array{whole: string, cents: string}
+     * The amount in, like every price in this application, is Canadian dollars.
+     * What comes out is that amount in whatever currency is being shown, which
+     * is the only conversion boundary on the page -- see Money.
+     *
+     * `cents` is null where the currency has no minor unit, which is why the
+     * shape is nullable and why templates ask before printing a separator. It
+     * used to explode on '.', and at zero decimals number_format writes none.
+     *
+     * `$in` is how a booking escapes the ambient currency, and it is the whole
+     * reason this parameter exists. BookingPresenter shares one instance of
+     * this class, so a purely ambient lookup would re-render every past booking
+     * in whatever the visitor's cookie says today -- which is exactly what
+     * recording the currency on the row exists to prevent. A booking passes its
+     * own frozen pair; everything else takes the default.
+     *
+     * @return array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}
      */
-    public function priceParts(float $amount): array
+    public function priceParts(float $amount, ?Money $in = null): array
     {
-        [$whole, $cents] = explode('.', number_format($amount, 2, '.', ','));
+        // Held rather than rebuilt per price. A search page draws roughly two
+        // hundred of these, and building the catalogue for each one cost 2ms of
+        // nothing -- measured, not guessed. An instance field rather than a
+        // static, so no test has to remember to reset it.
+        return ($in ?? $this->money ??= Money::active())->parts($amount);
+    }
 
-        return ['whole' => $whole, 'cents' => $cents];
+    /**
+     * A difference, to the nearest whole unit and with no minor part.
+     *
+     * @return array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}
+     */
+    public function priceRounded(float $amount): array
+    {
+        return ($this->money ??= Money::active())->rounded($amount);
     }
 
     public function stopsLabel(int $stops): string

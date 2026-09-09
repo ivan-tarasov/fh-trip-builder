@@ -15,6 +15,7 @@ use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
+use TripBuilder\Repository\CurrencyRateRepository;
 use TripBuilder\Repository\RouteRepository;
 use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
@@ -30,6 +31,9 @@ use TripBuilder\Timer;
 final class LayoutData
 {
     private ?Connection $connection = null;
+
+    /** '' once asked and found nothing, so the query runs once either way. */
+    private ?string $ratesDate = null;
 
     /** Below this, the estimate is close enough to print as it comes. */
     private const int COUNT_ROUND_ABOVE = 10000;
@@ -320,6 +324,32 @@ final class LayoutData
             'most-searched-airports' => $this->mostSearchedAirports($limit),
             default => [],
         };
+    }
+
+    /**
+     * The day the rates being used were published, or null.
+     *
+     * Lazy and memoised: it is one query for one line in the switcher panel,
+     * and a page whose visitor never opens the panel still pays for it, so it
+     * is not resolved until a template asks. Null where nothing has been
+     * fetched, which the panel says differently -- naming a date we do not have
+     * would be the one dishonest thing this feature could do.
+     */
+    public function ratesDate(): ?string
+    {
+        if ($this->ratesDate !== null) {
+            return $this->ratesDate === '' ? null : $this->ratesDate;
+        }
+
+        try {
+            $date = new CurrencyRateRepository($this->connection())->latestDate();
+        } catch (Throwable) {
+            $date = null;
+        }
+
+        $this->ratesDate = $date ?? '';
+
+        return $date;
     }
 
     /**

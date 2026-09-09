@@ -96,9 +96,15 @@ return [
     | scrolls past and a full menu leaves it nowhere to land. Everything else is
     | still one glance away in the footer, which lists the lot.
     |
-    | `soon` marks a placeholder: rendered as text rather than a link, so it is
-    | not offered to the keyboard and does not apologise for doing nothing when
-    | clicked. The same rule the hero's own tray follows.
+    | Currency is not in here, and should not be put back. It is a control
+    | rather than a destination: this map is keyed by URL and both its readers
+    | -- the header and the footer column -- use the key as an href, so an entry
+    | that must never become a link needs a special case in each of them
+    | forever. It lives in partials/currency-switcher.html.twig instead.
+    |
+    | That also retired the `soon` flag, which marked a placeholder rendered as
+    | text rather than a link. Currency was its last user. The hero's tray still
+    | greys out its unbuilt sections, but it does that with its own markup.
     */
     'main-menu' => [
         '/my/bookings/' => [
@@ -131,15 +137,6 @@ return [
             'icon' => 'fas fa-circle-info',
             'enabled' => true,
             'header' => false,
-        ],
-        // Nothing to link to yet: every price on the site is CAD. It holds the
-        // place the currency switch will take, and says so out loud.
-        '/currency/' => [
-            'text' => 'CAD',
-            'icon' => 'fas fa-globe',
-            'enabled' => true,
-            'footer' => false,
-            'soon' => true,
         ],
         '/software-tests/' => [
             'text' => 'Software tests',

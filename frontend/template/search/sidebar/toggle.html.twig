@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# One switch. Unavailable means turning it on would leave no flights at all,
    so it reads the same as an unavailable option anywhere else. #}
 <label class="filter-toggle{{ toggle.available ? '' : ' is-unavailable' }}">
@@ -28,6 +29,6 @@
     {% if not toggle.available %}
         <span class="filter-row__none filter-row__none--inline">no flights</span>
     {% elseif toggle.price is defined and toggle.price %}
-        <span class="filter-row__price">${{ toggle.price.whole }}</span>
+        <span class="filter-row__price">{{ money.whole(toggle.price) }}</span>
     {% endif %}
 </label>

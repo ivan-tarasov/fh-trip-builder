@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# The cheapest day to fly, and the seven next cheapest.
 
    Sorted by price, not by date. A calendar has to fill every day and a quiet
@@ -17,7 +18,7 @@
         {% for fare in dates %}
             <li class="fares__item">
                 <a class="fare" href="{{ fare.search }}">
-                    <span class="fare__price">${{ fare.total|round(0, 'floor') }}<span class="fare__currency">CAD</span></span>
+                    {% set fare_price = price_whole(fare.total) %}<span class="fare__price">{{ money.plain(fare_price) }}<span class="fare__currency">{{ fare_price.code }}</span></span>
                     {# The date leads, because it is what the strip is sorted by
                        and what the visitor is choosing between. date_label()
                        prints the year only when it is not this one, so a

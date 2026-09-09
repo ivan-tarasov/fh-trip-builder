@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {% extends 'layout.html.twig' %}
 
 {% block title %}Checkout{% endblock %}
@@ -230,7 +231,7 @@
                     {% endif %}
 
                     <button type="submit" class="checkout__pay">
-                        Pay ${{ trip.price_total.whole }}.{{ trip.price_total.cents }}
+                        Pay {{ money.plain(trip.price_total) }}
                     </button>
 
                     <p class="checkout__test">

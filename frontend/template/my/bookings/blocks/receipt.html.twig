@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# What was charged, and nothing else. Who travelled, how to reach them and
    what the fare allows have blocks of their own -- none of them is money, and
    putting them here made the receipt a drawer for anything that did not fit
@@ -8,15 +9,15 @@
 <dl class="receipt__amounts">
     <div class="receipt__amount">
         <dt>Base</dt>
-        <dd>${{ booking.price_base.whole }}.{{ booking.price_base.cents }}</dd>
+        <dd>{{ money.plain(booking.price_base) }}</dd>
     </div>
     <div class="receipt__amount">
         <dt>Taxes &amp; fees</dt>
-        <dd>${{ booking.price_tax.whole }}.{{ booking.price_tax.cents }}</dd>
+        <dd>{{ money.plain(booking.price_tax) }}</dd>
     </div>
     <div class="receipt__amount receipt__amount--total">
         <dt>{{ booking.is_cancelled ? 'Total charged' : 'Total paid' }}</dt>
-        <dd>${{ booking.price_total.whole }}.{{ booking.price_total.cents }} <span class="receipt__currency">CAD</span></dd>
+        <dd>{{ money.plain(booking.price_total) }} <span class="receipt__currency">{{ booking.price_total.code }}</span></dd>
     </div>
 </dl>
 {% else %}

@@ -218,6 +218,50 @@ return [
             'comment' => false,
         ],
         [
+            // The two columns above are Canadian dollars, always, because that
+            // is what the whole application prices in. These two are how the
+            // booking is *read*: the currency the buyer was quoted in and the
+            // rate it was quoted at.
+            //
+            // Storing the converted amounts instead was the other option and it
+            // is the wrong one. The rate has to be on the row either way -- a
+            // receipt has to be reproducible years later, long after the rate
+            // has moved -- and with it here the converted figures would be
+            // redundant. Worse, they would put the column's width at the mercy
+            // of the menu: two legs for a party of nine at the top of the fare
+            // range is CAD 36,027.90, which in rupiah is about 457,000,000
+            // against DECIMAL(10,2)'s ceiling of 99,999,999.99. Widening to fit
+            // today's rupiah would not fit whatever is added to the catalogue
+            // next. Canadian dollars bound the column by the thing being sold.
+            //
+            // This is the same doctrine as `fare_brand` and `fare_rules` above:
+            // record what was agreed rather than look it up again. A frozen
+            // rate *is* that record. What it forbids is reading
+            // `currency_rates` at display time, which is why BookingPresenter
+            // passes these two down explicitly.
+            'name' => 'currency',
+            'type' => 'char',
+            'length' => 3,
+            'charset' => 'ascii',
+            // Every row written before this column existed genuinely was in
+            // Canadian dollars, so the default is not a guess -- it is the
+            // truth about those rows.
+            'default' => 'CAD',
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => 'The currency the buyer was quoted in, and the one the booking is read in',
+        ],
+        [
+            'name' => 'currency_rate',
+            'type' => 'decimal',
+            'length' => '14,6',
+            // And their rate against the dollar was 1.
+            'default' => [1],
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => 'Units of `currency` per 1 CAD at the moment of purchase',
+        ],
+        [
             'name' => 'card_brand',
             'type' => 'varchar',
             'length' => 16,

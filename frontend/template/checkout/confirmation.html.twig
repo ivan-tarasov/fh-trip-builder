@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {% extends 'layout.html.twig' %}
 
 {% block title %}Booking confirmed{% endblock %}
@@ -80,7 +81,7 @@
                     </div>
                     <div class="order__price-row order__price-row--total">
                         <dt>Charged</dt>
-                        <dd>${{ booking.price_total.whole }}.{{ booking.price_total.cents }}</dd>
+                        <dd>{{ money.plain(booking.price_total) }}</dd>
                     </div>
                 </dl>
 

@@ -1,0 +1,89 @@
+{# The currency the site is priced in, and a panel to change it.
+
+   This used to be a `soon` placeholder in `site.main-menu` -- a span reading
+   "CAD" that said "coming soon" to a screen reader. It is not in that menu any
+   more, and it should not go back: the map is keyed by URL and both its readers
+   use the key as an href, so an entry that must never become a link would be a
+   special case in the header and in the footer forever. This is a control, not
+   a destination.
+
+   Hand-rolled on the passenger selector's shape (search/passengers.html.twig):
+   a button owning `aria-expanded`, a panel it names with `aria-controls`,
+   hidden with the `hidden` attribute so the keyboard skips it while it is shut.
+   There is no Bootstrap dropdown anywhere in this app and this is not the place
+   to introduce the first one.
+
+   The two data attributes are how global.js learns the cookie to write and how
+   long to write it for, so src/Currency.php stays the only place either is
+   spelled -- the same contract the cookie notice uses. #}
+<div class="currency">
+    <button type="button" class="currency__trigger js-currency-trigger"
+            aria-expanded="false" aria-controls="currency-panel">
+        <i class="fas fa-globe fa-lg me-2" aria-hidden="true"></i>{{ currency.active }}
+        <span class="visually-hidden"> &mdash; change currency</span>
+    </button>
+
+    <div class="currency__panel" id="currency-panel"
+         data-cookie="{{ currency.cookie }}"
+         data-max-age="{{ currency.max_age }}"
+         hidden>
+        {# Thirty is too many to scan and too few to page, which is what a
+           filter is for. `type="search"` rather than text: it comes with a
+           clear button on the platforms that draw one, and announces itself. #}
+        <label class="visually-hidden" for="currency-filter">Search currencies</label>
+        <input class="currency__filter js-currency-filter" id="currency-filter"
+               type="search" placeholder="Search" autocomplete="off" spellcheck="false">
+
+        <ul class="currency__list js-currency-list">
+            {% for code, item in currency.list %}
+                {% set is_active = code == currency.active %}
+                <li class="currency__item">
+                    {# `data-search` is built here rather than read off the text
+                       in the browser, so matching does not depend on which
+                       elements happen to hold which words.
+
+                       Folded to ASCII first, and the map is two characters long
+                       because only two names in the whole catalogue need it:
+                       Icelandic Króna and Polish Złoty. Without it "kron" finds
+                       the Swedish, Norwegian and Danish krona and silently
+                       misses the Icelandic one -- which looks like a bug in the
+                       list rather than in the search. #}
+                    <button type="button"
+                            class="currency__option js-currency-choice{{ is_active ? ' is-active' : '' }}"
+                            data-code="{{ code }}"
+                            data-search="{{ (code ~ ' ' ~ item.name)|lower|replace({'ó': 'o', 'ł': 'l'}) }}"
+                            {% if is_active %}aria-current="true"{% endif %}>
+                        <span class="currency__code">{{ code }}</span>
+                        <span class="currency__name">{{ item.name }}</span>
+                        {# The symbol repeats what the name says, so it is
+                           decorative -- announcing "kr" after "Swedish Krona"
+                           is noise. #}
+                        <span class="currency__symbol" aria-hidden="true">{{ item.symbol }}</span>
+                        {% if is_active %}
+                            <i class="fas fa-check currency__tick" aria-hidden="true"></i>
+                            <span class="visually-hidden"> (selected)</span>
+                        {% endif %}
+                    </button>
+                </li>
+            {% endfor %}
+        </ul>
+
+        {# What the numbers on the page are, and how old they are. The line the
+           whole feature is honest because of: a converted price is an estimate
+           at somebody else's rate, and this is where a reader can see whose and
+           when. `rates_date()` is lazy, so a visitor who never opens this pays
+           nothing for it.
+
+           No date means no rates have ever been fetched and the built-in ones
+           are in use. It says that rather than naming a date, because a
+           confident wrong date is worse than an admission. #}
+        {% set published = rates_date() %}
+        <p class="currency__source">
+            {% if published %}
+                European Central Bank rates, {{ published|date('j F Y') }}
+            {% else %}
+                Built-in reference rates
+            {% endif %}
+        </p>
+    </div>
+</div>
