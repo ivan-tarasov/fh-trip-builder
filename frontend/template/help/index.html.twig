@@ -4,11 +4,17 @@
 
 {% block description %}Baggage, refunds, tickets, passenger details and flying with children — what this site decides, what the fare decides, and what the airline decides.{% endblock %}
 
+{# Paired with `'hero': true` below. The hub gets the band its five articles
+   get, because it is the way in to them: without it, following a card from
+   here changes the shape of the page rather than its contents. #}
+{% block hero %}yes{% endblock %}
+
 {% block content %}
 {% embed 'partials/article.html.twig' with {
     'title': 'Help',
     'icon': 'fa-circle-question',
-    'lead': 'Five things people ask before they book and after. Most answers come down to the same split: the fare decides what a ticket allows, and the airline decides what happens at the airport.'
+    'lead': 'Five things people ask before they book and after. Most answers come down to the same split: the fare decides what a ticket allows, and the airline decides what happens at the airport.',
+    'hero': true
 } %}
     {# A card each rather than a list of links: the summary is the half that
        tells somebody which of five pages they want, and a footer-style list of

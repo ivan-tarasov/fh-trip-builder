@@ -16,10 +16,29 @@
 {# Empty or not: a trail is never one crumb, since anything with a name also
    has Home above it. The old `> 1` read as guarding a case that cannot arise. #}
 {% if trail is not empty %}
-    <nav class="breadcrumbs" aria-label="Breadcrumb">
+    {# Two options, both for a trail drawn inside a page's own band rather than
+       in the strip below the header.
+
+       `on_dark` swaps the colours: the ones here are mixed for a light
+       surface, and the palette carries a set for the other case --
+       --ink-on-dark and friends -- measured against --brand-ink for this.
+
+       `hide_current` drops the last crumb, because the heading directly below
+       a band already says it: "Home > Help > Baggage" above a title reading
+       "Baggage" states the page twice. What is left is the path to the page
+       rather than the page, which is the job the reference gives an "all
+       articles" eyebrow -- and CSS puts a separator after it so the trail
+       points into the heading instead of stopping short.
+
+       The structured data below is built from the whole trail either way. It
+       describes the page's position to a crawler, and that does not change
+       because the last step is drawn as a heading instead of a crumb. #}
+    {% set shown = hide_current|default(false) ? trail|filter(crumb => not crumb.current) : trail %}
+
+    <nav class="breadcrumbs{{ on_dark|default(false) ? ' breadcrumbs--on-dark' : '' }}{{ hide_current|default(false) ? ' breadcrumbs--to-heading' : '' }}" aria-label="Breadcrumb">
         <div class="container">
             <ol class="breadcrumbs__list">
-                {% for crumb in trail %}
+                {% for crumb in shown %}
                     <li class="breadcrumbs__item{{ crumb.current ? ' breadcrumbs__item--current' : '' }}"
                         {{ crumb.current ? 'aria-current="page"' : '' }}>
                         {% if crumb.url %}

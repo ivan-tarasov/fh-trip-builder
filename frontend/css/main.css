@@ -5020,6 +5020,49 @@ body:has(main.article) .breadcrumbs__list {
 
 /* The page you are on is not a link, and reads a step darker so the trail has
    an end rather than trailing off. */
+/* The trail inside an article's band. Same markup, a ground it was not mixed
+   for -- so the colours come from the palette's on-dark set, which exists with
+   its ratios measured against --brand-ink for exactly this case. */
+.breadcrumbs--on-dark .breadcrumbs__list {
+  justify-content: center;
+}
+
+.breadcrumbs--on-dark .breadcrumbs__item,
+.breadcrumbs--on-dark .breadcrumbs__link {
+  color: var(--ink-on-dark);
+}
+
+/* The same weight as the crumbs themselves, not the rule-coloured whisper the
+   light trail uses. --line-on-dark is 1.44:1 on this ground, which is a hairline
+   between panels and disappears as a glyph -- and here the separators are load
+   bearing: the trail stops before the page, so the last one is what points into
+   the heading. --ink-on-dark is 7.52:1 and makes "Home > Help >" read as one
+   piece of signposting rather than two words that happen to be near each
+   other. */
+.breadcrumbs--on-dark .breadcrumbs__item + .breadcrumbs__item::before,
+.breadcrumbs--on-dark.breadcrumbs--to-heading .breadcrumbs__item:last-child::after {
+  color: var(--ink-on-dark);
+}
+
+/* A separator after the last crumb, where the trail stops one step short of
+   the page because the heading below states it. Without this the path reads
+   as ending at its parent rather than continuing into the title. */
+.breadcrumbs--to-heading .breadcrumbs__item:last-child::after {
+  content: '\203A';
+  margin-left: .5rem;
+  /* Colour comes from the on-dark rule above, which this shares. */
+}
+
+.breadcrumbs--on-dark .breadcrumbs__item--current {
+  color: var(--ink-on-dark-lead);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .breadcrumbs--on-dark .breadcrumbs__link:hover {
+    color: #fff;
+  }
+}
+
 .breadcrumbs__item--current {
   color: var(--ink-secondary);
   font-weight: 600;
@@ -6419,6 +6462,85 @@ body:has(.cookie-notice) .to-top { display: none; }
    for no reason anybody could have given -- and once every page title on the
    site came from one of these three rules, the odd 2px was the last thing
    between them and one scale. */
+/* The band an article opens with, on help and legal.
+
+   The header's own colour, not a lighter one: the two are meant to read as a
+   single block that the sheet punches out of, which is how the reference this
+   follows works -- its header is the same blue as its hero. A distinguishable
+   band would put a seam under the header and turn one shape into two.
+
+   Named `article__hero` and not `hero` on purpose. main.css:3543 makes the
+   header sticky on any page containing `.hero`, matched on the element rather
+   than on a class a page would have to carry, so taking that name would
+   silently change the header's behaviour here. `:has(.hero)` is a class
+   selector and not a prefix, so this does not match it -- the same reason
+   `.hero-cards` does not. */
+.article--hero {
+  /* The band supplies the space the sheet used to leave for itself. */
+  padding-top: 0;
+}
+
+.article__hero {
+  /* On top of the trail's own 1.25rem, so the path clears the header rather
+     than sitting under it. The band is one block with the header, which is
+     the whole point of it -- and two things in one block still need space
+     between them. */
+  padding-top: 1.75rem;
+  /* This is not the gap under the title. Two numbers decide that: the sheet
+     rises by the negative margin below, so what a reader sees between the
+     title and the sheet's top edge is this *less* that. Change one and the
+     other has to move or the gap does. */
+  padding-bottom: 12.5rem;
+  background-color: var(--brand-ink);
+  text-align: center;
+}
+
+.article__hero .article__title {
+  /* Still the sheet's flex row, with nothing beside the title to lay out --
+     centred rather than stacked now that the band carries no icon. */
+  justify-content: center;
+  /* Wide enough for the longest title on one line -- "Changing passenger
+     details", 26 characters -- and narrow enough that a longer one wraps
+     instead of spanning the full container. */
+  max-width: 26ch;
+  margin: .5rem auto 0;
+  color: #fff;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  line-height: 1.15;
+  /* Two balanced lines rather than a long one and an orphan, where it wraps.
+     Ignored by browsers that do not know it, which lose nothing. */
+  text-wrap: balance;
+}
+
+.article__hero .article__title-icon {
+  /* --cat-blue measures 3.11:1 on this ground, which is the floor for
+     something decorative and looks it. The tint is 13.62:1 and keeps the
+     accent rather than going grey. */
+  color: var(--brand-tint);
+  font-size: 1.75rem;
+}
+
+/* The sheet, starting inside the band and finishing outside it. Follows
+   .hero-cards, the one other overlap in this file: a margin rather than a
+   position, so the reading order is still band then sheet, and a z-index so
+   the overlap is paint-order-independent. */
+.article--hero .article__layout {
+  position: relative;
+  z-index: 1;
+  /* Deep enough that the band runs past the lead entirely and finishes level
+     with the prose below it. Shallower and the navy ends on the sheet's own
+     top padding, which reads as the sheet starting below the band rather than
+     inside it -- an overlap has to cross something to be one. */
+  margin-top: -9rem;
+}
+
+@media (max-width: 47.9375em) {
+  /* Less of both. The band is already taller once the title wraps, and a
+     deep overlap on a narrow screen buries the title it sits under. */
+  .article__hero { padding-top: 1rem; padding-bottom: 9.5rem; }
+  .article--hero .article__layout { margin-top: -6.5rem; }
+}
+
 .article__title {
   display: flex;
   /* Baseline, not centre: "Changing passenger details" wraps to two lines below
