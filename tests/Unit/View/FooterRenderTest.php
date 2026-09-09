@@ -492,6 +492,51 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
+     * Every way into the footer by keyboard shows where you are.
+     *
+     * The footer is the densest keyboard surface on the site -- 73 tab stops on
+     * the homepage, 70 of them links -- and for a long time exactly one of them
+     * had a focus ring: the subscribe input. The other 72 fell back to whatever
+     * the browser draws, over a navy band, while ten other components in this
+     * stylesheet have a ring designed for them.
+     *
+     * Asserted against the stylesheet rather than the render, the way
+     * ReadmeTest checks its heading rules: what can be read off the page is the
+     * markup, and the thing that broke here was the CSS.
+     *
+     * The colour matters as much as the rule. --brand-accent is a dark teal and
+     * the band is a dark blue; --ink-on-dark-lead is the 11.98-contrast ink the
+     * footer already used for the one ring it had.
+     */
+    public function testEveryFocusableThingInTheFooterHasARing(): void
+    {
+        $css = (string) file_get_contents(__DIR__ . '/../../../frontend/css/main.css');
+
+        foreach (['a', 'button', 'input'] as $element) {
+            self::assertStringContainsString(
+                '.footer ' . $element . ':focus-visible',
+                $css,
+                'footer <' . $element . '> has no focus ring',
+            );
+        }
+
+        self::assertMatchesRegularExpression(
+            '/\.footer a:focus-visible,\s*\.footer button:focus-visible,\s*\.footer input:focus-visible \{'
+            . '\s*outline: 2px solid var\(--ink-on-dark-lead\);/',
+            $css,
+            'the footer ring should use the on-dark ink, not the light-page accent',
+        );
+
+        // The back-to-top button is fixed over the page rather than in the
+        // band, so it takes the other colour -- and it is easy to sweep into
+        // the footer rule by accident, where it would be invisible.
+        self::assertMatchesRegularExpression(
+            '/\.to-top:focus-visible \{\s*outline: 2px solid var\(--brand-accent\);/',
+            $css,
+        );
+    }
+
+    /**
      * A new tab must not be handed a reference back to this one.
      */
     public function testExternalLinksCannotReachBack(): void
