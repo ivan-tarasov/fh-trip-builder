@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
+use TripBuilder\ArticleRating;
 use TripBuilder\CabinClass;
+use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Money;
+use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Service\FlightFinder;
+use TripBuilder\Voter;
 
 class AjaxController extends AbstractController
 {
@@ -20,6 +24,9 @@ class AjaxController extends AbstractController
 
     /** Where a form post leaves its answer for the page it is sent back to. */
     private const string SUBSCRIBE_NOTICE = 'subscribe_notice';
+
+    /** The same, for a vote cast with no scripting. */
+    private const string VOTE_NOTICE = 'article_vote_notice';
 
     private array $get;
 
@@ -328,6 +335,120 @@ class AjaxController extends AbstractController
     }
 
     /**
+     * Record whether an article helped, from the thumbs on a help page.
+     *
+     * Reachable two ways, like /ajax/subscribe and for the same reason: the
+     * page's script sends fetch and asks for JSON, and with scripting off the
+     * same form posts itself and the browser wants a page back.
+     *
+     * Nothing here trusts the form. The slug has to be one we publish, the
+     * verdict has to be one of two numbers, and the voter is a cookie this
+     * endpoint mints rather than anything the request can name -- otherwise a
+     * posted `voter` field would let one person vote as many times as they can
+     * invent tokens.
+     */
+    public function articleVote(): void
+    {
+        $asJson = str_contains((string) $this->request->header('Accept'), 'application/json');
+
+        if ($failure = $this->guardFailure()) {
+            [$code, $message] = $failure;
+            $this->answerVote($asJson, $code, ['status' => 'error', 'message' => $message], 'bad');
+
+            return;
+        }
+
+        $slug = $this->request->body->str('slug');
+
+        // An exact key in the catalogue, on Currency::tryFrom()'s reasoning: a
+        // slug is whatever was posted, so `Baggage` is somebody editing the
+        // form by hand. Without this the table fills with votes for articles
+        // that do not exist, and `varchar(64)` would take most of them.
+        if (!array_key_exists($slug, (array) Config::get('help.articles', []))) {
+            $this->answerVote($asJson, 422, [
+                'status' => 'error',
+                'message' => 'That is not an article we have.',
+            ], 'bad');
+
+            return;
+        }
+
+        // -1 for missing, not a number, or anything but 0 and 1. filter_var
+        // does that inside intWithin, which matters: a plain (int) cast would
+        // turn "yes" into 0 and record an unreadable answer as a thumbs down.
+        $helpful = $this->request->body->intWithin('helpful', -1, 0, 1);
+
+        if ($helpful < 0) {
+            $this->answerVote($asJson, 422, [
+                'status' => 'error',
+                'message' => 'Say whether it helped or it did not.',
+            ], 'bad');
+
+            return;
+        }
+
+        try {
+            $repository = new ArticleVoteRepository($this->connection());
+            // Minted here and nowhere else, so reading an article tags nobody.
+            $repository->record($slug, Voter::identify($this->request->isSecure()), $helpful === 1);
+            $tally = $repository->tallyFor($slug);
+        } catch (Throwable $e) {
+            // The reason goes to the log, not to the page, as with subscribe:
+            // a visitor cannot act on it and a database error is not theirs.
+            error_log('Article vote failed: ' . $e->getMessage());
+            $this->answerVote($asJson, 500, [
+                'status' => 'error',
+                'message' => 'That did not work. Try again in a moment.',
+            ], 'bad');
+
+            return;
+        }
+
+        $this->answerVote($asJson, 200, [
+            'status' => 'ok',
+            'helpful' => $helpful === 1,
+            'votes' => $tally['votes'],
+            'yes' => $tally['helpful'],
+            // Whether the page may print the figures yet. Decided here so the
+            // browser and a no-script render cannot disagree about it.
+            'shown' => ArticleRating::worthShowing($tally['votes']),
+            // No undertaking to act on it. There is nobody here to read a
+            // thumbs-down, and saying otherwise would be the kind of promise
+            // PromisesTest exists to keep out of this app.
+            'message' => $helpful === 1 ? 'Thanks. Glad it helped.' : 'Thanks. Noted that it did not.',
+        ], $helpful === 1 ? 'good' : 'quiet');
+    }
+
+    /**
+     * JSON to a script, the page back to a browser.
+     *
+     * The same fork as answerSubscribe() with its own session key and anchor.
+     * Left as two short methods rather than one with six arguments; what must
+     * not be duplicated is returnTo(), and it is not.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function answerVote(bool $asJson, int $code, array $payload, string $tone): void
+    {
+        if ($asJson) {
+            header('Content-type: application/json; charset=utf-8');
+            http_response_code($code);
+            echo json_encode($payload);
+
+            return;
+        }
+
+        $_SESSION[self::VOTE_NOTICE] = [
+            'tone' => $tone,
+            'message' => (string) $payload['message'],
+        ];
+
+        // Back to the article, at the block that was just used, and a 303 so
+        // the back button does not offer to send the vote again.
+        $this->bounce($this->returnTo() . '#article-verdict', 303);
+    }
+
+    /**
      * JSON to a script, the page back to a browser.
      *
      * @param array<string, mixed> $payload
@@ -352,7 +473,7 @@ class AjaxController extends AbstractController
 
         // Redirect rather than render: a POST left in history is a POST the
         // browser offers to send again on every back button.
-        $this->bounce($this->subscribeReturn() . '#fare-alerts', 303);
+        $this->bounce($this->returnTo() . '#fare-alerts', 303);
     }
 
     /**
@@ -362,8 +483,12 @@ class AjaxController extends AbstractController
      * treated as hostile until it looks like one of our paths: it has to begin
      * with a single slash, which rules out `//evil.example` and any absolute
      * URL, or this endpoint would forward anybody anywhere.
+     *
+     * Shared by every form post here rather than copied per endpoint. One
+     * spelling of this check is the point: two would drift, and the comment
+     * below is what a drifted second copy would be missing.
      */
-    private function subscribeReturn(): string
+    private function returnTo(): string
     {
         $to = (string) $this->request->body->nullableStr('return_to');
 
