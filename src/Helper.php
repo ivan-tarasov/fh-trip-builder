@@ -84,6 +84,14 @@ class Helper
      * A fingerprint of the checkout's current position: HEAD's contents plus
      * the modification time of the ref it points at, so committing, switching
      * branches or checking out all invalidate the cached git info.
+     *
+     * And of the tags, because getGitInfo() reports one. Without them a
+     * `git fetch --tags` on a server whose HEAD has not moved leaves the footer
+     * naming the previous release, which is what this checkout was doing when
+     * the line below was added: the cache held v2.24.0 while `git describe`
+     * answered v2.24.1. Both paths are needed and either may be absent --
+     * `refs/tags` is a directory whose mtime moves when a tag file lands in it,
+     * and `packed-refs` is where a fetch or a `git gc` puts them instead.
      */
     private static function gitStamp(): string
     {
@@ -102,6 +110,15 @@ class Helper
             if (is_file($ref)) {
                 $stamp .= ':' . filemtime($ref);
             }
+        }
+
+        // Two stats rather than a `git` call: this runs on every request that
+        // draws a footer, and it is meant to be the cache key rather than the
+        // work. Guarded because filemtime() warns on a missing path, and
+        // phpunit.xml.dist makes a warning a failure.
+        foreach (['/.git/refs/tags', '/.git/packed-refs'] as $path) {
+            $tags = self::getRootDir() . $path;
+            $stamp .= ':' . (file_exists($tags) ? filemtime($tags) : '0');
         }
 
         return $stamp;

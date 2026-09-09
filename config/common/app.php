@@ -14,28 +14,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Software version
-    |--------------------------------------------------------------------------
-    |
-    | DEPRECATED: now application using git tag
-    |
-    | [major].[minor].[patch]
-    |
-    | major – can be incremented if there are major changes in software, like
-    |         backward-incompatible API release.
-    | minor – incremented if backward compatible APIs are introduced.
-    | patch – incremented after a bug fix.
-    |
-    */
-
-    'version' => [
-        'major' => 2,
-        'minor' => 0,
-        'patch' => 10,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Software release year
     |--------------------------------------------------------------------------
     |

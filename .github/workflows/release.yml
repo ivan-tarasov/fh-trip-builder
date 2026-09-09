@@ -1,9 +1,23 @@
 name: Release
 
 # Tags and publishes a release when a pull request is merged into develop.
-# The bump comes from a label on the PR — release:major / release:minor /
-# release:patch, defaulting to patch — so commit messages stay prose.
-# Add the `no-release` label to merge without cutting a release.
+#
+# The version is the calendar: vYYYY.M.COUNT, where the year and month are read
+# from the merge commit's own date in UTC and COUNT says which release of that
+# month this is, counting from 1. Nothing carries and nothing resets — a new
+# month simply matches no tags and starts again. Two things follow that look
+# like bugs otherwise: no tag ever ends in .0, and the middle number is the
+# calendar month rather than an ordinal, so a first release of 2027 falling in
+# March is v2027.3.1 and not v2027.1.1.
+#
+# Semver went because nothing installs this app as a dependency, so "will this
+# upgrade break me" had no asker — and a dated version says the more useful
+# thing about a project like this, which is when it was last alive.
+#
+# release:major / release:minor / release:patch are no longer read here: with
+# the calendar deciding, there is no bump left to choose. They stay as a way to
+# classify a pull request, and pr-labels.yml still requires exactly one.
+# `no-release` is the only label this workflow consults — it skips the job.
 
 on:
   pull_request:
@@ -35,37 +49,48 @@ jobs:
 
       - name: Work out the next version
         id: version
-        env:
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
           set -euo pipefail
 
-          case ",${LABELS}," in
-            *,release:major,*) level=major ;;
-            *,release:minor,*) level=minor ;;
-            *)                 level=patch ;;
-          esac
+          # The merge commit's own date, not the runner's clock. Two reasons:
+          # it agrees with the release notes below, which use committer dates
+          # in UTC because git records no push time; and it makes a re-run of
+          # this workflow produce the same version rather than a different one
+          # if the month has turned over in between.
+          read -r year month <<< "$(TZ=UTC git log -1 --date=format-local:'%Y %m' --pretty=%cd HEAD)"
 
-          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
-          latest=${latest:-v0.0.0}
-          IFS=. read -r major minor patch <<< "${latest#v}"
+          # 09 -> 9. Base 10 stated explicitly, because a leading zero makes
+          # the shell read the number as octal — and because git's version sort
+          # puts a padded tag *below* every unpadded one of the same month
+          # (v2026.09.5 lands under v2026.9.1), where it would be invisible to
+          # the glob below and could hand back a version already used.
+          month=$((10#$month))
 
-          case "$level" in
-            major) major=$((major + 1)); minor=0; patch=0 ;;
-            minor) minor=$((minor + 1)); patch=0 ;;
-            patch) patch=$((patch + 1)) ;;
-          esac
+          prefix="v${year}.${month}."
 
-          next="v${major}.${minor}.${patch}"
+          # This month's releases only. The digit class rather than a bare `*`
+          # so the pattern cannot be read as a prefix of something longer.
+          last=$(git tag --list "${prefix}[0-9]*" --sort=-v:refname | head -n1)
+          count=1
+          [ -n "$last" ] && count=$(( ${last##*.} + 1 ))
+
+          next="${prefix}${count}"
+
+          # The notes range is the last release *anywhere*, which on the first
+          # of a month is not the same as the last release this month. Legacy
+          # semver tags sort below every calendar one, so this keeps answering
+          # correctly across the changeover.
+          previous=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          previous=${previous:-v0.0.0}
 
           if git rev-parse -q --verify "refs/tags/${next}" >/dev/null; then
             echo "::error::Tag ${next} already exists — refusing to overwrite it."
             exit 1
           fi
 
-          echo "Bumping ${latest} -> ${next} (${level})"
+          echo "Releasing ${next} (${count} of ${year}-${month}); notes since ${previous}"
           echo "tag=${next}" >> "$GITHUB_OUTPUT"
-          echo "previous=${latest}" >> "$GITHUB_OUTPUT"
+          echo "previous=${previous}" >> "$GITHUB_OUTPUT"
 
       - name: Write the release notes
         env:
