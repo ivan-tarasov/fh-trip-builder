@@ -104,6 +104,18 @@ final class LayoutData
     }
 
     /**
+     * What to call the hidden input that carries the token.
+     *
+     * Beside the token itself so a form can name both from one place. The two
+     * that post one had written the name out, and had written two different
+     * ones -- see the note in AjaxController::guardFailure().
+     */
+    public function csrfField(): string
+    {
+        return Csrf::FIELD;
+    }
+
+    /**
      * @return array<string, string>
      * @throws Exception
      */

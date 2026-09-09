@@ -372,8 +372,14 @@ class AjaxController extends AbstractController
             return [405, 'Method not allowed'];
         }
 
-        $token = $this->request->body->nullableStr('csrf_token')
-            ?? $this->request->header('X-CSRF-Token');
+        // Csrf::FIELD and Csrf::HEADER, not the strings they happen to hold.
+        // This read used to spell both out, and the field it spelled was
+        // 'csrf_token' -- which is the *session key's* name, not the field's.
+        // So the constant said one thing, checkout obeyed it, and everything
+        // posting to /ajax obeyed something else. Nothing was broken by it;
+        // renaming the constant would have been.
+        $token = $this->request->body->nullableStr(Csrf::FIELD)
+            ?? $this->request->header(Csrf::HEADER);
 
         if (!Csrf::isValid($token)) {
             return [403, 'Invalid or missing CSRF token'];

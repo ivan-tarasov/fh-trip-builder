@@ -111,7 +111,7 @@
            fetch to put the token in a header and no way to know afterwards
            which page the visitor was on. The endpoint refuses a return_to that
            is not one of our own paths. #}
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
         <input type="hidden" name="return_to" value="{{ current_page() }}">
 
         <div class="footer__subscribe-row">

@@ -9,6 +9,7 @@ use DOMElement;
 use DOMXPath;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
+use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Routes;
 use TripBuilder\View\LayoutData;
@@ -624,6 +625,25 @@ final class FooterRenderTest extends TestCase
         // Repository is deliberately not one of them.
         preg_match('#<nav class="footer__column"[^>]*>(.*?)</nav>#s', $html, $landmark);
         self::assertStringNotContainsString('Repository', $landmark[1]);
+    }
+
+    /**
+     * The subscribe form names its token field after the constant.
+     *
+     * It used to write out `csrf_token`, which is what Csrf calls its *session
+     * key*, not its field -- so the one form in the footer that posts a token
+     * disagreed with the class that checks it. It worked only because the
+     * endpoint wrote the same wrong name out a second time.
+     */
+    public function testTheSubscribeFormNamesTheTokenFieldAfterTheConstant(): void
+    {
+        $html = $this->render('/');
+
+        self::assertStringContainsString(
+            'name="' . Csrf::FIELD . '" value="',
+            $html,
+            'the hidden token input is not named after Csrf::FIELD',
+        );
     }
 
     /**

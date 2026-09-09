@@ -119,7 +119,11 @@
                 body.append('from', from);
                 body.append('to', to);
                 body.append('class', cabin);
-                body.append('csrf_token', csrfToken());
+                // Csrf::FIELD. The header name below is mirrored from
+                // Csrf::HEADER the same way -- JavaScript cannot read a PHP
+                // constant, so these two strings are the contract, and the
+                // constants are where it is defined.
+                body.append('_csrf', csrfToken());
 
                 fetch('/ajax/day-prices', {method: 'POST', body: body})
                     .then((response) => response.ok ? response.json() : null)

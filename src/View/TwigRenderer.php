@@ -70,6 +70,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('indexable', $this->layout->indexable(...)));
         $this->twig->addFunction(new TwigFunction('in_section', $this->layout->inSection(...)));
         $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
+        $this->twig->addFunction(new TwigFunction('csrf_field', $this->layout->csrfField(...)));
         $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));
         $this->twig->addFunction(new TwigFunction('git_repo', $this->layout->gitRepo(...)));
         $this->twig->addFunction(new TwigFunction('copyright_years', $this->layout->copyrightYears(...)));
