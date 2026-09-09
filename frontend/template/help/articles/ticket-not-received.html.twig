@@ -1,18 +1,31 @@
-{# The one non-obvious fact on the site, and the reason this article exists:
-   there are no accounts here. A booking is found by session id -- see
-   BookingRepository::forSession() -- so the list is the browser's, and the
-   reference is the only part of a booking somebody carries away. #}
+{# Two facts, and this article was written knowing only one of them.
+
+   The one it knew: there are no accounts here. A booking is found by session
+   id -- see BookingRepository::forSession() -- so the list is the browser's,
+   and the reference is the only part of a booking somebody carries away.
+
+   The one it did not: no email is sent, ever. There is no mailer in this
+   project. This article had a section telling the reader their ticket "goes to
+   the address you gave at checkout" and to look in their spam folder if it had
+   not turned up -- advice for waiting on something that was never coming,
+   picked up in good faith from the confirmation page, which said the same
+   thing and no longer does.
+
+   So the honest answer to "my ticket did not arrive" is that none is sent, and
+   the rest of the article is where the booking actually is. #}
+<h2>No ticket is emailed</h2>
+<p>
+    Nothing arrives in your inbox, however long you wait, and there is no
+    spam folder worth checking. {{ config('app.name') }} is a demonstration:
+    it takes a booking, gives it a reference and keeps it, and it issues no
+    ticket and contacts no airline.
+</p>
+
 <h2>The reference is the booking</h2>
 <p>
     If you saw a booking reference on the confirmation page, the booking
-    exists. The email is a copy of it, not the ticket itself. Write the
-    reference down: it is what an airline asks for.
-</p>
-
-<h2>The email</h2>
-<p>
-    It goes to the address you gave at checkout and can take a few minutes to
-    arrive. If it has not turned up after that, look in your spam folder.
+    exists. Write it down: it is the one part of a booking you carry away from
+    the browser you made it in.
 </p>
 
 <h2>It is on this site too &mdash; in this browser</h2>
@@ -28,8 +41,9 @@
     down.
 </p>
 
-<h2>If you gave the wrong address</h2>
+<h2>The address you gave</h2>
 <p>
-    We cannot send it a second time. Contact the airline with your reference
-    and give it the right address.
+    It is stored with the booking and shown on its own page, under
+    <a href="/my/bookings">My bookings</a>, so you can see what was typed. Since
+    nothing is sent to it, a typo there costs you nothing.
 </p>
