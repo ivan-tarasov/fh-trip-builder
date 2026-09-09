@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
-use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\RouteRepository;
@@ -37,7 +37,9 @@ class SitemapController extends AbstractController
      * The pages are gathered by inclusion, not exclusion -- ENABLED_ROUTES
      * filtered through Routes::isPublic(), which is the same test the robots
      * meta tag makes. A new private route is therefore left out by default
-     * rather than needing to be remembered.
+     * rather than needing to be remembered. The families the router holds only
+     * as patterns -- places and help articles -- are enumerated from their
+     * tables instead.
      *
      * No <lastmod>, <changefreq> or <priority>. Nothing here records when a
      * city page last changed, and a lastmod of "now" on every URL is a lie a
@@ -51,6 +53,7 @@ class SitemapController extends AbstractController
         try {
             $urls = [
                 ...$this->staticPaths(),
+                ...$this->articlePaths(),
                 ...$this->cityPaths(),
                 ...$this->countryPaths(),
                 ...$this->airportPaths(),
@@ -58,9 +61,15 @@ class SitemapController extends AbstractController
                 ...$this->routePaths(),
             ];
         } catch (Throwable $e) {
-            // The static pages are worth serving even if the database is not
+            // The routed pages are worth serving even if the database is not
             // answering -- an empty sitemap would tell a crawler the site has
             // no pages, which is worse than an incomplete one.
+            //
+            // staticPaths() is the only contributor that can run here, and it
+            // has to stay that way: this is a catch handler, so anything that
+            // throws inside it throws uncaught and the crawler gets a 500
+            // instead of a short sitemap. That is why the help articles moved
+            // out of it when they became rows.
             error_log('Sitemap places failed: ' . $e->getMessage());
             $urls = $this->staticPaths();
         }
@@ -111,15 +120,15 @@ class SitemapController extends AbstractController
      * The fixed pages, taken from the route table so a new one is listed by
      * having been routed rather than by being remembered here.
      *
-     * The help articles are the exception and have to be named: they are the
-     * one family the route table holds only as a pattern, because an article is
-     * identified by its slug and there is no record to look one up in. They are
-     * read from the same config the pages themselves are, so a sixth article is
-     * listed by existing.
+     * Touches no database, which is the whole reason it exists separately:
+     * index() calls this from inside its catch handler, so it is the one
+     * contributor that must be able to run when nothing else can.
      *
-     * They belong in here rather than beside the place families because they
-     * need no database, which is what makes them worth serving when index()
-     * falls back on this method alone.
+     * The help articles used to be listed here for that same reason. They are
+     * rows now, so they are in articlePaths() with the place families, and a
+     * sitemap served while the database is down no longer names them. That is
+     * a real loss, accepted: the alternative is a second copy of the slugs
+     * kept in step by hand.
      *
      * @return list<string>
      */
@@ -130,17 +139,32 @@ class SitemapController extends AbstractController
             static fn(string $path): bool => Routes::isPublic($path),
         );
 
-        /** @var array<string, array<string, mixed>> $articles */
-        $articles = Config::get('help.articles', []);
-
-        foreach (array_keys($articles) as $slug) {
-            $paths[] = '/help/' . $slug;
-        }
-
         // Neither of these is a page. They are public and they are routed, so
         // the filter above keeps them; a sitemap listing itself and a robots
         // file is a sitemap describing its own plumbing.
         return array_values(array_diff($paths, self::NOT_PAGES));
+    }
+
+    /**
+     * One entry per help article.
+     *
+     * Named individually because the router holds this family only as a
+     * pattern -- `#^/help/[A-Za-z-]+$#` describes the shape of an article's
+     * address and cannot enumerate which ones exist. Read from the same table
+     * the pages themselves read, so a sixth article is listed by existing and
+     * a disabled one is not listed at all.
+     *
+     * @return list<string>
+     */
+    private function articlePaths(): array
+    {
+        $paths = [];
+
+        foreach (array_keys(new ArticleRepository($this->connection())->all()) as $slug) {
+            $paths[] = '/help/' . $slug;
+        }
+
+        return $paths;
     }
 
     /**

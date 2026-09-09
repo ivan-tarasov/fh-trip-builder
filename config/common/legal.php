@@ -10,7 +10,8 @@ return [
     | that this one has been missing while it loaded two analytics vendors and
     | wrote passenger names to a table.
     |
-    | Same shape as config/common/help.php, and for the same reasons: the slug,
+    | The shape the help articles had before they became rows, and for the
+    | same reasons: the slug,
     | the title and the one-line summary are needed by the page head, the
     | footer row, the breadcrumb and the sibling links, so they are written once
     | here, and the prose lives in a template per document because prose belongs

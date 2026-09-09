@@ -368,16 +368,16 @@ return [
             // what they searched or booked. `source` sends it to
             // LayoutData::topRatedHelp().
             //
-            // The five labels that used to be written out here live in
-            // config/common/help.php now, as each article's optional `short`.
-            // They were measured for this column's width and are still needed
-            // -- two of the titles do not fit -- but they are facts about the
-            // articles, and this column is built from that list now.
+            // The five labels that used to be written out here are the
+            // `short` column on article_translations. They were measured for
+            // this column's width and are still needed -- two of the titles do
+            // not fit -- but they are facts about the articles, and this
+            // column is built from that table now.
             //
-            // Ordered by the votes on each article, with the order they are
-            // written in as the tiebreaker. On a database nobody has voted on
-            // every article is level, so the tiebreaker is what shows -- which
-            // is bags and money first, the order the list was already in.
+            // Ordered by the votes on each article, with `articles.position`
+            // as the tiebreaker. On a database nobody has voted on every
+            // article is level, so the tiebreaker is what shows -- which is
+            // bags and money first, the order the list has always been in.
             'title' => 'Help & tips',
             'source' => 'top-rated-help',
             'count' => 5,

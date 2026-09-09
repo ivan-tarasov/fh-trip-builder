@@ -14,6 +14,7 @@ use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
@@ -423,11 +424,11 @@ final class LayoutData
      * The help articles, best-regarded first.
      *
      * The one column here ranked by what readers said rather than by what they
-     * searched or booked, and the only one whose full set is known without
-     * asking the database: the articles are five entries in config, so this
-     * starts from that list and asks the table only how each one has done.
-     * An article nobody has voted on is therefore still in the column, at the
-     * bottom, rather than missing from it.
+     * searched or booked. Two reads, not one: the articles table gives the full
+     * set and the votes table only says how each one has done, so an article
+     * nobody has voted on is still in the column, at the bottom, rather than
+     * missing from it. That is the opposite of how the other five work, where
+     * absence of data means absence from the column.
      *
      * Ordered by ArticleRating::score() and not by the share who said yes,
      * because one reader saying yes would otherwise outrank forty saying so --
@@ -437,26 +438,34 @@ final class LayoutData
      */
     public function topRatedHelp(int $limit): array
     {
-        /** @var array<string, array<string, mixed>> $articles */
-        $articles = Config::get('help.articles', []);
+        try {
+            $articles = new ArticleRepository($this->connection())->all();
+        } catch (Throwable) {
+            // The column takes itself out, which is what the other five do
+            // when their query fails. This read used to be config and could
+            // not fail; now that it can, a broken database costs the column
+            // rather than the footer.
+            return [];
+        }
+
         $tally = [];
 
         try {
             $tally = new ArticleVoteRepository($this->connection())->tally();
         } catch (Throwable) {
-            // Nothing to rank by, so the order config wrote them in stands --
-            // which is what a database nobody has voted on gives anyway. A
-            // failure here takes the ranking away, not the column.
+            // Nothing to rank by, so the order the articles are stored in
+            // stands -- which is what a database nobody has voted on gives
+            // anyway. A failure here takes the ranking away, not the column.
         }
 
         $ranked = [];
         $position = 0;
 
         foreach ($articles as $slug => $article) {
-            $ranked[(string) $slug] = [
+            $ranked[$slug] = [
                 // The short name where the article has one: two of the titles
                 // are wider than this column.
-                'label' => (string) ($article['short'] ?? $article['title']),
+                'label' => $article['short'] ?? $article['title'],
                 'score' => ArticleRating::score(
                     $tally[$slug]['helpful'] ?? 0,
                     $tally[$slug]['votes'] ?? 0,
@@ -465,10 +474,10 @@ final class LayoutData
             ];
         }
 
-        // Score down, then the order they are written in. The tiebreaker is
+        // Score down, then the order the table gives them. The tiebreaker is
         // not decoration: with no votes every article scores nought, so on a
-        // fresh database it decides the whole column -- and every other
-        // ranking here carries one for the same reason.
+        // fresh database `position` decides the whole column -- and every
+        // other ranking here carries one for the same reason.
         uasort(
             $ranked,
             static fn(array $a, array $b): int

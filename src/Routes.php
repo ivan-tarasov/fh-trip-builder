@@ -141,7 +141,7 @@ class Routes
         // "baggage". No code on the end, like the route above it -- and unlike
         // it, no record behind the slug either. The slug is the whole identity,
         // so a pattern is all the router can do; which five words are real is
-        // in config/common/help.php, and HelpController's question.
+        // a row in `articles`, and HelpController's question.
         '#^/help/[A-Za-z-]+$#' => 'Help@show',
     ];
 

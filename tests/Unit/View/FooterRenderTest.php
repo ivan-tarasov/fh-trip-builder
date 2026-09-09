@@ -16,16 +16,21 @@ use TripBuilder\View\LayoutData;
 use TripBuilder\View\TwigRenderer;
 
 /**
- * The footer, which is on every page and is drawn from config.
+ * The footer, which is on every page.
  *
- * Three things here can break without anybody noticing on the page they were
- * working on. The link columns come from `site.footer-columns`, so a column
- * renamed in config and not in the partial silently disappears. The navigation
- * column is filtered by `enabled` and `footer`, and that filter exists because
- * the footer once shipped links to routes that were not routes -- a 404 on
- * every page of the site. And the whole file also carries every script tag and
- * closes the document, so a restructure that drops them takes the search form,
- * the calendar and the back-to-top button with it and leaves no error behind.
+ * Note what this suite cannot see. Every one of the six link columns is drawn
+ * from the database now -- Help & tips was the last one held in config, and it
+ * became rows with the articles -- and a column with nothing to show takes
+ * itself off the page. So there are no link columns here at all, and anything
+ * asserting about them lives in tests/Integration/View instead.
+ *
+ * What is left is still worth guarding. The navigation column is filtered by
+ * `enabled` and `footer`, and that filter exists because the footer once
+ * shipped links to routes that were not routes -- a 404 on every page of the
+ * site. The fare-alert form carries the CSRF field and the one-shot notice.
+ * And this file also carries every script tag and closes the document, so a
+ * restructure that drops them takes the search form, the calendar and the
+ * back-to-top button with it and leaves no error behind.
  */
 final class FooterRenderTest extends TestCase
 {
@@ -124,49 +129,6 @@ final class FooterRenderTest extends TestCase
         self::assertNotFalse($end, $title . ' should be followed by a list');
 
         return substr($html, $at, $end - $at);
-    }
-
-    /**
-     * A "more" link only where there is somewhere for it to go. Two of the six
-     * columns have none, for two different reasons: Help & tips leads to pages
-     * that do not exist yet, and Directions leads to real ones that no index
-     * could list -- 42,578 city pairs can be flown nonstop, so there is no
-     * /routes page and there should not be one.
-     *
-     * Counted against the columns that were actually drawn, not against every
-     * column configured: a data-driven column takes its more-link with it when
-     * it has no data, which is what happens here whenever no database is
-     * reachable.
-     */
-    public function testMoreLinksAppearOnlyWhereConfigured(): void
-    {
-        $html = $this->render('/airlines');
-
-        $drawn = 0;
-
-        foreach (Config::get('site.footer-columns') as $column) {
-            if (!isset($column['more'])) {
-                continue;
-            }
-
-            // The column exists on the page only if it had links to show.
-            if (!str_contains($html, '>' . $column['title'] . '</h2>')) {
-                continue;
-            }
-
-            $drawn++;
-            // The configured text is a format string -- "All %s airlines" --
-            // so what the page should show is what footer_more() makes of it.
-            $text = new LayoutData()->footerMore($column['more'])['text'];
-            self::assertStringContainsString('>' . $text . '</a>', $html);
-        }
-
-        self::assertGreaterThan(0, $drawn, 'at least one more-link should be drawn');
-        self::assertSame(
-            $drawn,
-            substr_count($html, 'footer__more'),
-            'every more-link drawn belongs to a column that was drawn',
-        );
     }
 
     /**
@@ -432,105 +394,6 @@ final class FooterRenderTest extends TestCase
                 '#^/route/[a-z0-9]+(?:-[a-z0-9]+)*-to-[a-z0-9]+(?:-[a-z0-9]+)*$#',
                 $href,
                 $href . ' is not a canonical route address',
-            );
-        }
-    }
-
-    /**
-     * The help column uses each article's short name, not its title.
-     *
-     * Two of the five titles are wider than this column: "Refunds and
-     * exchanges" measured 170px against the 166 it has, and "Changing
-     * passenger details" is two lines. Those labels used to be written out in
-     * site.php and moved to help.php as `short` when the column stopped being
-     * a hand-written list -- so this asserts the measurement survived the move,
-     * which is the thing that would have quietly regressed.
-     */
-    public function testTheHelpColumnUsesTheShortNamesAndNotTheTitles(): void
-    {
-        $html = $this->render('/');
-
-        // The plain form: render() decodes entities on purpose, and its own
-        // comment warns that asserting `&amp;` here would be testing Twig's
-        // escaping rather than the label.
-        self::assertStringContainsString('Refunds & exchanges', $html);
-        self::assertStringNotContainsString('Refunds and exchanges', $html);
-
-        self::assertStringContainsString('>Passenger details<', $html);
-        self::assertStringNotContainsString('Changing passenger details', $html);
-    }
-
-    /**
-     * With nothing to rank by, the order config wrote them in stands.
-     *
-     * Not a fallback nobody hits: there is no seeder for article_votes, so
-     * every article scores nought until a reader clicks, and this is what the
-     * column looks like on a fresh install. The unit suite has no database, so
-     * this is also the path a failed query takes -- both land here, which is
-     * the point.
-     */
-    public function testWithNoVotesTheHelpColumnKeepsTheOrderConfigWroteIt(): void
-    {
-        $links = new LayoutData()->topRatedHelp(5);
-
-        /** @var array<string, array<string, mixed>> $articles */
-        $articles = Config::get('help.articles', []);
-        $expected = [];
-
-        foreach ($articles as $slug => $article) {
-            $expected[] = '/help/' . $slug;
-        }
-
-        self::assertSame($expected, array_values($links), 'config order is the tiebreaker');
-    }
-
-    /**
-     * An article nobody has voted on is still in the column.
-     *
-     * The set comes from config and the votes only rank it, so a new article
-     * appears the day it is written rather than the day somebody rates it.
-     */
-    public function testEveryArticleIsOfferedWhateverTheVotesSay(): void
-    {
-        $links = new LayoutData()->topRatedHelp(5);
-
-        self::assertCount(count(Config::get('help.articles', [])), $links);
-    }
-
-    /**
-     * The help column, which was the reason the exemption above existed.
-     *
-     * Five links on every page of the site, answering 404 on every one of them,
-     * for as long as the footer has been written. They resolve now, and each is
-     * checked against the article index as well as against the router: the
-     * pattern would pass `/help/anything`, and what makes a slug real is being
-     * one of the five words in config/common/help.php.
-     */
-    public function testEveryHelpLinkResolves(): void
-    {
-        $html = $this->render('/');
-
-        preg_match_all('#href="(/help[^"]*)"#', $html, $links);
-
-        self::assertNotEmpty($links[1], 'the help column should have links');
-
-        /** @var array<string, array<string, mixed>> $articles */
-        $articles = Config::get('help.articles', []);
-
-        foreach (array_unique($links[1]) as $href) {
-            self::assertNotNull(
-                Routes::resolve($href),
-                $href . ' is linked in the footer but is not a route',
-            );
-
-            if ($href === '/help') {
-                continue;
-            }
-
-            self::assertArrayHasKey(
-                substr($href, strlen('/help/')),
-                $articles,
-                $href . ' is linked in the footer but names no article',
             );
         }
     }

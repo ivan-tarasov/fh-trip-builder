@@ -20,7 +20,7 @@ final class RoutesTest extends TestCase
      * The hub is an exact route and the articles are a pattern.
      *
      * The pattern is the loose half, and it is loose deliberately: what makes a
-     * slug real is being a key in config/common/help.php, which is
+     * slug real is being a row in `articles`, which is
      * HelpController's question and not the router's. So the router says yes to
      * a word here and the page still answers 404.
      */

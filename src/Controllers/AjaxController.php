@@ -7,9 +7,9 @@ namespace TripBuilder\Controllers;
 use Throwable;
 use TripBuilder\ArticleRating;
 use TripBuilder\CabinClass;
-use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Money;
+use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\RoutePriceRepository;
@@ -364,7 +364,27 @@ class AjaxController extends AbstractController
         // slug is whatever was posted, so `Baggage` is somebody editing the
         // form by hand. Without this the table fills with votes for articles
         // that do not exist, and `varchar(64)` would take most of them.
-        if (!array_key_exists($slug, (array) Config::get('help.articles', []))) {
+        //
+        // Case-sensitive, unlike HelpController, which lower-cases and 301s.
+        // A reader following a capitalised link gets redirected to the real
+        // page; a script posting `slug=Baggage` gets refused. Deliberate.
+        //
+        // Reading the articles table means this can now fail, and a failure
+        // has to refuse rather than wave the vote through -- an allow-list
+        // that opens when the database is down is not one.
+        try {
+            $known = new ArticleRepository($this->connection())->all();
+        } catch (Throwable $e) {
+            error_log('Article vote allow-list unavailable: ' . $e->getMessage());
+            $this->answerVote($asJson, 500, [
+                'status' => 'error',
+                'message' => 'That did not work. Try again in a moment.',
+            ], 'bad');
+
+            return;
+        }
+
+        if (!array_key_exists($slug, $known)) {
             $this->answerVote($asJson, 422, [
                 'status' => 'error',
                 'message' => 'That is not an article we have.',

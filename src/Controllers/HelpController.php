@@ -6,7 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\ArticleRating;
-use TripBuilder\Config;
+use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\TwigRenderer;
@@ -15,18 +15,23 @@ use TripBuilder\Voter;
 /**
  * The help articles, and the page that lists them.
  *
- * The only family here that is not rows in a table. A city, an airline and a
- * route are all questions asked of the database; these five are answers
- * somebody wrote, and the whole controller is therefore a lookup in
- * config/common/help.php and a template.
+ * This used to be the only family here that was not rows in a table -- a
+ * lookup in config/common/help.php and a template. The articles are rows now,
+ * for reasons an array could not serve: a translation is a row keyed by
+ * language, an editor needs somewhere to write, and "last updated" is a fact a
+ * config file cannot state honestly.
  *
- * It used to be true that nothing in here caught a database error, because
- * there was no query to fail. An article now carries the votes readers have
- * given it, so there is one -- and it is guarded rather than allowed to break
- * the page, on the reasoning LayoutData's footer readers give: the prose is
- * what the visitor came for, and a rating block with no figures is a smaller
- * loss than no article. The other thing that can fail is a slug naming no
- * article, which is a 404 and not an error.
+ * What is left in a file is the prose, one template per slug, which
+ * help/view.html.twig still includes by name. So there are two catalogues
+ * until that moves as well, and a row without a matching template renders the
+ * catch block below rather than a page -- which is what
+ * ArticleTemplatesTest exists to stop.
+ *
+ * Two queries can fail here and both are guarded rather than allowed to break
+ * the page: the article list, without which there is nothing to show and the
+ * answer is a 404, and the vote tally, where a rating block with no figures is
+ * a smaller loss than no article. The third thing that can go wrong is a slug
+ * naming no article, which is also a 404 and not an error.
  */
 class HelpController extends AbstractController
 {
@@ -41,14 +46,14 @@ class HelpController extends AbstractController
     public function index(): void
     {
         echo new TwigRenderer()->renderPage('help/index.html.twig', [
-            'articles' => self::addressable(self::articles()),
+            'articles' => self::addressable($this->articles()),
         ]);
     }
 
     public function show(): void
     {
         $slug = $this->slug();
-        $articles = self::articles();
+        $articles = $this->articles();
         $canonical = mb_strtolower($slug);
 
         if (!isset($articles[$canonical])) {
@@ -143,12 +148,20 @@ class HelpController extends AbstractController
      *
      * @return array<string, array<string, mixed>>
      */
-    private static function articles(): array
+    private function articles(): array
     {
-        /** @var array<string, array<string, mixed>> $articles */
-        $articles = Config::get('help.articles', []);
+        try {
+            return new ArticleRepository($this->connection())->all();
+        } catch (Throwable $e) {
+            // No list means no article and no hub, so this is not the kind of
+            // failure the page can absorb the way it absorbs a missing vote
+            // count. Logged and returned empty, which both callers read as
+            // "no such article" and answer 404 -- an honest answer, where a
+            // stack trace would not be.
+            error_log('Help articles unavailable: ' . $e->getMessage());
 
-        return $articles;
+            return [];
+        }
     }
 
     /**

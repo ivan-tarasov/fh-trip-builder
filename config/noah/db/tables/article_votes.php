@@ -43,10 +43,12 @@ return [
     | its tiebreaker, exactly as the other five columns do before anybody has
     | used the site.
     |
-    | `slug` and not an article id, because articles have neither. They are
-    | identified by the key they carry in config/common/help.php, which is also
-    | their URL. That is the identifier that survives articles becoming database
-    | rows later: the votes join on it with nothing to migrate.
+    | `slug` and not an article id. It was chosen when articles were entries in
+    | config/common/help.php and had no id to borrow, on the reasoning that a
+    | slug is also the URL and would therefore survive them becoming rows. They
+    | have, and it did: `articles` is keyed on slug too, so these votes join
+    | onto it and nothing had to be migrated. Adding an integer id now would
+    | mean rewriting every row here.
     |
     | `voter` is the `tb_voter` cookie, minted only when somebody actually votes
     | -- see src/Voter.php, including what it does not defend against. There are
@@ -70,7 +72,7 @@ return [
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
-            'comment' => 'A key into help.articles, and the article URL',
+            'comment' => 'A key into articles.slug, and the article URL',
         ],
         [
             'name' => 'voter',

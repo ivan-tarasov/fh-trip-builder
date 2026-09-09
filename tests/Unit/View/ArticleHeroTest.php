@@ -162,7 +162,11 @@ final class ArticleHeroTest extends TestCase
         $html = $this->page('/help/baggage');
 
         self::assertMatchesRegularExpression('#<script type="application/ld\+json">#', $html);
-        self::assertStringContainsString('"Baggage"', $html, 'the crawler is still told the page');
+        self::assertStringContainsString(
+            '"' . self::articles()['baggage']['title'] . '"',
+            $html,
+            'the crawler is still told the page',
+        );
     }
 
     /**
@@ -253,6 +257,34 @@ final class ArticleHeroTest extends TestCase
     }
 
     /**
+     * Two articles, invented.
+     *
+     * This test is about the band, not about what the articles say, and
+     * articles are rows now — so it supplies its own rather than reaching for
+     * a database it does not need. The slugs are real because the prose is
+     * still a template per slug and `/help/baggage` has to render one.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private static function articles(): array
+    {
+        return [
+            'baggage' => [
+                'title' => 'Fixture: bags',
+                'short' => null,
+                'icon' => 'fa-suitcase-rolling',
+                'summary' => 'A fixture sentence, so the lead has something to be.',
+            ],
+            'refunds' => [
+                'title' => 'Fixture: refunds',
+                'short' => null,
+                'icon' => 'fa-rotate-left',
+                'summary' => 'A second fixture sentence, so the aside has a sibling.',
+            ],
+        ];
+    }
+
+    /**
      * The band's contents, from `<div class="article__hero">` to its close.
      */
     private function band(string $html): string
@@ -299,8 +331,7 @@ final class ArticleHeroTest extends TestCase
         }
 
         if ($path === '/help') {
-            /** @var array<string, array<string, mixed>> $articles */
-            $articles = Config::get('help.articles', []);
+            $articles = self::articles();
             $listed = [];
 
             foreach ($articles as $slug => $article) {
@@ -315,8 +346,7 @@ final class ArticleHeroTest extends TestCase
 
         if (str_starts_with($path, '/help/')) {
             $slug = substr($path, strlen('/help/'));
-            /** @var array<string, array<string, mixed>> $articles */
-            $articles = Config::get('help.articles', []);
+            $articles = self::articles();
             $more = [];
 
             foreach (array_diff_key($articles, [$slug => null]) as $other => $article) {

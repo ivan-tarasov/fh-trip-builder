@@ -17,7 +17,7 @@ use TripBuilder\View\TwigRenderer;
  *
  * The only page family here that is prose rather than rows, which changes what
  * can go wrong with it. There is no query to fail; what fails is an article
- * added to config/common/help.php with no template beside it, or a link in the
+ * added to the `articles` table with no template beside it, or a link in the
  * prose to a page that does not exist. Both would reach a reader as a working
  * page -- the first as "Something went wrong", the second as a 404 one click
  * away -- and neither would fail anything else in this suite.
@@ -36,13 +36,58 @@ final class HelpRenderTest extends TestCase
         $_SESSION = [];
     }
 
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * A catalogue this test owns, naming the real slugs.
+     *
+     * Articles are rows now, and a data provider is static and runs before
+     * setUp() does, so it cannot open a database connection. Rather than give
+     * this suite one, the catalogue is a fixture: the *slugs* are real, because
+     * the prose is still a template per slug and the point of several tests
+     * below is that the template exists and renders; the titles and summaries
+     * are invented, because no test here should fail when somebody edits a
+     * sentence.
+     *
+     * What is no longer proved here is that the five real articles render.
+     * That is ArticleCatalogueTest's job, with a database. Same split the vote
+     * and rates work settled on, and the better shape regardless: a unit test
+     * that renders a page should not also be asserting what is written on it.
+     *
+     * @return array<string, array<string, mixed>>
+     */
     private static function articles(): array
     {
-        /** @var array<string, array<string, mixed>> $articles */
-        $articles = Config::get('help.articles', []);
-
-        return $articles;
+        return [
+            'baggage' => [
+                'title' => 'Fixture: bags',
+                'short' => null,
+                'icon' => 'fa-suitcase-rolling',
+                'summary' => 'A fixture sentence standing in for the baggage summary.',
+            ],
+            'refunds' => [
+                'title' => 'Fixture: refunds and exchanges',
+                'short' => 'Fixture: refunds',
+                'icon' => 'fa-rotate-left',
+                'summary' => 'A fixture sentence standing in for the refunds summary.',
+            ],
+            'ticket-not-received' => [
+                'title' => 'Fixture: ticket did not arrive',
+                'short' => null,
+                'icon' => 'fa-envelope',
+                'summary' => 'A fixture sentence standing in for the ticket summary.',
+            ],
+            'passenger-details' => [
+                'title' => 'Fixture: changing passenger details',
+                'short' => 'Fixture: passenger details',
+                'icon' => 'fa-passport',
+                'summary' => 'A fixture sentence standing in for the passenger summary.',
+            ],
+            'flying-with-children' => [
+                'title' => 'Fixture: flying with children',
+                'short' => null,
+                'icon' => 'fa-child',
+                'summary' => 'A fixture sentence standing in for the children summary.',
+            ],
+        ];
     }
 
     /**
@@ -314,17 +359,12 @@ final class HelpRenderTest extends TestCase
     }
 
     /**
-     * One case per article in the index.
-     *
-     * Config is loaded here as well as in setUp(): a data provider is static
-     * and runs before the first test does, so the index is not read yet.
+     * One case per article in the fixture catalogue.
      *
      * @return list<array{string}>
      */
     public static function articleProvider(): array
     {
-        new Config('common');
-
         return array_map(static fn(string $slug): array => [$slug], array_keys(self::articles()));
     }
 
