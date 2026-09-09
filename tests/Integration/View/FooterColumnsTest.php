@@ -20,6 +20,13 @@ use TripBuilder\View\TwigRenderer;
  * with no rows takes itself off the page -- so without a database the footer
  * renders one column and there is nothing to compare. The suite that renders
  * the footer fastest is exactly the suite that cannot see this.
+ *
+ * Which cuts both ways, and cost this test a round of CI: a column can be
+ * absent because something broke, or because the signal behind it has honestly
+ * never been written to. `search` is empty on a freshly installed database --
+ * searches are recorded by use, not by seeding -- so the routes column is
+ * missing there by design. Asserting all six are present was asserting that
+ * somebody had used the site.
  */
 final class FooterColumnsTest extends IntegrationTestCase
 {
@@ -36,13 +43,20 @@ final class FooterColumnsTest extends IntegrationTestCase
      * grid gives no clue when one drifts: a short column just leaves white
      * space beneath it that reads as breathing room.
      *
-     * Which is how it went wrong. A commit about keeping labels on one line
-     * also took a row off every count -- Directions from seven to six, the
-     * counted four from six to five -- and nothing failed, because nothing
-     * compared them.
+     * This does not claim it would have caught the commit that made them
+     * uneven, because it would not -- before that commit the counted columns
+     * ran to seven rows and Help & tips to six, so this test would have been
+     * failing then and passing after. It pins the state that is wanted from
+     * here: level, at whatever length.
      *
-     * Length rather than a number: six is not sacred, and moving all six
-     * together is a fine change. One of them moving alone is not.
+     * Length rather than a number, so moving all of them together stays a
+     * cheap change and moving one alone does not.
+     *
+     * On an installed database with no searches recorded, the Directions
+     * column has nothing to show and correctly takes itself off the page, so
+     * this compares the five that draw. That is not a gap to close here --
+     * FooterRenderTest::testADataDrivenColumnFollowsItsData is what checks a
+     * column's presence against its own source.
      */
     public function testTheLinkColumnsAreAllTheSameLength(): void
     {
@@ -53,22 +67,6 @@ final class FooterColumnsTest extends IntegrationTestCase
             1,
             array_unique($lengths),
             'these columns are different lengths: ' . (string) json_encode($lengths),
-        );
-    }
-
-    /**
-     * And every column configured is actually drawn.
-     *
-     * The counted ones vanish when their query returns nothing, which is right
-     * on a broken database and wrong on a working one -- a column quietly
-     * missing from a seeded install means the signal behind it found no rows.
-     */
-    public function testEveryConfiguredColumnIsDrawn(): void
-    {
-        self::assertCount(
-            count(Config::get('site.footer-columns')),
-            $this->columnLengths(),
-            'a configured column is not on the page',
         );
     }
 
