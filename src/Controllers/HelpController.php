@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
+use TripBuilder\ArticleRating;
 use TripBuilder\Config;
+use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\TwigRenderer;
+use TripBuilder\Voter;
 
 /**
  * The help articles, and the page that lists them.
@@ -17,9 +20,13 @@ use TripBuilder\View\TwigRenderer;
  * somebody wrote, and the whole controller is therefore a lookup in
  * config/common/help.php and a template.
  *
- * That is also why nothing in here catches a database error the way the place
- * controllers do -- there is no query to fail. What can fail is a slug naming
- * no article, which is a 404 and not an error.
+ * It used to be true that nothing in here caught a database error, because
+ * there was no query to fail. An article now carries the votes readers have
+ * given it, so there is one -- and it is guarded rather than allowed to break
+ * the page, on the reasoning LayoutData's footer readers give: the prose is
+ * what the visitor came for, and a rating block with no figures is a smaller
+ * loss than no article. The other thing that can fail is a slug naming no
+ * article, which is a 404 and not an error.
  */
 class HelpController extends AbstractController
 {
@@ -79,11 +86,56 @@ class HelpController extends AbstractController
                 // it offers -- and they are what stop each of these being
                 // reachable only from the footer.
                 'more' => self::addressable(array_diff_key($articles, [$slug => null])),
+                'verdict' => $this->verdict($slug),
             ]);
         } catch (Throwable $e) {
             error_log('Help page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this page. Please try again later.';
         }
+    }
+
+    /**
+     * What the rating block needs: the tally, and how this reader voted.
+     *
+     * `mine` has three values and they are three different states. Null is a
+     * reader who has not voted -- and, separately, a reader with no cookie at
+     * all, which is everybody who has never voted on anything. False is a
+     * reader who voted no, and must not be offered the buttons as though they
+     * had not.
+     *
+     * `shown` is decided here rather than in the template so that this page
+     * and the JSON the endpoint answers with cannot disagree about whether the
+     * figures may be printed.
+     *
+     * @return array{slug: string, votes: int, yes: int, shown: bool, mine: bool|null}
+     */
+    private function verdict(string $slug): array
+    {
+        $tally = ['votes' => 0, 'helpful' => 0];
+        $mine = null;
+
+        try {
+            $repository = new ArticleVoteRepository($this->connection());
+            $tally = $repository->tallyFor($slug);
+            $voter = Voter::current();
+
+            if ($voter !== null) {
+                $mine = $repository->verdictOf($slug, $voter);
+            }
+        } catch (Throwable) {
+            // Nought votes and no verdict, which the block renders as its
+            // opening state. A visitor who then votes gets a real answer or a
+            // real error from the endpoint; what they do not get is a help
+            // page that failed to load because a count did.
+        }
+
+        return [
+            'slug' => $slug,
+            'votes' => $tally['votes'],
+            'yes' => $tally['helpful'],
+            'shown' => ArticleRating::worthShowing($tally['votes']),
+            'mine' => $mine,
+        ];
     }
 
     /**

@@ -1,0 +1,62 @@
+{# Did this article help?
+
+   Two submit buttons in a real form, so it works with no scripting: the post
+   goes to /ajax/article-vote, which answers a browser with a redirect back
+   here and answers fetch with JSON. Both hidden fields are carried for the
+   same reason the subscribe form carries them -- without a script there is no
+   header to put the token in, and no other way to say which page to return to.
+
+   The chosen button stays enabled after a vote. The endpoint upserts on
+   (slug, voter), so changing your mind is supported, and a block that locked
+   itself would be hiding a thing the table can do. What marks the choice is a
+   modifier class and the line above it, not `aria-pressed` -- these are
+   submits, not toggles.
+
+   The tally is printed only when `verdict.shown` says so. Below that it is one
+   or two people, and "100% helpful" over a single vote is a claim rather than
+   a figure. #}
+{% set notice = article_vote_notice() %}
+<section class="article__verdict" id="article-verdict" aria-labelledby="article-verdict-title">
+    <div class="article__verdict-ask">
+        <h2 class="article__verdict-title" id="article-verdict-title">Did this answer it, or are you still stuck?</h2>
+
+        <p class="article__verdict-status js-vote-status" role="status" aria-live="polite"
+           {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>
+            {%- if notice -%}
+                {{ notice.message }}
+            {%- elseif verdict.mine is same as(true) -%}
+                You said this sorted it.
+            {%- elseif verdict.mine is same as(false) -%}
+                You said you were still stuck.
+            {%- endif -%}
+        </p>
+
+        {# Spelled once. The script fills the same pattern off the data
+           attribute after a vote, so the sentence a reader sees before and
+           after cannot drift apart -- the reason the cookie notice and the
+           currency switcher take their names off data attributes too. #}
+        {% set tally = '%yes% of %votes% readers found this helpful' %}
+        <p class="article__verdict-tally js-vote-tally" data-template="{{ tally }}"
+           {{- verdict.shown ? '' : ' hidden' }}>
+            {{- verdict.shown ? tally|replace({'%yes%': verdict.yes, '%votes%': verdict.votes}) : '' -}}
+        </p>
+    </div>
+
+    <form class="article__verdict-form js-article-vote" action="/ajax/article-vote" method="post">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ current_page() }}">
+        <input type="hidden" name="slug" value="{{ verdict.slug }}">
+
+        <button type="submit" name="helpful" value="1"
+                class="article__verdict-button article__verdict-button--up js-vote-yes{{ verdict.mine is same as(true) ? ' article__verdict-button--chosen' : '' }}"
+                aria-label="Yes, this answered it">
+            <i class="fas fa-thumbs-up" aria-hidden="true"></i>
+        </button>
+
+        <button type="submit" name="helpful" value="0"
+                class="article__verdict-button article__verdict-button--down js-vote-no{{ verdict.mine is same as(false) ? ' article__verdict-button--chosen' : '' }}"
+                aria-label="No, still stuck">
+            <i class="fas fa-thumbs-down" aria-hidden="true"></i>
+        </button>
+    </form>
+</section>

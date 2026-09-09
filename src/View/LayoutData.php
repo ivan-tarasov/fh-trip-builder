@@ -492,9 +492,38 @@ final class LayoutData
      */
     public function subscribeNotice(): ?array
     {
-        $notice = $_SESSION['subscribe_notice'] ?? null;
+        return self::oneShotNotice('subscribe_notice');
+    }
 
-        unset($_SESSION['subscribe_notice']);
+    /**
+     * The answer to a vote cast with no scripting, once.
+     *
+     * Registered as a Twig function and not a global, for the reason the
+     * subscribe one is: a global is evaluated on every page, so the first page
+     * the visitor happened to load would swallow the notice meant for the
+     * article they voted on.
+     *
+     * @return array{tone: string, message: string}|null
+     */
+    public function articleVoteNotice(): ?array
+    {
+        return self::oneShotNotice('article_vote_notice');
+    }
+
+    /**
+     * Read a session notice and clear it in the same breath.
+     *
+     * Shared by both callers rather than written twice. The clearing is the
+     * part worth having in one place: a notice that is read without being
+     * unset goes on announcing itself on every page until the session ends.
+     *
+     * @return array{tone: string, message: string}|null
+     */
+    private static function oneShotNotice(string $key): ?array
+    {
+        $notice = $_SESSION[$key] ?? null;
+
+        unset($_SESSION[$key]);
 
         if (!is_array($notice) || !isset($notice['tone'], $notice['message'])) {
             return null;

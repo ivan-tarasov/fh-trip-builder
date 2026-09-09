@@ -4543,6 +4543,7 @@ body:has(.hero) header#top {
 .filter-section__toggle:active,
 .filter-section__chevron-btn:active,
 .review__change:active,
+.article__verdict-button:active,
 .to-top:active {
   transform: scale(.97);
   transition: transform var(--dur-fast) var(--ease-out);
@@ -6538,6 +6539,126 @@ body:has(.cookie-notice) .to-top { display: none; }
   border-top: 1px solid var(--line);
   color: var(--ink-muted);
   font-size: .875rem;
+}
+
+/* The rating block, closing the sheet.
+
+   Two icon pills against the question, which is the shape the reference uses
+   and the shape that survives the sheet narrowing: the ask wraps, the controls
+   do not. `--verdict-control` sizes the pills from one place because "as tall
+   as each other" is a relationship, not two numbers that happen to agree
+   today -- the same reason the cookie notice declares its own. */
+.article__verdict {
+  --verdict-control: 2.5625rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2.5rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.article__verdict-ask {
+  /* Lets the column shrink instead of shoving the pills off the edge. */
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.article__verdict-title {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.article__verdict-status,
+.article__verdict-tally {
+  margin: .25rem 0 0;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+}
+
+/* Nothing said yet, so no gap where a line would be. */
+.article__verdict-status:empty { display: none; }
+
+/* On white, so these are the light-surface tones and not the footer's
+   on-dark set. */
+.article__verdict-status[data-tone="good"]  { color: var(--brand-success); }
+.article__verdict-status[data-tone="bad"]   { color: var(--brand-danger); }
+.article__verdict-status[data-tone="quiet"] { color: var(--ink-muted); }
+
+.article__verdict-form {
+  display: flex;
+  gap: .625rem;
+  /* Never the half that collapses. */
+  flex: 0 0 auto;
+}
+
+.article__verdict-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.25rem;
+  min-height: var(--verdict-control);
+  padding: .5rem 1.125rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background-color: #fff;
+  color: var(--ink-secondary);
+  font-size: 1.0625rem;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+/* Green up, red down -- the only two controls in the app whose meaning is
+   their direction, so they are the only ones that take the success and danger
+   colours for something other than an outcome.
+
+   Both get the same weight of colour, deliberately. Tinting only the thumbs-up
+   would make the pair read as one button we want pressed and one we tolerate,
+   and a rating that leans on the reader is not a rating.
+
+   Hung off --up and --down rather than the js- hooks beside them: nothing in
+   this file styles a js- class, because those name behaviour and are the ones
+   a script is free to move. */
+.article__verdict-button--up.article__verdict-button--chosen {
+  border-color: var(--success-tint-edge);
+  background-color: var(--success-tint);
+  color: var(--brand-success);
+}
+
+.article__verdict-button--down.article__verdict-button--chosen {
+  border-color: var(--danger-tint-edge);
+  background-color: var(--danger-tint);
+  color: var(--brand-danger);
+}
+
+/* After the chosen pair on purpose: they share a specificity, so this is what
+   lets a hover still answer on the button already picked -- the edge darkens
+   from the tint to the full colour and the fill stays put. */
+@media (hover: hover) and (pointer: fine) {
+  .article__verdict-button--up:hover {
+    border-color: var(--brand-success);
+    background-color: var(--success-tint);
+    color: var(--brand-success);
+  }
+
+  .article__verdict-button--down:hover {
+    border-color: var(--brand-danger);
+    background-color: var(--danger-tint);
+    color: var(--brand-danger);
+  }
+}
+
+@media (max-width: 47.9375em) {
+  /* The ask above, the pills below and full width: at this measure the two
+     halves side by side leave the question on three lines. */
+  .article__verdict { gap: 1rem; }
+  .article__verdict-ask { flex-basis: 100%; }
+  .article__verdict-form { flex: 1 1 100%; }
+  .article__verdict-button { flex: 1 1 0; }
 }
 
 .article__aside {

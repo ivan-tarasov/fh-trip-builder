@@ -22,6 +22,8 @@
        article index, so it is one of five words and not something off a URL. #}
     {% block body %}{% include 'help/articles/' ~ article.slug ~ '.html.twig' %}{% endblock %}
 
+    {% block note %}{% include 'partials/article-verdict.html.twig' %}{% endblock %}
+
     {# The other four. An article has no data of its own to link out with, so
        its siblings are what it offers -- and they are what keep each of these
        reachable from somewhere other than the footer. #}
