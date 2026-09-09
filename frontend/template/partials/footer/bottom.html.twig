@@ -54,7 +54,8 @@
     {% include 'partials/footer/column.html.twig' with {
         'id': 'nav',
         'title': 'Navigation',
-        'links': navigation
+        'links': navigation,
+        'landmark': 'Pages of ' ~ config('app.name')
     } only %}
 
     {% include 'partials/footer/column.html.twig' with {
@@ -81,8 +82,15 @@
        so renaming it to match the words above would land that redirect on a
        page with no such anchor and no message in sight. #}
     {% set notice = subscribe_notice() %}
+    {# aria-labelledby, so the form is a landmark with a name.
+
+       It has a visible <h2> and had no accessible name, which means it was not
+       exposed as a form landmark at all -- the heading was there for the eye
+       and nothing else. Pointing at the heading it already has costs one
+       attribute and an id. #}
     <form class="footer__subscribe js-subscribe" id="fare-alerts"
-          action="/ajax/subscribe" method="post" novalidate>
+          action="/ajax/subscribe" method="post" novalidate
+          aria-labelledby="subscribe-title">
         {# What this form does is keep an address. What it does not do is send
            anything to it -- there is no mailer in this project -- and the copy
            used to say otherwise three times over: a heading promising an inbox,
@@ -93,7 +101,7 @@
            comment above gives: the version before it accepted an address and
            dropped it, and `subscribers` is somewhere to put one. Collecting is
            the thing it can honestly claim, so that is what it claims. #}
-        <h2 class="footer__title">The fare-alert list</h2>
+        <h2 class="footer__title" id="subscribe-title">The fare-alert list</h2>
         <p class="footer__subscribe-text">
             Leave your address and it goes on the list. Nothing is sent yet
             &mdash; there is no mail behind this demonstration.

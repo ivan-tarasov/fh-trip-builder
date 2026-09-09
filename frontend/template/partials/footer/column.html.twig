@@ -13,7 +13,20 @@
 {% set more = more ?? null %}
 {% set external = external ?? false %}
 
-<div class="footer__column">
+{# A <nav> when the caller says the column is one, a <div> otherwise.
+
+   The element rather than role="navigation" on the div, because the two are
+   equivalent to a screen reader and the native one needs no explaining -- and
+   the swap is free here: both are block-level, both carry .footer__column, and
+   the grid above cannot tell them apart.
+
+   Only the site navigation asks for it. The six columns in the band above
+   share one landmark between them for the reason links.html.twig gives, and
+   the Repository column is four links to GitHub rather than a way around this
+   site. #}
+{% set wrapper = (landmark ?? false) ? 'nav' : 'div' %}
+
+<{{ wrapper }} class="footer__column"{% if landmark ?? false %} aria-label="{{ landmark }}"{% endif %}>
     <h2 class="footer__title" id="footer-col-{{ id }}">{{ title }}</h2>
     {# Named after its own heading. Forty links in one landmark is a lot to page
        through; this lets a screen reader announce which column it has entered
@@ -34,4 +47,4 @@
             </li>
         {% endif %}
     </ul>
-</div>
+</{{ wrapper }}>

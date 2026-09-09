@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Unit\View;
 
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
 use TripBuilder\Helper;
@@ -534,6 +537,93 @@ final class FooterRenderTest extends TestCase
             '/\.to-top:focus-visible \{\s*outline: 2px solid var\(--brand-accent\);/',
             $css,
         );
+    }
+
+    /**
+     * Every icon in the footer is decoration, and says so.
+     *
+     * They all carried aria-hidden except one -- the back-to-top chevron --
+     * which is the shape this kind of bug takes: not a decision, an omission in
+     * the one element written before the convention settled. Asserted over all
+     * of them rather than that one, because the next one will be an omission
+     * too.
+     *
+     * Ancestors count, which is why this reads the tree rather than matching
+     * tags. The first version did match tags and failed on the brand mark --
+     * whose <i> carries nothing because the <a> around it is already
+     * aria-hidden, so the icon is not announced and does not need saying twice.
+     * A test that made it say so would have been asking for noise.
+     */
+    public function testEveryIconInTheFooterIsHiddenFromAssistiveTech(): void
+    {
+        $document = new DOMDocument();
+        // The fragment is not a whole document and uses named entities; both
+        // are warnings we do not want and neither changes the tree.
+        @$document->loadHTML('<?xml encoding="utf-8"?><body>' . $this->render('/') . '</body>');
+
+        $announced = (new DOMXPath($document))
+            ->query('//i[not(ancestor-or-self::*[@aria-hidden="true"])]');
+
+        self::assertNotFalse($announced);
+        self::assertGreaterThan(0, $document->getElementsByTagName('i')->length, 'no icons to check');
+
+        $names = [];
+
+        foreach ($announced as $icon) {
+            $names[] = $icon instanceof DOMElement ? $icon->getAttribute('class') : '?';
+        }
+
+        self::assertSame([], $names, 'icons a screen reader would announce: ' . implode(', ', $names));
+    }
+
+    /**
+     * The subscribe form is a landmark, and its name is not a dangling id.
+     *
+     * It had a visible heading and no accessible name, so it was not exposed as
+     * a form landmark at all. What replaced that is a reference, and a
+     * reference can rot quietly: rename the heading's id and the form loses its
+     * name again with nothing to show for it. So this follows the pointer.
+     */
+    public function testTheSubscribeFormIsNamedByItsOwnHeading(): void
+    {
+        $html = $this->render('/');
+
+        self::assertMatchesRegularExpression(
+            '/<form[^>]*class="footer__subscribe[^"]*"[^>]*aria-labelledby="([^"]+)"/s',
+            $html,
+        );
+
+        preg_match('/<form[^>]*class="footer__subscribe[^"]*"[^>]*aria-labelledby="([^"]+)"/s', $html, $named);
+
+        self::assertStringContainsString(
+            'id="' . $named[1] . '"',
+            $html,
+            'the form is named by an id that is not on the page',
+        );
+    }
+
+    /**
+     * Two navigation landmarks in the footer: no more, and not none.
+     *
+     * The six columns share one, for the reason links.html.twig gives -- six
+     * landmarks at the bottom of every page is a lot to page through. The
+     * Navigation column is the second, because it is the only other thing down
+     * here that is a way around this site; Repository is four links to GitHub
+     * and stays a plain list on purpose.
+     */
+    public function testOnlyTheNavigationColumnIsALandmarkOfItsOwn(): void
+    {
+        $html = $this->render('/');
+
+        self::assertSame(2, substr_count($html, '<nav'), 'the footer should hold exactly two navs');
+
+        // The one around the columns, and the one that is a column.
+        self::assertStringContainsString('<nav class="footer__columns"', $html);
+        self::assertMatchesRegularExpression('/<nav class="footer__column" aria-label="[^"]+"/', $html);
+
+        // Repository is deliberately not one of them.
+        preg_match('#<nav class="footer__column"[^>]*>(.*?)</nav>#s', $html, $landmark);
+        self::assertStringNotContainsString('Repository', $landmark[1]);
     }
 
     /**
