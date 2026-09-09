@@ -607,6 +607,41 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
+     * Every "All ..." link is spelled the way the router spells that page.
+     *
+     * An exact key of ENABLED_ROUTES, not a path that merely resolves. Both
+     * forms return 200 -- Request::path() rtrims -- so `/airlines/` worked
+     * while pointing at a URL whose canonical is `/airlines` and which the
+     * sitemap publishes without the slash. Four entries had drifted into two
+     * spellings, and nothing could see it.
+     *
+     * Doubles as the cheapest possible check that these links are not 404s:
+     * a `more` URL that is not a route is a dead end offering more dead ends.
+     */
+    public function testEveryMoreLinkIsSpelledAsItsRoute(): void
+    {
+        $checked = 0;
+
+        foreach (Config::get('site.footer-columns') as $column) {
+            $url = $column['more']['url'] ?? null;
+
+            if ($url === null) {
+                continue;
+            }
+
+            self::assertArrayHasKey(
+                $url,
+                Routes::ENABLED_ROUTES,
+                $url . ' is not how the router spells that page',
+            );
+
+            $checked++;
+        }
+
+        self::assertGreaterThan(0, $checked, 'no more-links to check');
+    }
+
+    /**
      * Every link that leaves the page says so.
      *
      * Fifteen of them down here open a new tab and none of them used to

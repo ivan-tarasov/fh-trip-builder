@@ -66,8 +66,19 @@ return [
     | Where a page lives, spelled once. The router normalises a trailing slash
     | either way, so the only thing at stake is which form the app emits -- and
     | it has to be one form, or the same page renders two different actions for
-    | the same destination. Trailing slash, because that is what every link the
-    | app already publishes uses, and what is in anybody's bookmarks.
+    | the same destination.
+    |
+    | These two keep their trailing slash: both are published that way already,
+    | `search` as a GET form's action in three templates and `saved` as a link
+    | in the sections partial, and anybody's bookmarks have that spelling.
+    |
+    | It is not a site-wide rule, and this block used to claim it was. A page's
+    | identity everywhere else is the form the router normalised to, which has
+    | no slash: LayoutData::canonicalPath() returns it, the sitemap publishes it
+    | because SitemapController reads the route keys, and every page emits it as
+    | its canonical whichever spelling was asked for. The `more` links below had
+    | drifted to two spellings across four entries for want of this being
+    | written down.
     |
     */
 
@@ -334,7 +345,7 @@ return [
             'title' => 'Airports',
             'source' => 'most-searched-airports',
             'count' => 5,
-            'more' => ['text' => 'All %s airports', 'url' => '/airports/', 'total' => 'airports'],
+            'more' => ['text' => 'All %s airports', 'url' => '/airports', 'total' => 'airports'],
         ],
         [
             // Counted, not curated: `book_count` is written every time a
@@ -344,7 +355,7 @@ return [
             'title' => 'Airlines',
             'source' => 'most-booked-airlines',
             'count' => 5,
-            'more' => ['text' => 'All %s airlines', 'url' => '/airlines/', 'total' => 'airlines'],
+            'more' => ['text' => 'All %s airlines', 'url' => '/airlines', 'total' => 'airlines'],
         ],
         [
             'title' => 'Help & tips',
