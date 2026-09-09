@@ -574,9 +574,43 @@
                 ? undefined
                 : this.perAdult(prices[cell.dataset.day]);
 
-            label.textContent = price === undefined ? '' : this.settings.currency + Math.round(price);
+            label.textContent = price === undefined ? '' : this.priceText(price);
             cell.classList.toggle('is-cheap', price !== undefined && price <= bar);
         });
+    };
+
+    /**
+     * Write one amount the way its currency is written.
+     *
+     * The calendar draws its own cells, so it formats its own figures -- and
+     * `settings.currency` alone was not enough to do that with. It is a symbol
+     * and nothing else, which is fine for a dollar and wrong for a krona: SEK
+     * puts the symbol last and groups thousands with a space, so a price built
+     * as symbol-then-digits reads as a Canadian number in a Swedish hat.
+     *
+     * The amounts arriving here are already converted -- see
+     * AjaxController::dayPrices() -- so there is no rate in this file. What
+     * comes with them is how to write them, and `currency` below is whatever
+     * the response declared.
+     *
+     * Whole units only. A fare calendar is a grid of thirty rough figures and
+     * cents in every cell would be noise, which is what it did before this
+     * existed too.
+     */
+    DatePicker.prototype.priceText = function (amount) {
+        const whole = Math.round(amount);
+
+        if (!this.currency) {
+            return this.settings.currency + whole;
+        }
+
+        // Grouped, because the rest of the site groups. Before this the cell
+        // said "$1234" while the fare strip beside it said "$1,234".
+        const digits = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, this.currency.group);
+
+        return this.currency.before
+            ? this.currency.symbol + digits
+            : digits + ' ' + this.currency.symbol;
     };
 
     /**
@@ -584,9 +618,19 @@
      *
      * The grid is rebuilt rather than repainted, because a calendar that opened
      * without prices has no elements to put them in.
+     *
+     * `currency` travels with the prices rather than being set once at
+     * construction, because the two have to agree: the cookie can change
+     * between the page rendering and the response landing, and a calendar
+     * holding one currency's symbol over another's figures would be wrong in
+     * the way that is hardest to notice.
      */
-    DatePicker.prototype.setPrices = function (prices, legName) {
+    DatePicker.prototype.setPrices = function (prices, legName, currency) {
         const leg = legName ? this.legs.find((one) => one.name === legName) : null;
+
+        if (currency) {
+            this.currency = currency;
+        }
 
         if (leg) {
             leg.prices = prices;
@@ -727,7 +771,7 @@
 
         this.applyPrice.textContent = set.length === 0
             ? ''
-            : 'from ' + this.settings.currency + Math.round(total) + who;
+            : 'from ' + this.priceText(total) + who;
     };
 
     /** The lowest fare across one leg's window, or null when there is none. */

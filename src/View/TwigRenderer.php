@@ -95,6 +95,12 @@ final readonly class TwigRenderer
             'max_age' => Currency::MAX_AGE,
             'active' => $money->currency()->code,
             'list' => Currency::all(),
+            // What the browser needs to write a price itself. `rate` is for the
+            // slider, whose values stay Canadian dollars.
+            'symbol' => $money->currency()->symbol,
+            'before' => $money->currency()->symbolFirst,
+            'group' => $money->currency()->group,
+            'rate' => $money->rate(),
         ]);
 
         $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));

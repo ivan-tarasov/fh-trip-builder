@@ -172,6 +172,19 @@ final class Money
     }
 
     /**
+     * The bare converted number, for a caller that will format it itself.
+     *
+     * The calendar is the only one: it is handed a base and a tax per day and
+     * scales them for the party in the browser, so it needs figures rather than
+     * strings. Party shares are multipliers, so scaling a converted amount and
+     * converting a scaled one give the same answer.
+     */
+    public function convert(float $cad): float
+    {
+        return $cad * $this->rate;
+    }
+
+    /**
      * The amount with no minor unit at all, floored.
      *
      * The fare strips and the facts tiles quote a price to the dollar -- "from
@@ -221,6 +234,12 @@ final class Money
     public function currency(): Currency
     {
         return $this->currency;
+    }
+
+    /** For the slider, which converts a Canadian-dollar value in the browser. */
+    public function rate(): float
+    {
+        return $this->rate;
     }
 
     /**

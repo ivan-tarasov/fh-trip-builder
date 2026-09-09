@@ -63,7 +63,21 @@
     {% endif %}
 </head>
 
-<body class="d-flex flex-column">
+{# The active currency, for the two things the browser formats itself: the
+   price slider's pill, which converts a Canadian-dollar value as it is dragged,
+   and the fare calendar's fallback before a response arrives. On <body> because
+   both live on pages that include no partial in common, and because
+   document.body.dataset is readable from anywhere in global.js.
+
+   `rate` is here for the slider only. Its values are Canadian dollars and stay
+   that way -- they are what the filter compares and what a shared link carries
+   -- so only the caption converts. See Helper::sliderCaption. #}
+<body class="d-flex flex-column"
+      data-currency="{{ currency.active }}"
+      data-currency-symbol="{{ currency.symbol }}"
+      data-currency-before="{{ currency.before ? '1' : '0' }}"
+      data-currency-group="{{ currency.group }}"
+      data-currency-rate="{{ currency.rate }}">
 <header class="p-3 bg-primary text-white" id="top">
     <div class="container">
         {# Named because the breadcrumb below is a second <nav>, and two

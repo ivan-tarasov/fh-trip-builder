@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
+use TripBuilder\Money;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Repository\SubscriberRepository;
@@ -195,10 +196,38 @@ class AjaxController extends AbstractController
             $this->buildOnce($from, $to, $cabin, $since, $until, $prices);
         }
 
+        // Converted here, not in the browser. The calendar formats its own
+        // cells, so handing it Canadian dollars and a yen symbol -- which is
+        // what passing only the symbol through would have done -- puts a ¥ in
+        // front of a dollar figure on thirty cells at once.
+        //
+        // The conversion happens on read, *after* the cache: the expensive
+        // build is keyed on from/to/cabin and guarded by a lock, and adding a
+        // currency to either would serialise unrelated requests and multiply
+        // the table by thirty for figures that are one multiplication apart.
+        $money = Money::active();
+        $currency = $money->currency();
+
         echo json_encode([
             'status' => 'ok',
             'cabin' => $cabin->value,
-            'prices' => $prices->read($from, $to, $cabin, $since, $until),
+            // The payload says what its own numbers are. The cookie can change
+            // between the page rendering and this request arriving, and a
+            // calendar that took the symbol from the page and the figures from
+            // here would then disagree with itself.
+            'currency' => [
+                'code' => $currency->code,
+                'symbol' => $currency->symbol,
+                'before' => $currency->symbolFirst,
+                'group' => $currency->group,
+            ],
+            'prices' => array_map(
+                static fn(array $day): array => [
+                    'base' => $money->convert($day['base']),
+                    'tax' => $money->convert($day['tax']),
+                ],
+                $prices->read($from, $to, $cabin, $since, $until),
+            ),
         ]);
     }
 

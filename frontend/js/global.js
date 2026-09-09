@@ -129,7 +129,12 @@
                     .then((response) => response.ok ? response.json() : null)
                     .then((data) => {
                         if (data && data.prices && Object.keys(data.prices).length) {
-                            picker.setPrices(data.prices, legName);
+                            // The currency the response declared, not the one
+                            // the page was rendered in. They are the same
+                            // almost always, and when they are not it is
+                            // because the cookie changed since -- in which case
+                            // these figures belong to the new one.
+                            picker.setPrices(data.prices, legName, data.currency);
 
                             return;
                         }
@@ -2424,10 +2429,47 @@
         return minutes === 0 ? hours + 'h' : hours + 'h ' + minutes + 'm';
     }
 
+    /**
+     * The active currency, as the server rendered it onto <body>.
+     *
+     * Read on each call rather than cached, because it is three attribute
+     * lookups and caching it would be one more thing to get stale.
+     */
+    function activeCurrency() {
+        const data = document.body.dataset;
+
+        return {
+            symbol: data.currencySymbol || '$',
+            before: data.currencyBefore !== '0',
+            group: data.currencyGroup || ',',
+            rate: Number(data.currencyRate) || 1
+        };
+    }
+
+    /**
+     * A price slider's caption.
+     *
+     * The value in is Canadian dollars and stays that way: it is what the
+     * filter compares, and what a shared search link carries, so a link means
+     * the same thing whoever opens it and whatever the rate did overnight. Only
+     * the caption converts -- see the note on Helper::sliderCaption, which
+     * paints this same pill on the first render and has to agree with it.
+     *
+     * The steps stay Canadian-dollar shaped, so a yen pill reads "Up to
+     * ¥5,425" rather than a round number. Correct and odd beats round and off
+     * by a step.
+     */
     function sliderLabel(kind, value) {
-        return kind === 'money'
-            ? '$' + Math.round(value).toLocaleString('en-US')
-            : formatMinutes(value);
+        if (kind !== 'money') {
+            return formatMinutes(value);
+        }
+
+        const currency = activeCurrency();
+        const digits = Math.round(value * currency.rate)
+            .toLocaleString('en-US')
+            .replace(/,/g, currency.group);
+
+        return currency.before ? currency.symbol + digits : digits + ' ' + currency.symbol;
     }
 
     // On two handles the end matters: a floor dragged up has to read "From" or
