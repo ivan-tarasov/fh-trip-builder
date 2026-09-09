@@ -7,11 +7,16 @@
    because three copies of it are three chances for them to stop agreeing. #}
 {% block description %}{{ article.summary }}{% endblock %}
 
+{# Paired with `'hero': true` below: this tells the layout not to draw the
+   breadcrumb strip, because the band draws the trail itself. #}
+{% block hero %}yes{% endblock %}
+
 {% block content %}
 {% embed 'partials/article.html.twig' with {
     'title': article.title,
     'icon': article.icon,
-    'lead': article.summary
+    'lead': article.summary,
+    'hero': true
 } %}
     {# The prose, from the one template named after this slug.
 

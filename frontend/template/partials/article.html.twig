@@ -14,14 +14,50 @@
 
    `note` is for a line that belongs to the document -- where the README came
    from -- and `aside` for a panel beside it, which is where an article puts its
-   siblings. Both are empty unless a page fills them. #}
-<main role="main" class="article">
+   siblings. Both are empty unless a page fills them.
+
+   `hero` is opt-in and off by default, which is not timidity: five templates
+   embed this, and /about is a rendered README whose heading belongs on the
+   sheet with the prose rather than over a band. Help and legal pass it; the
+   two /about pages pass nothing and are unchanged. #}
+{# The heading, captured so it can be printed in one of two places without
+   being written twice. `{% set %}` keeps the markup as markup and still
+   escapes what is interpolated into it, and the class stays spelled exactly
+   `article__title` -- LegalRenderTest matches that with its closing quote, so
+   a modifier alongside it would fail the legal suite without changing a
+   pixel. #}
+{% set heading %}
+    <h1 class="article__title">
+        <i class="fas {{ icon }} article__title-icon" aria-hidden="true"></i>
+        {{ title }}
+    </h1>
+{% endset %}
+
+<main role="main" class="article{{ hero|default(false) ? ' article--hero' : '' }}">
+    {% if hero|default(false) %}
+        {# The band. Not called `hero`: main.css makes the header sticky on any
+           page containing `.hero`, matched on the element rather than a page
+           class, so borrowing the name would change the header's behaviour on
+           every article. `:has(.hero)` is a class selector and not a prefix,
+           so `article__hero` does not match it.
+
+           The trail comes inside, where it does the job the reference puts an
+           "all articles" eyebrow to -- and where it has to be, since the strip
+           it normally sits in would otherwise show a band of page background
+           between the header and this. #}
+        <div class="article__hero">
+            <div class="container">
+                {% include 'partials/breadcrumbs.html.twig' with {'on_dark': true} %}
+                {{ heading }}
+            </div>
+        </div>
+    {% endif %}
+
     <div class="container article__layout">
         <div class="article__sheet">
-            <h1 class="article__title">
-                <i class="fas {{ icon }} article__title-icon" aria-hidden="true"></i>
-                {{ title }}
-            </h1>
+            {% if not hero|default(false) %}
+                {{ heading }}
+            {% endif %}
 
             {# The sentence the page is about, set apart from the answer rather
                than run into it. On an article it is also the meta description,

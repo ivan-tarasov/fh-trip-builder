@@ -7,11 +7,16 @@
    sentence in one place. #}
 {% block description %}{{ document.summary }}{% endblock %}
 
+{# Paired with `'hero': true` below: this tells the layout not to draw the
+   breadcrumb strip, because the band draws the trail itself. #}
+{% block hero %}yes{% endblock %}
+
 {% block content %}
 {% embed 'partials/article.html.twig' with {
     'title': document.title,
     'icon': document.icon,
-    'lead': document.summary
+    'lead': document.summary,
+    'hero': true
 } %}
     {# The prose, from the one template named after this slug. The slug has
        already been matched against the document index, so it is one of three

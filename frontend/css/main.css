@@ -5020,6 +5020,32 @@ body:has(main.article) .breadcrumbs__list {
 
 /* The page you are on is not a link, and reads a step darker so the trail has
    an end rather than trailing off. */
+/* The trail inside an article's band. Same markup, a ground it was not mixed
+   for -- so the colours come from the palette's on-dark set, which exists with
+   its ratios measured against --brand-ink for exactly this case. */
+.breadcrumbs--on-dark .breadcrumbs__list {
+  justify-content: center;
+}
+
+.breadcrumbs--on-dark .breadcrumbs__item,
+.breadcrumbs--on-dark .breadcrumbs__link {
+  color: var(--ink-on-dark);
+}
+
+.breadcrumbs--on-dark .breadcrumbs__item + .breadcrumbs__item::before {
+  color: var(--line-on-dark);
+}
+
+.breadcrumbs--on-dark .breadcrumbs__item--current {
+  color: var(--ink-on-dark-lead);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .breadcrumbs--on-dark .breadcrumbs__link:hover {
+    color: #fff;
+  }
+}
+
 .breadcrumbs__item--current {
   color: var(--ink-secondary);
   font-weight: 600;
@@ -6419,6 +6445,78 @@ body:has(.cookie-notice) .to-top { display: none; }
    for no reason anybody could have given -- and once every page title on the
    site came from one of these three rules, the odd 2px was the last thing
    between them and one scale. */
+/* The band an article opens with, on help and legal.
+
+   The header's own colour, not a lighter one: the two are meant to read as a
+   single block that the sheet punches out of, which is how the reference this
+   follows works -- its header is the same blue as its hero. A distinguishable
+   band would put a seam under the header and turn one shape into two.
+
+   Named `article__hero` and not `hero` on purpose. main.css:3543 makes the
+   header sticky on any page containing `.hero`, matched on the element rather
+   than on a class a page would have to carry, so taking that name would
+   silently change the header's behaviour here. `:has(.hero)` is a class
+   selector and not a prefix, so this does not match it -- the same reason
+   `.hero-cards` does not. */
+.article--hero {
+  /* The band supplies the space the sheet used to leave for itself. */
+  padding-top: 0;
+}
+
+.article__hero {
+  /* Deep enough that the sheet can rise into it and still leave the title
+     clear of the sheet's top edge: this less the negative margin below is the
+     gap that is actually visible. */
+  padding-bottom: 6rem;
+  background-color: var(--brand-ink);
+  text-align: center;
+}
+
+.article__hero .article__title {
+  /* Stacked rather than the sheet's baseline row: the icon goes above a
+     centred title, where a row would leave the pair sitting off-centre by
+     half the icon. */
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  /* Wide enough for the longest title on one line -- "Changing passenger
+     details", 26 characters -- and narrow enough that a longer one wraps
+     instead of spanning the full container. */
+  max-width: 26ch;
+  margin: .5rem auto 0;
+  color: #fff;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  line-height: 1.15;
+  /* Two balanced lines rather than a long one and an orphan, where it wraps.
+     Ignored by browsers that do not know it, which lose nothing. */
+  text-wrap: balance;
+}
+
+.article__hero .article__title-icon {
+  /* --cat-blue measures 3.11:1 on this ground, which is the floor for
+     something decorative and looks it. The tint is 13.62:1 and keeps the
+     accent rather than going grey. */
+  color: var(--brand-tint);
+  font-size: 1.75rem;
+}
+
+/* The sheet, starting inside the band and finishing outside it. Follows
+   .hero-cards, the one other overlap in this file: a margin rather than a
+   position, so the reading order is still band then sheet, and a z-index so
+   the overlap is paint-order-independent. */
+.article--hero .article__layout {
+  position: relative;
+  z-index: 1;
+  margin-top: -3.75rem;
+}
+
+@media (max-width: 47.9375em) {
+  /* Less of both. The band is already taller once the title wraps, and a
+     deep overlap on a narrow screen buries the title it sits under. */
+  .article__hero { padding-bottom: 4.5rem; }
+  .article--hero .article__layout { margin-top: -2.5rem; }
+}
+
 .article__title {
   display: flex;
   /* Baseline, not centre: "Changing passenger details" wraps to two lines below
