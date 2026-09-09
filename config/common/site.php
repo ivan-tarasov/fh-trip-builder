@@ -278,16 +278,6 @@ return [
 
     'footer-columns' => [
         [
-            // Counted, not curated: `book_count` is written every time a
-            // booking is made, so this column keeps itself. Behind the count
-            // sits the curated `traffic` tier, which is what an install nobody
-            // has booked on yet orders by -- see AirlineRepository::mostBooked().
-            'title' => 'Airlines',
-            'source' => 'most-booked-airlines',
-            'count' => 6,
-            'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
-        ],
-        [
             // Counted, like Cities below and unlike the four curated columns.
             // `source` sends it to LayoutData::popularRoutes().
             //
@@ -308,7 +298,7 @@ return [
             // row the others spend on "All ..." is spent on another route.
             'title' => 'Directions',
             'source' => 'popular-routes',
-            'count' => 7,
+            'count' => 6,
         ],
         [
             // Counted now, and the objection that kept it curated is answered
@@ -318,7 +308,7 @@ return [
             // See CountryRepository::mostSearched().
             'title' => 'Countries',
             'source' => 'most-searched-countries',
-            'count' => 6,
+            'count' => 5,
             'more' => ['text' => 'All countries', 'url' => '/countries'],
         ],
         [
@@ -328,7 +318,7 @@ return [
             // the app has been keeping since its first search.
             'title' => 'Cities',
             'source' => 'most-searched',
-            'count' => 6,
+            'count' => 5,
             // The page it leads to is what gives all 231 city pages a route in.
             'more' => ['text' => 'All cities', 'url' => '/cities'],
         ],
@@ -343,16 +333,35 @@ return [
             // LayoutData::mostSearchedAirports().
             'title' => 'Airports',
             'source' => 'most-searched-airports',
-            'count' => 6,
+            'count' => 5,
             'more' => ['text' => 'All airports', 'url' => '/airports/'],
+        ],
+        [
+            // Counted, not curated: `book_count` is written every time a
+            // booking is made, so this column keeps itself. Behind the count
+            // sits the curated `traffic` tier, which is what an install nobody
+            // has booked on yet orders by -- see AirlineRepository::mostBooked().
+            'title' => 'Airlines',
+            'source' => 'most-booked-airlines',
+            'count' => 5,
+            'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
         ],
         [
             'title' => 'Help & tips',
             'links' => [
                 'Baggage' => '/help/baggage',
-                'Refunds and exchanges' => '/help/refunds',
+                // "&", not "and": measured in the real face at 15px, the
+                // spelled-out version is 170px against the 166 a column gives
+                // it and the ampersand brings it to 153. The heading above it
+                // is "Help & tips", so the column was already written this way.
+                'Refunds & exchanges' => '/help/refunds',
                 'Ticket did not arrive' => '/help/ticket-not-received',
-                'Changing passenger details' => '/help/passenger-details',
+                // Shorter than the article's own heading, which is "Changing
+                // passenger details" and is two lines in a column this narrow.
+                // The footer has never promised to repeat a page's title --
+                // the Airports column beside it says "London (LHR)" where the
+                // page says "Heathrow".
+                'Passenger details' => '/help/passenger-details',
                 'Flying with children' => '/help/flying-with-children',
             ],
             'more' => ['text' => 'All help topics', 'url' => '/help'],

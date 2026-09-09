@@ -260,10 +260,28 @@ final class LayoutData
             $from = (string) $route['from_name'];
             $to = (string) $route['to_name'];
 
-            $links[$from . ' — ' . $to] = RouteAddress::path($from, $to);
+            // Held together by no-break spaces inside each name, so the only
+            // place the label may wrap is the dash between them. "Fort
+            // Lauderdale — San Francisco" does not fit a 190px column and broke
+            // inside "San Francisco", which reads as two entries; broken at the
+            // dash it reads as the one it is. Characters and not markup,
+            // because this is a label in a map the template escapes.
+            $links[self::unbroken($from) . ' — ' . self::unbroken($to)] = RouteAddress::path($from, $to);
         }
 
         return $links;
+    }
+
+    /**
+     * A name with no space a line may break at.
+     *
+     * U+00A0 for every space in it. Only the two spaces around the separator
+     * are left breakable, which is where a pair of city names should come apart
+     * if it has to.
+     */
+    private static function unbroken(string $name): string
+    {
+        return str_replace(' ', "\u{00A0}", $name);
     }
 
     /**
