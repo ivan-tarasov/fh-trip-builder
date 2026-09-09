@@ -179,7 +179,10 @@ final class FooterRenderTest extends TestCase
             }
 
             $drawn++;
-            self::assertStringContainsString('>' . $column['more']['text'] . '</a>', $html);
+            // The configured text is a format string -- "All %s airlines" --
+            // so what the page should show is what footer_more() makes of it.
+            $text = new LayoutData()->footerMore($column['more'])['text'];
+            self::assertStringContainsString('>' . $text . '</a>', $html);
         }
 
         self::assertGreaterThan(0, $drawn, 'at least one more-link should be drawn');

@@ -77,6 +77,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('subscribe_notice', $this->layout->subscribeNotice(...)));
         $this->twig->addFunction(new TwigFunction('most_searched_cities', $this->layout->mostSearchedCities(...)));
         $this->twig->addFunction(new TwigFunction('footer_links', $this->layout->footerLinks(...)));
+        $this->twig->addFunction(new TwigFunction('footer_more', $this->layout->footerMore(...)));
     }
 
     /**

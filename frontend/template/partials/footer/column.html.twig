@@ -11,6 +11,11 @@
    column that deliberately has no `more` link would still have to be written as
    an explicit null to survive it. #}
 {% set more = more ?? null %}
+{# `text` carries a %s where the count goes, and footer_more() fills it from the
+   repository that draws the page the link leads to -- so "All 105 airlines" and
+   the airlines page can never disagree. A column whose count is unavailable gets
+   its plain label back. #}
+{% set more = more ? footer_more(more) : null %}
 {% set external = external ?? false %}
 
 {# A <nav> when the caller says the column is one, a <div> otherwise.

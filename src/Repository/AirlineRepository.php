@@ -231,6 +231,13 @@ final readonly class AirlineRepository
         );
     }
 
+    public function countSellable(): int
+    {
+        return (int) $this->connection->fetchValue(
+            'SELECT COUNT(*) FROM ' . Table::Airlines->value . ' al WHERE' . self::ONLY_SELLABLE,
+        );
+    }
+
     /**
      * The airport codes an airline is based at.
      *

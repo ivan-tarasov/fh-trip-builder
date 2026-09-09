@@ -104,6 +104,17 @@ final readonly class AirportRepository
         return $this->connection->fetchAll($sql);
     }
 
+    public function countEnabled(bool $majorOnly): int
+    {
+        $sql = 'SELECT COUNT(*) FROM ' . Table::Airports->value . ' a WHERE a.enabled = 1';
+
+        if ($majorOnly) {
+            $sql .= ' AND is_major = 1';
+        }
+
+        return (int) $this->connection->fetchValue($sql);
+    }
+
     /**
      * Everywhere a search can start or end: the cities the network serves and
      * the airports inside them, as one ordered list.

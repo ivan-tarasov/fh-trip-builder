@@ -309,7 +309,7 @@ return [
             'title' => 'Countries',
             'source' => 'most-searched-countries',
             'count' => 5,
-            'more' => ['text' => 'All countries', 'url' => '/countries'],
+            'more' => ['text' => 'All %s countries', 'url' => '/countries', 'total' => 'countries'],
         ],
         [
             // The one column whose pages exist and are not a list somebody has
@@ -320,7 +320,7 @@ return [
             'source' => 'most-searched',
             'count' => 5,
             // The page it leads to is what gives all 231 city pages a route in.
-            'more' => ['text' => 'All cities', 'url' => '/cities'],
+            'more' => ['text' => 'All %s cities', 'url' => '/cities', 'total' => 'cities'],
         ],
         [
             // Counted, off `search_count`, and one airport per city: London
@@ -334,7 +334,7 @@ return [
             'title' => 'Airports',
             'source' => 'most-searched-airports',
             'count' => 5,
-            'more' => ['text' => 'All airports', 'url' => '/airports/'],
+            'more' => ['text' => 'All %s airports', 'url' => '/airports/', 'total' => 'airports'],
         ],
         [
             // Counted, not curated: `book_count` is written every time a
@@ -344,7 +344,7 @@ return [
             'title' => 'Airlines',
             'source' => 'most-booked-airlines',
             'count' => 5,
-            'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
+            'more' => ['text' => 'All %s airlines', 'url' => '/airlines/', 'total' => 'airlines'],
         ],
         [
             'title' => 'Help & tips',

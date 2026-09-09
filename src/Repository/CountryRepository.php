@@ -104,6 +104,17 @@ final readonly class CountryRepository
         );
     }
 
+    /** Counts what sellable() lists, so the join that excludes empty countries stays. */
+    public function countSellable(): int
+    {
+        return (int) $this->connection->fetchValue(
+            'SELECT COUNT(DISTINCT c.code)'
+            . ' FROM ' . Table::Countries->value . ' c'
+            . ' JOIN ' . Table::Airports->value . ' a ON a.country_code = c.code'
+            . ' WHERE' . self::ONLY_SELLABLE,
+        );
+    }
+
     /**
      * The countries whose airports people search for, busiest first.
      *

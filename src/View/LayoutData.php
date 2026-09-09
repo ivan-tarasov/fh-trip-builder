@@ -323,6 +323,47 @@ final class LayoutData
     }
 
     /**
+     * A footer "All ..." link with its count filled in.
+     *
+     * The number has to be the one the page behind the link actually lists, so
+     * each count comes from the repository that draws that page and reuses the
+     * same filter. A COUNT written a second time here would agree today and
+     * part company the first time one of those filters changes.
+     *
+     * @param array<string, string> $more
+     *
+     * @return array<string, string>
+     */
+    public function footerMore(array $more): array
+    {
+        $total = isset($more['total']) ? $this->directoryTotal($more['total']) : null;
+
+        // No count: drop the placeholder rather than the link. "All airlines"
+        // still leads where it led before this had a number in it.
+        $more['text'] = $total === null
+            ? str_replace('%s ', '', $more['text'])
+            : sprintf($more['text'], number_format($total));
+
+        return $more;
+    }
+
+    /** How many rows one of the directory pages lists, or null if it will not say. */
+    private function directoryTotal(string $key): ?int
+    {
+        try {
+            return match ($key) {
+                'cities' => new CityRepository($this->connection())->countAll(),
+                'countries' => new CountryRepository($this->connection())->countSellable(),
+                'airports' => new AirportRepository($this->connection())->countEnabled(true),
+                'airlines' => new AirlineRepository($this->connection())->countSellable(),
+                default => null,
+            };
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * The airlines people book, ready for the footer's link column.
      *
      * Counted rather than curated, like the two columns above it. Same shape
