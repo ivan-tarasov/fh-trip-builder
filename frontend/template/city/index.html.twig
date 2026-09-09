@@ -1,0 +1,27 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Cities we fly to{% endblock %}
+
+{% block description %}Every city in our schedules, A to Z, with fares, airports and nearby cities for each.{% endblock %}
+
+{# Every city, as a directory. The arrangement, the filter and the alphabet all
+   live in partials/directory.html.twig, because countries are next and will be
+   read exactly the same way -- a few hundred names, and you arrive knowing the
+   one you want.
+
+   This page exists for a reason that was measured. Crawling the links out of
+   the homepage reached 171 of the 231 city pages, the furthest in six hops, and
+   sixty had no inbound link at all. #}
+{% block content %}
+<main role="main" class="page-list">
+    <div class="container">
+        {% include 'partials/directory.html.twig' with {
+            'title': 'Cities we fly to',
+            'lead': 'Every city in our schedules, with the fares and airports for each.',
+            'placeholder': 'Start typing a name or IATA code',
+            'label': 'Filter cities',
+            'groups': groups
+        } only %}
+    </div>
+</main>
+{% endblock %}

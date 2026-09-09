@@ -1,0 +1,68 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Flights from {{ route.from.name }} to {{ route.to.name }}{% endblock %}
+
+{# Counted off the figures the page prints, so no two route pages claim to be
+   about the same thing. #}
+{% block description %}Cheap flights from {{ route.from.name }} to {{ route.to.name }} — from ${{ route.cheapest|round(0, 'floor') }} CAD, {{ duration(route.typical) }} in the air, {{ route.carriers > 1 ? route.carriers ~ ' airlines' : '1 airline' }} flying it direct.{% endblock %}
+
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
+{# The one page here that is a pair rather than a record. Four blocks, and the
+   two in the middle are the ones a route is actually asked about: when is it
+   cheap, and who flies it. #}
+{% set blocks = [
+    {
+        'id': 'general',
+        'title': 'Flights from ' ~ route.from.name ~ ' to ' ~ route.to.name,
+        'nav': 'General information',
+        'icon': 'fa-circle-info',
+        'tone': 'green',
+        'template': 'route/blocks/facts.html.twig',
+        'when': true
+    },
+    {
+        'id': 'dates',
+        'title': 'The cheapest dates to fly',
+        'nav': 'Cheapest dates',
+        'icon': 'fa-tag',
+        'tone': 'blue',
+        'template': 'route/blocks/dates.html.twig',
+        'when': dates is not empty
+    },
+    {
+        'id': 'airlines',
+        'title': route.carriers > 1 ? 'Airlines flying this route' : 'The airline flying this route',
+        'nav': 'Airlines',
+        'icon': 'fa-plane',
+        'tone': 'orange',
+        'template': 'route/blocks/airlines.html.twig',
+        'when': carriers is not empty
+    },
+    {
+        'id': 'airports',
+        'title': 'Airports on this route',
+        'nav': 'Airports',
+        'icon': 'fa-plane-departure',
+        'tone': 'violet',
+        'template': 'route/blocks/airports.html.twig',
+        'when': ends is not empty
+    }
+] %}
+
+{% block content %}
+{% include 'partials/place.html.twig' with {
+    'heading': 'Flights from ' ~ route.from.name ~ ' to ' ~ route.to.name,
+    'rail_title': route.from.code ~ ' — ' ~ route.to.code,
+    'blocks': blocks,
+    'data': {
+        'place': route,
+        'reverse': reverse,
+        'dates': dates,
+        'carriers': carriers,
+        'ends': ends
+    }
+} only %}
+{% endblock %}

@@ -1,0 +1,52 @@
+{# What the airport is doing today.
+
+   Today in the airport's own time, which is what the whole board is read
+   against: `flights.departure_time` is stored in each airport's local time --
+   Montreal to London is 415 minutes of flying and 714 minutes of clock -- so
+   the times below need no conversion and the date had to be worked out from the
+   airport's offset rather than the server's. See
+   AirportController::localNow().
+
+   Flights that have already gone are kept and dimmed rather than dropped. A
+   board that silently shortened itself through the day would leave somebody
+   wondering whether the 06:15 exists; struck through, it answers.
+
+   Tabs come from .tabset, and a direction with nothing in it was dropped before
+   it got here -- so a small airport with only departures shows no tabs at all
+   rather than an empty second panel. #}
+<div class="board tabset">
+    {% if schedule|length > 1 %}
+        <div class="tabset__tabs" role="radiogroup" aria-label="Departures or arrivals">
+            {% for direction in schedule %}
+                <input class="tabset__radio" type="radio" name="board-direction"
+                       id="board-{{ direction.id }}" {{ loop.first ? 'checked' : '' }}>
+                <label class="tabset__tab" for="board-{{ direction.id }}">{{ direction.label }}</label>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% for direction in schedule %}
+        {% set arriving = direction.id == 'in' %}
+        <ul class="board__list tabset__panel" aria-label="{{ direction.label }} on {{ local_now|date('j F') }}">
+            {% for flight in direction.flights %}
+                {% set when = arriving ? flight.arrival_time : flight.departure_time %}
+                <li class="board__row{{ when < local_now ? ' board__row--gone' : '' }}">
+                    <span class="board__time">{{ when|date('H:i') }}</span>
+
+                    <img class="board__airline"
+                         src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ flight.airline ~ '.png') }}"
+                         width="24" height="24" loading="lazy" alt="">
+                    <span class="board__flight">{{ flight.airline }}{{ flight.number }}</span>
+
+                    <a class="board__place" href="{{ flight.other_url }}">
+                        <span class="board__label">{{ arriving ? 'from' : 'to' }}</span>
+                        {{ flight.other_city }}
+                        <span class="board__code">{{ flight.other_code }}</span>
+                    </a>
+
+                    <span class="board__span">{{ duration(flight.duration) }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+</div>

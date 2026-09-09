@@ -1,0 +1,19 @@
+{# Who flies it, busiest first, each reaching its own page.
+
+   The count is how many of the route's upcoming flights are theirs, which is
+   the one number that says who actually owns the route: British Airways flies
+   69 of the 226 between New York and London and Ryanair 10, and a list in any
+   other order would present those as equals. #}
+<ul class="chips">
+    {% for carrier in carriers %}
+        <li>
+            <a class="chip chip--link" href="{{ carrier.url }}">
+                <img class="chip__logo"
+                     src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ carrier.code ~ '.png') }}"
+                     width="20" height="20" loading="lazy" alt="">
+                {{ carrier.name }}
+                <span class="chip__note">{{ carrier.flights }} flights</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>

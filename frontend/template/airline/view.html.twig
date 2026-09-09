@@ -1,0 +1,85 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ airline.name }} ({{ airline.code }}){% endblock %}
+
+{# Counted off the figures the page prints, so no two of the 105 airline pages
+   claim to be about the same thing. #}
+{% block description %}{{ airline.name }} ({{ airline.code }}) flights — the cheapest fares out of {{ airline.hub_count > 1 ? 'its ' ~ airline.hub_count ~ ' hubs' : 'its hub' }}, and the {{ airline.destinations }} places it flies to.{% endblock %}
+
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
+{# Five blocks. A fare table is still not one of them: all five brands are on
+   all 105 airlines, so the table would be the same table every time. The fleet
+   was in that same category until it was measured a second time -- see
+   AirlineController.
+
+   `title_hidden` on the first: the masthead inside it opens with the mark and
+   the name, so a heading above it saying the name again is the same words
+   twice. Hidden rather than dropped -- it still names the section, and the
+   rail's anchor still has something to point at. #}
+{% set blocks = [
+    {
+        'id': 'general',
+        'title': 'General information about ' ~ airline.name,
+        'nav': 'General information',
+        'icon': 'fa-circle-info',
+        'tone': 'green',
+        'template': 'airline/blocks/facts.html.twig',
+        'when': true,
+        'title_hidden': true
+    },
+    {
+        'id': 'fares',
+        'title': 'Cheap tickets on ' ~ airline.name,
+        'nav': 'Cheap tickets',
+        'icon': 'fa-tag',
+        'tone': 'blue',
+        'template': 'place/fares.html.twig',
+        'when': fares is not empty
+    },
+    {
+        'id': 'hubs',
+        'title': airline.hub_count > 1 ? 'Hubs of ' ~ airline.name : 'Hub of ' ~ airline.name,
+        'nav': airline.hub_count > 1 ? 'Hubs' : 'Hub',
+        'icon': 'fa-plane-departure',
+        'tone': 'violet',
+        'template': 'airline/blocks/hubs.html.twig',
+        'when': hubs is not empty
+    },
+    {
+        'id': 'aircraft',
+        'title': 'Aircraft ' ~ airline.name ~ ' flies most',
+        'nav': 'Aircraft',
+        'icon': 'fa-plane-up',
+        'tone': 'orange',
+        'template': 'airline/blocks/aircraft.html.twig',
+        'when': aircraft is not empty
+    },
+    {
+        'id': 'peers',
+        'title': 'Other airlines at the same airports',
+        'nav': 'Other airlines',
+        'icon': 'fa-user-group',
+        'tone': 'pink',
+        'template': 'airline/blocks/peers.html.twig',
+        'when': peers is not empty
+    }
+] %}
+
+{% block content %}
+{% include 'partials/place.html.twig' with {
+    'heading': 'Flights on ' ~ airline.name,
+    'rail_title': airline.name,
+    'blocks': blocks,
+    'data': {
+        'place': airline,
+        'hubs': hubs,
+        'fares': fares,
+        'aircraft': aircraft,
+        'peers': peers,
+        'window_days': window_days
+    }
+} only %}
+{% endblock %}

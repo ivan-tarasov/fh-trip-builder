@@ -1,0 +1,22 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Countries we fly to{% endblock %}
+
+{% block description %}Every country in our schedules, A to Z, with fares, cities and airports for each.{% endblock %}
+
+{# Every country, as a directory -- the same component the cities use, which is
+   why it was built as one. The arrangement, the filter and the alphabet all
+   live in partials/directory.html.twig. #}
+{% block content %}
+<main role="main" class="page-list">
+    <div class="container">
+        {% include 'partials/directory.html.twig' with {
+            'title': 'Countries we fly to',
+            'lead': 'Every country in our schedules, with the cities and airports for each.',
+            'placeholder': 'Start typing a name or country code',
+            'label': 'Filter countries',
+            'groups': groups
+        } only %}
+    </div>
+</main>
+{% endblock %}

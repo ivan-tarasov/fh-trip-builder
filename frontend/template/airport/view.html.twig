@@ -1,0 +1,76 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ airport.title }} ({{ airport.code }}){% endblock %}
+
+{% block description %}{{ airport.title }} ({{ airport.code }}) in {{ airport.city }}, {{ airport.country }} — today's departures and arrivals, and the cheapest direct fares out of it.{% endblock %}
+
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
+{# What this airport has to say. The shell that draws it -- the rail, the
+   anchors, the dropping of an empty block -- is shared with the city and
+   country pages. #}
+{% set blocks = [
+    {
+        'id': 'general',
+        'title': 'General information about ' ~ airport.title,
+        'nav': 'General information',
+        'icon': 'fa-circle-info',
+        'tone': 'green',
+        'template': 'airport/blocks/facts.html.twig',
+        'when': true
+    },
+    {
+        'id': 'schedule',
+        'title': 'Schedule for ' ~ local_now|date('j F'),
+        'nav': 'Today\'s schedule',
+        'icon': 'fa-clock',
+        'tone': 'blue',
+        'template': 'airport/blocks/schedule.html.twig',
+        'when': schedule is not empty
+    },
+    {
+        'id': 'fares',
+        'title': 'Cheap tickets from ' ~ airport.city,
+        'nav': 'Cheap tickets',
+        'icon': 'fa-tag',
+        'tone': 'orange',
+        'template': 'place/fares.html.twig',
+        'when': fares is not empty
+    },
+    {
+        'id': 'routes',
+        'title': 'Popular routes from ' ~ airport.city,
+        'nav': 'Popular routes',
+        'icon': 'fa-route',
+        'tone': 'pink',
+        'template': 'place/routes.html.twig',
+        'when': routes is not empty
+    },
+    {
+        'id': 'nearby',
+        'title': 'Airports near ' ~ airport.title,
+        'nav': 'Airports nearby',
+        'icon': 'fa-plane-departure',
+        'tone': 'violet',
+        'template': 'airport/blocks/nearby.html.twig',
+        'when': nearby is not empty
+    }
+] %}
+
+{% block content %}
+{% include 'partials/place.html.twig' with {
+    'heading': 'Flights from ' ~ airport.title ~ ', ' ~ airport.city,
+    'rail_title': airport.code,
+    'blocks': blocks,
+    'data': {
+        'place': airport,
+        'schedule': schedule,
+        'local_now': local_now,
+        'nearby': nearby,
+        'fares': fares,
+        'routes': routes
+    }
+} only %}
+{% endblock %}

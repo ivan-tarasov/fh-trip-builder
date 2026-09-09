@@ -1,0 +1,101 @@
+{# The four things somebody checks before opening a search, then the shape of
+   the trip.
+
+   The price leads, because it is the one figure the visitor came for and the
+   only one that moves. It is a "from" price and reads as one: the cheapest
+   single economy seat on any upcoming date, which is what the strip below
+   shows the whole of.
+
+   The time in the air is the average and not the fastest -- see
+   RouteRepository::summary(). The distance is the shortest of the airport pairs
+   on the route, which is the one that is a fact about the geography rather than
+   about which airport a carrier happens to use. #}
+{% include 'partials/facts-grid.html.twig' with {
+    'facts': [
+        {
+            'icon': 'fa-tag',
+            'value': '$' ~ place.cheapest|round(0, 'floor'),
+            'label': 'Cheapest fare'
+        },
+        { 'icon': 'fa-clock', 'value': duration(place.typical), 'label': 'Time in the air' },
+        { 'icon': 'fa-ruler', 'value': place.km|number_format ~ ' km', 'label': 'Distance' },
+        {
+            'icon': 'fa-plane',
+            'value': place.carriers,
+            'label': place.carriers > 1 ? 'Airlines' : 'Airline'
+        }
+    ]
+} only %}
+
+{# The same trip the other way, which is where a reader of this page most
+   often goes next. Above the map rather than at the foot of the block: it
+   belongs with the price and the duration, which are the figures somebody is
+   comparing when they think of the trip back.
+
+   Absent where the pair cannot be flown home nonstop, which is a question
+   RouteController::backAgain() asks rather than assumes.
+
+   `??`, because this block is rendered by tests that hand it a route and no
+   return -- and by anything else that comes to reuse it. #}
+{% if reverse ?? null %}
+    <p class="route-back">
+        <i class="fas fa-left-right route-back__icon" aria-hidden="true"></i>
+        Flying home?
+        <a class="route-back__link" href="{{ reverse.url }}">{{ reverse.from }} to {{ reverse.to }}</a>
+        from ${{ reverse.cheapest|round(0, 'floor') }}
+    </p>
+{% endif %}
+
+{# Both ends on one map, with the flight drawn between them.
+
+   The line is a great circle and not a straight one, because on the projection
+   a map draws, straight is the wrong shape: New York to London leaves the coast
+   heading north-east over Newfoundland, and a straight line sends it across the
+   middle of the Atlantic. GreatCircle works out the points, and a route
+   crossing the antimeridian comes back as two runs -- two lines, because joined
+   into one the map draws the join straight back around the world.
+
+   Marked at each city's own centre, the mean of its airports, which is what
+   CityRepository::byCode() returns. No zoom: the frame is fitted to the pins
+   and to the arc, which matters here more than anywhere else -- framed on its
+   two ends alone, a route bowing a thousand kilometres north of them loses its
+   top.
+
+   Each pin carries its city's name, and green for where you leave and red for
+   where you land -- the one convention nobody has to be taught. The pins used
+   to read "1" and "2", which named neither place; the flat picture still cannot
+   do better, because that endpoint takes a single character on a pin, but the
+   live map has no such limit. #}
+{% include 'partials/map.html.twig' with {
+    'markers': [
+        {
+            'lat': place.from.latitude,
+            'lon': place.from.longitude,
+            'colour': '0EB600',
+            'label': place.from.name
+        },
+        {
+            'lat': place.to.latitude,
+            'lon': place.to.longitude,
+            'colour': 'EC3735',
+            'label': place.to.name
+        }
+    ],
+    'paths': place.path,
+    'label': 'Map of the route from ' ~ place.from.name ~ ' to ' ~ place.to.name
+        ~ ', with the flight path drawn between them'
+} only %}
+
+{# Kept now that the pins carry names, because it is not saying the same thing
+   twice to the people who need it. The live map draws its labels into a canvas,
+   which a screen reader cannot read at all, and the flat picture behind
+   `<noscript>` has unlabelled pins because its endpoint cannot label them. This
+   is the text those two cases have, and the colour key for everyone else. #}
+<ul class="place__legend">
+    <li class="place__legend-item place__legend-item--from">
+        <span class="place__legend-role">From</span> {{ place.from.name }}
+    </li>
+    <li class="place__legend-item place__legend-item--to">
+        <span class="place__legend-role">To</span> {{ place.to.name }}
+    </li>
+</ul>

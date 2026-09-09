@@ -353,6 +353,172 @@ class Helper
      * something else to compare against -- the far end of a date range names
      * its own year, so the near end only needs one when the two disagree.
      */
+    /**
+     * An hours-from-UTC offset, written the way a clock is read.
+     *
+     * The column is decimal(4,2) and it means it: eight of our airports sit at
+     * +5.5, Kathmandu at +5.75 and Adelaide at +10.5. Printing the number
+     * straight gives "GMT+5.5", and rounding it to an hour tells everyone
+     * flying to India the wrong time. Minutes are only shown when there are
+     * any, so the common case stays "GMT+3" rather than "GMT+3:00".
+     */
+    public static function gmtOffset(float $hours): string
+    {
+        if ($hours === 0.0) {
+            return 'GMT';
+        }
+
+        $minutes = (int) round(abs($hours) * 60);
+        $whole = intdiv($minutes, 60);
+        $part = $minutes % 60;
+
+        return sprintf(
+            'GMT%s%d%s',
+            $hours < 0 ? '-' : '+',
+            $whole,
+            $part === 0 ? '' : sprintf(':%02d', $part),
+        );
+    }
+
+    /**
+     * Accented Latin letters and the plain ones they stand in for.
+     *
+     * Latin-1 Supplement and Latin Extended-A, which is what this data holds
+     * and what a European or Latin American place name is written with. Not
+     * ext-intl: the CI image installs mysqli, pdo_mysql, curl and mbstring and
+     * nothing else, so Transliterator is not there to be called. Not iconv's
+     * //TRANSLIT either -- on macOS it renders Montréal as "Montr'eal", which
+     * is worse than doing nothing.
+     *
+     * Written as two strings rather than a map because that is how it stays
+     * legible and how strtr() takes it fastest: each character in the first
+     * becomes the one at the same position in the second.
+     */
+    private const string ACCENTED =
+        'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçÐðŠšŽžŸ';
+    private const string PLAIN =
+        'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcDdSsZzY';
+
+    /**
+     * The few that are two letters rather than an accent on one.
+     *
+     * Kept apart because the fold above is positional and cannot expand: a
+     * ligature stands for a pair, and Æ folded to "A" loses half of it. None of
+     * these is in this seed; they are here because this map is the sort of
+     * thing that gets copied to the next project.
+     */
+    private const array LIGATURES = [
+        'Æ' => 'AE', 'æ' => 'ae',
+        'Œ' => 'OE', 'œ' => 'oe',
+        'Þ' => 'Th', 'þ' => 'th',
+        'ß' => 'ss',
+    ];
+
+    /**
+     * A name as it appears in a URL: lower case, words joined by hyphens.
+     *
+     * Accents are folded first, and they have to be. Every one of the 231 major
+     * city names in this seed is ASCII, which is why this did not fold anything
+     * for a long time -- but airport titles are not, and eight of them are not.
+     * Without the fold, `[^a-z0-9]` reads an accented letter as punctuation and
+     * leaves a hyphen where it stood: Cancún International addressed itself as
+     * "canc-n-international-cun" and Dakar's as
+     * "dakar-yoff-l-opold-s-dar-senghor-international-dkr".
+     *
+     * Anything the fold does not know is still dropped, and that is still not
+     * broken -- a place is resolved by the code on the end of its slug, and the
+     * canonical redirect rewrites the name half to whatever this returns. It is
+     * only ugly, which for a URL somebody reads is reason enough to fold.
+     */
+    public static function slug(string $text): string
+    {
+        $folded = strtr($text, self::foldMap());
+        $slug = preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($folded));
+
+        return trim($slug ?? '', '-');
+    }
+
+    /**
+     * The fold as strtr() wants it, built once per process.
+     *
+     * Multi-byte, so the two constants cannot be walked a byte at a time --
+     * ß is two bytes and every accented letter here is at least two. strtr()
+     * with an array handles characters of any length; with two strings it would
+     * pair bytes and produce mojibake.
+     *
+     * @return array<string, string>
+     */
+    private static function foldMap(): array
+    {
+        static $map = null;
+
+        if ($map === null) {
+            $map = array_combine(
+                mb_str_split(self::ACCENTED),
+                mb_str_split(self::PLAIN),
+            ) + self::LIGATURES;
+        }
+
+        return $map;
+    }
+
+    /**
+     * "montreal-ymq" -- the name for a reader, the code for the lookup.
+     *
+     * Not city-specific: a country, an airport and an airline are all a name
+     * with a code, and spelling their addresses two different ways would be a
+     * second rule to remember for no gain.
+     */
+    public static function placeSlug(string $name, string $code): string
+    {
+        return self::slug($name) . '-' . mb_strtolower($code);
+    }
+
+    /**
+     * Where an airport's page lives.
+     *
+     * The whole path and not just the slug, because four callers were spelling
+     * "/airport/" in front of one -- two controllers, the sitemap and now the
+     * blocks that list a city's and a country's airports. A fifth would have
+     * been a fifth place to change the day the prefix does.
+     */
+    public static function airportUrl(string $title, string $code): string
+    {
+        return '/airport/' . self::placeSlug($title, $code);
+    }
+
+    /** Where an airline's page lives. */
+    public static function airlineUrl(string $name, string $code): string
+    {
+        return '/airline/' . self::placeSlug($name, $code);
+    }
+
+    // A route's address is not here, unlike the four above it. It is the one
+    // that has to be read as well as written, which is more than a helper --
+    // see TripBuilder\RouteAddress.
+
+    /**
+     * The code off the end of a place slug, or null when there is not one.
+     *
+     * The inverse of placeSlug(), and read from the end rather than the start,
+     * because a name can hold as many hyphens as it likes -- "tel-aviv-yafo",
+     * "coolangatta-gold-coast" and "cote-d-ivoire" are all ours. The first
+     * spelling of this allowed exactly one word, which turned away every city
+     * whose name has two while montreal-ymq worked and hid it.
+     *
+     * The length is the caller's, and it is the whole difference between a
+     * city's address and a country's: three characters for IATA, two for ISO.
+     * Anything else is not a mistyped place, it is not a place.
+     */
+    public static function placeCode(string $slug, int $length): ?string
+    {
+        $slug = mb_strtolower($slug);
+
+        return preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{' . $length . '}$/', $slug) === 1
+            ? strtoupper(substr($slug, -$length))
+            : null;
+    }
+
     public static function dateLabel(
         string|int $when,
         string $format,

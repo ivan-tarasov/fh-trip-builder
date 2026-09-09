@@ -3,12 +3,31 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="{{ config('app.name') }} – {{ config('meta.description') }}" />
+    {# The page's own, or the site's if it has none.
+
+       Not truncated here. A search engine cuts a description around 160
+       characters, and cutting it in code would mean guessing where -- so each
+       one is written to fit instead. The longest of them is 143, on the city
+       with the longest name we sell to; if one ever needs more room than that,
+       the fix is shorter words rather than an ellipsis. #}
+    <meta name="description" content="{{ page_description|default('')|trim ?: config('app.name') ~ ' – ' ~ config('meta.description') }}" />
     <meta name="keywords" content="{{ config('app.name') }}, {{ config('meta.keywords')|join(', ') }}" />
     <meta name="author" content="{{ config('meta.author.name') }} <{{ config('meta.author.email') }}>"/>
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     <title>{{ page_title|default('Flights') }} - {{ config('app.name') }}</title>
+
+    {# The one address this page answers at. A trailing slash is optional here
+       and any query string makes another copy, so without this every page
+       competes with three or four of itself. #}
+    <link rel="canonical" href="{{ canonical_path() }}" />
+
+    {# Search results are a snapshot of prices that will be wrong tomorrow,
+       checkout is a step in a transaction, and /my is one browser's own
+       bookings. None of them is a page anybody should arrive at cold. #}
+    {% if not indexable() %}
+        <meta name="robots" content="noindex, follow" />
+    {% endif %}
 
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
 
@@ -28,6 +47,10 @@
     <link href="//cdnjs.cloudflare.com/ajax/libs/ion-rangeslider/2.3.0/css/ion.rangeSlider.min.css" rel="stylesheet" />
     <link href="//use.fontawesome.com/releases/v6.1.1/css/all.css" rel="stylesheet" type='text/css' integrity="sha384-/frq1SRXYH/bSyou/HUp/hib7RVN1TawQYja658FEOodR/FQBKVqT9Ol+Oz3Olq5" crossorigin="anonymous" />
     <link href="//cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+    {# Only where a map is drawn. See the `map` block in layout.html.twig. #}
+    {% if needs_map|default(false) %}
+        <link href="https://api.mapbox.com/mapbox-gl-js/{{ config('maps.gl_version') }}/mapbox-gl.css" rel="stylesheet" />
+    {% endif %}
     <link href="{{ asset(config('site.directory.css') ~ '/main.css') }}" rel="stylesheet" media="all" />
 
     <script src="//code.jquery.com/jquery-3.3.1.min.js"></script>

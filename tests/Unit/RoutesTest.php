@@ -16,6 +16,23 @@ final class RoutesTest extends TestCase
         self::assertSame('Checkout@confirmation', Routes::resolve('/checkout/confirmation'));
     }
 
+    /**
+     * The hub is an exact route and the articles are a pattern.
+     *
+     * The pattern is the loose half, and it is loose deliberately: what makes a
+     * slug real is being a key in config/common/help.php, which is
+     * HelpController's question and not the router's. So the router says yes to
+     * a word here and the page still answers 404.
+     */
+    public function testHelpHasAHubAndAPatternForItsArticles(): void
+    {
+        self::assertSame('Help@index', Routes::resolve('/help'));
+        self::assertSame('Help@show', Routes::resolve('/help/baggage'));
+        self::assertSame('Help@show', Routes::resolve('/help/ticket-not-received'));
+        // Capitals reach the controller so that it can redirect them.
+        self::assertSame('Help@show', Routes::resolve('/help/Baggage'));
+    }
+
     public function testABookingIsAddressedByItsIdInThePath(): void
     {
         self::assertSame('My@booking', Routes::resolve('/my/bookings/100001'));
@@ -48,6 +65,11 @@ final class RoutesTest extends TestCase
             ['/my/bookings/12/calendar/extra'],
             ['/my/bookings/12/cancel'],
             ['/nope'],
+            // The help pattern is anchored, and takes no digits and no second
+            // segment.
+            ['/help/'],
+            ['/help/baggage/extra'],
+            ['/help/baggage2'],
         ];
     }
 

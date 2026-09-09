@@ -48,6 +48,10 @@ final readonly class TwigRenderer
         // a trip crossing New Year cannot print two dates eleven months apart
         // as though they were days.
         $this->twig->addFunction(new TwigFunction('date_label', Helper::dateLabel(...)));
+        $this->twig->addFunction(new TwigFunction('gmt_offset', Helper::gmtOffset(...)));
+        $this->twig->addFunction(new TwigFunction('map_config', MapView::config(...)));
+        $this->twig->addFunction(new TwigFunction('map_image', MapView::image(...)));
+        $this->twig->addFunction(new TwigFunction('duration', Helper::hoursAndMinutes(...)));
         // What each passenger type pays, so the calendar can price a party in
         // the browser without a second definition of it living there.
         $this->twig->addFunction(new TwigFunction('party_shares', Party::shares(...)));
@@ -62,12 +66,16 @@ final readonly class TwigRenderer
         // Given the trail the partial is about to draw, so the two agree.
         $this->twig->addFunction(new TwigFunction('breadcrumb_jsonld', Breadcrumbs::structuredData(...)));
         $this->twig->addFunction(new TwigFunction('current_page', $this->layout->currentPage(...)));
+        $this->twig->addFunction(new TwigFunction('canonical_path', $this->layout->canonicalPath(...)));
+        $this->twig->addFunction(new TwigFunction('indexable', $this->layout->indexable(...)));
         $this->twig->addFunction(new TwigFunction('in_section', $this->layout->inSection(...)));
         $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
         $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));
         $this->twig->addFunction(new TwigFunction('git_repo', $this->layout->gitRepo(...)));
         $this->twig->addFunction(new TwigFunction('copyright_years', $this->layout->copyrightYears(...)));
         $this->twig->addFunction(new TwigFunction('subscribe_notice', $this->layout->subscribeNotice(...)));
+        $this->twig->addFunction(new TwigFunction('most_searched_cities', $this->layout->mostSearchedCities(...)));
+        $this->twig->addFunction(new TwigFunction('footer_links', $this->layout->footerLinks(...)));
     }
 
     /**

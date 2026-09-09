@@ -1,0 +1,18 @@
+{# A page's title and the line under it.
+
+   For a page that is neither prose nor a directory. Those two carry their own
+   header inside their sheet -- see partials/article.html.twig and
+   partials/directory.html.twig -- and a page with cards under it has nowhere
+   to put one, so it had been borrowing Bootstrap's `display-4` and `.lead`.
+   That rendered 56px at weight 300 where every other title in the app is 28 to
+   32px at 700: the largest and lightest heading on the site, on the only two
+   pages that had not been given one of their own.
+
+   The type is the directory's, because these pages are its kin -- a title, a
+   line saying what the list is, and then the list. #}
+<header class="page-head">
+    <h1 class="page-head__title">{{ title }}</h1>
+    {% if lead is defined and lead is not empty %}
+        <p class="page-head__lead">{{ lead }}</p>
+    {% endif %}
+</header>

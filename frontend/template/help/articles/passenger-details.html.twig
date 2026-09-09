@@ -1,0 +1,38 @@
+{# The fields are CheckoutController::validatePassenger(); the age bands are
+   dobFitsType(). "Name changes are not allowed" is the line already agreed to
+   at checkout -- see checkout/rules.html.twig -- and this page must not soften
+   it into "ask the airline". #}
+<h2>Name changes are not allowed</h2>
+<p>
+    Once a ticket is issued, the name on it stays. That is the
+    airline&rsquo;s rule rather than ours, and it is why checkout asks for
+    names as printed on the ID.
+</p>
+<p>
+    So check every name against the passport or ID that traveller will fly on,
+    before you pay. It is the one part of a booking that cannot be put right
+    afterwards.
+</p>
+
+<h2>What checkout asks for</h2>
+<p>
+    For each traveller: first and last name as printed on the ID, a date of
+    birth, and a gender. The blocks are numbered within a type &mdash; Adult 1,
+    Adult 2, Child 1 &mdash; so they match the party you searched for.
+</p>
+<p>
+    The email and phone number are for the booking as a whole rather than for
+    one traveller. Both are shown back on the booking&rsquo;s own page.
+</p>
+
+<h2>Why the date of birth has to match</h2>
+<p>
+    It has to agree with the kind of traveller: an adult is 12 or over, a child
+    is 2 to 11, and a lap infant is under 2. A date that disagrees is refused,
+    because the age is what sets the fare &mdash; see
+    <a href="/help/flying-with-children">flying with children</a>.
+</p>
+<p>
+    If somebody was booked as the wrong type, that is a different fare and not
+    an edit. Cancel it where the fare allows that, and book again.
+</p>

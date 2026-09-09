@@ -1,0 +1,31 @@
+{# Where its network starts, and how far apart those places are.
+
+   One map for the airline rather than one per hub, the same way a country's
+   airports are drawn: the useful fact about Delta's seven is the shape they
+   make across the United States, which seven separate maps cannot show.
+
+   The chips name the city as well as the airport, which the country page's do
+   not need to: "Hartsfield-Jackson Atlanta" says where it is, and "Stansted"
+   does not say London. #}
+{% set pins = [] %}
+{% for hub in hubs %}
+    {% set pins = pins|merge([{ 'lat': hub.latitude, 'lon': hub.longitude }]) %}
+{% endfor %}
+
+<ul class="chips">
+    {% for hub in hubs %}
+        <li>
+            <a class="chip chip--link" href="{{ hub.url }}">
+                <i class="fas fa-plane-departure chip__icon" aria-hidden="true"></i>
+                {{ hub.title }} ({{ hub.code }})
+                <span class="chip__note">{{ hub.city }}</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+
+{% include 'partials/map.html.twig' with {
+    'markers': pins,
+    'label': 'Map showing the ' ~ (hubs|length > 1 ? hubs|length ~ ' airports' : 'airport')
+        ~ ' ' ~ place.name ~ ' is based at'
+} only %}

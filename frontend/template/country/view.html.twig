@@ -1,0 +1,67 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Flights to {{ country.name }}{% endblock %}
+
+{# Counted off the same figures the page prints, so no two of the 93 country
+   pages claim to be about the same thing. #}
+{% block description %}Cheap flights to {{ country.name }} — the cheapest direct fares into {{ country.cities > 1 ? 'its ' ~ country.cities ~ ' cities' : 'its city' }}, and every airport we sell a seat to.{% endblock %}
+
+{# This page draws a map, so it gets Mapbox GL. Five page types do and
+   thirteen do not; see the `map` block in layout.html.twig. #}
+{% block map %}yes{% endblock %}
+
+{# What this country has to say, in the order it is worth saying: the facts, the
+   price, then where in it you can land. The shell that draws it -- the rail, the
+   anchors, the dropping of an empty block -- is shared with the city page. #}
+{% set blocks = [
+    {
+        'id': 'general',
+        'title': 'General information about ' ~ country.name,
+        'nav': 'General information',
+        'icon': 'fa-circle-info',
+        'tone': 'green',
+        'template': 'country/blocks/facts.html.twig',
+        'when': true
+    },
+    {
+        'id': 'fares',
+        'title': 'Cheap tickets to ' ~ country.name,
+        'nav': 'Cheap tickets',
+        'icon': 'fa-tag',
+        'tone': 'blue',
+        'template': 'place/fares.html.twig',
+        'when': fares is not empty
+    },
+    {
+        'id': 'cities',
+        'title': 'Cities of ' ~ country.name,
+        'nav': 'Cities',
+        'icon': 'fa-city',
+        'tone': 'orange',
+        'template': 'country/blocks/cities.html.twig',
+        'when': country_cities is not empty
+    },
+    {
+        'id': 'airports',
+        'title': 'Airports of ' ~ country.name,
+        'nav': 'Airports',
+        'icon': 'fa-plane-departure',
+        'tone': 'violet',
+        'template': 'place/airports.html.twig',
+        'when': country_airports is not empty
+    }
+] %}
+
+{% block content %}
+{% include 'partials/place.html.twig' with {
+    'heading': 'Flights to ' ~ country.name,
+    'rail_title': country.name,
+    'blocks': blocks,
+    'data': {
+        'place': country,
+        'cities': country_cities,
+        'airports': country_airports,
+        'fares': fares
+    }
+} only %}
+{% endblock %}

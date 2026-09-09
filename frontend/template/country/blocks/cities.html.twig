@@ -1,0 +1,19 @@
+{# Where in the country, busiest first.
+
+   Links, not labels: this is the one block whose whole job is to hand a reader
+   on, and the city page underneath it is where the fares actually are. The note
+   is the airport count, and only where there is more than one -- "Toronto 1
+   airport" on every chip is noise, "Montreal 2 airports" is a reason to look. #}
+<ul class="chips">
+    {% for city in cities %}
+        <li>
+            <a class="chip chip--link" href="{{ city.url }}">
+                <i class="fas fa-location-dot chip__icon" aria-hidden="true"></i>
+                {{ city.name }}
+                {% if city.airports > 1 %}
+                    <span class="chip__note">{{ city.airports }} airports</span>
+                {% endif %}
+            </a>
+        </li>
+    {% endfor %}
+</ul>

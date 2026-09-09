@@ -108,6 +108,38 @@
      the brighter originals did. */
   --brand-success:    #146C43;   /* 6.45 on white, 6.12 on #f8f9fa */
   --brand-danger:     #B02A37;   /* 6.50 on white, 6.16 on #f8f9fa */
+  --brand-danger-700: #96232E;   /* pressed and hovered, as accent-700 is */
+
+  /* Tints for the two semantics, mirroring --brand-tint / --brand-tint-edge.
+     These are not new colours: every value here was already in the file. What
+     was missing was a name, and without one the same job had been mixed by
+     hand each time it came up -- six near-identical pale pinks across the
+     checkout alert, the notice chips, a cancelled booking and a danger hover,
+     and two pale greens. The ink that goes on them measures 5.56 and 5.59. */
+  /* Categorical, and decorative only.
+     Colours whose job is to tell one section from another. Neither brand hue
+     can do that alone, and the semantics must not be borrowed for it -- green
+     as a category would collide with green as "good".
+     Bright on purpose. The first attempt held the brand teal's own lightness
+     and chroma and rotated hue, which produced a well-behaved family and a
+     drab one: at that chroma an orange comes out salmon. Holding one lightness
+     across four hues is what forces that, so each of these takes the lightness
+     its own hue needs, the way the reference set does -- its yellow is light
+     and its red is dark.
+     White glyph on each, measured: 3.45, 5.02, 3.58, 5.55. All clear the 3:1 a
+     graphic needs; blue and violet also clear 4.5. Amber is the one this family
+     cannot offer -- #F08C00 measures 2.48 and no white mark belongs on it.
+     Nothing wearing these carries state, so none has to mean anything. */
+  --cat-green:         #2F9E44;
+  --cat-blue:          #1971C2;
+  --cat-orange:        #E8590C;
+  --cat-violet:        #7048E8;
+  --cat-pink:          #C2255C;
+
+  --success-tint:      #E4F2EA;
+  --success-tint-edge: #B2E2C4;
+  --danger-tint:       #FBE9EB;
+  --danger-tint-edge:  #F3C7CC;
 
   /* Muted text. This file used Bootstrap's gray-500 in 25 places -- 2.07:1 on
      white, which is not only past AA but past the 3:1 floor for a graphic, and
@@ -151,6 +183,12 @@
      not a light colour laid on top, so this is white at low alpha and picks up
      whatever it sits on. */
   --line-on-dark:     rgba(255, 255, 255, .12);
+  /* Success and danger for a dark surface. --brand-success and --brand-danger
+     are mixed for white and measure 1.3 and 1.7 on the navy card -- unreadable
+     -- so the pair is lightened rather than reused. Both against
+     --brand-ink-700, which is the only dark surface either appears on. */
+  --good-on-dark:     #6EE7B7;   /* 7.52 on --brand-ink-700 */
+  --bad-on-dark:      #FCA5A5;   /* 6.04 on --brand-ink-700 */
 
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
   --bs-body-color: var(--ink-body);
@@ -188,10 +226,10 @@
 .btn-danger {
   --bs-btn-bg: var(--brand-danger);
   --bs-btn-border-color: var(--brand-danger);
-  --bs-btn-hover-bg: #96232e;
-  --bs-btn-hover-border-color: #96232e;
-  --bs-btn-active-bg: #96232e;
-  --bs-btn-active-border-color: #96232e;
+  --bs-btn-hover-bg: var(--brand-danger-700);
+  --bs-btn-hover-border-color: var(--brand-danger-700);
+  --bs-btn-active-bg: var(--brand-danger-700);
+  --bs-btn-active-border-color: var(--brand-danger-700);
 }
 
 .btn-primary {
@@ -299,6 +337,13 @@
   --icon-plane: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/%3E%3C/svg%3E");
   --icon-pin: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E");
   --icon-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5v4l5-4.5L13 0z'/%3E%3Cpath d='M12.5 8v5l4 2 .75-1.23-3.25-1.77V8z'/%3E%3C/svg%3E");
+
+  /* The column a page gives its content: what .place__blocks measures inside
+     the 1140px container once the 17rem rail and the gap are taken out. An
+     article has no rail, so it centres this width instead -- and the trail
+     above it is centred to match, which is the only reason this is a token
+     rather than a number in one place. */
+  --content-column: 820px;
 
   --dur-fast: .12s;   /* hover feedback, press, small reveals */
   --dur-base: .2s;    /* chevrons and anything that rotates or slides */
@@ -481,6 +526,22 @@ a {
 .page-wrapper {
   min-height: 100vh;
 }
+/* The ground every page stands on.
+
+   White was the default because nothing had ever said otherwise, and it left
+   the white cards the app is built out of invisible against it -- a booking
+   block, a flight card and a footer column all have a white surface and no
+   edge, so on white they read as one continuous sheet. A step of grey behind
+   them is what makes each one a thing.
+
+   On body and not on .page, so it also reaches the bands that are not page
+   content: the breadcrumb strip sits above .page and was left a white seam
+   between the navy header and the grey below it. The header and the footer
+   paint their own colour over this, so there is nothing to fight. */
+body {
+  background-color: var(--surface);
+}
+
 
 /* What a rubber-band scroll reveals past either end of the page.
 
@@ -1085,16 +1146,6 @@ textarea {
 
 button {
   cursor: pointer;
-}
-
-.label {
-  font-size: 14px;
-  color: #333;
-  text-transform: capitalize;
-  display: block;
-  font-weight: 700;
-  white-space: nowrap;
-  margin-right: 30px;
 }
 
 
@@ -1805,98 +1856,6 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 /* ==========================================================================
-   #SELECT2
-   ========================================================================== */
-.select--no-search .select2-search {
-  display: none !important;
-}
-
-.rs-select2 {
-  width: 100%;
-}
-
-.rs-select2 .select2-container {
-  width: 100% !important;
-  outline: none;
-}
-
-.rs-select2 .select2-container .select2-selection--single {
-  outline: none;
-  border: none;
-  height: 60px;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__rendered {
-  line-height: 60px;
-  padding-left: 0;
-  color: #666;
-  font-size: 16px;
-  text-transform: uppercase;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__arrow {
-  height: 58px;
-  right: 4px;
-  display: -webkit-box;
-  display: -webkit-flex;
-  display: -moz-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: center;
-  -webkit-justify-content: center;
-  -moz-box-pack: center;
-  -ms-flex-pack: center;
-  justify-content: center;
-  -webkit-box-align: center;
-  -webkit-align-items: center;
-  -moz-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__arrow b {
-  display: none;
-}
-
-.rs-select2 .select2-container .select2-selection--single .select2-selection__arrow:after {
-  font-family: "Material-Design-Iconic-Font";
-  content: '\f2f9';
-  font-size: 24px;
-  color: #808080;
-  transition: transform var(--dur-base) var(--ease-out);
-}
-
-.rs-select2 .select2-container.select2-container--open .select2-selection--single .select2-selection__arrow::after {
-  -webkit-transform: rotate(-180deg);
-  -moz-transform: rotate(-180deg);
-  -ms-transform: rotate(-180deg);
-  -o-transform: rotate(-180deg);
-  transform: rotate(-180deg);
-}
-
-.select2-container--open .select2-dropdown--below {
-  border: none;
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  border-radius: 10px;
-  -webkit-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  -moz-box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.15);
-  margin-top: 2px;
-  overflow: hidden;
-}
-
-.select2-container--default .select2-results__option {
-  padding: 10px;
-  font-size: 16px;
-  color: #666;
-}
-
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-  background: #6c7ae0;
-}
-
-/* ==========================================================================
    #SIDEBAR
    ========================================================================== */
 
@@ -2035,6 +1994,16 @@ input[type=number]::-webkit-outer-spin-button {
    #AIRLINES
    ========================================================================== */
 
+/* An airline is the only listing on the site with no surface of its own -- the
+   airports beside it use a Bootstrap .card and these never did, because the
+   white page was doing the job. With the page grey they needed a sheet like
+   everything else. */
+.airline-panel {
+  padding: 1.25rem;
+  background-color: #fff;
+  border-radius: .75rem;
+}
+
 .feature-icon {
   width: 4rem;
   height: 4rem;
@@ -2079,49 +2048,23 @@ input[type=number]::-webkit-outer-spin-button {
    CommonMark, with no classes to hook. Everything is scoped under .readme so
    these bare element selectors cannot reach the rest of the app.
 
-   Measure is capped rather than left to the container: the README is prose, and
-   a 1,300px line of it is unreadable. */
-.readme {
-  max-width: 64ch;
-  color: var(--ink-body);
-  font-size: 1rem;
-  line-height: 1.7;
-}
+   Only the markdown is here. The sheet it sits on, the measure, and the
+   headings, paragraphs, lists and links that any prose page has are under
+   #ARTICLE, shared with /help -- `.readme` is the extra a document nobody here
+   wrote needs on top: the heading levels the help articles have no use for, and
+   the blocks only a README produces. Nothing below overlaps that section, so
+   which of the two comes first in this file does not matter. */
 
-.readme > :first-child {
-  margin-top: 0;
-}
-
-/* The ladder never drops below the 1rem body text: a heading smaller than the
-   paragraph it introduces reads as a caption. Below h3 there is no room left to
-   shrink, so the deeper levels separate on weight, colour and letter-spacing
-   instead of size. */
+/* h1 is one of those levels, and one the file no longer reaches: the page
+   supplies its own heading, so the README's title sits above the about:start
+   marker. Kept because a README can grow another one, and an unstyled heading
+   here does not fail harmlessly -- see the note on h4. */
 .readme h1 {
   margin-bottom: .75rem;
   color: var(--brand-ink);
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -.01em;
-}
-
-/* The section headings carry the page's structure, so they get a rule above to
-   separate one section from the last. */
-.readme h2 {
-  margin-top: 2.5rem;
-  margin-bottom: 1rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
-  color: var(--brand-ink);
-  font-size: 1.375rem;
-  font-weight: 700;
-}
-
-.readme h3 {
-  margin-top: 1.75rem;
-  margin-bottom: .35rem;
-  color: var(--brand-ink);
-  font-size: 1.125rem;
-  font-weight: 700;
 }
 
 /* Every level the file can reach, not only the levels it uses today. Bootstrap
@@ -2175,26 +2118,16 @@ input[type=number]::-webkit-outer-spin-button {
   margin-top: .5rem;
 }
 
-/* One rhythm for every block the file can produce, not only the text ones.
-   Missing pre and table here left a code block with no bottom margin at all,
-   so the paragraph after it sat flush against the block and read as part of
-   it -- while the gap going in was a full 1rem, which made the asymmetry look
-   deliberate. Anything block-level a README can grow belongs in this list. */
-.readme p,
-.readme ul,
-.readme ol,
+/* The same rhythm the shared body gives a paragraph or a list, for the blocks
+   only a README produces. Missing pre and table here once left a code block
+   with no bottom margin at all, so the paragraph after it sat flush against the
+   block and read as part of it -- while the gap going in was a full 1rem, which
+   made the asymmetry look deliberate. Anything block-level a README can grow
+   belongs in this list. */
 .readme pre,
 .readme table,
 .readme blockquote {
   margin-bottom: 1rem;
-}
-
-/* Bootstrap's reboot zeroes list padding, and the markers are drawn outside the
-   box, so an unpadded list hung its numbers to the left of the text column.
-   Enough room for a two-digit marker to stay inside the measure. */
-.readme ul,
-.readme ol {
-  padding-left: 1.75rem;
 }
 
 .readme li > ul,
@@ -2207,20 +2140,6 @@ input[type=number]::-webkit-outer-spin-button {
    step's text rather than starting a new indent. */
 .readme li > pre {
   margin-top: .5rem;
-}
-
-.readme li + li {
-  margin-top: .35rem;
-}
-
-.readme a {
-  color: var(--brand-accent-700);
-  text-decoration: underline;
-  text-underline-offset: .15em;
-}
-
-.readme a:hover {
-  color: var(--brand-accent);
 }
 
 /* The "Built With" badges are inline images inside links; without this they sit
@@ -2355,15 +2274,6 @@ input[type=number]::-webkit-outer-spin-button {
   height: auto;
 }
 
-.readme__source {
-  max-width: 64ch;
-  margin-top: 2.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
-  color: var(--ink-muted);
-  font-size: .875rem;
-}
-
 button,
 input[type="text"],
 textarea {
@@ -2383,7 +2293,7 @@ textarea {
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: .25rem .85rem;
-  color: #495057;
+  color: var(--ink-secondary);
   background-color: #fff;
   font-weight: 500;
   transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
@@ -2396,7 +2306,7 @@ textarea {
 }
 
 .details-toggle:not(.collapsed) {
-  background-color: #e7f1ff;
+  background-color: var(--brand-tint);
   border-color: var(--brand-tint-edge);
   color: var(--brand-accent-700);
 }
@@ -2608,22 +2518,64 @@ textarea {
   padding-left: .75rem;
 }
 
+/* Shape only. The colour used to be white here as well, which was right while
+   all four badges were saturated fills and wrong the moment two of them became
+   tinted -- and wrong at a specificity the modifiers could not answer, so a
+   tinted chip rendered white on pale grey. Each modifier states its own pair. */
 .flight-badges .badge {
   font-size: .8125rem;
   padding: .35rem .7rem;
   border-radius: 999px;
-  color: #fff;
 }
 
-.badge--success { background-color: #2fa360; }
-.badge--primary { background-color: #2f6fed; }
-.badge--purple  { background-color: #7048e8; }
-.badge--teal    { background-color: #0f9b8e; }
+
+
+
+
 .badge--secondary { background-color: var(--ink-secondary); }
 
 /* The flight a Change link came back to replace. Deliberately the brand accent
    rather than one of the sort badges' colours: those describe how a row scored,
    this one says the traveller already has it. */
+/* How a row scored, in the palette the rest of the app is in.
+
+   These were four saturated fills -- a green, a violet, a bright blue and a
+   second teal -- and three things were wrong with them. Two failed WCAG AA
+   outright: white measured 3.22 on the green and 3.44 on the teal. Two were
+   near-misses of tokens that already existed, a second green beside
+   --brand-success and a second teal beside --brand-accent, which reads as a
+   mistake rather than a choice. And the blue was #2f6fed, which is the stock
+   Bootstrap blue this palette was written to purge.
+
+   Two tiers now, which is what the four labels actually are. Cheapest and Best
+   value are claims about the whole list and carry a filled chip; Fastest and
+   Cheapest nonstop qualify one, and are tinted. Every pairing is measured:
+   6.45, 15.60, 7.87 and 7.04 against their own backgrounds.
+
+   No new tokens. The tinted pair is the treatment .search-cabin already uses
+   for the same job a few lines up. */
+.badge--success {
+  background-color: var(--brand-success);
+  color: #fff;
+}
+
+.badge--primary {
+  background-color: var(--brand-ink);
+  color: #fff;
+}
+
+.badge--purple {
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-secondary);
+}
+
+.badge--teal {
+  background-color: var(--brand-tint);
+  border: 1px solid var(--brand-tint-edge);
+  color: var(--brand-accent-700);
+}
+
 .badge--current { background-color: var(--brand-accent-700); }
 
 .flight-card--badged { border-top-left-radius: .5rem; }
@@ -2649,16 +2601,16 @@ textarea {
   border: 0;
   border-radius: 50%;
   background-color: var(--surface-sunken);
-  color: #495057;
+  color: var(--ink-secondary);
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 .icon-btn:hover { background-color: var(--line); }
-.icon-btn.is-active { color: #e03131; }
-.icon-btn.is-copied { background-color: #d3f9d8; color: #2b8a3e; }
+.icon-btn.is-active { color: var(--brand-danger); }
+.icon-btn.is-copied { background-color: var(--brand-tint); color: var(--brand-success); }
 
 /* Removing a saved flight: the one destructive control on the saved page. */
-.icon-btn--danger:hover { background-color: #ffe3e3; color: #c92a2a; }
+.icon-btn--danger:hover { background-color: var(--danger-tint); color: var(--brand-danger); }
 
 /* Dropping a saved flight used to delete the card mid-click, so everything
    below jumped up under the pointer at the exact moment it was busy. The card
@@ -2712,7 +2664,7 @@ textarea {
 .notice--risk,
 .notice--check,
 .notice--note {
-  background-color: #FFE9E9;
+  background-color: var(--danger-tint);
   color: var(--brand-danger);
 }
 
@@ -2952,7 +2904,7 @@ textarea {
 
 /* The chosen outbound: a green banner rather than a green wash, so the route
    bar inside keeps the same contrast it has on every other card. */
-.selected-flight { border: 1px solid #b2e2c4; }
+.selected-flight { border: 1px solid var(--success-tint-edge); }
 
 .selected-flight__banner {
   display: flex;
@@ -2960,7 +2912,7 @@ textarea {
   justify-content: space-between;
   gap: .75rem;
   padding: .5rem 1rem;
-  background-color: #2fa360;
+  background-color: var(--brand-success);
   color: #fff;
   border-radius: calc(var(--bs-border-radius) - 1px) calc(var(--bs-border-radius) - 1px) 0 0;
 }
@@ -2996,7 +2948,7 @@ textarea {
 .price__symbol {
   font-size: 1.35rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 
 .price__whole {
@@ -3008,7 +2960,7 @@ textarea {
 .price__cents {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
   margin-left: -.15rem;
 }
 
@@ -3066,9 +3018,12 @@ textarea {
   align-items: stretch;
   margin-bottom: 1rem;
   border-radius: .75rem;
-  /* A light ground, so the chosen tab reads as filled rather than as the only
-     thing with a border. */
-  background-color: var(--surface);
+  /* White, because the page is not. This was --surface, which gave the bar its
+     own light ground back when every page was white -- and became invisible the
+     day the page took that same colour, leaving two of the three tabs floating
+     with no surface at all while the chosen one looked like the only control
+     there. A control on a grey page is a white one. */
+  background-color: #fff;
   overflow: hidden;
 }
 
@@ -3086,7 +3041,11 @@ textarea {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.sort-bar__tab:hover { background-color: var(--line); }
+/* --brand-tint, which is what every other hover in this file uses. It was
+   --surface for a moment, and --surface is exactly the colour of the page: the
+   hovered tab stopped looking hovered and started looking like a hole cut in
+   the white bar. */
+.sort-bar__tab:hover { background-color: var(--brand-tint); }
 
 /* Ink, not accent. This marks which sort is active -- it is state, not a step
    forward -- and leaving the accent free for the Select buttons is what stops
@@ -3331,7 +3290,7 @@ textarea {
 
 .filter-row:hover .filter-row__only,
 .filter-row__only:focus-visible { opacity: 1; }
-.filter-row__only:hover { background-color: #e7f1ff; }
+.filter-row__only:hover { background-color: var(--brand-tint); }
 
 .filter-row__label {
   display: block;
@@ -3487,7 +3446,7 @@ textarea {
   pointer-events: none;
 }
 .filter-pill:hover { background-color: var(--line); }
-.filter-pill__icon { color: #868e96; font-size: .8125rem; }
+.filter-pill__icon { color: var(--ink-muted); font-size: .8125rem; }
 
 /* A selected pill. `is-on` is set by JS on load and on every change.
    :has(input:checked) would express this in CSS alone, but the state is then
@@ -3644,7 +3603,7 @@ body:has(.hero) header#top {
   display: inline-block;
   margin-top: .5rem;
   font-size: .875rem;
-  color: #868e96;
+  color: var(--ink-muted);
 }
 
 /* --- Unavailable ---------------------------------------------------------
@@ -3792,12 +3751,12 @@ body:has(.hero) header#top {
   display: flex;
   align-items: center;
   gap: .5rem;
-  border: 1px solid #f5c2c7;
+  border: 1px solid var(--danger-tint-edge);
   border-radius: .75rem;
-  background-color: #fff5f5;
+  background-color: var(--danger-tint);
   padding: .75rem 1rem;
   margin-bottom: 1.25rem;
-  color: #842029;
+  color: var(--brand-danger);
 }
 
 /* Form and summary side by side; the summary drops under the form on a narrow
@@ -3857,7 +3816,7 @@ body:has(.hero) header#top {
   margin-bottom: .3125rem;
   font-size: .875rem;
   font-weight: 500;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .field__input {
   width: 100%;
@@ -3917,6 +3876,10 @@ body:has(.hero) header#top {
   border-radius: .875rem;
   padding: 1.125rem 1.25rem;
   backface-visibility: hidden;
+  /* Outside the palette on purpose. This is a picture of a physical object,
+     not a piece of interface: a bank card is navy plastic with a gold chip, and
+     paying it in --brand-ink and --brand-accent would make it a Trip Builder
+     card rather than the visitor's. Nothing here carries text or state. */
   background: linear-gradient(135deg, #1f2c47 0%, #2b3a5c 55%, #33415f 100%);
   box-shadow: 0 .5rem 1.5rem rgba(31, 44, 71, .35);
   color: #fff;
@@ -3992,7 +3955,7 @@ body:has(.hero) header#top {
 .pay-card__back-note { margin: .75rem 0 0; font-size: .6875rem; opacity: .65; }
 
 /* --- accept and pay ----------------------------------------------------- */
-.accept { display: flex; gap: .625rem; font-size: .875rem; color: #495057; }
+.accept { display: flex; gap: .625rem; font-size: .875rem; color: var(--ink-secondary); }
 
 /* Sized explicitly. The form block near the top of this file sets
    `input { width: 100% }`, and on a flex item that is what flex-basis:auto
@@ -4006,7 +3969,7 @@ body:has(.hero) header#top {
   margin-top: .1rem;
   accent-color: var(--brand-accent);
 }
-.accept--invalid { color: #842029; }
+.accept--invalid { color: var(--brand-danger); }
 
 .checkout__pay {
   display: block;
@@ -4026,7 +3989,7 @@ body:has(.hero) header#top {
 .checkout__pay:hover { filter: brightness(.92); color: #fff; }
 .checkout__pay--link { max-width: 18rem; }
 .checkout__test { margin: .75rem 0 0; color: var(--ink-secondary); font-size: .8125rem; }
-.checkout__test code { color: #495057; }
+.checkout__test code { color: var(--ink-secondary); }
 
 /* --- order summary ------------------------------------------------------ */
 .order {
@@ -4049,7 +4012,7 @@ body:has(.hero) header#top {
 .order__route { display: flex; align-items: center; gap: .5rem; margin: 0 0 .25rem; }
 .order__code { font-size: 1.125rem; font-weight: 700; color: var(--ink-body); }
 .order__arrow { color: var(--ink-muted); font-size: .8125rem; }
-.order__when { margin: 0; font-size: .875rem; color: #495057; }
+.order__when { margin: 0; font-size: .875rem; color: var(--ink-secondary); }
 .order__detail { margin: 0; font-size: .8125rem; color: var(--ink-muted); }
 
 .order__prices { margin: 0; }
@@ -4082,7 +4045,7 @@ body:has(.hero) header#top {
   margin: 0 0 .5rem;
   font-size: .875rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .rules__brand {
   flex: 0 0 auto;
@@ -4091,7 +4054,7 @@ body:has(.hero) header#top {
   padding: .1rem .5rem;
   font-size: .75rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .rules__list { margin: 0; padding: 0; list-style: none; }
 /* In a booking's Fare row the list follows the brand name, so it needs the gap a standalone block does not. */
@@ -4101,7 +4064,7 @@ body:has(.hero) header#top {
   gap: .5rem;
   padding: .1875rem 0;
   font-size: .8125rem;
-  color: #495057;
+  color: var(--ink-secondary);
 }
 .rules__icon { flex: 0 0 .875rem; margin-top: .2rem; font-size: .6875rem; color: var(--brand-success); }
 .rules__item--restricted { color: var(--ink-secondary); }
@@ -4121,7 +4084,7 @@ body:has(.hero) header#top {
 .done { text-align: center; padding: 1.5rem 0 2rem; }
 .done__icon { font-size: 2.75rem; color: var(--brand-success); }
 .done__title { margin: .875rem 0 .5rem; font-size: 1.75rem; font-weight: 700; }
-.done__lead { margin: 0 auto; max-width: 32rem; color: #495057; }
+.done__lead { margin: 0 auto; max-width: 32rem; color: var(--ink-secondary); }
 .done__reference {
   display: inline-flex;
   flex-direction: column;
@@ -4164,7 +4127,7 @@ body:has(.hero) header#top {
 }
 .done__leg { padding: .625rem 0; border-bottom: 1px solid var(--surface-sunken); }
 .done__leg-route { display: flex; align-items: center; gap: .5rem; }
-.done__leg-when { display: flex; gap: .5rem; font-size: .875rem; color: #495057; }
+.done__leg-when { display: flex; gap: .5rem; font-size: .875rem; color: var(--ink-secondary); }
 .done__leg-sep { color: var(--ink-muted); }
 .done__leg-carrier { font-size: .8125rem; color: var(--ink-muted); }
 .done__demo { margin: .75rem 0 0; font-size: .8125rem; color: var(--ink-muted); }
@@ -4220,7 +4183,7 @@ body:has(.hero) header#top {
   letter-spacing: .06em;
   color: var(--bs-primary);
 }
-.review__half-date { margin: .125rem 0 0; font-size: .9375rem; color: #495057; }
+.review__half-date { margin: .125rem 0 0; font-size: .9375rem; color: var(--ink-secondary); }
 
 .review__change {
   border: 1px solid var(--line-strong);
@@ -4228,7 +4191,7 @@ body:has(.hero) header#top {
   padding: .25rem .85rem;
   font-size: .875rem;
   font-weight: 500;
-  color: #495057;
+  color: var(--ink-secondary);
   text-decoration: none;
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
@@ -4607,9 +4570,9 @@ body:has(.hero) header#top {
    solid fill, which stays legible at this weight without shouting.
 
    Contrast, measured in the browser on the tint each sits on:
-     confirmed  #146C43 on #E4F2EA   5.59
-     cancelled  #B02A37 on #FBE9EB   5.56
-     flown      #3F4854 on #E8EDF3   7.87  */
+     confirmed  --brand-success on --success-tint    5.59
+     cancelled  --brand-danger  on --danger-tint     5.56
+     flown      --ink-secondary on --surface-sunken  7.87 */
 .booking-status {
   display: inline-flex;
   align-items: center;
@@ -4620,8 +4583,8 @@ body:has(.hero) header#top {
   line-height: 1.3;
   white-space: nowrap;
 }
-.booking-status--confirmed { background-color: #E4F2EA; color: var(--brand-success); }
-.booking-status--cancelled { background-color: #FBE9EB; color: var(--brand-danger); }
+.booking-status--confirmed { background-color: var(--success-tint); color: var(--brand-success); }
+.booking-status--cancelled { background-color: var(--danger-tint); color: var(--brand-danger); }
 .booking-status--flown { background-color: var(--surface-sunken); color: var(--ink-secondary); }
 
 /* "Departs in 40 days". Quiet beside the status pill: the status answers
@@ -4647,10 +4610,15 @@ body:has(.hero) header#top {
    still a receipt somebody may need -- and loses only the lift. .shadow-sm is
    a Bootstrap utility and carries !important, so the honest place to drop it is
    the template, which simply does not emit it. */
+/* Sunken rather than merely un-lifted. This was --surface, which read as a
+   dimmer card while the page was white and read as nothing at all once the page
+   became that colour -- the card disappeared into the ground instead of sitting
+   quietly on it. A step below the page says "already flown" more clearly than
+   an absent shadow did anyway. */
 .booking-card--past,
-.booking-card--cancelled { background-color: var(--surface); }
+.booking-card--cancelled { background-color: var(--surface-sunken); }
 .booking-card--past .flight-card__footer,
-.booking-card--cancelled .flight-card__footer { background-color: var(--surface-sunken); }
+.booking-card--cancelled .flight-card__footer { background-color: var(--line); }
 
 /* What you can do with a booking, as one row. Wraps rather than squeezing, so
    the next action added here does not have to find its own corner of the page. */
@@ -4777,10 +4745,10 @@ body:has(.hero) header#top {
   gap: .5rem;
   margin: 1.5rem 0 0;
   padding: .75rem 1rem;
-  border: 1px solid #F3C7CC;
+  border: 1px solid var(--danger-tint-edge);
   border-left: 3px solid var(--brand-danger);
   border-radius: .5rem;
-  background-color: #FDF4F5;
+  background-color: var(--danger-tint);
   color: var(--ink-secondary);
   font-size: .9375rem;
 }
@@ -5004,6 +4972,17 @@ body:has(.hero) header#top {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* An article centres its sheet in the container, so the trail has to centre
+   with it: left where every other page puts it, it sat 148px to the left of the
+   page it describes. Done on the list rather than by narrowing the container,
+   because the container's own max-width changes at four breakpoints and a flat
+   override would only line up at the widest of them. Below the measure both
+   simply fill the space, and they stay aligned. */
+body:has(main.article) .breadcrumbs__list {
+  max-width: var(--content-column);
+  margin-inline: auto;
 }
 
 .breadcrumbs__item {
@@ -5310,8 +5289,8 @@ body:has(.hero) header#top {
 
 .footer__subscribe-note:empty { display: none; }
 
-.footer__subscribe-note[data-tone="good"]  { color: #6EE7B7; }
-.footer__subscribe-note[data-tone="bad"]   { color: #FCA5A5; }
+.footer__subscribe-note[data-tone="good"]  { color: var(--good-on-dark); }
+.footer__subscribe-note[data-tone="bad"]   { color: var(--bad-on-dark); }
 .footer__subscribe-note[data-tone="quiet"] { color: var(--ink-on-dark); }
 
 .footer__subscribe-consent {
@@ -5371,4 +5350,1155 @@ body:has(.hero) header#top {
   .footer__columns,
   .footer__destinations,
   .footer__bottom { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   #PLACE PAGE
+   ==========================================================================
+   A rail and a stack of blocks. The rail is a table of contents for a page
+   that is long by design -- somebody who came for the airports should not have
+   to scroll past the fares to find them.
+
+   Not city-specific, which is why it is not called that. A country is read the
+   same way and so, next, are an airline and an airport: some facts, some
+   fares, some links, and a rail to reach them by. */
+
+.place {
+  padding: 2rem 0 4rem;
+}
+
+.place__layout {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Sticky, and bounded by .place__layout rather than by the page: it travels
+   down beside the blocks and stops where they stop, instead of riding on over
+   the footer. Same reason the search bar is bounded by .page. */
+.place__rail {
+  position: sticky;
+  top: 1.5rem;
+  padding: 1.25rem;
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+.place__rail-title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.place__rail-list {
+  display: grid;
+  gap: .25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place__rail-link {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .5rem;
+  color: var(--ink-body);
+  font-size: .9375rem;
+  text-decoration: none;
+  border-radius: .625rem;
+  transition: background-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .place__rail-link:hover { background-color: var(--surface-sunken); }
+}
+
+/* The icon tile is what makes a list of eight grey rows scannable: the colour
+   is the thing the eye comes back to, not the word. */
+.place__rail-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  color: #fff;
+  font-size: .8125rem;
+  border-radius: 50%;
+}
+
+/* A colour per block, from the categorical set. These were four hues invented
+   on the spot -- a #2F9E44, an #E8590C, a #C2255C and a #1971C2, none of them
+   from this palette. Flattening them was the wrong answer -- a rail you can
+   find by colour is easier to come back to than one you have to read -- and so
+   was muting them. They are those four colours again, named this time, and
+   measured.
+
+   Five now that the city and airport pages have a routes block, and the fifth
+   is the crimson those four started out with -- the one violet replaced. Same
+   ramp as the rest of the set, at the same step. */
+.place__rail-icon--green  { background-color: var(--cat-green); }
+.place__rail-icon--blue   { background-color: var(--cat-blue); }
+.place__rail-icon--orange { background-color: var(--cat-orange); }
+.place__rail-icon--violet { background-color: var(--cat-violet); }
+.place__rail-icon--pink   { background-color: var(--cat-pink); }
+
+.place__blocks {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.place__block {
+  padding: 1.75rem;
+  background-color: #fff;
+  border-radius: 1rem;
+  /* A grid item is min-width:auto, which means "at least as wide as what is
+     inside me" -- and inside one of these is a strip of eight fare cards that
+     would rather be 1,520px. Without this the widest block sets the width of
+     the column and every other block is dragged out with it, off the side of
+     the page. The strip's own overflow-x can only work once this lets the
+     block be narrower than its contents. */
+  min-width: 0;
+  /* Clear of the sticky rail's top edge, so an anchored jump does not land
+     with the heading tucked under it. */
+  scroll-margin-top: 1.5rem;
+}
+
+.place__block-title {
+  margin: 0 0 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* The way home, under the route's figures. Quiet: it is an offer rather than
+   the answer this page came to give, and the price is what makes it worth
+   reading at all. */
+.route-back {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .375rem;
+  margin: 1.25rem 0 0;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+}
+
+.route-back__icon { color: var(--ink-muted); }
+
+.route-back__link:any-link {
+  color: var(--brand-accent-700);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: .15em;
+}
+
+.route-back__link:hover { text-decoration-color: currentcolor; }
+
+/* The map, whether it is a live one or the picture inside <noscript>.
+
+   `aspect-ratio` rather than a height, and the same 650:300 the picture has:
+   the box then has its final shape before Mapbox GL loads, so the page does not
+   jump when half a megabyte of JavaScript arrives and fills it. It is also what
+   gives the map a size to initialise into -- GL JS measures its container, and
+   a container with no height renders nothing at all.
+
+   `overflow: hidden` because the live map draws its own canvas and controls,
+   which would otherwise sit square over the rounded corners. */
+.place__map {
+  display: block;
+  width: 100%;
+  aspect-ratio: 650 / 300;
+  height: auto;
+  margin-top: 1.25rem;
+  border-radius: .75rem;
+  overflow: hidden;
+  /* Something to look at while the tiles arrive, in place of a white hole. */
+  background-color: var(--surface-sunken);
+}
+
+/* An airline's mark. The one place page with no map of its own to lead with,
+   and the one whose subject has a face people recognise faster than its name. */
+/* The airline masthead: the mark and the two things that identify the carrier,
+   on one line. Both used to be tiles in the grid below -- a code and a country
+   sitting among counted figures, where they read as statistics and are not.
+   The mark was on a line of its own above them, belonging to nothing. */
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+/* As tall as the three rows beside it, which measure 81px to its 80. It was
+   3.5rem while the identity was two lines; the contacts moved up from below the
+   tiles, where they were a row belonging to nothing, and gave the mark a
+   third. */
+.masthead__mark {
+  flex: 0 0 auto;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 1rem;
+}
+
+.masthead__identity { min-width: 0; }
+
+.masthead__name {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.masthead__meta {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .25rem 0 0;
+  color: var(--ink-muted);
+  font-size: .9375rem;
+}
+
+/* The code set apart, because it is an identifier rather than a word: two
+   capitals in running text read as an abbreviation of the name beside them. */
+.masthead__code {
+  padding: .0625rem .375rem;
+  color: var(--ink-secondary);
+  font-weight: 700;
+  letter-spacing: .04em;
+  background-color: var(--surface-sunken);
+  border-radius: .25rem;
+}
+
+.masthead__sep { color: var(--line-strongest); }
+
+/* Every link in the masthead, which is the country and the website. Plain
+   underlined text rather than the chips these used to be: a chip is a thing to
+   pick from a set, and there is no set here -- one country, one website, and a
+   phone number that is not a link at all.
+
+   `:any-link` and not the bare class, because the reset's `a:link` takes the
+   underline off and is a class plus an element to this rule's one class. The
+   pseudo-class buys the point that wins it. */
+.masthead__link:any-link {
+  color: var(--ink-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: .15em;
+}
+
+.masthead__link:hover { color: var(--brand-accent-700); }
+
+/* An address has no spaces to break at, and the longest here is 57 characters
+   against a text column that is 218px wide on a phone. Left alone it would
+   push the mark's row wider than the card. */
+.masthead__link {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.masthead__contact {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  /* Wraps rather than pushing the mark's row wide: a name and a number are two
+     unrelated things and read fine on two lines. */
+  flex-wrap: wrap;
+  margin: .375rem 0 0;
+  color: var(--ink-muted);
+  font-size: .9375rem;
+}
+
+/* Small, and after the words rather than beside them: it marks where the link
+   goes, it is not part of the label. */
+.masthead__out {
+  margin-left: .375rem;
+  font-size: .75em;
+}
+
+/* A pin's name, sitting above it on the map.
+
+   White ground rather than a text halo, because a label here crosses coastline,
+   motorway and parkland within its own width and no outline reads on all
+   three. The map is what it sits on, so it takes the map's job of being legible
+   seriously: solid ground, ink text, and a shadow to lift it off the tiles.
+
+   `pointer-events: none` so the label never eats a drag: a map you cannot pan
+   because you grabbed a word is worse than an unlabelled one. `!important`
+   because Mapbox writes `pointer-events: auto` as an inline style onto the
+   element it is handed -- which is this one -- and an inline style beats any
+   rule here however specific. Measured: without it the computed value is
+   `auto`, whatever this file says. */
+.map-label {
+  display: block;
+  max-width: 12rem;
+  padding: .1875rem .4375rem;
+  overflow: hidden;
+  color: var(--brand-ink);
+  font-size: .8125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: #fff;
+  border-radius: .3125rem;
+  box-shadow: 0 1px 3px rgb(16 36 63 / 28%);
+  pointer-events: none !important;
+}
+
+/* ---------- Which pin is which ---------- */
+
+.place__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.5rem;
+  margin: .75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: .9375rem;
+}
+
+.place__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.place__legend-item::before {
+  content: "";
+  width: .625rem;
+  height: .625rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--legend-pin);
+}
+
+/* Sampled from the rendered pins rather than picked to taste, and so
+   deliberately outside this palette: a dot that only nearly matches the pin it
+   stands for is worse than no dot, because the reader has to decide whether
+   they are the same thing. */
+.place__legend-item--from { --legend-pin: #0EB600; }
+.place__legend-item--to { --legend-pin: #EC3735; }
+
+.place__legend-role { color: var(--ink-muted); }
+
+/* ---------- The four figures ---------- */
+
+.facts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts-grid__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  background-color: var(--surface-sunken);
+  border-radius: .75rem;
+}
+
+.facts-grid__icon { color: var(--brand-accent); font-size: 1.25rem; }
+.facts-grid__value { font-size: 1.0625rem; font-weight: 700; }
+.facts-grid__label { color: var(--ink-muted); font-size: .875rem; }
+
+/* ---------- Chips ---------- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .625rem 1rem;
+  color: var(--ink-body);
+  font-size: .9375rem;
+  font-weight: 600;
+  background-color: var(--surface-sunken);
+  border-radius: 2rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.chip__icon { color: var(--ink-secondary); font-size: .875rem; }
+
+/* A widebody, on the aircraft list. The one attribute of an aircraft a
+   passenger feels, and the thing that makes two airlines' lists look different
+   at a glance rather than only to somebody who knows what a Dash 8 is.
+
+   Below .chip and not above it: both are one class, so the background it sets
+   wins on source order alone. */
+.chip--wide {
+  color: var(--brand-ink);
+  background-color: var(--brand-tint);
+  box-shadow: inset 0 0 0 1px var(--brand-tint-edge);
+}
+
+.chip--wide .chip__icon { color: var(--brand-accent); }
+
+/* What a count of flights is a count of. Two blocks on the airline page look a
+   fortnight ahead rather than over the whole schedule, and a number with no
+   period behind it is not a number. */
+.chips__note {
+  margin: .875rem 0 0;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+}
+
+
+/* An airline's mark, where a chip names an airline rather than a place. Square
+   and small: it stands in for the icon, so it takes the icon's room. */
+.chip__logo {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: .25rem;
+}
+
+/* A row of chips inside a tabset. The shown panel is given whatever display
+   its container names, and .chips is a flex row -- without this it would be
+   handed the `block` default and every chip would take its own line. */
+.chips.tabset__panel { --tabset-panel: flex; }
+
+/* Quieter than the name it follows: the distance qualifies the city, it is not
+   a second thing to read. */
+.chip__note { color: var(--ink-muted); font-weight: 400; }
+
+@media (hover: hover) and (pointer: fine) {
+  .chip--link:hover { background-color: var(--line); }
+}
+
+/* ---------- Narrowing ---------- */
+
+@media (max-width: 991.98px) {
+  /* The rail stops leading and becomes a strip across the top: a sticky column
+     is worth a screen's width only while there is a screen's width to spare. */
+  .place__layout { grid-template-columns: minmax(0, 1fr); }
+  .place__rail { position: static; }
+  .place__rail-list { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; }
+}
+
+@media (max-width: 767.98px) {
+  .facts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .place__block { padding: 1.25rem; }
+}
+
+/* ---------- Tabs, without JavaScript ---------- */
+
+/* A radio group and sibling selectors do the whole job. It is keyboard-operable
+   because radios are, it is announced because radios are, and it works with
+   scripting off -- which matters on pages whose entire purpose is to be arrived
+   at cold from a search engine.
+
+   Named for the mechanism rather than the fares strip it was written for,
+   because a schedule board wants exactly this and copying forty lines of it
+   would be the wrong way to get one. */
+
+/* The radios are the control -- kept off screen rather than display:none, which
+   would take them out of the tab order and leave the labels operable by mouse
+   only. */
+.tabset__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.tabset__tabs {
+  display: flex;
+  gap: .25rem;
+  margin-bottom: 1.25rem;
+}
+
+.tabset__tab {
+  padding: .5rem 1rem;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  font-weight: 600;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.tabset__radio:checked + .tabset__tab {
+  color: var(--ink-body);
+  background-color: var(--surface-sunken);
+}
+
+/* Focus lands on the radio, which cannot be seen, so the label wears the ring
+   on its behalf -- otherwise tabbing to this control shows nothing at all. */
+.tabset__radio:focus-visible + .tabset__tab {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tabset__tab:hover { background-color: var(--surface-sunken); }
+}
+
+/* Every panel is hidden, then the one whose radio is checked is shown.
+
+   By position, not by id. This was two rules naming #fares-home and
+   #fares-away, which meant a second tabbed block anywhere on the site needed
+   its own pair -- the ids of one page's tabs written into the stylesheet. The
+   radios are the only inputs inside .tabset__tabs and the panels the only lists
+   beside it, so :nth-of-type counts them both without knowing what either is
+   called. A third tab is one more line.
+
+   What a shown panel becomes is the caller's: a fares strip is a grid and a
+   board is a plain block, so the value comes through a custom property instead
+   of being decided here. */
+.tabset__panel { display: none; }
+
+.tabset:has(.tabset__radio:nth-of-type(1):checked) .tabset__panel:nth-of-type(1),
+.tabset:has(.tabset__radio:nth-of-type(2):checked) .tabset__panel:nth-of-type(2) {
+  display: var(--tabset-panel, block);
+}
+
+/* One tab and no radios to check: show it. */
+.tabset:not(:has(.tabset__radio)) .tabset__panel { display: var(--tabset-panel, block); }
+
+/* ---------- Schedule board ---------- */
+
+/* A row per flight, and the columns hold their width down the whole list --
+   that alignment is what makes a board scannable, and a flex row per item would
+   let every row size itself and none of them line up. `auto` on the place
+   column is what absorbs the difference between "Ottawa" and "Ho Chi Minh
+   City". */
+.board__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* Up to 114 flights in a day at Heathrow. Left to grow, the block would be
+     four screens tall and the two below it unreachable without scrolling past
+     all of it, so the board scrolls inside its own box instead. */
+  max-height: 26rem;
+  overflow-y: auto;
+}
+
+.board__row {
+  display: grid;
+  grid-template-columns: 3.25rem 1.5rem 4rem auto max-content;
+  align-items: center;
+  gap: .625rem;
+  padding: .5rem .25rem;
+  font-size: .9375rem;
+}
+
+.board__row + .board__row { border-top: 1px solid var(--line); }
+
+/* Already gone, and still worth showing -- a board that shortened itself
+   through the day would leave somebody wondering whether the 06:15 exists. */
+.board__row--gone { color: var(--ink-muted); }
+.board__row--gone .board__time { text-decoration: line-through; }
+
+.board__time {
+  color: var(--ink-body);
+  font-weight: 700;
+  /* Tabular, so the digits sit in a column instead of drifting by a pixel a
+     row -- the one place on the site where a hundred numbers are stacked. */
+  font-variant-numeric: tabular-nums;
+}
+
+.board__row--gone .board__time { color: inherit; }
+
+.board__airline { border-radius: .25rem; }
+
+.board__flight {
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+.board__place {
+  color: var(--ink-body);
+  text-decoration: none;
+  /* One line, clipped: a long city name must not be allowed to make its row
+     taller than every other row. */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.board__row--gone .board__place { color: inherit; }
+
+@media (hover: hover) and (pointer: fine) {
+  .board__place:hover { text-decoration: underline; }
+}
+
+/* "to" and "from", which is what tells the two panels apart once the tab is out
+   of view at the bottom of a long list. */
+.board__label {
+  color: var(--ink-muted);
+  font-size: .8125rem;
+}
+
+.board__code {
+  color: var(--ink-muted);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.board__span {
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  /* The flight number and the duration are the two a phone can do without:
+     the time, the airline mark and where it goes are the board. */
+  .board__row { grid-template-columns: 3.25rem 1.5rem auto; }
+  .board__flight,
+  .board__span { display: none; }
+}
+
+/* ---------- Cheap fares ---------- */
+
+.fares { --tabset-panel: grid; }
+
+.fares__strip {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(16.5rem, 1fr);
+  gap: 1rem;
+  margin: 0;
+  padding: 0 0 .5rem;
+  list-style: none;
+  /* A strip rather than a wrap: eight fares in a row of cards would be four
+     lines of the same shape, and the horizontal run says "there are more"
+     without a control that has to be built and explained. */
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+
+.fares__item { scroll-snap-align: start; }
+
+.fare {
+  display: grid;
+  gap: .375rem;
+  height: 100%;
+  padding: 1.25rem;
+  background-color: var(--surface-sunken);
+  border-radius: .75rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .fare:hover { background-color: var(--line); }
+}
+
+.fare__price {
+  color: var(--ink-body);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* Beside the figure, not above it: the number is what is being compared and the
+   currency is the same on every card. */
+.fare__currency {
+  margin-left: .25rem;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+  font-weight: 400;
+}
+
+.fare__route { color: var(--ink-body); font-size: .9375rem; font-weight: 600; }
+
+.fare__detail {
+  display: flex;
+  align-items: center;
+  /* Wrapping, because the row holds four things of unpredictable width -- a
+     logo, a date, a duration and the word direct -- and "17 Nov," on one line
+     with "Tue" under it is what a row that cannot wrap does instead. */
+  flex-wrap: wrap;
+  gap: .25rem .5rem;
+  margin-top: .25rem;
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+}
+
+.fare__when { white-space: nowrap; }
+
+.fare__airline { flex: 0 0 auto; border-radius: 50%; }
+.fare__legs { margin-left: auto; white-space: nowrap; }
+.fare__times { color: var(--ink-muted); font-size: .8125rem; }
+
+
+@media (max-width: 575.98px) {
+  .fares__strip { grid-auto-columns: minmax(13rem, 1fr); }
+}
+
+/* ==========================================================================
+   #ARTICLE
+   ==========================================================================
+   A page of prose, which is a shape this stylesheet did not have. Every other
+   content family is a grid of things and takes the container; these are read a
+   line at a time, so they take a measure instead.
+
+   Shared by /about and the five /help articles -- see
+   partials/article.html.twig. The README-only parts of markdown are under
+   #README further up: code, tables, an image, and the heading levels the help
+   articles have no use for.
+   ========================================================================== */
+
+/* Prose, not a record, so this is the one content family with no rail beside
+   it. The place shell earns its rail by having four or five blocks a reader
+   jumps between; an article is read top to bottom, and an anchor list over five
+   headings is furniture. */
+.article {
+  /* The same 2rem under the trail that .place and the directory pages leave.
+     Missing, the sheet's top edge sat exactly on the breadcrumb's baseline. */
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.article__layout {
+  display: grid;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.article__sheet {
+  padding: 2rem 2.25rem;
+  /* The same column every other content page gives its blocks, so a help
+     article and a city page hold their text in the same width. */
+  max-width: var(--content-column);
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+/* 2rem, the same as .directory__title and .page-head__title. It was 1.875rem
+   for no reason anybody could have given -- and once every page title on the
+   site came from one of these three rules, the odd 2px was the last thing
+   between them and one scale. */
+.article__title {
+  display: flex;
+  /* Baseline, not centre: "Changing passenger details" wraps to two lines below
+     about 430px, and centred the icon floated between them like a bullet for
+     the whole block instead of sitting with the first line. */
+  align-items: baseline;
+  gap: .75rem;
+  margin: 0 0 .75rem;
+  color: var(--brand-ink);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.article__title-icon {
+  color: var(--cat-blue);
+  font-size: 1.5rem;
+}
+
+/* The summary again, as the first thing under the title -- it is also the meta
+   description, so a reader arriving from a search result sees the sentence that
+   brought them. Set apart from the body so it reads as the promise rather than
+   as the first paragraph of the answer. */
+.article__lead {
+  margin: 0 0 1.75rem;
+  padding-bottom: 1.25rem;
+  color: var(--ink-secondary);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  border-bottom: 1px solid var(--line);
+}
+
+.article__body {
+  color: var(--ink-body);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.article__body > :first-child {
+  margin-top: 0;
+}
+
+/* The ladder never drops below the 1rem body text: a heading smaller than the
+   paragraph it introduces reads as a caption. It is the README page's ladder,
+   which was the considered one of the two -- the help pages had invented a
+   flatter h2 with no rule above it, and one of them had to go. Below h3 there
+   is no room left to shrink, so the deeper levels separate on weight, colour
+   and letter-spacing instead of size; those live under #README, because they
+   are levels only generic markdown reaches. */
+
+/* Section headings carry the page's structure, so they take a rule above to
+   separate one section from the last. */
+.article__body h2 {
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--brand-ink);
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+/* The lead already draws a rule under itself, so a section heading that opens
+   the body must not draw a second one below it. Left in, the two hairlines sat
+   28px apart -- the lead's bottom margin -- and read as a mistake, which is
+   what they were. */
+.article__body > h2:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.article__body h3 {
+  margin-top: 1.75rem;
+  margin-bottom: .35rem;
+  color: var(--brand-ink);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.article__body p,
+.article__body ul,
+.article__body ol {
+  margin-bottom: 1rem;
+}
+
+/* Bootstrap's reboot zeroes list padding, and the markers are drawn outside the
+   box, so an unpadded list hangs its numbers to the left of the text column.
+   Enough room for a two-digit marker to stay inside the measure. */
+.article__body ul,
+.article__body ol {
+  padding-left: 1.75rem;
+}
+
+.article__body li + li {
+  margin-top: .35rem;
+}
+
+/* Underlined because they sit in running text, where colour alone is not
+   enough to mark a link. Unclassed on purpose: a link that carries a class is a
+   component -- a card on the hub, a button on the unavailable page -- and it
+   says how it looks itself. Written as a plain `a` this beat `.article-card` on
+   specificity and underlined all five topics on /help. */
+.article__body a:not([class]) {
+  color: var(--brand-accent-700);
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
+.article__body a:not([class]):hover {
+  color: var(--brand-accent);
+}
+
+/* A line that belongs to the document rather than to the page: where the README
+   came from, and when it last changed. */
+.article__note {
+  margin: 2.5rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: .875rem;
+}
+
+.article__aside {
+  max-width: var(--content-column);
+  padding: 1.5rem 2.25rem 1.75rem;
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+.article__aside-title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* The hub. One card per article, and the card carries the summary: the line is
+   the half that tells somebody which of five pages they want, and a list of
+   five titles alone makes them open two to find out. */
+.article-list {
+  display: grid;
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.article-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  background-color: var(--surface-sunken);
+  border-radius: .75rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.article-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #fff;
+  font-size: .9375rem;
+  background-color: var(--cat-blue);
+  border-radius: 50%;
+}
+
+.article-card__text {
+  display: grid;
+  gap: .1875rem;
+  min-width: 0;
+}
+
+.article-card__title {
+  color: var(--brand-ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.article-card__summary {
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  line-height: 1.5;
+}
+
+@media (hover: hover) {
+  .article-card:hover { background-color: var(--line); }
+}
+
+@media (max-width: 47.9375em) {
+  .article__sheet,
+  .article__aside {
+    padding-right: 1.25rem;
+    padding-left: 1.25rem;
+  }
+}
+
+
+/* ==========================================================================
+   #DIRECTORY
+   ==========================================================================
+   A few hundred named places, arranged to be found in. Shared by the city list
+   and, next, the country list -- both are read the same way. */
+
+.page-list { padding: 2rem 0 4rem; }
+
+/* A page's title and the line under it, where the page is neither prose nor a
+   directory. Those two carry their own header inside their sheet; a page whose
+   content is cards has nowhere to put one, so /my/bookings and /my/saved had
+   been borrowing Bootstrap's `display-4` and `.lead`. Measured, that was 56px
+   at weight 300 against the 28-32px at 700 every other title in the app uses --
+   the largest and lightest heading on the site, on the only two pages nobody
+   had given a header of their own.
+
+   The type is .directory__title's, because these pages are its kin: a title, a
+   line saying what the list is, and then the list. Less room under it than the
+   48px `py-5` left, which was air sized for a heading half as big again. */
+.page-head {
+  padding: 3rem 0 2rem;
+}
+
+.page-head__title {
+  margin: 0 0 .375rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.page-head__lead {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 1.0625rem;
+}
+
+.directory {
+  padding: 2rem 2.25rem;
+  background-color: #fff;
+  border-radius: 1rem;
+}
+
+.directory__title { margin: 0 0 .375rem; font-size: 2rem; font-weight: 700; }
+
+.directory__lead {
+  margin: 0 0 1.5rem;
+  color: var(--ink-muted);
+  font-size: 1.0625rem;
+}
+
+/* ---------- The filter ---------- */
+
+.directory__search {
+  position: relative;
+  max-width: 26rem;
+  margin-bottom: 1.5rem;
+}
+
+.directory__search-icon {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  color: var(--ink-muted);
+  font-size: .9375rem;
+  /* The input is the target; the icon is decoration in front of it. */
+  pointer-events: none;
+}
+
+/* Every property restated: the reset at the top of this file strips borders
+   from inputs and sets a global 18px, so nothing here is inherited. */
+.directory__search-input {
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem 0 2.75rem;
+  color: var(--ink-body);
+  font-size: 1rem;
+  background-color: var(--surface);
+  border: 1px solid transparent;
+  border-radius: .75rem;
+}
+
+.directory__search-input::placeholder { color: var(--ink-muted); }
+
+.directory__search-input:focus-visible {
+  background-color: #fff;
+  border-color: var(--brand-accent);
+  outline: 2px solid var(--brand-tint-edge);
+  outline-offset: 1px;
+}
+
+/* ---------- The alphabet ---------- */
+
+.directory__alphabet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  margin-bottom: 1.5rem;
+}
+
+.directory__letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Square and finger-sized. A row of single characters is the smallest target
+     on the site otherwise. */
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 .375rem;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: .5rem;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .directory__letter:hover { background-color: var(--surface); }
+}
+
+.directory__letter.is-current {
+  color: #fff;
+  background-color: var(--brand-ink);
+}
+
+/* ---------- The groups ---------- */
+
+.directory__group {
+  padding-top: 1.5rem;
+  /* Clear of the heading when the alphabet jumps to it. */
+  scroll-margin-top: 1.5rem;
+}
+
+/* One letter at a time, starting with the first.
+
+   With no script running this is done entirely in CSS: the first group shows,
+   and the alphabet's anchors are real anchors, so following one makes that
+   group the :target and the default steps aside. That is why the groups are
+   not rendered hidden -- a server-side default of "only A" would leave the
+   other twenty-five letters pointing at sections nothing could reveal.
+
+   Once the script is running it owns which group is visible and says so with
+   the hidden attribute; these two rules hand it the decision. */
+.directory__group { display: none; }
+.directory__group:first-of-type { display: block; }
+.directory__groups:has(:target) .directory__group:first-of-type { display: none; }
+.directory__group:target { display: block; }
+
+.directory.is-scripted .directory__group { display: block; }
+.directory.is-scripted .directory__group[hidden] { display: none; }
+
+.directory__group-title {
+  margin: 0 0 .75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* Columns rather than a grid: the names run down each one and a group of three
+   does not leave a row of empty cells behind it. */
+.directory__list {
+  column-count: 4;
+  column-gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.directory__item[hidden] { display: none; }
+
+/* The list is four columns, and a column break does not care that a name and
+   the line under it are one thing: without this, "Heathrow" sat in column one
+   and "London, United Kingdom" in column two. Harmless while every item was a
+   single line, which is why it was not needed until airports arrived. */
+.directory__item { break-inside: avoid; }
+
+.directory__link {
+  display: block;
+  padding: .25rem 0;
+  color: var(--brand-accent);
+  font-size: .9375rem;
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .directory__link:hover { color: var(--brand-accent-700); text-decoration: underline; }
+}
+
+/* A second line under the name, for a caller whose names do not explain
+   themselves. Cities and countries need none -- "Toronto" is Toronto. Airports
+   do: Heathrow, Gatwick and Stansted are all London and none of them says so. */
+.directory__note {
+  display: block;
+  padding-bottom: .25rem;
+  color: var(--ink-muted);
+  font-size: .8125rem;
+}
+
+.directory__item:has(.directory__note) .directory__link { padding-bottom: 0; }
+
+.directory__empty {
+  padding: 2rem 0;
+  color: var(--ink-muted);
+  font-size: 1rem;
+}
+
+@media (max-width: 1279.98px) { .directory__list { column-count: 3; } }
+@media (max-width: 991.98px)  { .directory__list { column-count: 2; } }
+@media (max-width: 575.98px) {
+  .directory { padding: 1.25rem; }
+  .directory__list { column-count: 1; }
 }

@@ -1,0 +1,72 @@
+{# A few hundred named places, arranged to be found in.
+
+   Built for three callers -- cities, countries and airports. All of them are a
+   list of "name, code, address" read by somebody who arrives knowing the name
+   they want, so all of them want the same three things: a filter, an alphabet,
+   and groups.
+
+   Everything is rendered. 231 rows is nothing to send, and rendering the lot
+   means the page works with no scripting at all: the alphabet is anchors that
+   jump to a heading, and every name is a link that was always there. The
+   script only makes it quicker.
+
+   Parameters: title, lead, groups (letter => items), placeholder, label.
+
+   An item is {name, code, url}, and may add:
+   - `note`, printed beside the name. Airports need it -- "Gatwick" on its own
+     does not say London, and three of them do not say it three times.
+   - `search`, matched instead of the name. Also airports: somebody looking for
+     Heathrow types "London", which is nowhere in the word "Heathrow". #}
+<div class="directory">
+    <h1 class="directory__title">{{ title }}</h1>
+    <p class="directory__lead">{{ lead }}</p>
+
+    {# Hidden until the script that makes it work is running. A search box that
+       takes what somebody types and does nothing with it is the one thing this
+       codebase has already removed once, from the footer -- see the comment
+       that used to sit there. #}
+    <div class="directory__search" hidden data-directory-search>
+        <label class="visually-hidden" for="directory-filter">{{ label }}</label>
+        <i class="fas fa-magnifying-glass directory__search-icon" aria-hidden="true"></i>
+        <input class="directory__search-input js-directory-filter"
+               id="directory-filter" type="search" autocomplete="off"
+               placeholder="{{ placeholder }}">
+    </div>
+
+    {# Only the letters that have something under them. An alphabet with dead
+       keys in it invites a click that answers nothing. #}
+    <nav class="directory__alphabet" aria-label="Jump to a letter">
+        {% for letter in groups|keys %}
+            <a class="directory__letter js-directory-letter"
+               href="#letter-{{ letter|lower }}" data-letter="{{ letter }}">{{ letter }}</a>
+        {% endfor %}
+    </nav>
+
+    <div class="directory__groups js-directory-groups">
+        {% for letter, items in groups %}
+            <section class="directory__group js-directory-group"
+                     id="letter-{{ letter|lower }}" data-letter="{{ letter }}"
+                     aria-labelledby="letter-{{ letter|lower }}-title">
+                <h2 class="directory__group-title" id="letter-{{ letter|lower }}-title">{{ letter }}</h2>
+                <ul class="directory__list">
+                    {% for item in items %}
+                        {# The code is searchable but not shown: it is how people
+                           type, not how they read. Same for anything else the
+                           caller puts in `search`. #}
+                        <li class="directory__item js-directory-item"
+                            data-name="{{ (item.search|default(item.name))|lower }}"
+                            data-code="{{ item.code|lower }}">
+                            <a class="directory__link" href="{{ item.url }}">{{ item.name }}</a>
+                            {% if item.note|default('') is not empty %}
+                                <span class="directory__note">{{ item.note }}</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endfor %}
+    </div>
+
+    {# Said only when a filter has emptied the page. #}
+    <p class="directory__empty js-directory-empty" hidden role="status"></p>
+</div>

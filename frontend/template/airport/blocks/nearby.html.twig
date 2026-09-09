@@ -1,0 +1,19 @@
+{# Somewhere else to leave from, when this one is not the one.
+
+   Each carries how far it is, because that is the whole decision: Gatwick at 40
+   kilometres is a different proposition from Manchester at 244. Rounded to ten,
+   which is as precise as a straight line between two runways deserves to sound.
+
+   These are drives, not flights -- see AirportRepository::nearby() for why the
+   radius is 300km where the city page's is a thousand. #}
+<ul class="chips">
+    {% for airport in nearby %}
+        <li>
+            <a class="chip chip--link" href="{{ airport.url }}">
+                <i class="fas fa-plane-departure chip__icon" aria-hidden="true"></i>
+                {{ airport.title }} ({{ airport.code }})
+                <span class="chip__note">{{ (airport.km / 10)|round * 10 }} km</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>

@@ -253,11 +253,18 @@ return [
     | The way into the site for somebody arriving from a search engine, and the
     | way around it for somebody who has scrolled to the bottom looking for one.
     |
-    | Every one of these leads to a page that does not exist yet and answers 404
-    | today. That is deliberate and it is the whole point of writing them down:
-    | the list is the specification for what gets built next, and the codes are
-    | real ones checked against the seeders, so the links start working the day
-    | the pages do rather than needing to be rewritten.
+    | Written before the pages existed, deliberately: the list was the
+    | specification for what got built next. Four of the six columns now lead
+    | somewhere -- airlines, cities, countries and airports -- and Directions is
+    | the one still waiting.
+    |
+    | What that experiment got wrong is worth keeping. The codes here were real
+    | ones checked against the seeders, on the theory that the links would start
+    | working the day the pages did. They did not: a place's address is its name
+    | and its code together -- "air-canada-ac", not "AC" -- so every column has
+    | had to be respelled as its pages arrived. A code is not an address, and a
+    | link written before there is anything to link to cannot know the
+    | difference. A test walks these now instead.
     |
     | One shape for every column, so a single partial renders all of them. The
     | old footer had three loops over three different shapes, which is exactly
@@ -273,54 +280,77 @@ return [
         [
             'title' => 'Airlines',
             'links' => [
-                'Air Canada' => '/airlines/AC',
-                'WestJet' => '/airlines/WS',
-                'Delta Air Lines' => '/airlines/DL',
-                'American Airlines' => '/airlines/AA',
-                'United Airlines' => '/airlines/UA',
+                'Air Canada' => '/airline/air-canada-ac',
+                'WestJet' => '/airline/westjet-ws',
+                'Delta Air Lines' => '/airline/delta-air-lines-dl',
+                'American Airlines' => '/airline/american-airlines-aa',
+                'United Airlines' => '/airline/united-airlines-ua',
             ],
             'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
         ],
         [
+            // Counted, like Cities below and unlike the four curated columns.
+            // `source` sends it to LayoutData::popularRoutes().
+            //
+            // These were five hand-written pairs -- Montreal to Toronto,
+            // Montreal to Paris and so on -- which was the right list to write
+            // before there were route pages and the wrong one to keep after.
+            // A route page exists for any of 42,578 city pairs you can fly
+            // nonstop, and no list of five names the busy ones for long.
+            //
+            // What the query has to do that the cities one does not: only
+            // return pairs that have a page. A search is recorded for whatever
+            // anybody asked about, and five of the 163 city pairs searched here
+            // have no nonstop and so no page -- see RouteRepository::popular().
             'title' => 'Directions',
-            'links' => [
-                'Montreal — Toronto' => '/routes/YMQ-YTO',
-                'Montreal — Vancouver' => '/routes/YMQ-YVR',
-                'Montreal — Paris' => '/routes/YMQ-PAR',
-                'Toronto — New York' => '/routes/YTO-NYC',
-                'Toronto — London' => '/routes/YTO-LON',
-            ],
+            'source' => 'popular-routes',
+            'count' => 5,
         ],
         [
-            'title' => 'Cities',
-            'links' => [
-                'Montreal' => '/cities/YMQ',
-                'Toronto' => '/cities/YTO',
-                'Vancouver' => '/cities/YVR',
-                'New York' => '/cities/NYC',
-                'London' => '/cities/LON',
-            ],
-        ],
-        [
-            'title' => 'Airports',
-            'links' => [
-                'Montréal–Trudeau' => '/airports/YUL',
-                'Toronto Pearson' => '/airports/YYZ',
-                'Vancouver' => '/airports/YVR',
-                'New York JFK' => '/airports/JFK',
-                'London Heathrow' => '/airports/LHR',
-            ],
-            'more' => ['text' => 'All airports', 'url' => '/airports/'],
-        ],
-        [
+            // Curated rather than counted, unlike Cities beside it: nothing in
+            // this app records how often a country is searched for, only how
+            // often its cities are, and summing those would rank a country by
+            // how many of them we happen to sell.
             'title' => 'Countries',
             'links' => [
-                'Canada' => '/countries/CA',
-                'United States' => '/countries/US',
-                'United Kingdom' => '/countries/GB',
-                'France' => '/countries/FR',
-                'Japan' => '/countries/JP',
+                'Canada' => '/country/canada-ca',
+                'United States' => '/country/united-states-us',
+                'United Kingdom' => '/country/united-kingdom-gb',
+                'France' => '/country/france-fr',
+                'Japan' => '/country/japan-jp',
             ],
+            'more' => ['text' => 'All countries', 'url' => '/countries'],
+        ],
+        [
+            // The one column whose pages exist and are not a list somebody has
+            // to remember to edit. `source` sends it to
+            // LayoutData::mostSearchedCities(), which reads the search counts
+            // the app has been keeping since its first search.
+            'title' => 'Cities',
+            'source' => 'most-searched',
+            'count' => 5,
+            // The page it leads to is what gives all 231 city pages a route in.
+            'more' => ['text' => 'All cities', 'url' => '/cities'],
+        ],
+        [
+            // Curated like Countries, and spelled the way the pages are: name
+            // then code. These were /airport/YUL until the pages existed and
+            // the route pattern would still take that, which is exactly why it
+            // is worth saying -- the controller answers 404 for a bare code,
+            // and a footer link that 404s does it on every page of the site.
+            //
+            // The labels are not the airport titles and do not need to be:
+            // "London Heathrow" is how somebody looks for it and "Heathrow" is
+            // what the page is called.
+            'title' => 'Airports',
+            'links' => [
+                'Montréal–Trudeau' => '/airport/pierre-elliott-trudeau-international-yul',
+                'Toronto Pearson' => '/airport/lester-b-pearson-international-yyz',
+                'Vancouver' => '/airport/vancouver-international-yvr',
+                'New York JFK' => '/airport/john-f-kennedy-international-jfk',
+                'London Heathrow' => '/airport/heathrow-lhr',
+            ],
+            'more' => ['text' => 'All airports', 'url' => '/airports/'],
         ],
         [
             'title' => 'Help & tips',
@@ -331,6 +361,7 @@ return [
                 'Changing passenger details' => '/help/passenger-details',
                 'Flying with children' => '/help/flying-with-children',
             ],
+            'more' => ['text' => 'All help topics', 'url' => '/help'],
         ],
     ],
 
@@ -344,27 +375,30 @@ return [
     |
     | Curated rather than counted. A "most popular" list taken from the search
     | table would be honest and would also be whatever three routes somebody
-    | last clicked on a demo database -- and it would put a query on every page
-    | render, in a footer that currently makes none.
+    | last clicked on a demo database. (The cities column above is counted, and
+    | can be: 254 rows grouped in 0.8ms, in a footer that was already asking the
+    | database for its flight count.)
     |
     | Same cities as the POI cards above, which is deliberate: the cards say
-    | there is something to see there, and these say you can get there.
+    | there is something to see there, and these say you can get there -- and
+    | now they do: every one of these resolves to a real city page, which is
+    | checked by a test rather than left to whoever edits this list next.
     |
     */
 
     'footer-destinations' => [
-        ['city' => 'Istanbul', 'country' => 'Turkey', 'url' => '/cities/IST'],
-        ['city' => 'Miami', 'country' => 'United States', 'url' => '/cities/MIA'],
-        ['city' => 'Montreal', 'country' => 'Canada', 'url' => '/cities/YMQ'],
-        ['city' => 'New York', 'country' => 'United States', 'url' => '/cities/NYC'],
-        ['city' => 'Paris', 'country' => 'France', 'url' => '/cities/PAR'],
-        ['city' => 'Rio de Janeiro', 'country' => 'Brasil', 'url' => '/cities/RIO'],
-        ['city' => 'Sydney', 'country' => 'Australia', 'url' => '/cities/SYD'],
-        ['city' => 'Tokyo', 'country' => 'Japan', 'url' => '/cities/TYO'],
-        ['city' => 'London', 'country' => 'United Kingdom', 'url' => '/cities/LON'],
-        ['city' => 'Toronto', 'country' => 'Canada', 'url' => '/cities/YTO'],
-        ['city' => 'Vancouver', 'country' => 'Canada', 'url' => '/cities/YVR'],
-        ['city' => 'Bangkok', 'country' => 'Thailand', 'url' => '/cities/BKK'],
+        ['city' => 'Istanbul', 'country' => 'Turkey', 'url' => '/city/istanbul-ist'],
+        ['city' => 'Miami', 'country' => 'United States', 'url' => '/city/miami-mia'],
+        ['city' => 'Montreal', 'country' => 'Canada', 'url' => '/city/montreal-ymq'],
+        ['city' => 'New York', 'country' => 'United States', 'url' => '/city/new-york-nyc'],
+        ['city' => 'Paris', 'country' => 'France', 'url' => '/city/paris-par'],
+        ['city' => 'Rio de Janeiro', 'country' => 'Brasil', 'url' => '/city/rio-de-janeiro-rio'],
+        ['city' => 'Sydney', 'country' => 'Australia', 'url' => '/city/sydney-syd'],
+        ['city' => 'Tokyo', 'country' => 'Japan', 'url' => '/city/tokyo-tyo'],
+        ['city' => 'London', 'country' => 'United Kingdom', 'url' => '/city/london-lon'],
+        ['city' => 'Toronto', 'country' => 'Canada', 'url' => '/city/toronto-yto'],
+        ['city' => 'Vancouver', 'country' => 'Canada', 'url' => '/city/vancouver-yvr'],
+        ['city' => 'Bangkok', 'country' => 'Thailand', 'url' => '/city/bangkok-bkk'],
     ],
 
 ];

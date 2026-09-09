@@ -36,5 +36,15 @@ return [
         '/airlines' => 'Airlines',
         '/airports' => 'Airports',
         '/about' => 'About',
+        // /city/<slug> is deliberately absent: its parent is the country it is
+        // in, not this list, so CityController hands over its own trail. This
+        // entry is for the index only.
+        '/cities' => 'Cities',
+        // A country's parent is this list, and a city's is its country -- see
+        // above. Neither trail mirrors its URL, and neither needs to.
+        '/countries' => 'Countries',
+        // The articles under this are deliberately absent: each is named by its
+        // title rather than by its slug, so HelpController passes the label.
+        '/help' => 'Help',
     ],
 ];

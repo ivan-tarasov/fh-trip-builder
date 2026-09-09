@@ -61,19 +61,30 @@ final class TwigRendererTest extends TestCase
 
     public function testRegisteredFunctionsAndEscapingInRealTemplate(): void
     {
-        $airline = (object) [
+        // The airline page's facts block, which took this over from the card
+        // that used to be /airlines. Any template that calls cdn() and config()
+        // and prints a name would do; this is the one that does.
+        $place = (object) [
             'code' => 'AC',
-            'title' => '<b>Air & Co</b>',
+            'name' => '<b>Air & Co</b>',
+            'country' => 'Canada',
+            'country_url' => '/country/canada-ca',
+            'hub_count' => 3,
+            'destinations' => 228,
+            'per_day' => 61,
+            'widebody_share' => 56,
             'phone' => '123',
-            'url' => 'https://example.test',
+            'url' => 'https://example.test/?a=1&b=2',
         ];
 
-        $html = $this->renderer->render('airlines/card.html.twig', ['airline' => $airline]);
+        $html = $this->renderer->render('airline/blocks/facts.html.twig', ['place' => $place]);
 
         // cdn() + config() build the logo URL.
         self::assertStringContainsString('//cdn.example.test/images/suppliers/AC.png', $html);
-        // The airline title is auto-escaped in both text and attribute context.
+        // The name is auto-escaped in text context.
         self::assertStringContainsString('&lt;b&gt;Air &amp; Co&lt;/b&gt;', $html);
         self::assertStringNotContainsString('<b>Air & Co</b>', $html);
+        // And the website in attribute context.
+        self::assertStringContainsString('href="https://example.test/?a=1&amp;b=2"', $html);
     }
 }

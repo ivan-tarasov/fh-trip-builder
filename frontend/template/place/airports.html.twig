@@ -1,0 +1,34 @@
+{# The airports, then where they are.
+
+   Links, not labels. These were labels while there was nowhere to send anyone;
+   there is now, and 324 of these pages were naming an airport that has its own
+   page without reaching it. #}
+<ul class="chips">
+    {% for airport in airports %}
+        <li>
+            <a class="chip chip--link" href="{{ airport.url }}">
+                <i class="fas fa-plane-departure chip__icon" aria-hidden="true"></i>
+                {{ airport.title }} ({{ airport.code }})
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+
+{# One map for the place rather than one per airport, because the useful fact
+   about Moscow's three is how far apart they are -- which a row of three
+   separate maps cannot show. It holds for a country too: Canada's seven read as
+   a shape, not a list.
+
+   No zoom, so the frame is fitted to the pins. A place with one airport still
+   gets a sensible view: the map falls back to a close zoom when there is only
+   one point to frame. #}
+{% set pins = [] %}
+{% for airport in airports %}
+    {% set pins = pins|merge([{ 'lat': airport.latitude, 'lon': airport.longitude }]) %}
+{% endfor %}
+
+{% include 'partials/map.html.twig' with {
+    'markers': pins,
+    'label': 'Map showing the ' ~ (airports|length > 1 ? airports|length ~ ' airports' : 'airport')
+        ~ ' serving ' ~ place.name
+} only %}

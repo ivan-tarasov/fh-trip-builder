@@ -7,9 +7,51 @@ namespace TripBuilder\Repository;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
+/**
+ * Countries, which are a table -- but a thin one.
+ *
+ * `countries` holds a code, an ISO-3 code and a name, and that is all. Anything
+ * else a country page says has to be counted from the airports in it: how many
+ * cities we sell to, how many airports serve them, and how far the clocks
+ * spread. That is why everything but all() joins -- and all() is the one caller
+ * that wants the table on its own, because a billing address is not a flight.
+ *
+ * Two facts the reference shows are simply not here. Its Canada page names a
+ * currency and a visa requirement, and this schema has neither -- both would be
+ * new seed data rather than a new query.
+ */
 final readonly class CountryRepository
 {
+    /** The same filter the rest of the site sells by. */
+    private const string ONLY_SELLABLE = ' a.enabled = 1 AND a.is_major = 1';
+
     public function __construct(private Connection $connection) {}
+
+    /**
+     * One country, with what its airports say about it.
+     *
+     * The timezone comes back as a span rather than a single offset, because
+     * for the countries where it matters a single offset is wrong: the United
+     * States runs from GMT-10 to GMT-4 in this data and Australia from +8 to
+     * +11. The reference shows one value for Canada and is wrong for the same
+     * reason.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function byCode(string $code): ?array
+    {
+        return $this->connection->fetchOne(
+            'SELECT c.code, c.code_iso_3, c.title AS name,'
+            . ' COUNT(DISTINCT a.city_code) AS cities,'
+            . ' COUNT(*) AS airports,'
+            . ' MIN(a.timezone) AS timezone_min, MAX(a.timezone) AS timezone_max'
+            . ' FROM ' . Table::Countries->value . ' c'
+            . ' JOIN ' . Table::Airports->value . ' a ON a.country_code = c.code'
+            . ' WHERE' . self::ONLY_SELLABLE . ' AND c.code = ?'
+            . ' GROUP BY c.code, c.code_iso_3, c.title',
+            [strtoupper($code)],
+        );
+    }
 
     /**
      * Every country, code to name, in alphabetical order by name.
@@ -19,6 +61,10 @@ final readonly class CountryRepository
      * behind this is already seeded with all of them and is what the airports
      * join against, so a card registered anywhere the app sells flights to can
      * now be entered.
+     *
+     * All 255 and not only the ones we fly to -- see sellable() for those. A
+     * billing address is where the card lives, which has nothing to do with
+     * where the flight goes.
      *
      * @return array<string, string>
      */
@@ -35,5 +81,47 @@ final readonly class CountryRepository
         }
 
         return $countries;
+    }
+
+    /**
+     * Every country we sell a seat to, name-ordered for the directory.
+     *
+     * The join is what makes it "we sell to" rather than "exists": the seed has
+     * 255 countries and we fly to 93 of them, and a directory listing the other
+     * 162 would be 162 links to a 404.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function sellable(): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT c.code, c.title AS name, COUNT(DISTINCT a.city_code) AS cities'
+            . ' FROM ' . Table::Countries->value . ' c'
+            . ' JOIN ' . Table::Airports->value . ' a ON a.country_code = c.code'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' GROUP BY c.code, c.title'
+            . ' ORDER BY name ASC',
+        );
+    }
+
+    /**
+     * The country's airports, largest first.
+     *
+     * Whole rows rather than codes, because the page needs both: the fare query
+     * has to name the codes and the map has to plot the coordinates. One query
+     * for the two, since 32 rows is the largest answer here -- the United
+     * States -- and asking twice would be the more expensive of the two.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function airports(string $code): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT a.code, a.title, a.city, a.city_code, a.latitude, a.longitude'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' WHERE' . self::ONLY_SELLABLE . ' AND a.country_code = ?'
+            . ' ORDER BY a.traffic_weight DESC, a.title ASC',
+            [strtoupper($code)],
+        );
     }
 }

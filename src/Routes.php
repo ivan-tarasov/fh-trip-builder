@@ -18,6 +18,21 @@ class Routes
         '/airlines' => 'Airlines@index',
         '/airports' => 'Airports@index',
         '/about' => 'About@index',
+        // Every city we sell to, in one place. Sixty of the 231 city pages had
+        // no inbound link before this existed -- see CityRepository::all().
+        '/cities' => 'City@index',
+        // And every country. Same page, different rows: both are a few hundred
+        // names somebody arrives already knowing.
+        '/countries' => 'Country@index',
+        // The five help topics the footer has always linked to. A hub rather
+        // than five loose pages, so the family has somewhere to be listed and
+        // each article has its siblings to point at.
+        '/help' => 'Help@index',
+
+        // Not a page. It is here rather than as a file on disk because its
+        // contents are the 231 city pages, which are rows in a table.
+        '/sitemap.xml' => 'Sitemap@index',
+        '/robots.txt' => 'Sitemap@robots',
 
         /*
         |--------------------------------------------------------------------------
@@ -93,12 +108,74 @@ class Routes
         // route below still answers, because that is where the query-string
         // form lands before being redirected here.
         '#^/search/[A-Z0-9]{3}\d{6}(?:x[2-9])?[A-Z0-9]{3}(?:\d{6})?(?:x[2-9])?[YWCF]\d{1,3}$#' => 'Search@index',
+        // "montreal-ymq". The name is for the reader and the code is what the
+        // lookup uses, so the pattern is deliberately loose about the name half
+        // -- a stale or mistyped one still finds the city and is redirected to
+        // the spelling this app would have written.
+        '#^/city/[A-Za-z0-9-]+$#' => 'City@show',
+        // "canada-ca", spelled the same way and loose for the same reason. The
+        // code on the end is two characters rather than three, because that is
+        // what an ISO country code is; the controllers, not the router, are
+        // what tell the two apart.
+        '#^/country/[A-Za-z0-9-]+$#' => 'Country@show',
+        // "heathrow-lhr". Three characters again, like a city -- an IATA code
+        // is an IATA code whether it names an airport or the city around it.
+        '#^/airport/[A-Za-z0-9-]+$#' => 'Airport@show',
+        // "air-canada-ac". Two characters, like a country: an airline's IATA
+        // code is two, and the controller is what knows which two.
+        '#^/airline/[A-Za-z0-9-]+$#' => 'Airline@show',
+        // "montreal-to-toronto" -- the only page here that is a pair rather
+        // than a record, and the only address with no code in it at all. Loose
+        // like the other four, and for the same reason: what turns a slug away
+        // is whether it names two cities, which is a question for
+        // RouteAddress::read() and not for a pattern.
+        '#^/route/[A-Za-z0-9-]+$#' => 'Route@show',
+        // "baggage". No code on the end, like the route above it -- and unlike
+        // it, no record behind the slug either. The slug is the whole identity,
+        // so a pattern is all the router can do; which five words are real is
+        // in config/common/help.php, and HelpController's question.
+        '#^/help/[A-Za-z-]+$#' => 'Help@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
     ];
+
+    /**
+     * Paths whose pages are transient, personal, or both.
+     *
+     * A search result is a snapshot of prices that will be wrong tomorrow, and
+     * there are more possible search URLs than there are flights. A checkout is
+     * a step in a transaction. /my is one browser's own bookings.
+     *
+     * Two things read this and they must agree: the robots meta tag that keeps
+     * these out of an index, and the sitemap that would otherwise invite a
+     * crawler in. It lives here because this class is what already knows what a
+     * path is.
+     */
+    public const array PRIVATE_PREFIXES = ['/search', '/checkout', '/my'];
+
+    /**
+     * Whether a path is a page worth a stranger arriving at.
+     */
+    public static function isPublic(string $path): bool
+    {
+        foreach (self::PRIVATE_PREFIXES as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+                return false;
+            }
+        }
+
+        $route = self::resolve($path);
+
+        if ($route === null) {
+            return false;
+        }
+
+        // An endpoint answers with JSON, not with a page.
+        return !in_array(explode('@', $route)[0], self::EXCLUDE_HEADER_FOOTER, true);
+    }
 
     /**
      * Routes that emit their own payload from a controller that otherwise
@@ -111,6 +188,8 @@ class Routes
      */
     public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
         '#^/my/bookings/\d+/calendar$#',
+        '#^/sitemap\.xml$#',
+        '#^/robots\.txt$#',
     ];
 
     /**

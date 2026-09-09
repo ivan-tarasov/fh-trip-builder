@@ -1,0 +1,31 @@
+{# Four things about the airport itself, then where it is.
+
+   Not the city's facts over again -- the country and the city are both in the
+   trail above, one click each. Altitude is here instead because it is the one
+   fact in this data that belongs to the airport and to nothing else: El Alto is
+   at 13,313 feet and Schiphol is 11 below the sea.
+
+   Feet, which is what the column holds. Checked against airports whose
+   elevation is known rather than assumed: Denver reads 5,389, Bogota 8,361,
+   Amsterdam -11. The card on /airports has been calling these metres.
+
+   The time zone is printed from the stored offset through gmt_offset(), because
+   the column is a decimal and eight of these airports are on a half hour --
+   raw it says "GMT+5.5" and rounded it lies to everyone flying to India. #}
+{% include 'partials/facts-grid.html.twig' with {
+    'facts': [
+        { 'icon': 'fa-location-dot', 'value': place.city, 'label': 'City' },
+        { 'icon': 'fa-plane', 'value': place.code, 'label': 'IATA code' },
+        { 'icon': 'fa-clock', 'value': gmt_offset(place.timezone), 'label': 'Time zone' },
+        { 'icon': 'fa-mountain', 'value': place.altitude|number_format ~ ' ft', 'label': 'Altitude' }
+    ]
+} only %}
+
+{# No zoom named here. One point cannot be framed, so how far out a single-pin
+   map opens is one decision for the whole site and it lives in
+   config/common/maps.php -- see MapView::zoomFor(). What this map is for is
+   showing which part of the city the airport sits in, and what is around it. #}
+{% include 'partials/map.html.twig' with {
+    'markers': [{ 'lat': place.latitude, 'lon': place.longitude }],
+    'label': 'Map showing where ' ~ place.title ~ ' sits in ' ~ place.city
+} only %}

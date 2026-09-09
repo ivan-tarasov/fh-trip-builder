@@ -1,0 +1,40 @@
+{# The cheapest day to fly, and the seven next cheapest.
+
+   Sorted by price, not by date. A calendar has to fill every day and a quiet
+   route has nothing to put in most of them -- see
+   RouteRepository::cheapestDates(). Sorted by price there is nothing missing to
+   notice: the days with no flight are simply not among the cheapest.
+
+   Not the shared fares block, which prints the two cities on every card. Here
+   the two cities are the page's own title, and what varies down the strip is
+   the date and the airport pair -- Montreal to Paris is sold out of Orly and
+   Charles de Gaulle at different prices on different days.
+
+   `.fares` and `.tabset` with no radios: the tabset shows a lone panel without
+   drawing tabs over it, so a strip that needs no tabs asks for no extra CSS. #}
+<div class="fares tabset">
+    <ul class="fares__strip tabset__panel" aria-label="The cheapest dates to fly">
+        {% for fare in dates %}
+            <li class="fares__item">
+                <a class="fare" href="{{ fare.search }}">
+                    <span class="fare__price">${{ fare.total|round(0, 'floor') }}<span class="fare__currency">CAD</span></span>
+                    {# The date leads, because it is what the strip is sorted by
+                       and what the visitor is choosing between. date_label()
+                       prints the year only when it is not this one, so a
+                       January date on a page read in December says so. #}
+                    <span class="fare__route">{{ date_label(fare.departure_time, 'j M, D', 'j M Y, D') }}</span>
+
+                    <span class="fare__detail">
+                        <img class="fare__airline"
+                             src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ fare.airline ~ '.png') }}"
+                             width="28" height="28" loading="lazy" alt="">
+                        <span class="fare__when">{{ fare.departure_airport }} &ndash; {{ fare.arrival_airport }}</span>
+                        <span class="fare__legs">{{ duration(fare.duration) }} &middot; direct</span>
+                    </span>
+
+                    <span class="fare__times">{{ fare.departure_time|date('H:i') }} &ndash; {{ fare.arrival_time|date('H:i') }}</span>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>

@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use Exception;
+use Throwable;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
+use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\RouteRepository;
+use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
 use TripBuilder\Timer;
 
@@ -148,6 +152,140 @@ final class LayoutData
      * To the nearest thousand, so the digits that are shown are ones the
      * estimate can stand behind.
      */
+    /**
+     * The one address this page answers at.
+     *
+     * Every page here is reachable at more than one URL. A trailing slash is
+     * optional -- Request::path() rtrims it and both forms return 200 -- and
+     * any query string at all makes another: /airlines?utm_source=x is a fourth
+     * copy of a page that has one piece of content. Without a canonical each of
+     * those competes with the others.
+     *
+     * The path the router normalised to, which is the form it treats as the
+     * page's identity, and no query. Relative rather than absolute for the same
+     * reason the breadcrumb JSON-LD is: this app knows no canonical host, and
+     * inventing one would be a second source of truth nothing could keep right.
+     *
+     * A search or a checkout has no business having one of these -- see
+     * indexable() -- but it costs nothing to answer honestly for them too.
+     */
+    public function canonicalPath(): string
+    {
+        return $this->currentPage();
+    }
+
+    /**
+     * Whether a search engine should keep this page.
+     *
+     * Three kinds of page should not be kept. A search result is a snapshot of
+     * prices that will be wrong tomorrow, and there are more possible search
+     * URLs than there are flights. A checkout is a step in a transaction. And
+     * /my is one browser's own bookings -- nothing there is public, and a
+     * session that has ended renders it empty.
+     *
+     * A page answering 404 is the fourth: the router has already said it is not
+     * a page, and this stops a crawler holding on to the URL that led there.
+     */
+    public function indexable(): bool
+    {
+        if (http_response_code() === 404) {
+            return false;
+        }
+
+        // Routes::isPublic() and not a second list here: the sitemap asks the
+        // same question, and two copies of the answer would drift.
+        return Routes::isPublic($this->currentPage());
+    }
+
+    /**
+     * The most-searched cities, ready for the footer's link column.
+     *
+     * Returned as `name => url` because that is the shape the column partial
+     * draws, and slugged here because the URL spelling is this app's business
+     * rather than the database's.
+     *
+     * A failure here is not worth a broken page. The footer already depends on
+     * the database for its flight count, so this is not a new risk -- but that
+     * one has a fallback and so does this: an empty list, and the column takes
+     * itself out.
+     *
+     * @return array<string, string>
+     */
+    public function mostSearchedCities(int $limit): array
+    {
+        try {
+            $cities = new CityRepository($this->connection())->mostSearched($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($cities as $city) {
+            $name = (string) $city['name'];
+            $links[$name] = '/city/' . Helper::placeSlug($name, (string) $city['code']);
+        }
+
+        return $links;
+    }
+
+    /**
+     * The most-searched routes, ready for the footer's link column.
+     *
+     * The label is both city names, which is what the page is called and what
+     * somebody scanning a footer is looking for. Same shape and same fallback
+     * as the cities above it.
+     *
+     * Every one of these resolves. RouteRepository::popular() only returns
+     * pairs that can be flown nonstop, because a search is recorded for any
+     * pair anybody asked about and only some of those have a page -- see the
+     * comment there.
+     *
+     * @return array<string, string>
+     */
+    public function popularRoutes(int $limit): array
+    {
+        try {
+            $routes = new RouteRepository($this->connection())->popular($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($routes as $route) {
+            $from = (string) $route['from_name'];
+            $to = (string) $route['to_name'];
+
+            $links[$from . ' — ' . $to] = RouteAddress::path($from, $to);
+        }
+
+        return $links;
+    }
+
+    /**
+     * Whatever a data-driven footer column asked for.
+     *
+     * The template used to call mostSearchedCities() directly, which worked
+     * while one column was counted. Two are, so the template asks by name and
+     * this decides -- otherwise the choice becomes a conditional in a
+     * template, and a third column becomes a longer one.
+     *
+     * An unknown source is an empty list rather than an error: the column then
+     * takes itself out, which is what a column with nothing to show should do
+     * whatever the reason.
+     *
+     * @return array<string, string>
+     */
+    public function footerLinks(string $source, int $limit): array
+    {
+        return match ($source) {
+            'most-searched' => $this->mostSearchedCities($limit),
+            'popular-routes' => $this->popularRoutes($limit),
+            default => [],
+        };
+    }
+
     /**
      * The answer to a form post, once, from whoever left it in the session.
      *

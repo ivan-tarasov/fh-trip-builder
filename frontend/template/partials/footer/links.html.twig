@@ -5,11 +5,26 @@
    headings already give a screen reader something to jump between. #}
 <nav class="footer__columns" aria-label="More on {{ config('app.name') }}">
     {% for column in config('site.footer-columns') %}
-        {% include 'partials/footer/column.html.twig' with {
-            'id': loop.index,
-            'title': column.title,
-            'links': column.links,
-            'more': column.more ?? null
-        } only %}
+        {# A column either lists what config says or asks for what the data
+           says. `source` is the second, and names which question to ask --
+           cities and routes are both counted from what people have actually
+           searched for, rather than from a list somebody has to remember to
+           edit. Which source means what is LayoutData::footerLinks(); a
+           conditional here would grow by a line per column. #}
+        {% set links = column.source is defined
+            ? footer_links(column.source, column.count ?? 5)
+            : column.links %}
+
+        {# A data-driven column can come back empty -- an unseeded database, or
+           a query that failed and returned nothing rather than a broken page.
+           A heading over nothing is worse than no heading. #}
+        {% if links is not empty %}
+            {% include 'partials/footer/column.html.twig' with {
+                'id': loop.index,
+                'title': column.title,
+                'links': links,
+                'more': column.more ?? null
+            } only %}
+        {% endif %}
     {% endfor %}
 </nav>

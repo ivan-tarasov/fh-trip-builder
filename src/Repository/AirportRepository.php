@@ -9,8 +9,37 @@ use TripBuilder\Database\Table;
 
 final readonly class AirportRepository
 {
-    private const string COLUMNS = 'a.code, a.title, c.title AS country, a.city_code, a.city, '
+    /**
+     * `city` is the city's name, not this airport's idea of it.
+     *
+     * Newark Liberty reports "Newark" where the other two airports of NYC
+     * report "New York", and the city this app has a page for is New York. Read
+     * straight off the row, that one airport made its own page's breadcrumb
+     * link to a redirect and made three other pages print a name no page of
+     * ours answers to. See CityRepository::namesSql().
+     */
+    private const string COLUMNS = 'a.code, a.title, c.title AS country, a.city_code, '
+        . 'COALESCE(cc.name, a.city) AS city, '
         . 'a.timezone, a.timezone_name, a.latitude, a.longitude, a.altitude';
+
+    /** The filter the whole site sells by, as CityRepository spells it. */
+    private const string ONLY_SELLABLE = ' a.enabled = 1 AND a.is_major = 1';
+
+    /**
+     * The tables COLUMNS is read from.
+     *
+     * A method rather than a constant because the city-name subquery is built,
+     * not written out. LEFT JOIN and COALESCE on it, not a plain JOIN: the
+     * subquery covers major airports only, and enabled(false) -- which the
+     * airports endpoint reaches -- would otherwise drop every minor airport in
+     * a city that has no major one.
+     */
+    private static function source(): string
+    {
+        return ' FROM ' . Table::Airports->value . ' a'
+            . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
+            . ' LEFT JOIN (' . CityRepository::namesSql() . ') cc ON cc.code = a.city_code';
+    }
 
     public function __construct(private Connection $connection) {}
 
@@ -22,9 +51,7 @@ final readonly class AirportRepository
      */
     public function enabled(bool $majorOnly): array
     {
-        $sql = 'SELECT ' . self::COLUMNS
-            . ' FROM ' . Table::Airports->value . ' a'
-            . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
+        $sql = 'SELECT ' . self::COLUMNS . self::source()
             . ' WHERE a.enabled = 1';
 
         if ($majorOnly) {
@@ -92,10 +119,6 @@ final readonly class AirportRepository
     }
 
     /**
-     * Bump the search counter for the given departure/arrival airports,
-     * matched by airport code or city code.
-     */
-    /**
      * Airports for a set of codes, in the same shape as enabled(). Used to
      * label the codes a search offered, so the sidebar can show a city and
      * country rather than three letters.
@@ -112,15 +135,17 @@ final readonly class AirportRepository
         $placeholders = implode(', ', array_fill(0, count($codes), '?'));
 
         return $this->connection->fetchAll(
-            'SELECT ' . self::COLUMNS
-            . ' FROM ' . Table::Airports->value . ' a'
-            . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
+            'SELECT ' . self::COLUMNS . self::source()
             . " WHERE a.code IN ($placeholders)"
             . ' ORDER BY a.city ASC, a.title ASC',
             array_values($codes),
         );
     }
 
+    /**
+     * Bump the search counter for the given departure/arrival airports,
+     * matched by airport code or city code.
+     */
     public function recordSearch(string ...$codes): void
     {
         $in = implode(', ', array_fill(0, count($codes), '?'));
@@ -146,4 +171,129 @@ final readonly class AirportRepository
         return $city === null ? null : (string) $city;
     }
 
+    /**
+     * One airport, by its IATA code.
+     *
+     * `country_code` on top of enabled()'s columns, because the page's
+     * breadcrumb has to link the country it sits in and the name alone will not
+     * spell an address.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function byCode(string $code): ?array
+    {
+        return $this->connection->fetchOne(
+            'SELECT ' . self::COLUMNS . ', a.country_code, a.traffic_weight' . self::source()
+            . ' WHERE' . self::ONLY_SELLABLE . ' AND a.code = ?',
+            [strtoupper($code)],
+        );
+    }
+
+    /**
+     * The airports somebody might drive to instead, nearest first.
+     *
+     * A much tighter radius than the city page's thousand kilometres, because
+     * this is a different question. A nearby city is somewhere else to fly
+     * from; a nearby airport is somewhere else to leave from, and past a
+     * three-hour drive nobody does. 300km is that drive.
+     *
+     * It leaves 102 of the 254 airports with no neighbour at all, and the block
+     * drops for them rather than reaching further to fill itself: at 500km the
+     * answers stop being drives, and 500km of driving to save a fare is not
+     * advice worth printing. Where there are neighbours the answers read right
+     * -- Gatwick, Stansted and Luton for Heathrow; nothing for Honolulu.
+     *
+     * Airports of the same city are included and are usually the first two.
+     * That is the point: Heathrow's most useful alternative is Gatwick.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function nearby(string $code, int $limit, int $maxKm): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT ' . self::COLUMNS . ','
+            . ' ST_Distance_Sphere(POINT(here.longitude, here.latitude), POINT(a.longitude, a.latitude)) / 1000 AS km'
+            . self::source()
+            // The airport itself, joined to as a single row so its coordinates
+            // can be named in the distance without a second round trip.
+            . ' JOIN ' . Table::Airports->value . ' here ON here.code = ?'
+            . ' WHERE' . self::ONLY_SELLABLE . ' AND a.code <> here.code'
+            . ' HAVING km <= ?'
+            . ' ORDER BY km ASC'
+            // Interpolated, as elsewhere in this layer: LIMIT takes no
+            // placeholder in an emulated prepare, and the caller has already
+            // been forced to declare it an int.
+            . ' LIMIT ' . max(1, $limit),
+            [strtoupper($code), $maxKm],
+        );
+    }
+
+    /**
+     * Everything leaving this airport on one date, earliest first.
+     *
+     * A half-open window rather than DATE(departure_time) = ?, which is the
+     * whole performance of this block: wrapped in DATE() the column cannot be
+     * seeked and the query costs 7ms, where the range seeks
+     * (departure_airport, departure_time) and costs 1.6ms for the same 50 rows.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function departures(string $code, string $date): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT f.airline, f.number, f.departure_time, f.arrival_time, f.duration,'
+            . ' other.code AS other_code, other.title AS other_title,'
+            . ' other.city AS other_city, other.city_code AS other_city_code'
+            . ' FROM ' . Table::Flights->value . ' f'
+            . ' JOIN ' . Table::Airports->value . ' other ON other.code = f.arrival_airport'
+            // `other_city` is this airport's own idea of its city, and the
+            // caller replaces it -- see AirportController::schedule(). Not
+            // joined to CityRepository::namesSql() the way the columns above
+            // are, because here it costs the plan: the derived table becomes
+            // the driving table, arrival_airport_time stops being used at
+            // all, and the query goes from 0.6ms to 19.5ms. One 1ms lookup
+            // in PHP serves both directions instead.
+            . ' WHERE f.departure_airport = ?'
+            . ' AND f.departure_time >= ? AND f.departure_time < ? + INTERVAL 1 DAY'
+            . ' ORDER BY f.departure_time ASC',
+            [strtoupper($code), $date, $date],
+        );
+    }
+
+    /**
+     * Everything landing here on one date, earliest first.
+     *
+     * Filtered on when it lands, not when it left: a red-eye out of Vancouver
+     * at 23:00 is tomorrow's arrival, and a board that filed it under yesterday
+     * would be wrong on both days.
+     *
+     * This is what (arrival_airport, arrival_time) is in the schema for. Before
+     * it the query was `type=ALL` over 683,760 rows at 9.6ms -- no index in the
+     * table led with an arrival, which is the same gap
+     * FlightRepository::cheapestDirectPerOrigin() works around by naming its
+     * origins. With it the same 40 rows come back in 1.3ms.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function arrivals(string $code, string $date): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT f.airline, f.number, f.departure_time, f.arrival_time, f.duration,'
+            . ' other.code AS other_code, other.title AS other_title,'
+            . ' other.city AS other_city, other.city_code AS other_city_code'
+            . ' FROM ' . Table::Flights->value . ' f'
+            . ' JOIN ' . Table::Airports->value . ' other ON other.code = f.departure_airport'
+            // `other_city` is this airport's own idea of its city, and the
+            // caller replaces it -- see AirportController::schedule(). Not
+            // joined to CityRepository::namesSql() the way the columns above
+            // are, because here it costs the plan: the derived table becomes
+            // the driving table, arrival_airport_time stops being used at
+            // all, and the query goes from 0.6ms to 19.5ms. One 1ms lookup
+            // in PHP serves both directions instead.
+            . ' WHERE f.arrival_airport = ?'
+            . ' AND f.arrival_time >= ? AND f.arrival_time < ? + INTERVAL 1 DAY'
+            . ' ORDER BY f.arrival_time ASC',
+            [strtoupper($code), $date, $date],
+        );
+    }
 }

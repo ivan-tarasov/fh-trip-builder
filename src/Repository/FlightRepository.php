@@ -966,6 +966,138 @@ final readonly class FlightRepository
     }
 
     /**
+     * The cheapest direct fare into one city, from each of several origins.
+     *
+     * One query, not one per origin, and deliberately not the obvious query.
+     * Asking for everything arriving at a city and grouping by origin is a full
+     * index scan -- 683,760 rows, measured at 1,216ms -- because the only index
+     * that covers a route leads with `departure_airport`, and "everything
+     * arriving here" names no departure. Naming the origins first turns the same
+     * question into a range scan of a couple of thousand rows: 22ms.
+     *
+     * ROW_NUMBER rather than GROUP BY, because the card needs the whole flight
+     * -- airline, times, duration -- and not just its price. Partitioned by the
+     * origin's city and not its airport: a fare from London means the cheapest
+     * out of any of its three, and three rows for one city would fill the strip
+     * with the same place.
+     *
+     * Direct flights only. Everything here is one flight, one price, one row;
+     * connections are what cheapestTotal() is for and cost accordingly.
+     *
+     * @param list<string> $fromAirports
+     * @param list<string> $toAirports
+     * @return list<array<string, mixed>>
+     */
+    public function cheapestDirectPerOrigin(array $fromAirports, array $toAirports, CabinClass $cabin): array
+    {
+        if ($fromAirports === [] || $toAirports === []) {
+            return [];
+        }
+
+        $from = implode(',', array_fill(0, count($fromAirports), '?'));
+        $to = implode(',', array_fill(0, count($toAirports), '?'));
+
+        return $this->connection->fetchAll(
+            'SELECT x.* FROM ('
+            . ' SELECT o.city_code AS from_city_code, oc.name AS from_city,'
+            . '  f.airline, f.departure_airport, f.arrival_airport,'
+            . '  f.departure_time, f.arrival_time, f.duration,'
+            . '  f.price_base + f.price_tax AS total,'
+            . '  ROW_NUMBER() OVER ('
+            . '   PARTITION BY o.city_code'
+            . '   ORDER BY f.price_base + f.price_tax ASC, f.departure_time ASC'
+            . '  ) AS rn'
+            . ' FROM ' . Table::Flights->value . ' f'
+            . ' JOIN ' . Table::Airports->value . ' o ON o.code = f.departure_airport'
+            // The city's name, not this airport's idea of it -- see
+            // CityRepository::namesSql().
+            . ' JOIN (' . CityRepository::namesSql() . ') oc ON oc.code = o.city_code'
+            . ' WHERE f.departure_airport IN (' . $from . ')'
+            . '  AND f.arrival_airport IN (' . $to . ')'
+            // Today's flights that have already left are not fares anybody can
+            // buy, and a landing page showing one is worse than showing none.
+            . '  AND f.departure_time >= NOW()'
+            . '  AND (f.cabins & ?)'
+            . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
+            [...$fromAirports, ...$toAirports, $cabin->bit()],
+        );
+    }
+
+    /**
+     * The cheapest direct fare into each city of a country, from anywhere on a
+     * shortlist of origins.
+     *
+     * The mirror image of cheapestDirectPerOrigin: a city page asks "from
+     * where", a country page asks "to which of my cities", so the partition
+     * moves from the departure city to the arrival one and the row that wins is
+     * the cheapest way into that city rather than out of that origin.
+     *
+     * The origins still have to be named, and for the same reason -- the index
+     * leads with `departure_airport`, so "everything arriving in Canada" seeks
+     * nothing. Naming 24 busy origin airports and letting the arrival side
+     * filter runs Canada's seven cities in 10ms.
+     *
+     * Nothing that starts and ends in the same city. Both ends of this query
+     * are airports and a city can hold three, so the United Kingdom's domestic
+     * tab offered "London -- London" for a Heathrow-Gatwick hop. It is a real
+     * flight; it is not a fare anybody is looking for, and it took the cheapest
+     * row on the tab.
+     *
+     * One carrier or all of them. An airline page asks the same question of its
+     * own hubs -- where is it cheap to go from here -- and the answer has to be
+     * a flight that airline actually operates, or the page recommends a rival.
+     *
+     * @param list<string> $fromAirports
+     * @param list<string> $toAirports
+     * @return list<array<string, mixed>>
+     */
+    public function cheapestPerDestinationCity(
+        array $fromAirports,
+        array $toAirports,
+        CabinClass $cabin,
+        ?string $airline = null,
+    ): array {
+        if ($fromAirports === [] || $toAirports === []) {
+            return [];
+        }
+
+        $from = implode(',', array_fill(0, count($fromAirports), '?'));
+        $to = implode(',', array_fill(0, count($toAirports), '?'));
+
+        return $this->connection->fetchAll(
+            'SELECT x.* FROM ('
+            . ' SELECT d.city_code AS to_city_code, dc.name AS to_city,'
+            . '  o.city_code AS from_city_code, oc.name AS from_city,'
+            . '  f.airline, f.departure_airport, f.arrival_airport,'
+            . '  f.departure_time, f.arrival_time, f.duration,'
+            . '  f.price_base + f.price_tax AS total,'
+            . '  ROW_NUMBER() OVER ('
+            . '   PARTITION BY d.city_code'
+            . '   ORDER BY f.price_base + f.price_tax ASC, f.departure_time ASC'
+            . '  ) AS rn'
+            . ' FROM ' . Table::Flights->value . ' f'
+            . ' JOIN ' . Table::Airports->value . ' o ON o.code = f.departure_airport'
+            . ' JOIN ' . Table::Airports->value . ' d ON d.code = f.arrival_airport'
+            // Both ends by the city's own name -- see CityRepository::namesSql().
+            . ' JOIN (' . CityRepository::namesSql() . ') oc ON oc.code = o.city_code'
+            . ' JOIN (' . CityRepository::namesSql() . ') dc ON dc.code = d.city_code'
+            . ' WHERE f.departure_airport IN (' . $from . ')'
+            . '  AND f.arrival_airport IN (' . $to . ')'
+            . '  AND d.city_code <> o.city_code'
+            . ($airline === null ? '' : '  AND f.airline = ?')
+            . '  AND f.departure_time >= NOW()'
+            . '  AND (f.cabins & ?)'
+            . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
+            [
+                ...$fromAirports,
+                ...$toAirports,
+                ...($airline === null ? [] : [$airline]),
+                $cabin->bit(),
+            ],
+        );
+    }
+
+    /**
      * The cheapest total (base + tax) for one direction, or null when it has no
      * itineraries.
      *

@@ -1,0 +1,34 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Help{% endblock %}
+
+{% block description %}Baggage, refunds, tickets, passenger details and flying with children — what this site decides, what the fare decides, and what the airline decides.{% endblock %}
+
+{% block content %}
+{% embed 'partials/article.html.twig' with {
+    'title': 'Help',
+    'icon': 'fa-circle-question',
+    'lead': 'Five things people ask before they book and after. Most answers come down to the same split: the fare decides what a ticket allows, and the airline decides what happens at the airport.'
+} %}
+    {# A card each rather than a list of links: the summary is the half that
+       tells somebody which of five pages they want, and a footer-style list of
+       titles makes them open two to find out. #}
+    {% block body %}
+        <ul class="article-list">
+            {% for article in articles %}
+                <li>
+                    <a class="article-card" href="{{ article.url }}">
+                        <span class="article-card__icon">
+                            <i class="fas {{ article.icon }}" aria-hidden="true"></i>
+                        </span>
+                        <span class="article-card__text">
+                            <span class="article-card__title">{{ article.title }}</span>
+                            <span class="article-card__summary">{{ article.summary }}</span>
+                        </span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endblock %}
+{% endembed %}
+{% endblock %}

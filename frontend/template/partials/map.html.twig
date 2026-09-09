@@ -1,0 +1,36 @@
+{# One map, drawn the same way on all five pages that have one.
+
+   Parameters: `markers`, and optionally `paths`, `zoom` and `label`.
+   A marker is {lat, lon} and may carry a `colour`; a path is a list of the
+   same. Where the numbers come from and which way round they go is
+   View\MapView's business, not this template's.
+
+   Two renderings of the one map, and only one of them is ever fetched. The div
+   is what frontend/js/map.js turns into a map you can pan; the picture inside
+   `<noscript>` is what a crawler and a scriptless browser get instead of an
+   empty box. A browser running scripts never requests the picture, so it costs
+   nothing to keep -- and it is the reason these pages still have indexable,
+   described map content now that the map itself is a canvas.
+
+   Nothing at all without a token: map_config() returns an empty string, and a
+   page with no map is better than a page of broken ones.
+
+   The container's height is in the stylesheet rather than measured from the
+   map, so the page has its final shape before any of this loads and does not
+   jump when it does. #}
+{% set paths = paths|default([]) %}
+{% set zoom = zoom|default(null) %}
+{% set config = map_config(markers, paths, zoom) %}
+
+{% if config %}
+    {# `group` rather than `region`: it wants a name a screen reader can hear
+       and skip, without adding a landmark to every one of these pages. What is
+       inside it is interactive, so it is not `img`. #}
+    <div class="place__map" data-map="{{ config }}"
+         role="group" aria-label="{{ label|default('Map') }}"></div>
+
+    <noscript>
+        <img class="place__map" src="{{ map_image(markers, paths, zoom) }}"
+             width="650" height="300" alt="{{ label|default('Map') }}">
+    </noscript>
+{% endif %}

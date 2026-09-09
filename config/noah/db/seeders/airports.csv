@@ -426,7 +426,7 @@ HVN,"New Haven",US,HVN,"New Haven",-4,America/New_York,41.265278,-72.888336,14,1
 HYA,Barnstable,US,HYA,Hyannis,-4,America/New_York,41.665833,-70.280556,55,1,0,0
 HYD,"Hyderabad Airport",IN,HYD,Hyderabad,5.5,Asia/Kolkata,17.233702,78.43043,2021,1,6,1
 HYS,Municipal,US,HYS,Hays,-5,America/Chicago,38.84611,-99.27417,1998,1,0,0
-IAD,"Washington Dulles International",US,WAS,Dulles,-4,America/New_York,38.95315,-77.44774,313,1,6,1
+IAD,"Washington Dulles International",US,WAS,Washington,-4,America/New_York,38.95315,-77.44774,313,1,6,1
 IAG,International,US,IAG,"Niagara Falls",-4,America/New_York,43.1,-78.95,590,1,0,0
 IAH,"George Bush Intercontinental",US,HOU,Houston,-5,America/Chicago,29.983334,-95.34,97,1,6,1
 IAS,Iasi,RO,IAS,Iasi,3,Europe/Bucharest,47.176987,27.616993,397,1,0,0

@@ -1,0 +1,53 @@
+{# The shares are printed rather than written out, from the same numbers the
+   prices are worked out with -- Party::shares(). They are the figures most
+   likely to be tuned, and a page quoting them from memory would be the last
+   place anybody looked. The two tax lines are words because they are
+   structural: a child holds a seat and is taxed like an adult, a lap infant
+   holds none and is not taxed at all. #}
+{% set shares = party_shares() %}
+
+<h2>Three kinds of traveller</h2>
+<p>
+    An adult is 12 or over. A child is 2 to 11 and gets a seat. A lap infant is
+    under 2 and travels on an adult&rsquo;s lap with no seat of their own.
+</p>
+<p>
+    Which one a child counts as decides both what they pay and how many of you
+    can travel on one booking.
+</p>
+
+<h2>What each one pays</h2>
+<p>Fares here are quoted per adult, and everyone else is a share of that:</p>
+<ul>
+    <li>
+        A child pays <strong>{{ (shares.child_fare * 100)|round }}%</strong> of
+        the adult fare and the tax in full. A seat is a seat.
+    </li>
+    <li>
+        A lap infant pays <strong>{{ (shares.infant_fare * 100)|round }}%</strong>
+        of the adult fare and no tax at all.
+    </li>
+</ul>
+<p>This is why a party of four does not cost four times a party of one.</p>
+
+<h2>What the search will not accept</h2>
+<ul>
+    <li>At least one adult. Somebody has to be responsible for the booking.</li>
+    <li>No more infants than adults. A lap needs an adult attached to it.</li>
+    <li>
+        {{ max_seats }} seats at most. Infants are not counted against it,
+        because they are not in one.
+    </li>
+</ul>
+
+<h2>At checkout, and on the day</h2>
+<p>
+    Each child needs a date of birth that matches the type they were booked as.
+    A date that disagrees is refused &mdash; see
+    <a href="/help/passenger-details">changing passenger details</a>.
+</p>
+<p>
+    Everything about the flight itself belongs to the airline: bassinets,
+    strollers, and whether a child may fly unaccompanied at all. Its page here
+    has its phone number &mdash; see <a href="/airlines">all airlines</a>.
+</p>

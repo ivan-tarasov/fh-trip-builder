@@ -1,0 +1,16 @@
+{# Four things somebody checks before booking, and nothing else.
+
+   The timezone is printed from the stored offset rather than the IANA name:
+   "GMT+3" answers "how far off is my clock", which is the question, where
+   "Europe/Moscow" answers a different one and is longer. Through gmt_offset()
+   because the column is a decimal and eight of our cities are on a half hour --
+   printing it raw says "GMT+5.5" and rounding it lies to everyone flying to
+   India. #}
+{% include 'partials/facts-grid.html.twig' with {
+    'facts': [
+        { 'icon': 'fa-globe', 'value': place.country, 'label': 'Country' },
+        { 'icon': 'fa-plane', 'value': place.code, 'label': 'IATA code' },
+        { 'icon': 'fa-calendar-days', 'value': place.airports, 'label': 'Airports' },
+        { 'icon': 'fa-clock', 'value': gmt_offset(place.timezone), 'label': 'Time zone' }
+    ]
+} only %}

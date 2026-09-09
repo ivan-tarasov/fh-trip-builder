@@ -2696,4 +2696,100 @@
         });
     }());
 
+    /*[ Directory: filter and alphabet ]
+    ===========================================================*/
+    (function () {
+        const root = document.querySelector('.directory');
+
+        if (!root) {
+            return;
+        }
+
+        const search = root.querySelector('[data-directory-search]');
+        const field = root.querySelector('.js-directory-filter');
+        const letters = [...root.querySelectorAll('.js-directory-letter')];
+        const groups = [...root.querySelectorAll('.js-directory-group')];
+        const items = [...root.querySelectorAll('.js-directory-item')];
+        const empty = root.querySelector('.js-directory-empty');
+
+        // The field is rendered hidden and unhidden here, so it never exists
+        // for somebody whose browser would leave it inert.
+        search.hidden = false;
+
+        // Announces that visibility is this script's job now. Until this class
+        // lands, CSS is showing the first group and letting :target swap it --
+        // see the #DIRECTORY section.
+        root.classList.add('is-scripted');
+
+        // The first letter, or whichever one the address names. A shared link
+        // to #letter-p should open on P, not on A.
+        const named = decodeURIComponent(location.hash.replace(/^#letter-/, '')).toUpperCase();
+        const has = (value) => groups.some((group) => group.dataset.letter === value);
+
+        let letter = has(named) ? named : (groups[0]?.dataset.letter ?? null);
+
+        const apply = () => {
+            const term = field.value.trim().toLowerCase();
+            let shown = 0;
+
+            items.forEach((item) => {
+                // A name or a code: people type "YMQ" as readily as "Montreal",
+                // and the code is not on screen to be read.
+                const hit = term === ''
+                    || item.dataset.name.includes(term)
+                    || item.dataset.code.includes(term);
+
+                item.hidden = !hit;
+
+                if (hit) {
+                    shown++;
+                }
+            });
+
+            groups.forEach((group) => {
+                const wanted = letter === null || group.dataset.letter === letter;
+                // A heading with nothing under it is worse than no heading, so a
+                // group goes when its last row does.
+                const has = [...group.querySelectorAll('.js-directory-item')]
+                    .some((item) => !item.hidden);
+
+                group.hidden = !wanted || !has;
+            });
+
+            letters.forEach((link) => {
+                link.classList.toggle('is-current', link.dataset.letter === letter);
+            });
+
+            // Counted rather than announced as a bare "nothing found": the
+            // number is what tells somebody whether to keep typing.
+            empty.hidden = shown > 0;
+            empty.textContent = shown > 0 ? '' : 'Nothing matches “' + field.value.trim() + '”.';
+        };
+
+        field.addEventListener('input', () => {
+            // Typing is a fresh question, and it is asked of the whole list:
+            // a letter chosen a moment ago would otherwise hide the very thing
+            // being searched for. Emptying the field puts the alphabet back in
+            // charge rather than leaving 231 rows on screen.
+            letter = field.value.trim() === '' ? (groups[0]?.dataset.letter ?? null) : null;
+            apply();
+        });
+
+        letters.forEach((link) => {
+            link.addEventListener('click', function (event) {
+                event.preventDefault();
+                letter = this.dataset.letter;
+                // Choosing a letter answers a different question from the one
+                // in the field, so the field stops asking.
+                field.value = '';
+                apply();
+            });
+        });
+
+        // Once at the start, or the page would sit on the whole alphabet until
+        // somebody touched something. The CSS default is one letter and this is
+        // the script agreeing with it rather than undoing it.
+        apply();
+    }());
+
 })(jQuery);

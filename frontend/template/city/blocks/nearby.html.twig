@@ -1,0 +1,17 @@
+{# Somewhere else to fly from, when the fare from here is not the one.
+
+   Each carries how far it is, because "nearby" covers 151km and 804km in this
+   list and the difference decides whether it is worth the drive. Rounded to
+   ten, which is as precise as a straight-line distance between two city
+   centres deserves to sound. #}
+<ul class="chips">
+    {% for place in nearby %}
+        <li>
+            <a class="chip chip--link" href="{{ place.url }}">
+                <i class="fas fa-plane-departure chip__icon" aria-hidden="true"></i>
+                {{ place.name }}
+                <span class="chip__note">{{ (place.km / 10)|round * 10 }} km</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>
