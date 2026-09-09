@@ -1,8 +1,11 @@
 name: PR labels
 
-# Merging into develop cuts a release (see release.yml), and the size of the
-# version bump comes from a label. This check makes that choice deliberate:
-# a pull request must carry exactly one release label before it can merge.
+# Merging into develop cuts a release (see release.yml). The version comes from
+# the calendar now rather than from a label, so none of these labels changes
+# what the tag will be. They stay for two reasons: `no-release` is what stops a
+# release being cut at all, and the other three classify a pull request so it
+# can be found again later. Requiring exactly one keeps that deliberate — a
+# pull request must carry one before it can merge.
 #
 # Failing this check only *blocks* a merge once it is added as a required
 # status check in the branch protection rules for develop.
@@ -41,12 +44,13 @@ jobs:
 
           if [ "$count" -eq 0 ]; then
             echo "::error::This pull request has no release label. Add one of"\
-                 "release:major, release:minor or release:patch to say how the"\
-                 "version should bump when it merges — or no-release to merge"\
-                 "without cutting a release."
+                 "release:major, release:minor or release:patch to say what kind"\
+                 "of change this is — or no-release to merge without cutting a"\
+                 "release at all. The version itself comes from the calendar."
           else
             echo "::error::This pull request has more than one release label"\
-                 "(${found# }). Keep exactly one so the version bump is not ambiguous."
+                 "(${found# }). Keep exactly one so the change has a single"\
+                 "classification, and so no-release cannot be contradicted."
           fi
 
           exit 1
