@@ -285,6 +285,7 @@ return [
                 'Delta Air Lines' => '/airline/delta-air-lines-dl',
                 'American Airlines' => '/airline/american-airlines-aa',
                 'United Airlines' => '/airline/united-airlines-ua',
+                'British Airways' => '/airline/british-airways-ba',
             ],
             'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
         ],
@@ -302,9 +303,14 @@ return [
             // return pairs that have a page. A search is recorded for whatever
             // anybody asked about, and five of the 163 city pairs searched here
             // have no nonstop and so no page -- see RouteRepository::popular().
+            //
+            // Seven where its neighbours show six and a link to the rest,
+            // because this is the one column with nowhere to send anybody:
+            // there is no directory of routes and there cannot be one, so the
+            // row the others spend on "All ..." is spent on another route.
             'title' => 'Directions',
             'source' => 'popular-routes',
-            'count' => 5,
+            'count' => 7,
         ],
         [
             // Curated rather than counted, unlike Cities beside it: nothing in
@@ -318,6 +324,7 @@ return [
                 'United Kingdom' => '/country/united-kingdom-gb',
                 'France' => '/country/france-fr',
                 'Japan' => '/country/japan-jp',
+                'Germany' => '/country/germany-de',
             ],
             'more' => ['text' => 'All countries', 'url' => '/countries'],
         ],
@@ -328,7 +335,7 @@ return [
             // the app has been keeping since its first search.
             'title' => 'Cities',
             'source' => 'most-searched',
-            'count' => 5,
+            'count' => 6,
             // The page it leads to is what gives all 231 city pages a route in.
             'more' => ['text' => 'All cities', 'url' => '/cities'],
         ],
@@ -349,6 +356,7 @@ return [
                 'Vancouver' => '/airport/vancouver-international-yvr',
                 'New York JFK' => '/airport/john-f-kennedy-international-jfk',
                 'London Heathrow' => '/airport/heathrow-lhr',
+                'Paris Charles de Gaulle' => '/airport/charles-de-gaulle-cdg',
             ],
             'more' => ['text' => 'All airports', 'url' => '/airports/'],
         ],

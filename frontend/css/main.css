@@ -5166,17 +5166,52 @@ body:has(main.article) .breadcrumbs__list {
   align-items: start;
 }
 
-.footer__brand-mark {
-  display: inline-flex;
+/* The mark beside both lines. `center` against .footer__brand-lines and not
+   against the name, which is the whole difference: the two lines are one block
+   here, so the tile is measured against their combined height and sits level
+   with the pair. */
+.footer__brand-head {
+  display: flex;
   align-items: center;
-  gap: .625rem;
+  gap: .875rem;
+  /* Clear of the socials below. 20px read as the next line of the same block --
+     the same distance a column leaves between its heading and its first link --
+     where these are two separate things that happen to share a corner. */
+  margin-bottom: 2.25rem;
+}
+
+/* A filled tile rather than a bare glyph, which is what makes the logo read as
+   a logo beside two lines of text instead of a bullet in front of one. Square,
+   and sized to the pair: 2.75rem is about what the name and the years measure
+   together. */
+.footer__brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: #fff;
+  font-size: 1.25rem;
+  background-color: var(--brand-accent);
+  border-radius: .875rem;
+}
+
+.footer__brand-lines {
+  display: grid;
+  gap: .125rem;
+  min-width: 0;
+}
+
+.footer__brand-name {
   color: var(--ink-on-dark-lead);
   font-size: 1.125rem;
+  font-weight: 700;
   text-decoration: none;
 }
 
 .footer__copyright {
-  margin: .75rem 0 1.25rem;
+  margin: 0;
   color: var(--ink-on-dark);
   font-size: .875rem;
 }
@@ -5211,7 +5246,7 @@ body:has(main.article) .breadcrumbs__list {
   }
 }
 
-/* ---------- Fare alerts ---------- */
+/* ---------- The subscribe form ---------- */
 
 /* Every property here is restated rather than inherited. The reset at the top
    of this file strips borders and margins from inputs and buttons and sets a

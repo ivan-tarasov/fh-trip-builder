@@ -12,14 +12,30 @@
 {% set git = git_info() %}
 
 <div class="footer__bottom">
+    {# The mark to the left of both lines, the way the reference has it: the
+       name on the first and the years on the second, and the logo centred
+       against the pair rather than against the name alone.
+
+       Which means the two lines are their own block. Indenting the years by the
+       tile's width instead -- the first attempt -- lines them up under the name
+       but leaves them below the tile, so the logo still belongs to one line.
+
+       Two links to "/" and only one of them announced. The name is the link; the
+       tile repeats it so the logo is clickable with a mouse, and is hidden from
+       assistive tech and taken out of the tab order so nobody has to hear the
+       same destination twice or tab through it to reach the socials. #}
     <div class="footer__brand">
-        <a class="footer__brand-mark" href="/">
-            <i class="fas fa-plane-departure" aria-hidden="true"></i>
-            <strong>{{ config('app.name') }}</strong>
-        </a>
-        <p class="footer__copyright">
-            <i class="far fa-copyright" aria-hidden="true"></i> {{ copyright_years() }}
-        </p>
+        <div class="footer__brand-head">
+            <a class="footer__brand-icon" href="/" aria-hidden="true" tabindex="-1">
+                <i class="fas fa-plane-departure"></i>
+            </a>
+            <div class="footer__brand-lines">
+                <a class="footer__brand-name" href="/">{{ config('app.name') }}</a>
+                <p class="footer__copyright">
+                    <i class="far fa-copyright" aria-hidden="true"></i> {{ copyright_years() }}
+                </p>
+            </div>
+        </div>
 
         {# Icons alone, the way the reference has them. Each one still needs a
            name for anyone who cannot see which brand it is. #}
@@ -58,12 +74,16 @@
        novalidate: the browser's own bubble says "Please enter an email address"
        in a tooltip that vanishes and is not announced. The field is still
        type="email", so the right keyboard comes up on a phone; the message is
-       ours to place and to keep on screen. #}
-    {% set notice = subscribe_notice() %}
+       ours to place and to keep on screen.
 
+       The id stays `fare-alerts` whatever the heading is called. It is where
+       AjaxController sends a scriptless browser back to after the form posts,
+       so renaming it to match the words above would land that redirect on a
+       page with no such anchor and no message in sight. #}
+    {% set notice = subscribe_notice() %}
     <form class="footer__subscribe js-subscribe" id="fare-alerts"
           action="/ajax/subscribe" method="post" novalidate>
-        <h2 class="footer__title">Fare alerts</h2>
+        <h2 class="footer__title">Cheap tickets in your inbox</h2>
         <p class="footer__subscribe-text">A note when a fare on a route you searched drops.</p>
 
         {# Both carried in the form, because without scripting there is no
