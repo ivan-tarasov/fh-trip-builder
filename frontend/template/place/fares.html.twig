@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# The cheapest direct way in, from home and from abroad.
 
    Tabs come from .tabset -- a radio group and sibling selectors, no JavaScript.
@@ -24,7 +25,7 @@
             {% for fare in tab.fares %}
                 <li class="fares__item">
                     <a class="fare" href="{{ fare.search }}">
-                        <span class="fare__price">${{ fare.total|round(0, 'floor') }}<span class="fare__currency">CAD</span></span>
+                        {% set fare_price = price_whole(fare.total) %}<span class="fare__price">{{ money.plain(fare_price) }}<span class="fare__currency">{{ fare_price.code }}</span></span>
                         <span class="fare__route">{{ fare.from_city }} &mdash; {{ fare.to_city }}</span>
 
                         <span class="fare__detail">

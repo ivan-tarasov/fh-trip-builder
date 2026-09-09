@@ -49,7 +49,7 @@ final readonly class Money
      * template can leave out the separator instead of printing a yen price with
      * a decimal point in it.
      *
-     * @return array{symbol: string, whole: string, cents: ?string, code: string, text: string}
+     * @return array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}
      */
     public function parts(float $cad): array
     {
@@ -74,7 +74,7 @@ final readonly class Money
      * 0.1 + 0.2 does not hold still, and number_format would round it back into
      * view.
      *
-     * @return array{base: array{symbol: string, whole: string, cents: ?string, code: string, text: string}, tax: array{symbol: string, whole: string, cents: ?string, code: string, text: string}, total: array{symbol: string, whole: string, cents: ?string, code: string, text: string}}
+     * @return array{base: array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}, tax: array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}, total: array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}}
      */
     public function split(float $base, float $tax): array
     {
@@ -86,6 +86,44 @@ final readonly class Money
             'tax' => $this->fromMinor($totalMinor - $baseMinor),
             'total' => $this->fromMinor($totalMinor),
         ];
+    }
+
+    /**
+     * The amount with no minor unit at all, floored.
+     *
+     * The fare strips and the facts tiles quote a price to the dollar -- "from
+     * $464" -- which the templates did with `|round(0, 'floor')` on the raw
+     * float. Floored on the converted major amount rather than on rounded minor
+     * units, because those two disagree: 464.999 floors to 464, but rounded to
+     * cents first it becomes 46500 and then floors to 465. One of those matches
+     * what the page said before and the other silently adds a dollar.
+     *
+     * @return array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}
+     */
+    public function whole(float $cad): array
+    {
+        $major = (int) floor($cad * $this->rate);
+
+        return $this->fromMinor($major * 10 ** $this->currency->decimals, withCents: false);
+    }
+
+    /**
+     * Whole units again, but rounded rather than floored.
+     *
+     * For a difference rather than a price. "+$465 vs cheapest" is a gap, and
+     * the nearest whole unit describes a gap best; a fare quoted "from $464"
+     * must never round up, because the fare it is advertising exists at 464.
+     * The two callers want opposite things from the same fraction, so they ask
+     * different questions.
+     *
+     * @return array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}
+     */
+    public function rounded(float $cad): array
+    {
+        return $this->fromMinor(
+            (int) round($cad * $this->rate) * 10 ** $this->currency->decimals,
+            withCents: false,
+        );
     }
 
     /**
@@ -114,9 +152,9 @@ final readonly class Money
     }
 
     /**
-     * @return array{symbol: string, whole: string, cents: ?string, code: string, text: string}
+     * @return array{symbol: string, whole: string, cents: ?string, point: string, before: bool, code: string, text: string}
      */
-    private function fromMinor(int $minor): array
+    private function fromMinor(int $minor, bool $withCents = true): array
     {
         $divisor = 10 ** $this->currency->decimals;
         $whole = number_format(
@@ -126,7 +164,7 @@ final readonly class Money
             $this->currency->group,
         );
 
-        $cents = $this->currency->decimals === 0
+        $cents = $this->currency->decimals === 0 || !$withCents
             ? null
             : str_pad((string) (abs($minor) % $divisor), $this->currency->decimals, '0', STR_PAD_LEFT);
 
@@ -136,6 +174,12 @@ final readonly class Money
             'symbol' => $this->currency->symbol,
             'whole' => $whole,
             'cents' => $cents,
+            // Carried so the markup can put the separator between the two spans
+            // itself, and so a template never has to know which currency wants
+            // a comma. Same for `before`: SEK is written 1 234,56 kr, and the
+            // symbol span has to move rather than the value.
+            'point' => $this->currency->point,
+            'before' => $this->currency->symbolFirst,
             'code' => $this->currency->code,
             // A non-breaking space before a trailing symbol, so "1 234 kr"
             // cannot leave the "kr" alone at the start of the next line.

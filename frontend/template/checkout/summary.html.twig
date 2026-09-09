@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# What is being bought, and for how much. Sticky, so the total stays in view
    while the form is filled in — the number is the reason the page exists. #}
 <aside class="order" aria-labelledby="order-heading">
@@ -26,15 +27,15 @@
     <dl class="order__prices">
         <div class="order__price-row">
             <dt>Fare</dt>
-            <dd>${{ trip.price_base.whole }}.{{ trip.price_base.cents }}</dd>
+            <dd>{{ money.plain(trip.price_base) }}</dd>
         </div>
         <div class="order__price-row">
             <dt>Taxes &amp; fees</dt>
-            <dd>${{ trip.price_tax.whole }}.{{ trip.price_tax.cents }}</dd>
+            <dd>{{ money.plain(trip.price_tax) }}</dd>
         </div>
         <div class="order__price-row order__price-row--total">
             <dt>Total</dt>
-            <dd>${{ trip.price_total.whole }}.{{ trip.price_total.cents }}</dd>
+            <dd>{{ money.plain(trip.price_total) }}</dd>
         </div>
     </dl>
 

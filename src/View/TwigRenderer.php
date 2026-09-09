@@ -9,6 +9,7 @@ use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Consent;
 use TripBuilder\Helper;
+use TripBuilder\Money;
 use TripBuilder\Party;
 use Twig\Environment;
 use Twig\Error\LoaderError;
@@ -74,6 +75,14 @@ final readonly class TwigRenderer
             'answered' => Consent::answered(),
             'accepted' => Consent::granted(),
         ]);
+
+        // A price, for the templates that are handed a raw Canadian-dollar
+        // float rather than a pre-split one. `price_whole` is the fare strips
+        // and facts tiles, which quote to the dollar -- they used
+        // `|round(0, 'floor')` on the float and a literal `$` beside it.
+        $money = Money::base();
+        $this->twig->addFunction(new TwigFunction('price', $money->parts(...)));
+        $this->twig->addFunction(new TwigFunction('price_whole', $money->whole(...)));
 
         $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));
         // Given the trail the partial is about to draw, so the two agree.

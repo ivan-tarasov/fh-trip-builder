@@ -1,0 +1,29 @@
+{# How a price is written, decided once.
+
+   Before this, twenty-eight lines across seventeen templates each spelled a
+   price out for themselves: a literal `$`, a literal `CAD`, and a hard `.`
+   between the whole amount and the cents. Every one of those was a separate
+   chance to get a currency wrong, and three of them would have been wrong the
+   moment a yen price appeared -- there is no hundredth of a yen, so `cents` is
+   null and the separator has nothing to separate.
+
+   Two macros, because there are two kinds of place a price appears.
+
+   `rich` is for the places that size the parts differently -- the amount large
+   and the cents small -- and needs real elements to hang that on. `plain` is
+   for the places markup cannot go at all: a `title` attribute, an `<option>`
+   label, a meta description. Both take the array ItineraryPresenter::priceParts
+   returns.
+
+   Written on single lines on purpose. A macro's body is emitted exactly as it
+   is written, so a newline for readability here would be a newline in the
+   middle of somebody's price. #}
+
+{% macro rich(price) %}{% if price.before %}<span class="price__symbol">{{ price.symbol }}</span>{% endif %}<span class="price__whole">{{ price.whole }}</span>{% if price.cents is not null %}<span class="price__cents">{{ price.point }}{{ price.cents }}</span>{% endif %}{% if not price.before %}<span class="price__symbol price__symbol--after">{{ price.symbol }}</span>{% endif %}{% endmacro %}
+
+{% macro plain(price) %}{{ price.text }}{% endmacro %}
+
+{# The whole amount and nothing else, for the filter labels and sort tabs. Those
+   are rough figures -- "from $464" beside an airline's name -- and the cents
+   were already being dropped before any of this existed. #}
+{% macro whole(price) %}{% if price.before %}{{ price.symbol }}{% endif %}{{ price.whole }}{% if not price.before %}&nbsp;{{ price.symbol }}{% endif %}{% endmacro %}

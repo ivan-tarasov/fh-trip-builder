@@ -241,8 +241,18 @@ class Helper
      */
     public static function sliderCaption(string $kind, int $from, ?int $to, int $min, int $max): string
     {
+        // The caption converts; the value does not. `$from`/`$to` are the
+        // numbers the filter compares and the ones a shared search link
+        // carries, and those stay Canadian dollars whatever is being shown --
+        // FlightFilters::DIM_PRICE compares against a CAD total. A slider
+        // labelled in yen that filtered as though the yen figure were dollars
+        // would look right and quietly return the wrong flights.
+        //
+        // Which is also why the steps stay CAD-shaped, so a yen pill reads
+        // "Up to ¥5,425" rather than a round number. Correct and odd beats
+        // round and off by a step.
         $show = static fn(int $value): string => $kind === 'money'
-            ? '$' . number_format($value)
+            ? Money::base()->rounded($value)['text']
             : self::hoursAndMinutes($value);
 
         if ($to === null) {

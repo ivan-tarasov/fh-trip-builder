@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {% set row_id = (flight.outbound_ids|merge(flight.return_ids))|join('-') %}
 
 {# Badges sit above the card and overlap it, so they read as a label on it.
@@ -27,15 +28,15 @@
 
                 {% if price_mode == 'from' %}<span class="small text-muted">from</span>{% endif %}
                 <div class="price">
-                    <span class="price__symbol">$</span><span class="price__whole">{{ flight.price.whole }}</span><span class="price__cents">.{{ flight.price.cents }}</span>
-                    <span class="price__currency">CAD</span>
+                    {{ money.rich(flight.price) }}
+                    <span class="price__currency">{{ flight.price.code }}</span>
                 </div>
                 <div class="small price-note">
                     {% if flight.is_cheapest %}
                         <span class="text-success fw-semibold">cheapest option</span>
                         <span class="text-muted">&middot;</span>
                     {% elseif flight.price_difference %}
-                        <span class="text-muted">+${{ flight.price_difference }} vs cheapest &middot;</span>
+                        <span class="text-muted">+{{ money.plain(flight.price_difference) }} vs cheapest &middot;</span>
                     {% endif %}
                     <span class="text-muted">
                     {% if price_mode == 'from' %}
@@ -45,7 +46,7 @@
                         </span>
                     {% else %}
                         <span data-toggle="tooltip" data-placement="top"
-                              title="Base ${{ flight.price_base }} plus taxes ${{ flight.price_tax }}, for {{ party_label|default('1 adult') }}.">
+                              title="Base {{ money.plain(flight.price_base) }} plus taxes {{ money.plain(flight.price_tax) }}, for {{ party_label|default('1 adult') }}.">
                             total for {{ party_label|default('1 adult') }} <i class="fas fa-info-circle"></i>
                         </span>
                     {% endif %}

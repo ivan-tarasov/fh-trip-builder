@@ -309,13 +309,13 @@ class SearchController extends AbstractController
                     : $this->presenter()->direction($this->data->selected)['direction'],
                 'selected_price' => $this->data->selected_price === null
                     ? null
-                    : number_format((float) $this->data->selected_price, 2),
+                    : $this->presenter()->priceParts((float) $this->data->selected_price),
                 'selected_return' => $this->data->selected_return === null
                     ? null
                     : $this->presenter()->direction($this->data->selected_return)['direction'],
                 'selected_return_price' => $this->data->selected_return_price === null
                     ? null
-                    : number_format((float) $this->data->selected_return_price, 2),
+                    : $this->presenter()->priceParts((float) $this->data->selected_return_price),
                 'package_price' => $this->data->package_price === null
                     ? null
                     : $this->presenter()->priceParts((float) $this->data->package_price),
@@ -1078,10 +1078,10 @@ class SearchController extends AbstractController
                 // Whole pounds/dollars: the cents of a difference are noise.
                 'is_cheapest' => $difference !== null && $difference < 0.5,
                 'price_difference' => $difference !== null && $difference >= 0.5
-                    ? number_format($difference)
+                    ? $this->presenter()->priceRounded($difference)
                     : null,
-                'price_base' => number_format((float) $flight->price_base, 2),
-                'price_tax' => number_format((float) $flight->price_tax, 2),
+                'price_base' => $this->presenter()->priceParts((float) $flight->price_base),
+                'price_tax' => $this->presenter()->priceParts((float) $flight->price_tax),
                 // Path only; the browser resolves it against its own origin.
                 'share_url' => match ($step) {
                     1 => $this->stepUrl($built['ids'], keepReturn: true),

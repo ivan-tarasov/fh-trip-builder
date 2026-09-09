@@ -1,3 +1,4 @@
+{% import 'partials/money.html.twig' as money %}
 {# The four things somebody checks before opening a search, then the shape of
    the trip.
 
@@ -14,7 +15,7 @@
     'facts': [
         {
             'icon': 'fa-tag',
-            'value': '$' ~ place.cheapest|round(0, 'floor'),
+            'value': price_whole(place.cheapest).text,
             'label': 'Cheapest fare'
         },
         { 'icon': 'fa-clock', 'value': duration(place.typical), 'label': 'Time in the air' },
@@ -42,7 +43,7 @@
         <i class="fas fa-left-right route-back__icon" aria-hidden="true"></i>
         Flying home?
         <a class="route-back__link" href="{{ reverse.url }}">{{ reverse.from }} to {{ reverse.to }}</a>
-        from ${{ reverse.cheapest|round(0, 'floor') }}
+        from {{ money.plain(price_whole(reverse.cheapest)) }}
     </p>
 {% endif %}
 
