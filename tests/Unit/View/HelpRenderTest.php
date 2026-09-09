@@ -8,7 +8,6 @@ use PHPUnit\Framework\TestCase;
 use TripBuilder\ArticleRating;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
-use TripBuilder\Party;
 use TripBuilder\Routes;
 use TripBuilder\View\TwigRenderer;
 
@@ -27,6 +26,15 @@ use TripBuilder\View\TwigRenderer;
  */
 final class HelpRenderTest extends TestCase
 {
+    /**
+     * Stand-in prose, shaped like what View\Markdown emits.
+     *
+     * An `<h2>` first, because that is what the body must open with, and a
+     * `<p>` after it. Nothing carries a class: article prose never has, and
+     * `.article__body` styles it by descent.
+     */
+    private const string PROSE = '<h2>A heading</h2>' . "\n" . '<p>Some prose.</p>';
+
     protected function setUp(): void
     {
         new Config('common');
@@ -331,6 +339,11 @@ final class HelpRenderTest extends TestCase
         return $this->render('help/view.html.twig', '/help/' . $slug, [
             'breadcrumbs' => [],
             'article' => $articles[$slug] + ['slug' => $slug],
+            // Converted prose, which the controller now hands over ready to
+            // print. Fixed markup rather than a real article's, because what
+            // this suite tests is that the template places it -- what the five
+            // published articles actually say is ArticleCatalogueTest's.
+            'article_html' => self::PROSE,
             'more' => $more,
             'verdict' => $verdict ?? self::verdict($slug),
         ]);
@@ -369,21 +382,31 @@ final class HelpRenderTest extends TestCase
     }
 
     /**
-     * An article in the index has prose to show.
+     * The converted prose is placed in the body, and placed unescaped.
      *
-     * The template is found by name rather than named in the config, so this is
-     * what stands between a typo in a key and a page that renders the
-     * controller's catch block.
+     * A stand-in body rather than a real one, and one article rather than all
+     * five: what this can prove is that the template prints what the
+     * controller hands it, in the element the stylesheet dresses by descent.
+     * Whether the five published articles have prose worth reading -- or any
+     * prose at all -- is a question about rows, and ArticleCatalogueTest asks
+     * it against the table.
+     *
+     * The heading is matched as markup rather than as text because that is the
+     * half that can regress quietly: drop the `|raw` and the page fills with
+     * `&lt;h2&gt;`, which is still a body with a heading in it as far as a
+     * looser assertion is concerned.
      */
-    #[\PHPUnit\Framework\Attributes\DataProvider('articleProvider')]
-    public function testEveryArticleRendersItsOwnProse(string $slug): void
+    public function testTheConvertedProseIsPlacedInTheBody(): void
     {
-        $html = $this->article($slug);
+        $html = $this->article('baggage');
 
-        self::assertStringContainsString('article__body', $html);
-        // A heading of its own, so an article that rendered an empty body
-        // cannot pass on the strength of the shell around it.
-        self::assertMatchesRegularExpression('#<div class="article__body">.*?<h2>#s', $html);
+        self::assertMatchesRegularExpression(
+            '#<div class="article__body">\s*<h2>A heading</h2>#s',
+            $html,
+            'the body should open with the prose it was handed',
+        );
+        self::assertStringContainsString('<p>Some prose.</p>', $html);
+        self::assertStringNotContainsString('&lt;h2&gt;', $html, 'the prose has been escaped');
     }
 
     /**
@@ -434,62 +457,6 @@ final class HelpRenderTest extends TestCase
         self::assertSame(
             array_values(array_diff(array_keys(self::articles()), [$slug])),
             array_map(static fn(string $href): string => substr($href, strlen('/help/')), $links[1]),
-        );
-    }
-
-    /**
-     * Every link in the prose goes somewhere.
-     *
-     * Asked of the router, not of a list here. The prose points at My bookings,
-     * the airline directory and its own siblings, and a mistyped one of those
-     * is a 404 reached from a page that looks finished.
-     */
-    #[\PHPUnit\Framework\Attributes\DataProvider('articleProvider')]
-    public function testEveryLinkInTheProseResolves(string $slug): void
-    {
-        preg_match('#<div class="article__body">.*?</div>#s', $this->article($slug), $body);
-        self::assertNotEmpty($body, 'the article body should be findable');
-
-        preg_match_all('#href="([^"]+)"#', $body[0], $links);
-
-        foreach (array_unique($links[1]) as $href) {
-            self::assertNotNull(
-                Routes::resolve(rtrim($href, '/') ?: '/'),
-                $href . ' is linked from /help/' . $slug . ' but is not a route',
-            );
-        }
-    }
-
-    /**
-     * The prose quotes the numbers the prices are worked out with.
-     *
-     * Written out, this page would be the last place anybody looked after
-     * tuning a share -- so it prints them, and this is what says so. A share
-     * changed in Party without the page following it can only fail here.
-     */
-    public function testTheChildAndInfantSharesComeFromParty(): void
-    {
-        $html = $this->article('flying-with-children');
-        $shares = Party::shares();
-
-        self::assertStringContainsString(
-            '<strong>' . round($shares['child_fare'] * 100) . '%</strong>',
-            $html,
-        );
-        self::assertStringContainsString(
-            '<strong>' . round($shares['infant_fare'] * 100) . '%</strong>',
-            $html,
-        );
-    }
-
-    /**
-     * The seat limit is the one the form enforces.
-     */
-    public function testTheSeatLimitComesFromParty(): void
-    {
-        self::assertStringContainsString(
-            Party::MAX_SEATS . ' seats at most',
-            $this->article('flying-with-children'),
         );
     }
 

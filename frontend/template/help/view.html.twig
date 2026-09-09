@@ -18,16 +18,32 @@
     'lead': article.summary,
     'hero': true
 } %}
-    {# The prose, from the one template named after this slug.
+    {# Already-safe HTML, on the same footing as /about: View\Markdown escapes
+       raw HTML in the source rather than passing it through and drops unsafe
+       link schemes, so escaping again here would print tags instead of prose.
+       The controller converts; this only places it. #}
+    {% block body %}{{ article_html|raw }}{% endblock %}
 
-       Derived rather than written out, unlike the block lists on the place and
-       booking pages: there the paths are spelled so a template can be found by
-       searching for where it is used, and here there is one line to find --
-       this one. The slug reaching it has already been matched against the
-       article index, so it is one of five words and not something off a URL. #}
-    {% block body %}{% include 'help/articles/' ~ article.slug ~ '.html.twig' %}{% endblock %}
+    {% block note %}
+        {% include 'partials/article-verdict.html.twig' %}
 
-    {% block note %}{% include 'partials/article-verdict.html.twig' %}{% endblock %}
+        {# When the answer last changed, in /about's words and /about's class.
+           After the question and not before it: the reader's way out of this
+           page is the thumbs, and a timestamp above them interrupts the prose
+           on its way to the one thing here to do.
+
+           Guarded like /about's, and safe to guard because a test watches the
+           pairing rather than a crash: an `{% if %}` on its own would let a
+           controller that stopped passing the date leave a page that still
+           looked finished, so ArticleCatalogueTest drives the controller and
+           asserts the line arrives. That is the better of the two mechanisms
+           -- Twig reads an empty date as *now*, so the alternative to printing
+           nothing here is printing today, which is a confident lie about how
+           current an answer is. #}
+        {% if updated_at|default(false) %}
+            <p class="article__note">Last updated {{ updated_at|date('j F Y') }}.</p>
+        {% endif %}
+    {% endblock %}
 
     {# The other four. An article has no data of its own to link out with, so
        its siblings are what it offers -- and they are what keep each of these
