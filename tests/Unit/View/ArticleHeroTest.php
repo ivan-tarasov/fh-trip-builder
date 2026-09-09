@@ -110,11 +110,77 @@ final class ArticleHeroTest extends TestCase
     #[DataProvider('bandedPages')]
     public function testTheTrailSitsInsideTheBandAndTakesItsColours(string $page): void
     {
+        $band = $this->band($this->page($page));
+
+        self::assertStringContainsString('breadcrumbs--on-dark', $band);
+        self::assertStringContainsString('breadcrumbs--to-heading', $band);
+        self::assertStringContainsString('Home', $band, 'the trail should be in the band');
+    }
+
+    /**
+     * The trail stops one step short of the page it is on.
+     *
+     * "Home > Help > Baggage" directly above a heading reading "Baggage" says
+     * the page twice, so the last crumb is dropped and CSS puts a separator
+     * after the trail instead -- the path points into the heading rather than
+     * restating it.
+     *
+     * Asserted on the crumbs rather than on the band's text, because the
+     * heading is in the band too and a substring check would match itself.
+     */
+    #[DataProvider('bandedPages')]
+    public function testTheTrailDoesNotRepeatTheHeading(string $page): void
+    {
         $html = $this->page($page);
         $band = $this->band($html);
 
-        self::assertStringContainsString('<nav class="breadcrumbs breadcrumbs--on-dark"', $band);
-        self::assertStringContainsString('Home', $band, 'the trail should be in the band');
+        preg_match_all('#<li class="breadcrumbs__item[^"]*"[^>]*>(.*?)</li>#s', $band, $crumbs);
+
+        $labels = array_map(
+            static fn(string $crumb): string => trim(strip_tags($crumb)),
+            $crumbs[1],
+        );
+
+        self::assertNotEmpty($labels, 'the band should still carry a trail');
+
+        preg_match('#<h1 class="article__title">(.*?)</h1>#s', $html, $h1);
+        $heading = trim(strip_tags($h1[1]));
+
+        self::assertNotContains($heading, $labels, $heading . ' is stated by the heading already');
+        self::assertStringNotContainsString('aria-current', $band, 'the current page is not a crumb here');
+    }
+
+    /**
+     * And the structured data still describes the whole path.
+     *
+     * Dropping the last crumb is a drawing decision. A crawler is told where
+     * the page sits either way, so the JSON-LD is built from the full trail
+     * and still names the page itself.
+     */
+    public function testTheStructuredDataStillNamesThePage(): void
+    {
+        $html = $this->page('/help/baggage');
+
+        self::assertMatchesRegularExpression('#<script type="application/ld\+json">#', $html);
+        self::assertStringContainsString('"Baggage"', $html, 'the crawler is still told the page');
+    }
+
+    /**
+     * No icon in the band.
+     *
+     * One glyph over a centred title is decoration, not a label. The sheet
+     * keeps its own, which is why this checks the band and not the page --
+     * /about still draws one and is asserted below.
+     */
+    #[DataProvider('bandedPages')]
+    public function testTheBandCarriesNoIcon(string $page): void
+    {
+        self::assertStringNotContainsString('article__title-icon', $this->band($this->page($page)));
+    }
+
+    public function testTheSheetHeadingKeepsItsIcon(): void
+    {
+        self::assertStringContainsString('article__title-icon', $this->page('/about'));
     }
 
     /**

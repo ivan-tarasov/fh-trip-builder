@@ -25,10 +25,19 @@
    escapes what is interpolated into it, and the class stays spelled exactly
    `article__title` -- LegalRenderTest matches that with its closing quote, so
    a modifier alongside it would fail the legal suite without changing a
-   pixel. #}
+   pixel.
+
+   No icon in a band. One glyph over a centred title reads as decoration
+   rather than as a label, and the band already carries the title, the path
+   above it and a colour of its own. The sheet keeps its icon, on the baseline
+   beside the title, where /about is now the only page drawing one -- and
+   `icon` is still read by the hub's cards and the aside's chips, which are
+   lists an icon genuinely helps somebody scan. #}
 {% set heading %}
     <h1 class="article__title">
-        <i class="fas {{ icon }} article__title-icon" aria-hidden="true"></i>
+        {%- if not hero|default(false) %}
+            <i class="fas {{ icon }} article__title-icon" aria-hidden="true"></i>
+        {% endif %}
         {{ title }}
     </h1>
 {% endset %}
@@ -47,7 +56,7 @@
            between the header and this. #}
         <div class="article__hero">
             <div class="container">
-                {% include 'partials/breadcrumbs.html.twig' with {'on_dark': true} %}
+                {% include 'partials/breadcrumbs.html.twig' with {'on_dark': true, 'hide_current': true} %}
                 {{ heading }}
             </div>
         </div>

@@ -5036,6 +5036,15 @@ body:has(main.article) .breadcrumbs__list {
   color: var(--line-on-dark);
 }
 
+/* A separator after the last crumb, where the trail stops one step short of
+   the page because the heading below states it. Without this the path reads
+   as ending at its parent rather than continuing into the title. */
+.breadcrumbs--to-heading .breadcrumbs__item:last-child::after {
+  content: '\203A';
+  margin-left: .5rem;
+  color: var(--line-on-dark);
+}
+
 .breadcrumbs--on-dark .breadcrumbs__item--current {
   color: var(--ink-on-dark-lead);
 }
@@ -6466,19 +6475,16 @@ body:has(.cookie-notice) .to-top { display: none; }
 .article__hero {
   /* Deep enough that the sheet can rise into it and still leave the title
      clear of the sheet's top edge: this less the negative margin below is the
-     gap that is actually visible. */
-  padding-bottom: 6rem;
+     gap that is actually visible, and that gap is what this is sized for. */
+  padding-bottom: 8rem;
   background-color: var(--brand-ink);
   text-align: center;
 }
 
 .article__hero .article__title {
-  /* Stacked rather than the sheet's baseline row: the icon goes above a
-     centred title, where a row would leave the pair sitting off-centre by
-     half the icon. */
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+  /* Still the sheet's flex row, with nothing beside the title to lay out --
+     centred rather than stacked now that the band carries no icon. */
+  justify-content: center;
   /* Wide enough for the longest title on one line -- "Changing passenger
      details", 26 characters -- and narrow enough that a longer one wraps
      instead of spanning the full container. */
@@ -6507,14 +6513,18 @@ body:has(.cookie-notice) .to-top { display: none; }
 .article--hero .article__layout {
   position: relative;
   z-index: 1;
-  margin-top: -3.75rem;
+  /* Deep enough that the band cuts across the lead rather than stopping at
+     the sheet's own top padding. Shallower than this and the navy ends on
+     blank white, which reads as the sheet starting below the band instead of
+     inside it -- the overlap has to cross something to be one. */
+  margin-top: -5.5rem;
 }
 
 @media (max-width: 47.9375em) {
   /* Less of both. The band is already taller once the title wraps, and a
      deep overlap on a narrow screen buries the title it sits under. */
-  .article__hero { padding-bottom: 4.5rem; }
-  .article--hero .article__layout { margin-top: -2.5rem; }
+  .article__hero { padding-bottom: 6.5rem; }
+  .article--hero .article__layout { margin-top: -4rem; }
 }
 
 .article__title {
