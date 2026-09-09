@@ -40,7 +40,8 @@
         {% for label, url in links %}
             <li class="footer__item">
                 <a class="footer__link" href="{{ url }}"
-                   {% if external %}target="_blank" rel="noopener"{% endif %}>{{ label }}</a>
+                   {% if external %}target="_blank" rel="noopener"{% endif %}>{{ label }}{% if external %}<span
+                    class="visually-hidden"> (opens in a new tab)</span>{% endif %}</a>
             </li>
         {% endfor %}
 

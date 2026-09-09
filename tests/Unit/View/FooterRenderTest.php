@@ -607,6 +607,106 @@ final class FooterRenderTest extends TestCase
     }
 
     /**
+     * Every link that leaves the page says so.
+     *
+     * Fifteen of them down here open a new tab and none of them used to
+     * mention it, which is the kind of thing that costs nothing to see and
+     * everything to not see: the page you were reading is suddenly not the
+     * page you are on, with no back button that returns to it.
+     *
+     * The worst was the build link in the stats line. Its whole accessible
+     * name was the raw version string -- "v1.2-fix/footer-improvements-3e0a6bf"
+     * -- read out character by character, describing nothing.
+     *
+     * The name is built the way a screen reader builds it: an aria-label wins
+     * outright, and otherwise the text content, which is why a
+     * `.visually-hidden` span appended inside the link is enough.
+     */
+    public function testEveryExternalLinkSaysItOpensANewTab(): void
+    {
+        $external = $this->externalLinks();
+
+        self::assertGreaterThan(0, count($external), 'no external links to check');
+
+        $silent = [];
+
+        foreach ($external as $link) {
+            if (stripos(self::accessibleName($link), 'new tab') === false) {
+                $silent[] = self::accessibleName($link);
+            }
+        }
+
+        self::assertSame([], $silent);
+    }
+
+    /**
+     * And the build link says what it is, not just that it opens elsewhere.
+     *
+     * Asserted separately so the explanation cannot be trimmed back to the
+     * bare "(opens in a new tab)" that the test above would still accept,
+     * leaving the name a version string again.
+     */
+    public function testTheBuildLinkExplainsItself(): void
+    {
+        $commit = null;
+
+        foreach ($this->externalLinks() as $link) {
+            if (str_contains($link->getAttribute('href'), '/commit/')) {
+                $commit = $link;
+            }
+        }
+
+        self::assertNotNull($commit, 'the stats line should link the build');
+
+        $name = self::accessibleName($commit);
+
+        self::assertStringContainsString('commit', $name, 'the name should say what it points at');
+
+        // And the visible version string is still part of that name, which is
+        // what an aria-label here would have thrown away -- WCAG's Label in
+        // Name wants the two to agree, not to compete.
+        $visible = '';
+
+        foreach ($commit->childNodes as $node) {
+            if ($node->nodeType === XML_TEXT_NODE) {
+                $visible .= $node->textContent;
+            }
+        }
+
+        self::assertNotSame('', trim($visible), 'the link should have visible text');
+        self::assertStringContainsString(trim($visible), $name);
+    }
+
+    /** @return list<DOMElement> */
+    private function externalLinks(): array
+    {
+        $document = new DOMDocument();
+        @$document->loadHTML('<?xml encoding="utf-8"?><body>' . $this->render('/') . '</body>');
+
+        $found = new DOMXPath($document)->query('//a[@target="_blank"]');
+
+        self::assertNotFalse($found);
+
+        $links = [];
+
+        foreach ($found as $link) {
+            if ($link instanceof DOMElement) {
+                $links[] = $link;
+            }
+        }
+
+        return $links;
+    }
+
+    /** The name a screen reader would announce: aria-label if set, else the text. */
+    private static function accessibleName(DOMElement $link): string
+    {
+        $label = $link->getAttribute('aria-label');
+
+        return trim((string) preg_replace('/\s+/', ' ', $label !== '' ? $label : $link->textContent));
+    }
+
+    /**
      * Two navigation landmarks in the footer: no more, and not none.
      *
      * The six columns share one, for the reason links.html.twig gives -- six

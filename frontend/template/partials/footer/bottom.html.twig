@@ -43,7 +43,7 @@
             {% for title, item in config('site.footer-social') %}
                 <li>
                     <a class="footer__social" href="{{ item.url }}"
-                       target="_blank" rel="noopener" aria-label="{{ title }}">
+                       target="_blank" rel="noopener" aria-label="{{ title }} (opens in a new tab)">
                         <i class="fa-brands fa-{{ item.ico }}" aria-hidden="true"></i>
                     </a>
                 </li>
@@ -141,20 +141,42 @@
        <ul> does, but not worth a third landmark in a footer that deliberately
        holds two -- see FooterRenderTest, which is where that decision is
        written down. #}
+    {# Six documents in one row: the three pages this site owns, then the three
+       the project is described by. They were a sentence -- "Software made by X
+       as Y PHP Coding Assessment. Code licensed MIT, documentation here." --
+       which put five links inside one line of prose and made the last of them
+       "here". A row says what each one is before you click it.
+
+       Ours first, and no divider between the halves: the order carries the
+       grouping and a rule between six links is decoration. #}
     <ul class="footer__legal-links">
         {% for slug, document in config('legal.documents') %}
             <li><a href="/{{ slug }}">{{ document.title }}</a></li>
         {% endfor %}
+        <li>
+            <a href="/Trip_Builder_1.pdf" target="_blank" rel="noopener">Assessment<span
+                class="visually-hidden"> (PDF, opens in a new tab)</span></a>
+        </li>
+        <li>
+            <a href="{{ config('app.documentation') }}" target="_blank" rel="noopener">Documentation<span
+                class="visually-hidden"> (opens in a new tab)</span></a>
+        </li>
+        <li>
+            <a href="{{ config('app.license.url') }}" target="_blank" rel="license noopener">{{ config('app.license.type') }} licence<span
+                class="visually-hidden"> (opens in a new tab)</span></a>
+        </li>
     </ul>
 
+    {# The credit stays a sentence. Who made this and why is a relationship, and
+       "Ivan Tarasov &middot; FlightHub" in the row above would have lost it. #}
     <p>
-        Software made by
-        <a href="{{ config('meta.author.website') }}" target="_blank" rel="noopener">{{ config('meta.author.name') }}</a>
-        as <a href="https://www.flighthub.com/" target="_blank" rel="noopener">FlightHub</a>
-        PHP Coding <a href="/Trip_Builder_1.pdf" target="_blank" rel="noopener">Assessment</a>.
-        Code licensed
-        <a href="{{ config('app.license.url') }}" target="_blank" rel="license noopener">{{ config('app.license.type') }}</a>,
-        documentation <a href="{{ config('app.documentation') }}" target="_blank" rel="noopener">here</a>.
+        Made by
+        <a href="{{ config('meta.author.website') }}" target="_blank" rel="noopener">{{ config('meta.author.name') }}<span
+            class="visually-hidden"> (opens in a new tab)</span></a>
+        as a
+        <a href="https://www.flighthub.com/" target="_blank" rel="noopener">FlightHub<span
+            class="visually-hidden"> (opens in a new tab)</span></a>
+        PHP coding assessment.
     </p>
 
     {# What the page cost to build. It used to sit in a column of its own beside
@@ -165,7 +187,12 @@
         {{ execution_time }}s &middot;
         {{ database_requests }} quer{{ database_requests == 1 ? 'y' : 'ies' }} &middot;
         {{ flights_count }} flights &middot;
-        <a href="{{ git_repo() }}/commit/{{ git.commit_hash }}" target="_blank" rel="noopener">{{ git.tag }}-{{ git.branch }}-{{ git.commit_hash }}</a>
+        {# Appended rather than an aria-label, which would have replaced the
+           visible text instead of explaining it. Read on its own this link
+           announced "v2.21.0-fix/footer-improvements-89414d3" and nothing
+           else. #}
+        <a href="{{ git_repo() }}/commit/{{ git.commit_hash }}" target="_blank" rel="noopener">{{ git.tag }}-{{ git.branch }}-{{ git.commit_hash }}<span
+            class="visually-hidden"> &mdash; the commit this build was made from, on GitHub (opens in a new tab)</span></a>
         posted {{ git.commit_date }}
     </p>
 </div>
