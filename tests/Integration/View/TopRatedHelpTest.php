@@ -6,6 +6,7 @@ namespace TripBuilder\Tests\Integration\View;
 
 use TripBuilder\ArticleRating;
 use TripBuilder\Config;
+use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 use TripBuilder\View\LayoutData;
@@ -107,7 +108,7 @@ final class TopRatedHelpTest extends IntegrationTestCase
 
         $order = array_values(new LayoutData()->topRatedHelp(5));
 
-        self::assertCount(count((array) Config::get('help.articles', [])), $order);
+        self::assertCount(count($this->repository()->all()), $order);
         self::assertSame('/help/refunds', $order[0], 'the only voted article should lead');
         self::assertContains('/help/baggage', $order, 'and an unvoted one is still offered');
     }
@@ -127,6 +128,66 @@ final class TopRatedHelpTest extends IntegrationTestCase
         self::assertArrayHasKey('Passenger details', $links);
         self::assertArrayNotHasKey('Changing passenger details', $links);
         self::assertSame('/help/passenger-details', $links['Passenger details']);
+    }
+
+    /**
+     * With nobody having voted, the column is in `position` order.
+     *
+     * Moved here from the unit suite, where it had quietly become vacuous: the
+     * catalogue it compared against was config, and when config went the
+     * assertion was an empty array against an empty array. It needs rows to
+     * mean anything, and this is the case a fresh install is actually in --
+     * there is no seeder for article_votes, so `position` decides the whole
+     * column until a reader clicks.
+     */
+    public function testWithNobodyVotingTheColumnIsInPositionOrder(): void
+    {
+        $expected = array_map(
+            static fn(string $slug): string => '/help/' . $slug,
+            array_keys($this->repository()->all()),
+        );
+
+        self::assertSame(
+            $expected,
+            array_values(new LayoutData()->topRatedHelp(5)),
+            'position is the tiebreaker, and with no votes it is the whole order',
+        );
+    }
+
+    /**
+     * A disabled article leaves the column, along with everywhere else.
+     *
+     * The reason `enabled` is filtered in the repository rather than by each
+     * caller: holding an article back has to hold it back from the footer, the
+     * hub, the aside, the sitemap and the vote endpoint in one go, and a flag
+     * each caller has to remember is a flag one of them will forget.
+     */
+    public function testADisabledArticleIsNotOffered(): void
+    {
+        $connection = $this->connection();
+        $before = count(new LayoutData()->topRatedHelp(9));
+
+        $connection->execute('UPDATE articles SET enabled = 0 WHERE slug = ?', ['refunds']);
+
+        try {
+            $links = new LayoutData()->topRatedHelp(9);
+
+            self::assertCount($before - 1, $links, 'the disabled article should be gone');
+            self::assertNotContains('/help/refunds', array_values($links));
+        } finally {
+            $connection->execute('UPDATE articles SET enabled = 1 WHERE slug = ?', ['refunds']);
+        }
+
+        self::assertContains(
+            '/help/refunds',
+            array_values(new LayoutData()->topRatedHelp(9)),
+            'and back once it is enabled again',
+        );
+    }
+
+    private function repository(): ArticleRepository
+    {
+        return new ArticleRepository($this->connection());
     }
 
     /** Cast `$votes` votes on one article, `$helpful` of them a yes. */

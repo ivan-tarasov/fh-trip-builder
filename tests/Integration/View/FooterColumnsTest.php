@@ -8,8 +8,10 @@ use DOMDocument;
 use DOMElement;
 use DOMXPath;
 use TripBuilder\Config;
+use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Routes;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
+use TripBuilder\View\LayoutData;
 use TripBuilder\View\TwigRenderer;
 
 /**
@@ -71,23 +73,159 @@ final class FooterColumnsTest extends IntegrationTestCase
     }
 
     /**
+     * Every `/help` link in the footer names an article that exists.
+     *
+     * Moved here from the unit suite when articles became rows. It has to have
+     * a database now, but it also does more than it could before: the check
+     * used to be `Routes::resolve($href) !== null`, and the help route is a
+     * loose pattern, so `/help/anything` satisfied it. A row either exists or
+     * it does not.
+     */
+    public function testEveryHelpLinkNamesAnArticleThatExists(): void
+    {
+        $html = $this->footer();
+        $known = new ArticleRepository($this->connection())->all();
+
+        self::assertNotEmpty($known, 'there should be articles to link');
+
+        preg_match_all('#href="(/help[^"]*)"#', $html, $links);
+
+        self::assertNotEmpty($links[1], 'the help column should have links');
+
+        foreach (array_unique($links[1]) as $href) {
+            if ($href === '/help') {
+                continue;
+            }
+
+            self::assertArrayHasKey(
+                substr($href, strlen('/help/')),
+                $known,
+                $href . ' is linked in the footer but names no article',
+            );
+        }
+    }
+
+    /**
+     * The column uses each article's short name where it has one.
+     *
+     * Two of the five titles are wider than this column: "Refunds and
+     * exchanges" measured 170px against the 166 it gets, and "Changing
+     * passenger details" is two lines. Those labels have moved from config to
+     * a nullable column, and this is what says the measurement survived.
+     */
+    public function testTheHelpColumnUsesTheShortNamesAndNotTheTitles(): void
+    {
+        $html = $this->footerText();
+        $shortened = 0;
+
+        foreach (new ArticleRepository($this->connection())->all() as $article) {
+            if ($article['short'] === null) {
+                continue;
+            }
+
+            $shortened++;
+
+            self::assertStringContainsString(
+                $article['short'],
+                $html,
+                'the short name should be the label',
+            );
+            self::assertStringNotContainsString(
+                $article['title'],
+                $html,
+                $article['title'] . ' is too wide for this column and should not appear in it',
+            );
+        }
+
+        self::assertGreaterThan(0, $shortened, 'sanity: some article should have a short name');
+    }
+
+    /**
+     * A "more" link appears under a column that drew, and nowhere else.
+     *
+     * Also moved from the unit suite, and for a reason worth recording: every
+     * one of the six columns is drawn from the database now, so with no
+     * connection none of them draws and this had nothing to count. Help & tips
+     * was the last one held in config.
+     */
+    public function testMoreLinksAppearOnlyWhereConfigured(): void
+    {
+        $html = $this->footerText();
+        $drawn = 0;
+
+        foreach (Config::get('site.footer-columns') as $column) {
+            if (!isset($column['more'])) {
+                continue;
+            }
+
+            // The column is on the page only if it had links to show.
+            if (!str_contains($html, '>' . $column['title'] . '</h2>')) {
+                continue;
+            }
+
+            $drawn++;
+            // The configured text is a format string -- "All %s airlines" --
+            // so what the page shows is what footerMore() makes of it.
+            $text = new LayoutData()->footerMore($column['more'])['text'];
+            self::assertStringContainsString('>' . $text . '</a>', $html);
+        }
+
+        self::assertGreaterThan(0, $drawn, 'at least one more-link should be drawn');
+        self::assertSame(
+            $drawn,
+            substr_count($html, 'footer__more'),
+            'every more-link drawn belongs to a column that was drawn',
+        );
+    }
+
+    /**
+     * The footer, rendered as a fragment with the three figures it prints.
+     *
+     * `connection()` is touched first so a machine with no database skips
+     * these rather than failing them -- the render reaches for its own.
+     *
+     * Raw, entities and all, because columnLengths() hands this to
+     * DOMDocument and that does its own decoding. A test matching strings
+     * wants footerText() instead.
+     */
+    private function footer(): string
+    {
+        $this->connection();
+
+        Routes::setCurrentPage('/');
+
+        return new TwigRenderer()->render('partials/footer.html.twig', [
+            'execution_time' => '0.001',
+            'database_requests' => 1,
+            'flights_count' => '~1,000',
+        ]);
+    }
+
+    /**
+     * The same footer with entities decoded, for matching strings against.
+     *
+     * Two of the things asserted below carry an ampersand -- the heading
+     * "Help & tips" and the label "Refunds & exchanges" -- and Twig escapes
+     * both, so a test looking for them raw finds nothing. FooterRenderTest
+     * decodes for exactly this reason and says so: spelling `&amp;` in the
+     * assertion would be matching Twig's escaping rather than the words.
+     *
+     * These two tests moved here from that class and this is what came with
+     * them; without it they fail on the ampersand and nothing else.
+     */
+    private function footerText(): string
+    {
+        return html_entity_decode($this->footer(), ENT_QUOTES | ENT_HTML5);
+    }
+
+    /**
      * Rows per column, keyed by heading.
      *
      * @return array<string, int>
      */
     private function columnLengths(): array
     {
-        // Touched so the test skips, rather than fails, where no database is
-        // reachable -- the render below reaches for its own connection.
-        $this->connection();
-
-        Routes::setCurrentPage('/');
-
-        $html = new TwigRenderer()->render('partials/footer.html.twig', [
-            'execution_time' => '0.001',
-            'database_requests' => 1,
-            'flights_count' => '~1,000',
-        ]);
+        $html = $this->footer();
 
         $document = new DOMDocument();
         @$document->loadHTML('<?xml encoding="utf-8"?><body>' . $html . '</body>');

@@ -13,6 +13,8 @@ enum Table: string
     case AircraftCabins = 'aircraft_cabins';
     case Airlines = 'airlines';
     case Airports = 'airports';
+    case Articles = 'articles';
+    case ArticleTranslations = 'article_translations';
     case ArticleVotes = 'article_votes';
     case Bookings = 'bookings';
     case BookingPassengers = 'booking_passengers';

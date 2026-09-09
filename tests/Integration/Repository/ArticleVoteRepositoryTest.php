@@ -19,7 +19,7 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  *
  * A slug outside the catalogue is used throughout, on the reasoning
  * CurrencyRateRepositoryTest gives for `ZZT`: it fits the column, has no entry
- * in config/common/help.php and so can never reach a page, which keeps these
+ * on the `articles` table and so can never reach a page, which keeps these
  * rows out of what the site shows while the suite runs.
  *
  * Every row here is written by the test that reads it. There is no seeder for
