@@ -299,10 +299,12 @@ final class FooterRenderTest extends TestCase
     /**
      * And so are the country links, for the same reason.
      *
-     * These were curated placeholders until the pages existed. They are still
-     * curated -- nothing counts how often a country is searched for -- but they
-     * are no longer placeholders, so a typo in one is now a 404 on every page
-     * of the site rather than a link to a page that was always going to 404.
+     * Counted since the column stopped being curated: a country ranks by its
+     * busiest airport's searches, so whether this suite sees any of these
+     * depends on whether a database is reachable. Written to hold either way,
+     * like the routes column below -- with none, the assertion that matters is
+     * that the column took its heading with it rather than leaving an empty
+     * one behind.
      */
     public function testEveryCountryLinkResolves(): void
     {
@@ -310,7 +312,11 @@ final class FooterRenderTest extends TestCase
 
         preg_match_all('#href="(/country/[^"]+)"#', $html, $links);
 
-        self::assertNotEmpty($links[1], 'the footer should link to countries');
+        if ($links[1] === []) {
+            self::assertStringNotContainsString('>Countries</h2>', $html, 'an empty column should not be headed');
+
+            return;
+        }
 
         foreach (array_unique($links[1]) as $href) {
             self::assertNotNull(
@@ -336,6 +342,9 @@ final class FooterRenderTest extends TestCase
      * bare code away is the controller, so a link left in the old spelling
      * would pass every check except the only one that matters and 404 on every
      * page of the site.
+     *
+     * Counted since the column stopped being curated, so it holds either way
+     * round -- see the country column above.
      */
     public function testEveryAirportLinkResolves(): void
     {
@@ -343,7 +352,11 @@ final class FooterRenderTest extends TestCase
 
         preg_match_all('#href="(/airport/[^"]+)"#', $html, $links);
 
-        self::assertNotEmpty($links[1], 'the footer should link to airports');
+        if ($links[1] === []) {
+            self::assertStringNotContainsString('>Airports</h2>', $html, 'an empty column should not be headed');
+
+            return;
+        }
 
         foreach (array_unique($links[1]) as $href) {
             self::assertNotNull(
@@ -366,6 +379,9 @@ final class FooterRenderTest extends TestCase
      * code would start working the day the page did; it did not, because an
      * address is a name and a code together. Every column has now learned that
      * the same way, which is why each has a test of its own.
+     *
+     * Counted since the column stopped being curated -- it ranks by bookings --
+     * so it holds either way round, like the two above it.
      */
     public function testEveryAirlineLinkResolves(): void
     {
@@ -373,7 +389,11 @@ final class FooterRenderTest extends TestCase
 
         preg_match_all('#href="(/airline/[^"]+)"#', $html, $links);
 
-        self::assertNotEmpty($links[1], 'the footer should link to airlines');
+        if ($links[1] === []) {
+            self::assertStringNotContainsString('>Airlines</h2>', $html, 'an empty column should not be headed');
+
+            return;
+        }
 
         foreach (array_unique($links[1]) as $href) {
             self::assertNotNull(

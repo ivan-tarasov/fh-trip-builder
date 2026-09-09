@@ -105,6 +105,45 @@ final readonly class CountryRepository
     }
 
     /**
+     * The countries whose airports people search for, busiest first.
+     *
+     * Nothing here records a search against a country, so this is derived --
+     * and how it is derived is the whole decision. The obvious rule is to sum
+     * the searches of a country's airports, and the obvious rule is wrong: it
+     * ranks a country by how many airports we happen to sell there, so a
+     * country with eight quiet ones outranks a country with one busy one. That
+     * objection is why this column was curated before there was an answer to
+     * it.
+     *
+     * MAX is the answer. A country is as searched-for as the airport people
+     * actually search for, which makes the United Kingdom first on Heathrow
+     * alone and lets Morocco in on Casablanca -- both true statements about
+     * demand rather than about the size of our catalogue.
+     *
+     * `traffic_weight` behind it for the same reason the airlines column has
+     * `traffic` behind its count: on a database nobody has searched yet, every
+     * country is on nought and the curated weight is what keeps the column
+     * sensible.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function mostSearched(int $limit): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT c.code, c.title AS name, MAX(a.search_count) AS hits,'
+            . ' MAX(a.traffic_weight) AS weight'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' JOIN ' . Table::Countries->value . ' c ON c.code = a.country_code'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' GROUP BY c.code, c.title'
+            // Ties broken by name, so the column is the same between renders
+            // rather than reshuffling whenever two countries are level.
+            . ' ORDER BY hits DESC, weight DESC, c.title ASC'
+            . ' LIMIT ' . max(1, $limit),
+        );
+    }
+
+    /**
      * The country's airports, largest first.
      *
      * Whole rows rather than codes, because the page needs both: the fare query

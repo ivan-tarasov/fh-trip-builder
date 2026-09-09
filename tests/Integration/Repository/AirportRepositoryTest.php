@@ -103,4 +103,52 @@ final class AirportRepositoryTest extends IntegrationTestCase
     {
         return new AirportRepository($this->connection());
     }
+    /**
+     * One airport per city, which is the rule the footer column rests on.
+     *
+     * London holds three of the four most-searched airports in this data --
+     * Heathrow, Gatwick, Stansted -- so ranked airport by airport the column is
+     * a list of London. Rank inside the city and take the winner and it is six
+     * places instead of two.
+     *
+     * The trap this guards is the version that filters on the city's maximum
+     * rather than ranking within it. It looks equivalent and passes on a
+     * database with searches in it; on a fresh one every airport in a city is
+     * level on nought, every one of them equals its own maximum, and the column
+     * fills with one city again.
+     */
+    public function testMostSearchedReturnsOneAirportPerCity(): void
+    {
+        $airports = $this->repository()->mostSearched(12);
+
+        self::assertNotEmpty($airports);
+
+        $cities = array_column($airports, 'city');
+
+        self::assertSame(array_unique($cities), $cities, 'two airports of one city are in the list');
+    }
+
+    /**
+     * Busiest first, and never one we do not sell.
+     */
+    public function testMostSearchedIsOrderedAndSellable(): void
+    {
+        $airports = $this->repository()->mostSearched(8);
+
+        self::assertNotEmpty($airports);
+        self::assertLessThanOrEqual(8, count($airports));
+
+        $hits = array_map(static fn(array $a): int => (int) $a['search_count'], $airports);
+        $sorted = $hits;
+        rsort($sorted);
+
+        self::assertSame($sorted, $hits);
+
+        $sellable = array_column($this->repository()->enabled(true), 'code');
+
+        foreach ($airports as $airport) {
+            self::assertContains($airport['code'], $sellable);
+        }
+    }
+
 }

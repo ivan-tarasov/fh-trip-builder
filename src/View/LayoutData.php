@@ -11,7 +11,10 @@ use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
+use TripBuilder\Repository\AirlineRepository;
+use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\RouteRepository;
 use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
@@ -282,8 +285,95 @@ final class LayoutData
         return match ($source) {
             'most-searched' => $this->mostSearchedCities($limit),
             'popular-routes' => $this->popularRoutes($limit),
+            'most-booked-airlines' => $this->mostBookedAirlines($limit),
+            'most-searched-countries' => $this->mostSearchedCountries($limit),
+            'most-searched-airports' => $this->mostSearchedAirports($limit),
             default => [],
         };
+    }
+
+    /**
+     * The airlines people book, ready for the footer's link column.
+     *
+     * Counted rather than curated, like the two columns above it. Same shape
+     * and the same fallback: a database that will not answer costs the column,
+     * not the page.
+     *
+     * @return array<string, string>
+     */
+    public function mostBookedAirlines(int $limit): array
+    {
+        try {
+            $airlines = new AirlineRepository($this->connection())->mostBooked($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($airlines as $airline) {
+            $name = (string) $airline['name'];
+            $links[$name] = Helper::airlineUrl($name, (string) $airline['code']);
+        }
+
+        return $links;
+    }
+
+    /**
+     * The countries whose airports are searched for most.
+     *
+     * @return array<string, string>
+     */
+    public function mostSearchedCountries(int $limit): array
+    {
+        try {
+            $countries = new CountryRepository($this->connection())->mostSearched($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($countries as $country) {
+            $name = (string) $country['name'];
+            $links[$name] = '/country/' . Helper::placeSlug($name, (string) $country['code']);
+        }
+
+        return $links;
+    }
+
+    /**
+     * The busiest airport of each of the most-searched cities.
+     *
+     * Labelled "London (LHR)" rather than "Heathrow", which is what the page is
+     * called. Two reasons, and the second is the one that decided it: half
+     * these titles do not say where they are -- "Pierre Elliott Trudeau
+     * International" names a man, not Montreal -- and the ones that do say it
+     * at length, which in a column 190px wide is two and three lines apiece.
+     * The city and the code are what a traveller reads an airport by anyway,
+     * and they fit on one line every time.
+     *
+     * @return array<string, string>
+     */
+    public function mostSearchedAirports(int $limit): array
+    {
+        try {
+            $airports = new AirportRepository($this->connection())->mostSearched($limit);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $links = [];
+
+        foreach ($airports as $airport) {
+            $code = (string) $airport['code'];
+            $links[$airport['city'] . ' (' . $code . ')'] = Helper::airportUrl(
+                (string) $airport['title'],
+                $code,
+            );
+        }
+
+        return $links;
     }
 
     /**

@@ -278,15 +278,13 @@ return [
 
     'footer-columns' => [
         [
+            // Counted, not curated: `book_count` is written every time a
+            // booking is made, so this column keeps itself. Behind the count
+            // sits the curated `traffic` tier, which is what an install nobody
+            // has booked on yet orders by -- see AirlineRepository::mostBooked().
             'title' => 'Airlines',
-            'links' => [
-                'Air Canada' => '/airline/air-canada-ac',
-                'WestJet' => '/airline/westjet-ws',
-                'Delta Air Lines' => '/airline/delta-air-lines-dl',
-                'American Airlines' => '/airline/american-airlines-aa',
-                'United Airlines' => '/airline/united-airlines-ua',
-                'British Airways' => '/airline/british-airways-ba',
-            ],
+            'source' => 'most-booked-airlines',
+            'count' => 6,
             'more' => ['text' => 'All airlines', 'url' => '/airlines/'],
         ],
         [
@@ -313,19 +311,14 @@ return [
             'count' => 7,
         ],
         [
-            // Curated rather than counted, unlike Cities beside it: nothing in
-            // this app records how often a country is searched for, only how
-            // often its cities are, and summing those would rank a country by
-            // how many of them we happen to sell.
+            // Counted now, and the objection that kept it curated is answered
+            // rather than ignored: summing a country's airport searches ranks it
+            // by how many airports we sell there, so this takes the *busiest*
+            // one instead. The United Kingdom leads on Heathrow alone.
+            // See CountryRepository::mostSearched().
             'title' => 'Countries',
-            'links' => [
-                'Canada' => '/country/canada-ca',
-                'United States' => '/country/united-states-us',
-                'United Kingdom' => '/country/united-kingdom-gb',
-                'France' => '/country/france-fr',
-                'Japan' => '/country/japan-jp',
-                'Germany' => '/country/germany-de',
-            ],
+            'source' => 'most-searched-countries',
+            'count' => 6,
             'more' => ['text' => 'All countries', 'url' => '/countries'],
         ],
         [
@@ -340,24 +333,17 @@ return [
             'more' => ['text' => 'All cities', 'url' => '/cities'],
         ],
         [
-            // Curated like Countries, and spelled the way the pages are: name
-            // then code. These were /airport/YUL until the pages existed and
-            // the route pattern would still take that, which is exactly why it
-            // is worth saying -- the controller answers 404 for a bare code,
-            // and a footer link that 404s does it on every page of the site.
+            // Counted, off `search_count`, and one airport per city: London
+            // holds three of the four most-searched in this data, so ranked
+            // airport by airport the column would be a list of London.
             //
-            // The labels are not the airport titles and do not need to be:
-            // "London Heathrow" is how somebody looks for it and "Heathrow" is
-            // what the page is called.
+            // The labels are still not the airport titles. "London (LHR)" fits
+            // a narrow column where "Pierre Elliott Trudeau International" is
+            // three lines of it and does not say Montreal anywhere -- see
+            // LayoutData::mostSearchedAirports().
             'title' => 'Airports',
-            'links' => [
-                'Montréal–Trudeau' => '/airport/pierre-elliott-trudeau-international-yul',
-                'Toronto Pearson' => '/airport/lester-b-pearson-international-yyz',
-                'Vancouver' => '/airport/vancouver-international-yvr',
-                'New York JFK' => '/airport/john-f-kennedy-international-jfk',
-                'London Heathrow' => '/airport/heathrow-lhr',
-                'Paris Charles de Gaulle' => '/airport/charles-de-gaulle-cdg',
-            ],
+            'source' => 'most-searched-airports',
+            'count' => 6,
             'more' => ['text' => 'All airports', 'url' => '/airports/'],
         ],
         [

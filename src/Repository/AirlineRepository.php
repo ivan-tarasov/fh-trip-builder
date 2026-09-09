@@ -297,15 +297,31 @@ final readonly class AirlineRepository
     }
 
     /**
-     * The most-booked airlines first (matches the legacy `orderBy('book_count')`
-     * default DESC direction).
+     * The airlines people book here, for the footer's column.
+     *
+     * `book_count` is written by recordBooking() every time a booking is made,
+     * so this is demand and not a list somebody keeps up to date -- the same
+     * reason the Cities and Directions columns are counted.
+     *
+     * Two things it needs that the version before it did not have. It is
+     * filtered to airlines we sell, because `SELECT *` over the table would
+     * happily rank one with no page and put a 404 in the footer of every page
+     * on the site -- the bug FooterRenderTest was written for. And `traffic`
+     * breaks the tie beneath the count, because a database nobody has booked
+     * on yet has 105 airlines on nought and would otherwise order them by
+     * whatever the table hands back: with the curated tier behind it the column
+     * still opens on the carriers worth naming.
      *
      * @return list<array<string, mixed>>
      */
     public function mostBooked(int $limit): array
     {
         return $this->connection->fetchAll(
-            'SELECT * FROM ' . Table::Airlines->value . ' ORDER BY book_count DESC LIMIT ' . $limit,
+            'SELECT al.code, al.title AS name'
+            . ' FROM ' . Table::Airlines->value . ' al'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' ORDER BY al.book_count DESC, al.traffic DESC, al.title ASC'
+            . ' LIMIT ' . max(1, $limit),
         );
     }
 }
