@@ -5032,8 +5032,16 @@ body:has(main.article) .breadcrumbs__list {
   color: var(--ink-on-dark);
 }
 
-.breadcrumbs--on-dark .breadcrumbs__item + .breadcrumbs__item::before {
-  color: var(--line-on-dark);
+/* The same weight as the crumbs themselves, not the rule-coloured whisper the
+   light trail uses. --line-on-dark is 1.44:1 on this ground, which is a hairline
+   between panels and disappears as a glyph -- and here the separators are load
+   bearing: the trail stops before the page, so the last one is what points into
+   the heading. --ink-on-dark is 7.52:1 and makes "Home > Help >" read as one
+   piece of signposting rather than two words that happen to be near each
+   other. */
+.breadcrumbs--on-dark .breadcrumbs__item + .breadcrumbs__item::before,
+.breadcrumbs--on-dark.breadcrumbs--to-heading .breadcrumbs__item:last-child::after {
+  color: var(--ink-on-dark);
 }
 
 /* A separator after the last crumb, where the trail stops one step short of
@@ -5042,7 +5050,7 @@ body:has(main.article) .breadcrumbs__list {
 .breadcrumbs--to-heading .breadcrumbs__item:last-child::after {
   content: '\203A';
   margin-left: .5rem;
-  color: var(--line-on-dark);
+  /* Colour comes from the on-dark rule above, which this shares. */
 }
 
 .breadcrumbs--on-dark .breadcrumbs__item--current {
