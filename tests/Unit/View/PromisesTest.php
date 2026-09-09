@@ -27,6 +27,13 @@ use SplFileInfo;
  *
  * So the guard is on the phrases rather than on the two files. If a mailer is
  * ever added, delete this test in the commit that adds it -- and not before.
+ *
+ * The article that spread it is no longer a template. Its prose is a row in
+ * article_translations, seeded from a markdown file in config/content/help --
+ * so this scans those files too, and ArticleCatalogueTest scans what is
+ * actually on the table. Both, because the committed file is what review
+ * sees and the row is what a reader gets -- and the whole lesson of this
+ * test is that a promise nobody is checking survives.
  */
 final class PromisesTest extends TestCase
 {
@@ -37,8 +44,12 @@ final class PromisesTest extends TestCase
      * address and the booking page shows it -- and the subscribe form saying
      * what an address is *for* is a different question from a page saying a
      * message has already gone.
+     *
+     * Public because the row a reader gets is checked too, by a test in the
+     * other suite -- ArticleCatalogueTest, which needs a database. One list
+     * in one place: two copies of a phrase list is how one goes stale.
      */
-    private const array UNKEEPABLE = [
+    public const array UNKEEPABLE = [
         'we sent',
         'we have sent',
         'we will send',
@@ -105,6 +116,26 @@ final class PromisesTest extends TestCase
     public function testNoServerMessagePromisesMailEither(): void
     {
         self::assertSame([], self::offences(self::sources(), self::stringLiterals(...), self::UNKEEPABLE));
+    }
+
+    /**
+     * Nor does the prose of any article, in the file it is written in.
+     *
+     * The article this test exists for is /help/ticket-not-received, and it is
+     * one of these files now. Its markdown carries no comments to strip: the
+     * editorial notes that used to sit at the top of these as Twig comments
+     * went when the prose moved, so what is scanned is the whole file.
+     */
+    public function testNoArticleFilePromisesMailNothingCanSend(): void
+    {
+        $files = self::articles();
+
+        self::assertNotEmpty($files, 'there should be article files to scan');
+        self::assertSame([], self::offences(
+            $files,
+            static fn(string $path): string => (string) file_get_contents($path),
+            self::UNKEEPABLE,
+        ));
     }
 
     /**
@@ -190,6 +221,20 @@ final class PromisesTest extends TestCase
     private static function templates(): array
     {
         return self::filesUnder(__DIR__ . '/../../../frontend/template', '.twig');
+    }
+
+    /**
+     * The committed copy of each help article.
+     *
+     * Not the copy a reader gets -- that is the row, and
+     * ArticleCatalogueTest checks it. This catches the phrase in review,
+     * before it is imported.
+     *
+     * @return list<string>
+     */
+    private static function articles(): array
+    {
+        return self::filesUnder(__DIR__ . '/../../../config/content/help', '.md');
     }
 
     /** @return list<string> */
