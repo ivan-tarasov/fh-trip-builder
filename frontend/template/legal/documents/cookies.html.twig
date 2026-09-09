@@ -37,7 +37,8 @@
 
 <h2>What the analytics vendors set</h2>
 <p>
-    Two scripts load on every page, and each sets cookies of its own:
+    Two scripts, and neither one loads unless you have allowed it. Until you
+    answer the notice, nothing below runs and none of these cookies exists:
 </p>
 <ul>
     <li>
@@ -55,16 +56,31 @@
     companies under their own policies.
 </p>
 
-<h2>Turning them off</h2>
+<h2>Your answer, and changing it</h2>
 <p>
-    Every browser can block or clear cookies for one site, and most can block
-    third-party cookies everywhere. Doing that to
-    {{ config('app.name') }} costs you the session &mdash; the checkout will not
-    hold together, and My bookings and saved flights will be empty &mdash; but
-    the rest of the site works, and search, the place pages and the fare
-    calendar do not need a cookie.
+    {% if not consent.answered %}
+        You have not answered yet, so no analytics is running.
+    {% elseif consent.accepted %}
+        You have allowed analytics. Both scripts are loading.
+    {% else %}
+        You have declined analytics. Neither script is loading.
+    {% endif %}
+    The answer is kept in a cookie of its own,
+    <strong>{{ consent.cookie }}</strong>, and in nothing else &mdash; so
+    clearing this site&rsquo;s cookies also clears the answer, and the notice
+    comes back.
 </p>
 <p>
-    A browser extension that blocks trackers will stop both analytics scripts
-    from loading. Nothing on this site depends on them.
+    <button type="button" class="cookie-reset js-cookie-reset"
+            data-cookie="{{ consent.cookie }}">Ask me again</button>
+</p>
+
+<h2>Turning off the rest</h2>
+<p>
+    The three above are not covered by that answer, because the site stops
+    working without them. Every browser can block or clear cookies for one
+    site. Doing that to {{ config('app.name') }} costs you the session &mdash;
+    the checkout will not hold together, and My bookings and saved flights will
+    be empty &mdash; but the rest works, and search, the place pages and the
+    fare calendar need no cookie at all.
 </p>

@@ -1,0 +1,72 @@
+{# Shown until the question has an answer, and then never again.
+
+   One line, and it tells rather than asks. The cookies that keep a search and a
+   booking together cannot be declined -- the site stops working without them --
+   so offering them as a choice would be a question with one possible answer.
+   They are stated. Analytics is the only part that is actually optional, and
+   the two buttons are where that is offered.
+
+   The first version explained both vendors, named Webvisor and listed which
+   cookies were exempt: fifty words and a slab two hundred pixels tall on a
+   phone. None of it stopped being true, it moved to /cookies, where somebody
+   who wants it is already looking.
+
+   Not a modal, and it does not trap focus: nothing on this site is withheld
+   until you decide, and a bar that blocks the page to ask about analytics is
+   worse than the analytics.
+
+   The data attributes are how global.js learns the cookie's name, its two
+   values and its lifetime, so src/Consent.php stays the only place they are
+   spelled. #}
+<section class="cookie-notice js-cookie-notice"
+         aria-label="Cookies"
+         data-cookie="{{ consent.cookie }}"
+         data-max-age="{{ consent.max_age }}">
+    {# The band runs edge to edge; what is written on it does not. Inside the
+       same .container every other row of this site uses, so the question lines
+       up with the footer headings directly above it rather than sitting 58px
+       further out on its own margin. #}
+    <div class="container cookie-notice__inner">
+        {# Drawn here rather than set in Font Awesome, which has no cookie in
+           colour -- and a flat two-tone one reads at this size where a
+           monochrome glyph just reads as a dot. Inline for the reason the
+           breadcrumb separator and the favicon are: no second request for
+           twenty lines of shapes, and nothing to go missing on a deploy.
+
+           The body is r=10.4 in a 24 box on purpose. At r=9.5 it filled 19 of
+           its 24 units, so a box sized to the buttons drew a cookie a third
+           smaller than them -- the box matched and the drawing did not.
+
+           Its own column beside the text, not an <i> inside it. Inline, the
+           icon belonged to the first line and the second and third started
+           underneath it; here the row is icon-then-block, so it stays at the
+           left however many lines the sentence takes. #}
+        <div class="cookie-notice__message">
+            <svg class="cookie-notice__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="11" cy="13.6" r="10.4" fill="#EDA362"/>
+                <circle cx="6.73" cy="10.21" r="1.64" fill="#8C5327"/>
+                <circle cx="13.3" cy="8.02" r="1.31" fill="#8C5327"/>
+                <circle cx="16.37" cy="14.04" r="1.64" fill="#8C5327"/>
+                <circle cx="8.7" cy="16.56" r="1.42" fill="#8C5327"/>
+                <circle cx="13.63" cy="19.18" r="1.2" fill="#8C5327"/>
+                <circle cx="4.54" cy="15.68" r="1.1" fill="#8C5327"/>
+                <circle cx="11.44" cy="12.4" r=".93" fill="#8C5327"/>
+                <circle cx="20.8" cy="4.2" r="1.6" fill="#EDA362"/>
+                <circle cx="22.9" cy="8.6" r=".85" fill="#EDA362"/>
+            </svg>
+
+            <p class="cookie-notice__text">
+                Cookies keep your search and bookings working. Analytics is
+                optional, and one of the two records and replays your session
+                &mdash; <a href="/cookies">here&rsquo;s the lot</a>.
+            </p>
+        </div>
+
+        <div class="cookie-notice__actions">
+            <button type="button" class="cookie-notice__button js-cookie-choice"
+                    data-consent="{{ consent.denied }}">No thanks</button>
+            <button type="button" class="cookie-notice__button cookie-notice__button--yes js-cookie-choice"
+                    data-consent="{{ consent.granted }}">Go ahead</button>
+        </div>
+    </div>
+</section>

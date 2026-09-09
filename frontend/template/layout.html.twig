@@ -49,4 +49,8 @@
     {% block content %}{{ page_content|default('')|raw }}{% endblock %}
 </div>
 
+{% if not consent.answered %}
+    {% include 'partials/cookie-notice.html.twig' %}
+{% endif %}
+
 {% include 'partials/footer.html.twig' %}

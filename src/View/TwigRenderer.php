@@ -7,6 +7,7 @@ namespace TripBuilder\View;
 use Exception;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
+use TripBuilder\Consent;
 use TripBuilder\Helper;
 use TripBuilder\Party;
 use Twig\Environment;
@@ -61,6 +62,18 @@ final readonly class TwigRenderer
         // includes that otherwise cut the context off. There is one definition
         // of how many seats a booking may hold and it is Party's.
         $this->twig->addGlobal('max_seats', Party::MAX_SEATS);
+
+        // Everything the layout needs to ask about analytics and to draw the
+        // notice: the cookie's spelling for global.js, and the answer so far.
+        // A global for the reason above -- the notice is included with `only`.
+        $this->twig->addGlobal('consent', [
+            'cookie' => Consent::COOKIE,
+            'granted' => Consent::GRANTED,
+            'denied' => Consent::DENIED,
+            'max_age' => Consent::MAX_AGE,
+            'answered' => Consent::answered(),
+            'accepted' => Consent::granted(),
+        ]);
 
         $this->twig->addFunction(new TwigFunction('asset', $this->layout->asset(...)));
         // Given the trail the partial is about to draw, so the two agree.

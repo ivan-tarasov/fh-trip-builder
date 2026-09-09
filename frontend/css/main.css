@@ -5357,6 +5357,143 @@ body:has(main.article) .breadcrumbs__list {
   opacity: .8;
 }
 
+/* ---------- The cookie notice ---------- */
+
+/* A light strip rather than the dark slab this started as. The dark band read
+   as a piece of the footer that had floated up the page, and it took 96px at
+   desktop and 210px on a phone to ask a one-line question. White, one line, one
+   row of buttons: the bar should be the least interesting thing on screen,
+   because the page behind it is what somebody came for. */
+.cookie-notice {
+  /* The pill height, and the icon is squared off it. Declared once because
+     "the same size as the buttons" is a relationship, and two hardcoded
+     numbers agreeing today is not one. */
+  --notice-control: 2.5625rem;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1040;
+  padding: .8125rem 0;
+  border-top: 1px solid var(--line);
+  background-color: #fff;
+  /* Upward and barely there. The border does the separating; this only stops a
+     white bar dissolving into a white page. */
+  box-shadow: 0 -2px 12px rgba(16, 36, 63, .06);
+}
+
+/* The row itself, on the site's grid. The band above is full-bleed so the
+   background reaches both edges; this keeps the writing where the writing goes
+   everywhere else. */
+.cookie-notice__inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .625rem 2rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Icon and words travel together, so the pair wraps above the buttons as one
+   thing. The basis lives here now rather than on the paragraph. */
+.cookie-notice__message {
+  display: flex;
+  flex: 1 1 20rem;
+  gap: .75rem;
+  /* Centred now the icon is pill-sized. Top-aligned made sense at 22px, when
+     the icon was shorter than a line of text and could sit on the first one;
+     at 41px it is taller than any single line, so aligning to the top left the
+     text hanging off its shoulder. */
+  align-items: center;
+}
+
+.cookie-notice__text {
+  /* No reading-measure cap: this is one line of interface text and the row
+     already bounds it, where a cap only forced a wrap the bar did not need. */
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  line-height: 1.45;
+}
+
+.cookie-notice__text a { color: var(--brand-accent); }
+
+/* Fixed size and never shrinking: a flex item with an intrinsic aspect ratio
+   will otherwise squash before the text does. The nudge sets it on the first
+   line's cap height rather than the top of its line box. */
+.cookie-notice__icon {
+  flex: 0 0 auto;
+  width: var(--notice-control);
+  height: var(--notice-control);
+}
+
+.cookie-notice__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+/* Pills, like every other action on this site. Both are the same size, the same
+   shape and in the same row; the only difference is the fill. A notice where
+   "no" is small print, or a link, or a shade of grey away from the background,
+   is a notice designed to be misread -- and this one is a real gate, so the
+   answer has to be a real choice. */
+.cookie-notice__button {
+  /* Its padding already produced this height; stating it is what stops a font
+     or padding change moving the buttons without moving the icon. */
+  min-height: var(--notice-control);
+  padding: .5rem 1.125rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background-color: #fff;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.cookie-notice__button--yes {
+  border-color: var(--brand-accent);
+  background-color: var(--brand-accent);
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cookie-notice__button:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+  .cookie-notice__button--yes:hover {
+    border-color: var(--brand-accent-700);
+    background-color: var(--brand-accent-700);
+    color: #fff;
+  }
+}
+
+/* Out of the way rather than shuffled above the bar: the bar's height depends
+   on how the text wraps, so any offset here would be a number that is right at
+   one width and wrong at the next. The button comes back the moment the
+   question is answered, which is one click away. */
+body:has(.cookie-notice) .to-top { display: none; }
+
+/* The way back to the question, on the cookies page. A button and not a link,
+   because it changes something rather than going somewhere. */
+.cookie-reset {
+  padding: .5rem 1.125rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background-color: #fff;
+  color: var(--ink-body);
+  font-size: .9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cookie-reset:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
+}
+
 /* ---------- Legal, and what the page cost to draw ---------- */
 
 .footer__legal {

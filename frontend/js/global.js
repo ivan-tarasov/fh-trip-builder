@@ -1430,6 +1430,51 @@
         initTooltips(document);
     });
 
+    /*[ Cookie notice ]
+    ===========================================================*/
+    // The whole of it: write the answer, take the bar away. The counters are
+    // rendered by the server, so analytics begins on the next page rather than
+    // this one -- a reload would start it a few seconds sooner and throw away
+    // whatever the visitor had already typed into the search form.
+    //
+    // The cookie's name, lifetime and two values come off the element's own
+    // data attributes, so src/Consent.php remains the only place they are
+    // spelled. Nothing here runs when the bar is absent, which is every page
+    // view after the first answer.
+    (function cookieNotice() {
+        const notice = document.querySelector('.js-cookie-notice');
+
+        if (!notice) {
+            return;
+        }
+
+        notice.querySelectorAll('.js-cookie-choice').forEach((button) => {
+            button.addEventListener('click', function () {
+                document.cookie = notice.dataset.cookie + '=' + encodeURIComponent(this.dataset.consent)
+                    + ';path=/;max-age=' + notice.dataset.maxAge + ';samesite=lax'
+                    + (window.location.protocol === 'https:' ? ';secure' : '');
+
+                notice.remove();
+            });
+        });
+    }());
+
+    // And the way back out of that answer, on the cookies page. A reload rather
+    // than a redraw: the counters are rendered by the server, so the page has
+    // to be built again to stop carrying them.
+    (function cookieReset() {
+        const button = document.querySelector('.js-cookie-reset');
+
+        if (!button) {
+            return;
+        }
+
+        button.addEventListener('click', function () {
+            document.cookie = this.dataset.cookie + '=;path=/;max-age=0';
+            window.location.reload();
+        });
+    }());
+
     /*[ Saved flights ]
     ===========================================================*/
     // Kept in a cookie rather than localStorage so the server can render
