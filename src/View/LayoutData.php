@@ -6,6 +6,7 @@ namespace TripBuilder\View;
 
 use Exception;
 use Throwable;
+use TripBuilder\ArticleRating;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
 use TripBuilder\Database\Connection;
@@ -13,6 +14,7 @@ use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\CurrencyRateRepository;
@@ -168,10 +170,6 @@ final class LayoutData
     }
 
     /**
-     * To the nearest thousand, so the digits that are shown are ones the
-     * estimate can stand behind.
-     */
-    /**
      * The one address this page answers at.
      *
      * Every page here is reachable at more than one URL. A trailing slash is
@@ -322,6 +320,7 @@ final class LayoutData
             'most-booked-airlines' => $this->mostBookedAirlines($limit),
             'most-searched-countries' => $this->mostSearchedCountries($limit),
             'most-searched-airports' => $this->mostSearchedAirports($limit),
+            'top-rated-help' => $this->topRatedHelp($limit),
             default => [],
         };
     }
@@ -415,6 +414,71 @@ final class LayoutData
         foreach ($airlines as $airline) {
             $name = (string) $airline['name'];
             $links[$name] = Helper::airlineUrl($name, (string) $airline['code']);
+        }
+
+        return $links;
+    }
+
+    /**
+     * The help articles, best-regarded first.
+     *
+     * The one column here ranked by what readers said rather than by what they
+     * searched or booked, and the only one whose full set is known without
+     * asking the database: the articles are five entries in config, so this
+     * starts from that list and asks the table only how each one has done.
+     * An article nobody has voted on is therefore still in the column, at the
+     * bottom, rather than missing from it.
+     *
+     * Ordered by ArticleRating::score() and not by the share who said yes,
+     * because one reader saying yes would otherwise outrank forty saying so --
+     * see that class for the figures.
+     *
+     * @return array<string, string> label => url
+     */
+    public function topRatedHelp(int $limit): array
+    {
+        /** @var array<string, array<string, mixed>> $articles */
+        $articles = Config::get('help.articles', []);
+        $tally = [];
+
+        try {
+            $tally = new ArticleVoteRepository($this->connection())->tally();
+        } catch (Throwable) {
+            // Nothing to rank by, so the order config wrote them in stands --
+            // which is what a database nobody has voted on gives anyway. A
+            // failure here takes the ranking away, not the column.
+        }
+
+        $ranked = [];
+        $position = 0;
+
+        foreach ($articles as $slug => $article) {
+            $ranked[(string) $slug] = [
+                // The short name where the article has one: two of the titles
+                // are wider than this column.
+                'label' => (string) ($article['short'] ?? $article['title']),
+                'score' => ArticleRating::score(
+                    $tally[$slug]['helpful'] ?? 0,
+                    $tally[$slug]['votes'] ?? 0,
+                ),
+                'position' => $position++,
+            ];
+        }
+
+        // Score down, then the order they are written in. The tiebreaker is
+        // not decoration: with no votes every article scores nought, so on a
+        // fresh database it decides the whole column -- and every other
+        // ranking here carries one for the same reason.
+        uasort(
+            $ranked,
+            static fn(array $a, array $b): int
+                => [$b['score'], $a['position']] <=> [$a['score'], $b['position']],
+        );
+
+        $links = [];
+
+        foreach (array_slice($ranked, 0, max(1, $limit), true) as $slug => $item) {
+            $links[$item['label']] = '/help/' . $slug;
         }
 
         return $links;
@@ -532,6 +596,10 @@ final class LayoutData
         return ['tone' => (string) $notice['tone'], 'message' => (string) $notice['message']];
     }
 
+    /**
+     * To the nearest thousand, so the digits that are shown are ones the
+     * estimate can stand behind.
+     */
     private static function roundToThousand(int $rows): int
     {
         return (int) round($rows, -3);
