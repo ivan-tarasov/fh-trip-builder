@@ -16,6 +16,7 @@ enum Table: string
     case Bookings = 'bookings';
     case BookingPassengers = 'booking_passengers';
     case Countries = 'countries';
+    case CurrencyRates = 'currency_rates';
     case FareBrands = 'fare_brands';
     case Flights = 'flights';
     case RouteDayPrice = 'route_day_price';

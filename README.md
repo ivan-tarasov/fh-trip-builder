@@ -204,6 +204,27 @@ php noah install
    ```
    This will delete flights older than today date from the database.
 
+#### Currency Management
+1. `currency:rates`: Refresh the conversion rates every price is converted with.
+   ```bash
+   php noah currency:rates
+   ```
+   Fetches the European Central Bank's reference rates and stores them against
+   the day the ECB published them, so running it twice in an afternoon corrects
+   one row rather than writing two. Safe to put on a daily cron; the ECB
+   publishes on working days, so a weekend run simply records Friday's figures
+   again.
+
+   Nothing is written unless the whole response is usable — a truncated body
+   would otherwise leave some currencies on an older rate while claiming all of
+   them had just been confirmed. To see what would be stored without storing it:
+   ```bash
+   php noah currency:rates --dry-run
+   ```
+   `app:install` seeds a starting set of rates, so a fresh clone converts before
+   this has ever run. It is not part of `app:install` on purpose: a deploy should
+   not be able to fail because a third party is down.
+
 ### Conclusion
 Noah CLI simplifies various tasks related to the Trip Builder Project. By utilizing its commands and their respective options, you can efficiently build and manage application.
 For more detailed information about each command and its usage, don't hesitate to consult the command's help screen using the help command as demonstrated above.

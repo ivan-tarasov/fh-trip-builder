@@ -11,6 +11,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
+use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Db\Migrate as DatabaseMigrate;
@@ -128,6 +129,24 @@ try {
     */
 
     $application->add(new RealignFlights());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Currency Rates
+    |--------------------------------------------------------------------------
+    |
+    | Refreshing what a Canadian dollar buys, from the European Central Bank's
+    | reference rates. Stored against the day the ECB published them, so the
+    | table is a history and running this twice in an afternoon corrects one row
+    | rather than writing two.
+    |
+    | Deliberately not part of `app:install`: a deploy should not be able to
+    | fail because a third party is down, and the seeded rows mean a fresh
+    | install already converts.
+    |
+    */
+
+    $application->add(new CurrencyRates());
 
     // FIXME: for image grabbing
     // $application->add(new GrabSuppliers());
