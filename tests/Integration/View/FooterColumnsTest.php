@@ -115,7 +115,7 @@ final class FooterColumnsTest extends IntegrationTestCase
      */
     public function testTheHelpColumnUsesTheShortNamesAndNotTheTitles(): void
     {
-        $html = $this->footer();
+        $html = $this->footerText();
         $shortened = 0;
 
         foreach (new ArticleRepository($this->connection())->all() as $article) {
@@ -150,7 +150,7 @@ final class FooterColumnsTest extends IntegrationTestCase
      */
     public function testMoreLinksAppearOnlyWhereConfigured(): void
     {
-        $html = $this->footer();
+        $html = $this->footerText();
         $drawn = 0;
 
         foreach (Config::get('site.footer-columns') as $column) {
@@ -183,6 +183,10 @@ final class FooterColumnsTest extends IntegrationTestCase
      *
      * `connection()` is touched first so a machine with no database skips
      * these rather than failing them -- the render reaches for its own.
+     *
+     * Raw, entities and all, because columnLengths() hands this to
+     * DOMDocument and that does its own decoding. A test matching strings
+     * wants footerText() instead.
      */
     private function footer(): string
     {
@@ -195,6 +199,23 @@ final class FooterColumnsTest extends IntegrationTestCase
             'database_requests' => 1,
             'flights_count' => '~1,000',
         ]);
+    }
+
+    /**
+     * The same footer with entities decoded, for matching strings against.
+     *
+     * Two of the things asserted below carry an ampersand -- the heading
+     * "Help & tips" and the label "Refunds & exchanges" -- and Twig escapes
+     * both, so a test looking for them raw finds nothing. FooterRenderTest
+     * decodes for exactly this reason and says so: spelling `&amp;` in the
+     * assertion would be matching Twig's escaping rather than the words.
+     *
+     * These two tests moved here from that class and this is what came with
+     * them; without it they fail on the ampersand and nothing else.
+     */
+    private function footerText(): string
+    {
+        return html_entity_decode($this->footer(), ENT_QUOTES | ENT_HTML5);
     }
 
     /**
