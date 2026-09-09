@@ -6473,10 +6473,16 @@ body:has(.cookie-notice) .to-top { display: none; }
 }
 
 .article__hero {
-  /* Deep enough that the sheet can rise into it and still leave the title
-     clear of the sheet's top edge: this less the negative margin below is the
-     gap that is actually visible, and that gap is what this is sized for. */
-  padding-bottom: 8rem;
+  /* On top of the trail's own 1.25rem, so the path clears the header rather
+     than sitting under it. The band is one block with the header, which is
+     the whole point of it -- and two things in one block still need space
+     between them. */
+  padding-top: 1.75rem;
+  /* This is not the gap under the title. Two numbers decide that: the sheet
+     rises by the negative margin below, so what a reader sees between the
+     title and the sheet's top edge is this *less* that. Change one and the
+     other has to move or the gap does. */
+  padding-bottom: 12.5rem;
   background-color: var(--brand-ink);
   text-align: center;
 }
@@ -6513,18 +6519,18 @@ body:has(.cookie-notice) .to-top { display: none; }
 .article--hero .article__layout {
   position: relative;
   z-index: 1;
-  /* Deep enough that the band cuts across the lead rather than stopping at
-     the sheet's own top padding. Shallower than this and the navy ends on
-     blank white, which reads as the sheet starting below the band instead of
-     inside it -- the overlap has to cross something to be one. */
-  margin-top: -5.5rem;
+  /* Deep enough that the band runs past the lead entirely and finishes level
+     with the prose below it. Shallower and the navy ends on the sheet's own
+     top padding, which reads as the sheet starting below the band rather than
+     inside it -- an overlap has to cross something to be one. */
+  margin-top: -9rem;
 }
 
 @media (max-width: 47.9375em) {
   /* Less of both. The band is already taller once the title wraps, and a
      deep overlap on a narrow screen buries the title it sits under. */
-  .article__hero { padding-bottom: 6.5rem; }
-  .article--hero .article__layout { margin-top: -4rem; }
+  .article__hero { padding-top: 1rem; padding-bottom: 9.5rem; }
+  .article--hero .article__layout { margin-top: -6.5rem; }
 }
 
 .article__title {
