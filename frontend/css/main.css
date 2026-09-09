@@ -3576,9 +3576,6 @@ body:has(.hero) header#top {
   .navbar-dock { display: none; }
 }
 
-/* A placeholder in the header: not a link, and saying so quietly. */
-.nav-link--soon { opacity: .65; cursor: default; }
-
 /* Pinned to the bottom of the screen so Apply is reachable without scrolling
    back down a long sidebar. It needs an opaque background and a shadow: the
    controls above scroll underneath it, and without those the two would blur
@@ -5356,6 +5353,122 @@ body:has(main.article) .breadcrumbs__list {
   font-size: .75rem;
   opacity: .8;
 }
+
+/* ---------- The currency switcher ---------- */
+
+.currency { position: relative; }
+
+/* Sized and coloured like the nav links beside it, because it sits in their
+   row -- but a button, because it opens something rather than going somewhere. */
+.currency__trigger {
+  display: inline-flex;
+  align-items: center;
+  padding: .5rem .75rem;
+  border: 0;
+  border-radius: .5rem;
+  background-color: transparent;
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .currency__trigger:hover { background-color: rgba(255, 255, 255, .12); }
+}
+
+.currency__trigger[aria-expanded="true"] { background-color: rgba(255, 255, 255, .16); }
+
+/* Right-aligned to the trigger, because the trigger is at the right end of the
+   header and a panel hanging off its left edge would leave the screen. */
+.currency__panel {
+  position: absolute;
+  top: calc(100% + .5rem);
+  right: 0;
+  z-index: 1050;
+  width: 20rem;
+  padding: .75rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background-color: #fff;
+  box-shadow: 0 12px 32px rgba(16, 36, 63, .18);
+  color: var(--ink-body);
+}
+
+.currency__filter {
+  width: 100%;
+  margin-bottom: .5rem;
+  padding: .5rem .75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: .5rem;
+  font-size: .9375rem;
+}
+
+.currency__filter:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 1px;
+}
+
+/* Capped and scrolled: thirty currencies is taller than most screens, and a
+   panel that runs off the bottom cannot reach its own source line. */
+.currency__list {
+  max-height: 17rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.currency__option {
+  display: flex;
+  gap: .5rem;
+  align-items: baseline;
+  width: 100%;
+  padding: .4375rem .5rem;
+  border: 0;
+  border-radius: .375rem;
+  background-color: transparent;
+  color: inherit;
+  font-size: .9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .currency__option:hover { background-color: var(--surface); }
+}
+
+.currency__option:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: -2px;
+}
+
+/* The code is what somebody scans for, so it is the fixed column. */
+.currency__code {
+  flex: 0 0 2.75rem;
+  font-weight: 700;
+}
+
+.currency__name { flex: 1 1 auto; color: var(--ink-secondary); }
+.currency__symbol { flex: 0 0 auto; color: var(--ink-muted); }
+.currency__option.is-active .currency__name { color: var(--ink-body); }
+.currency__tick { flex: 0 0 auto; color: var(--brand-accent); }
+
+/* Where the numbers come from and how old they are. Quiet, because it is a
+   provenance note rather than something the page is trying to say -- but
+   present, because a converted price is an estimate at somebody else's rate. */
+.currency__source {
+  margin: .5rem 0 0;
+  padding-top: .5rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: .75rem;
+}
+
+/* Hidden while the panel is shut, so the filter and thirty buttons are not in
+   the tab order of every page on the site. */
+.currency__option[hidden] { display: none; }
 
 /* ---------- The cookie notice ---------- */
 
