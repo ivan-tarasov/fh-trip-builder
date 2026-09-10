@@ -3,18 +3,6 @@
 
     const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-    /**
-     * A name reduced to something two spellings can be compared by.
-     *
-     * Shared, because two places want it for different reasons: the checkout's
-     * autofill turns a name into an address, and the place picker asks whether
-     * an airport's title already names its city. Eight of the 248 airports
-     * carry an accent the city column does not -- `Cancún International` in
-     * `Cancun`, `Düsseldorf International Airport` in `Dusseldorf` -- so a
-     * plain `includes` answers no where a reader would say yes.
-     */
-    const folded = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
     /*[ Search form: the two date fields ]
     ===========================================================*/
     try {
@@ -588,6 +576,9 @@
             };
 
 
+            // Strip the accents a name might carry before it becomes an address.
+            const slug = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
             autofillBar.querySelector('[data-autofill-button]').addEventListener('click', function () {
                 const form = autofillBar.closest('form');
                 const first = pick(FIRST);
@@ -596,7 +587,7 @@
                 const scheme = pick(SCHEMES);
 
                 const values = {
-                    email: folded(first) + '.' + folded(last) + Math.floor(Math.random() * 90 + 10) + '@' + pick(DOMAINS),
+                    email: slug(first) + '.' + slug(last) + Math.floor(Math.random() * 90 + 10) + '@' + pick(DOMAINS),
                     phone: shape(place.phone),
                     card_name: first + ' ' + last,
                     card_number: groupCard(cardNumber(scheme)),
@@ -821,23 +812,6 @@
             };
 
             /**
-             * Whether a row would say where it is without being told.
-             *
-             * "San Diego International Airport" names its city; "Pierre
-             * Elliott Trudeau International" does not, and neither does
-             * "Arturo Merino Benitez". So the heading goes above the second
-             * kind and not the first -- the question is what the reader can
-             * already see, not how the match happened.
-             *
-             * That rule replaced one keyed on the ranking band, which grouped
-             * Santiago and not San Diego for the same query and could not be
-             * explained to anybody looking at it.
-             */
-            const namesItsCity = function (option) {
-                return folded(option.textContent).includes(folded(option.dataset.short || ''));
-            };
-
-            /**
              * One row. Shared by the list and by the nearby block above it, so
              * the city/child/second-line rules are written once.
              */
@@ -1049,63 +1023,25 @@
                     return;
                 }
 
-                // A city over its airports where they do not name it themselves.
+                // A city's own airports nest under it where the city is on
+                // screen as a row of its own, which is the 18 cities that sell
+                // from more than one airport.
                 //
-                // "London" already appears as a row of its own, because it
-                // sells from three; "Montreal" cannot, because it sells from
-                // one and a second code for one place is not a choice. So the
-                // city goes on as a heading instead, and the airports under it
-                // become children -- which drops the second line the heading
-                // has just said for all of them, so a single-airport city
-                // costs no more height than before.
+                // A heading stood here for the other 213, whose city is not
+                // selectable -- "Montreal, Canada" over Trudeau. It went back
+                // out: for a city with one airport the row already carries the
+                // city on its second line, and a heading over a single row
+                // says the same thing twice and costs a line to do it.
                 //
-                // An empty box needs no guard of its own: it ranks everything
-                // band 0, so nothing reaches band 2 and the whole network is
-                // drawn exactly as it was.
-                const asOptions = citiesIn(found);
-                // Two conditions, and both earn their place.
-                //
-                // The row must not already name its city, or "San Diego
-                // International Airport" would be filed under a heading
-                // reading San Diego.
-                //
-                // And a city must have been typed -- band 2 is "the city line
-                // starts with what was typed", the city line being
-                // "City, Country". Without that, a search for `san` opened
-                // with a heading reading "Rio De Janeiro" over Santos Dumont,
-                // which matched on its own name: true, useless, and baffling
-                // where it sat. It also kept `trudeau` a plain row with its
-                // city beside it, which is what somebody searching for an
-                // airport is looking at.
-                const headed = new Set(
-                    found
-                        .filter(o => !o.hasAttribute('data-city')
-                            && !asOptions.has(o.dataset.inCity)
-                            && !namesItsCity(o)
-                            && rank(o) === 2)
-                        .map(o => o.dataset.inCity),
-                );
-
-                // Both kinds together, so the row builder indents a child
-                // without needing to know whether its city stands above it as
-                // an option or as a heading.
-                const shown = new Set([...asOptions, ...headed]);
-                let under = null;
-
+                // Measured before removing it, over every city name and every
+                // 2-6 letter prefix of one: with the heading kept only for
+                // cities offering two airports or more, it fired on 0 of 1,062
+                // queries. There is no version of it that draws for a city
+                // worth grouping, because a city with two airports has a row
+                // of its own and takes the nesting path above instead.
                 found.forEach(function (option) {
-                    const city = option.dataset.inCity;
-
-                    if (headed.has(city) && city !== under) {
-                        // The airport's own second line, which the row is
-                        // about to drop for being a child. Same words, said
-                        // once for the group instead of once per row.
-                        list.appendChild(headingFor(option.dataset.sub));
-                    }
-
-                    under = city;
-                    list.appendChild(rowFor(option, shown));
+                    list.appendChild(rowFor(option, citiesIn(found)));
                 });
-
 
                 if (ranked.length > found.length) {
                     const more = document.createElement('li');
