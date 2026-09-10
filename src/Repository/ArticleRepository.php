@@ -159,6 +159,44 @@ final readonly class ArticleRepository
     }
 
     /**
+     * Every article slug, enabled or not.
+     *
+     * Unfiltered on purpose, and the only read here that is. The importer
+     * compares this against the files on disk to find rows nothing describes
+     * any more, and an article held back with `enabled = 0` is still a row
+     * whose file may have gone.
+     *
+     * @return list<string>
+     */
+    public function slugs(): array
+    {
+        return array_map(
+            static fn(array $row): string => (string) $row['slug'],
+            $this->connection->fetchAll('SELECT slug FROM ' . Table::Articles->value),
+        );
+    }
+
+    /**
+     * Remove one article and the words filed under it.
+     *
+     * Both tables, because a translation with no article is a row nothing can
+     * reach and nothing would ever tidy: every read here starts from
+     * `articles` and joins outwards. The votes cast on it are
+     * ArticleVoteRepository's to remove, and it says why they cannot stay.
+     */
+    public function delete(string $slug): void
+    {
+        $this->connection->execute(
+            'DELETE FROM ' . Table::ArticleTranslations->value . ' WHERE slug = ?',
+            [$slug],
+        );
+        $this->connection->execute(
+            'DELETE FROM ' . Table::Articles->value . ' WHERE slug = ?',
+            [$slug],
+        );
+    }
+
+    /**
      * Every article on offer, keyed by slug, lowest `position` first.
      *
      * `enabled` is filtered here rather than by each caller, which is what
