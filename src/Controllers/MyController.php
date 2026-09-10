@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use stdClass;
+use TripBuilder\CabinClass;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\SearchUrl;
@@ -305,9 +306,8 @@ class MyController extends AbstractController
         $presenter = new ItineraryPresenter();
         $flights = [];
 
-        foreach ($this->savedKeys() as $key) {
-            $ids = array_map(intval(...), explode('-', $key));
-            $itinerary = $finder->itinerary($ids);
+        foreach ($this->savedFlights() as ['key' => $key, 'ids' => $ids, 'cabin' => $cabin]) {
+            $itinerary = $finder->itinerary($ids, $cabin);
 
             // A saved flight can go stale — the search data is regenerated, or
             // the legs no longer chain. Drop those rather than draw a broken card.
@@ -330,7 +330,7 @@ class MyController extends AbstractController
                     (float) $decoded->price_base + (float) $decoded->price_tax,
                 ),
                 'itinerary' => $direction,
-                'search_url' => $this->searchUrl($decoded->itinerary),
+                'search_url' => $this->searchUrl($decoded->itinerary, $cabin),
             ];
         }
 
@@ -341,15 +341,27 @@ class MyController extends AbstractController
     }
 
     /**
-     * The saved-flight keys from the cookie, in the order they were saved.
+     * The saved flights from the cookie, in the order they were saved.
      *
-     * The cookie is written by the browser, so treat it as untrusted input: only
-     * keys that are hyphen-separated integers survive, and the list is capped so
-     * a hand-edited cookie cannot turn one page render into thousands of queries.
+     * A key is ordered leg ids, and the cabin they were found in when that was
+     * not economy: `12-34` or `12-34:C`. Economy is left off by the card that
+     * writes it, which is why a key from before the cabin was carried still
+     * reads correctly -- everything saved then was priced as economy, because
+     * economy was all this page could ask for.
      *
-     * @return list<string>
+     * The cookie is written by the browser, so treat it as untrusted input.
+     * Only these two shapes survive, the cabin letters are the `[YWCF]` set
+     * SearchUrl's own path regex names, and the list is capped so a
+     * hand-edited cookie cannot turn one page render into thousands of
+     * queries. Anything else is dropped rather than repaired: a key is not
+     * something a reader typed.
+     *
+     * The raw key comes back alongside what it parsed to, because the card
+     * needs it to unsave itself.
+     *
+     * @return list<array{key: string, ids: list<int>, cabin: CabinClass}>
      */
-    private function savedKeys(): array
+    private function savedFlights(): array
     {
         $raw = json_decode($this->request->cookies->str(self::SAVED_COOKIE), true);
 
@@ -357,22 +369,35 @@ class MyController extends AbstractController
             return [];
         }
 
-        $keys = [];
+        $flights = [];
 
         foreach ($raw as $key) {
-            if (is_string($key) && preg_match('/^\d{1,19}(-\d{1,19})*$/', $key) === 1) {
-                $keys[$key] = $key;
+            if (!is_string($key) || preg_match('/^(\d{1,19}(?:-\d{1,19})*)(?::([YWCF]))?$/', $key, $parts) !== 1) {
+                continue;
             }
+
+            $flights[$key] = [
+                'key' => $key,
+                'ids' => array_map(intval(...), explode('-', $parts[1])),
+                // The letter is one of four by the pattern above, so this
+                // cannot fall through to the default for a bad code -- only
+                // for a key that names no cabin at all.
+                'cabin' => CabinClass::tryFromCode($parts[2] ?? '') ?? CabinClass::Economy,
+            ];
         }
 
-        return array_values(array_slice($keys, 0, self::SAVED_LIMIT));
+        return array_values(array_slice($flights, 0, self::SAVED_LIMIT));
     }
 
     /**
      * A link back to a fresh search for the same route and departure date, so a
      * saved flight is a starting point rather than a dead end.
+     *
+     * In the cabin it was saved in, since that is the search that found it.
+     * SearchUrl spells the cabin into every path it writes, economy included,
+     * so this needs no special case for the default.
      */
-    private function searchUrl(object $itinerary): string
+    private function searchUrl(object $itinerary, CabinClass $cabin): string
     {
         $segments = $itinerary->segments;
         $first = $segments[0];
@@ -383,6 +408,7 @@ class MyController extends AbstractController
             to: (string) $last->arrive->airport_code,
             depart: date('Y-m-d', (int) strtotime((string) $first->depart->date_time)),
             return: null,
+            cabin: $cabin,
         )->path();
     }
 

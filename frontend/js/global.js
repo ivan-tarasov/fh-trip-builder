@@ -1555,8 +1555,11 @@
     ===========================================================*/
     // Kept in a cookie rather than localStorage so the server can render
     // /my/saved without the page having to hand the list back over AJAX.
-    // A saved flight is its ordered leg ids, which is all that is needed to
-    // rebuild the itinerary; prices are looked up fresh, never stored.
+    // A saved flight is its ordered leg ids, plus the cabin it was found in
+    // where that was not economy -- `12-34` or `12-34:C`. That is all the
+    // server needs to rebuild it, and the cabin is not a cached price: it is
+    // which price to read. Prices and times are still looked up fresh, never
+    // stored. The key is written by the card, so this only carries it around.
     const SAVED_KEY = 'tb_saved_flights';
     const SAVED_MAX = 50;
     const SAVED_MAX_AGE = 60 * 60 * 24 * 365;
