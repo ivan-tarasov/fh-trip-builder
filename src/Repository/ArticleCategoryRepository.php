@@ -90,6 +90,27 @@ final readonly class ArticleCategoryRepository
     }
 
     /**
+     * Remove one category and the words filed under it.
+     *
+     * Nothing here checks for articles still pointing at it, and that is the
+     * importer's job rather than this one's: it refuses the whole run when an
+     * article names a category no file describes, so by the time anything gets
+     * here the group really is unclaimed. A check in both places would be one
+     * that could disagree.
+     */
+    public function delete(string $slug): void
+    {
+        $this->connection->execute(
+            'DELETE FROM ' . Table::ArticleCategoryTranslations->value . ' WHERE slug = ?',
+            [$slug],
+        );
+        $this->connection->execute(
+            'DELETE FROM ' . Table::ArticleCategories->value . ' WHERE slug = ?',
+            [$slug],
+        );
+    }
+
+    /**
      * Write one category and its translation, and say whether the words moved.
      *
      * The shape ArticleRepository::store() uses, for the reason it uses it:

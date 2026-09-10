@@ -235,8 +235,8 @@ php noah install
    This will delete flights older than today date from the database.
 
 #### Articles Management
-1. `articles:import`: Load the help categories and articles from
-   `config/content/help` into the database.
+1. `articles:import`: Make the help categories and articles in the database
+   match the files in `config/content/help`.
    ```bash
    php noah articles:import
    ```
@@ -264,8 +264,23 @@ php noah install
    Re-running it is safe and quiet. Every article is written on every run, but
    `updated_at` only moves when the title, short label, summary or prose
    actually differs from the stored copy — so the date on an article is the date
-   its content last changed, not the date somebody last ran the import. To see
-   what would be written without writing it:
+   its content last changed, not the date somebody last ran the import.
+
+   **It also removes.** A row whose file has gone is deleted, along with its
+   translations and, for an article, the votes cast on it — those are keyed on
+   the slug, so leaving them would hand a future article a tally about a page
+   nobody can read. Without this, deleting a file left the article on every
+   database that had already imported it while a fresh install never had it, so
+   the two quietly stopped agreeing.
+
+   Two things make that safe to have on by default. The command refuses the
+   whole run when it finds no files at all, so a mistyped path or an unmounted
+   volume cannot empty the tables. And it refuses when an article names a
+   category no file describes, so deleting a category still in use fails before
+   anything is written rather than orphaning its articles.
+
+   To see what would be written **and what would be removed**, without doing
+   either:
    ```bash
    php noah articles:import --dry-run
    ```

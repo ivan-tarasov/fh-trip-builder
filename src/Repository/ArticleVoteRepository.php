@@ -43,11 +43,28 @@ final readonly class ArticleVoteRepository
     }
 
     /**
+     * Drop every vote cast on one article.
+     *
+     * Called when the article itself goes. Leaving them behind would be worse
+     * than untidy: this table is keyed on the slug, so a later article reusing
+     * a retired one would inherit a tally cast about something else -- and the
+     * footer column ranks on that tally, so the new article would arrive
+     * already sorted by opinions of a page nobody can read.
+     */
+    public function delete(string $slug): void
+    {
+        $this->connection->execute(
+            'DELETE FROM ' . Table::ArticleVotes->value . ' WHERE slug = ?',
+            [$slug],
+        );
+    }
+
+    /**
      * Votes and yeses for every article anybody has voted on.
      *
      * Articles nobody has voted on are absent rather than present with nought,
      * because this cannot know what the full set of articles is -- that is
-     * config's job, and the caller has it.
+     * ArticleRepository's, and the caller has it.
      *
      * @return array<string, array{votes: int, helpful: int}>
      */

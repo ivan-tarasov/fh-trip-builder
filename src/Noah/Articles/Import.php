@@ -15,10 +15,11 @@ use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
+use TripBuilder\Repository\ArticleVoteRepository;
 
 #[AsCommand(
     name: 'articles:import',
-    description: 'Load the help articles from config/content/help into the database.',
+    description: 'Make the help articles in the database match the files in config/content/help.',
     aliases: [],
     hidden: false,
 )]
@@ -91,9 +92,7 @@ class Import extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         try {
-            // Categories first: an article names one, and the check below is
-            // worth nothing if it runs before the group it is checking for
-            // could have been created.
+            // Categories first: an article names one.
             $categories = self::read(self::CATEGORY_DIR, self::parseCategory(...));
             $articles = self::read(self::CONTENT_DIR, self::parse(...));
         } catch (Throwable $e) {
@@ -103,6 +102,8 @@ class Import extends AbstractCommand
         }
 
         if ($categories === [] || $articles === []) {
+            // Also what stops a mistyped or unmounted directory emptying the
+            // tables: nothing is removed on a run that found nothing to keep.
             $this->io->error(sprintf(
                 'Nothing to import: %s holds %d categor(y|ies) and %s holds %d article(s).',
                 self::CATEGORY_DIR,
@@ -110,6 +111,34 @@ class Import extends AbstractCommand
                 self::CONTENT_DIR,
                 count($articles),
             ));
+
+            return Command::FAILURE;
+        }
+
+        // Against the files and not against the table, which is what this
+        // checked before pruning existed. The table is the weaker of the two:
+        // a category renamed in a file leaves its old name behind until the
+        // next run, so an article still pointing at the old name passed. The
+        // files are what the table is about to be made to match, so they are
+        // what an article has to name.
+        //
+        // Before the connection, because nothing about it needs one -- a
+        // mistyped `category:` now costs no writes at all.
+        $unknown = self::orphans($articles, array_keys($categories));
+
+        if ($unknown !== []) {
+            $this->io->error(implode("\n", $unknown));
+
+            return Command::FAILURE;
+        }
+
+        try {
+            $connection = $this->connection();
+            $categoryRepository = new ArticleCategoryRepository($connection);
+            $repository = new ArticleRepository($connection);
+            $votes = new ArticleVoteRepository($connection);
+        } catch (Throwable $e) {
+            $this->io->error('No database: ' . $e->getMessage());
 
             return Command::FAILURE;
         }
@@ -127,15 +156,15 @@ class Import extends AbstractCommand
                 );
             }
 
-            // Checked even here, because a dry run that reported five happy
-            // articles and then failed on the sixth for a typo would be worse
-            // than no dry run at all.
-            $unknown = self::orphans($articles, array_keys($categories));
+            // The half of a dry run that matters now the command deletes. A
+            // preview that showed what would be written and stayed quiet about
+            // what would be removed would be a preview of the safe half.
+            foreach (array_diff($repository->slugs(), array_keys($articles)) as $slug) {
+                $this->formatOutput($slug, 'would remove', 'comment');
+            }
 
-            if ($unknown !== []) {
-                $this->io->error(implode("\n", $unknown));
-
-                return Command::FAILURE;
+            foreach (array_diff($categoryRepository->slugs(), array_keys($categories)) as $slug) {
+                $this->formatOutput($slug, 'would remove', 'comment');
             }
 
             $this->io->note(sprintf(
@@ -145,16 +174,6 @@ class Import extends AbstractCommand
             ));
 
             return Command::SUCCESS;
-        }
-
-        try {
-            $connection = $this->connection();
-            $categoryRepository = new ArticleCategoryRepository($connection);
-            $repository = new ArticleRepository($connection);
-        } catch (Throwable $e) {
-            $this->io->error('No database: ' . $e->getMessage());
-
-            return Command::FAILURE;
         }
 
         $changed = 0;
@@ -178,19 +197,6 @@ class Import extends AbstractCommand
 
             $changed += $moved ? 1 : 0;
             $this->formatOutput($slug, $moved ? 'updated' : 'unchanged', $moved ? 'success' : 'info');
-        }
-
-        // Against the table and not against the files just read, so a category
-        // that was renamed in a file but is still referenced by an article is
-        // caught, and so is one that only exists because an earlier import put
-        // it there. `slugs()` is unfiltered on purpose -- an article may
-        // belong to a group that is written but held back.
-        $unknown = self::orphans($articles, $categoryRepository->slugs());
-
-        if ($unknown !== []) {
-            $this->io->error(implode("\n", $unknown));
-
-            return Command::FAILURE;
         }
 
         foreach ($articles as $slug => $article) {
@@ -219,14 +225,69 @@ class Import extends AbstractCommand
             $this->formatOutput($slug, $moved ? 'updated' : 'unchanged', $moved ? 'success' : 'info');
         }
 
+        try {
+            $removed = $this->prune($articles, $categories, $repository, $categoryRepository, $votes);
+        } catch (Throwable $e) {
+            $this->io->error('Could not remove what the files no longer describe: ' . $e->getMessage());
+
+            return Command::FAILURE;
+        }
+
         $this->io->success(sprintf(
-            '%d categor(y|ies) and %d article(s) imported, %d changed.',
+            '%d categor(y|ies) and %d article(s) imported, %d changed, %d removed.',
             count($categories),
             count($articles),
             $changed,
+            $removed,
         ));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Delete the rows no file describes any more, and say how many.
+     *
+     * This is what makes the files the whole truth rather than a starting
+     * point: without it, deleting an article leaves it on every database that
+     * had already imported it, while a fresh install never has it -- so the
+     * two quietly stop agreeing, and only the fresh one matches the repository.
+     *
+     * Articles before categories, in the order a reader would lose them:
+     * pruning a category first would leave its articles briefly pointing at
+     * nothing. It cannot happen anyway, since the run refuses when an article
+     * names an absent category, but the order costs nothing and means the
+     * table is never in that state even for a moment.
+     *
+     * @param array<string, array<string, mixed>> $articles
+     * @param array<string, array<string, mixed>> $categories
+     */
+    private function prune(
+        array $articles,
+        array $categories,
+        ArticleRepository $repository,
+        ArticleCategoryRepository $categoryRepository,
+        ArticleVoteRepository $votes,
+    ): int {
+        $removed = 0;
+
+        foreach (array_diff($repository->slugs(), array_keys($articles)) as $slug) {
+            // The votes with it. They are keyed on the slug, so a later
+            // article reusing a retired one would otherwise inherit them.
+            $votes->delete($slug);
+            $repository->delete($slug);
+
+            $removed++;
+            $this->formatOutput($slug, 'removed', 'comment');
+        }
+
+        foreach (array_diff($categoryRepository->slugs(), array_keys($categories)) as $slug) {
+            $categoryRepository->delete($slug);
+
+            $removed++;
+            $this->formatOutput($slug, 'removed', 'comment');
+        }
+
+        return $removed;
     }
 
     /**
