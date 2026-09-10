@@ -875,12 +875,51 @@
                     return -1;
                 };
 
-                const ranked = options
-                    .map(o => ({ option: o, rank: rank(o) }))
-                    .filter(m => m.rank >= 0)
-                    // Stable within a rank, so each band stays alphabetical.
-                    .sort((a, b) => a.rank - b.rank)
-                    .map(m => m.option);
+                // Ranked by city rather than row by row, so a city's airports
+                // stay together.
+                //
+                // Row by row they did not. `par` put Paro International in
+                // the middle of Paris: "Paris Orly Airport" matches on its
+                // name and lands in band 0, Charles De Gaulle matches on its
+                // city line and lands in band 2, and Paro sorts between them
+                // -- so Paris was drawn as two halves around an airport in
+                // Bhutan. The nesting made it visible and the grouping is what
+                // fixes it.
+                //
+                // A group takes its best member's band, which is what makes
+                // "lon" answer with London and its three before anything else
+                // that merely contains those letters. Within a group the
+                // original order stands: the select ships a city immediately
+                // above its own airports, and `sort` is stable, so the city
+                // still leads and ties between groups stay alphabetical.
+                const groups = new Map();
+
+                options.forEach(function (option) {
+                    const band = rank(option);
+
+                    if (band < 0) {
+                        return;
+                    }
+
+                    // Keyed on the city, so an airport joins the group its
+                    // city leads even when the two matched for different
+                    // reasons -- which is the whole of the Paro problem.
+                    const key = option.dataset.inCity || option.value;
+                    const group = groups.get(key);
+
+                    if (group === undefined) {
+                        groups.set(key, { band: band, rows: [option] });
+
+                        return;
+                    }
+
+                    group.band = Math.min(group.band, band);
+                    group.rows.push(option);
+                });
+
+                const ranked = [...groups.values()]
+                    .sort((a, b) => a.band - b.band)
+                    .flatMap(group => group.rows);
 
                 // Only the first screenful. Every row costs layout, and a few
                 // hundred of them held the thread long enough that the list

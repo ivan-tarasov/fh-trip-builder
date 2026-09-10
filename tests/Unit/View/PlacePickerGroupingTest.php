@@ -141,6 +141,36 @@ final class PlacePickerGroupingTest extends TestCase
         self::assertStringContainsString('HERE_KM = 100', $repository);
     }
 
+    /**
+     * The list is ranked by city, not row by row.
+     *
+     * Row by row split a city in half. `par` drew "Paris", then Orly -- which
+     * matched on its name -- then Paro International in Bhutan, and only then
+     * Charles De Gaulle, which had matched on its city line and so sorted a
+     * band later. A group takes its best member's band, which keeps a city
+     * whole and still answers "lon" with London first.
+     *
+     * Asserted on the source because there is no JavaScript harness here. It
+     * pins the decision rather than the behaviour: what the list looks like is
+     * a question for a screenshot.
+     */
+    public function testTheListIsRankedByCityAndNotRowByRow(): void
+    {
+        $js = $this->read('frontend/js/global.js');
+
+        self::assertStringContainsString(
+            'group.band = Math.min(group.band, band)',
+            $js,
+            'a city should take its best match\'s band, or its rows scatter across bands',
+        );
+
+        self::assertStringContainsString(
+            '.sort((a, b) => a.band - b.band)',
+            $js,
+            'and the sort should be over groups rather than rows',
+        );
+    }
+
     private function read(string $path): string
     {
         return (string) file_get_contents(Helper::getRootDir() . '/' . $path);
