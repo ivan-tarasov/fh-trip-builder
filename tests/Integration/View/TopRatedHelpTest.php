@@ -96,21 +96,44 @@ final class TopRatedHelpTest extends IntegrationTestCase
     }
 
     /**
-     * An article nobody has voted on keeps its place in the column.
+     * An article nobody has voted on keeps its place in the ordering.
      *
-     * At the bottom rather than missing: the set of articles comes from config
-     * and the votes only order it, so a newly written article is linked from
-     * the footer the day it exists.
+     * Below the voted ones rather than missing: the set comes from the table
+     * and the votes only order it, so a newly written article is eligible for
+     * the column the day it exists.
+     *
+     * Asked for the whole catalogue rather than the footer's five. Those were
+     * the same number until the catalogue grew, and the old assertion -- the
+     * result holds every article -- passed on that coincidence rather than on
+     * anything this test means. What truncation does is the next test's job.
      */
     public function testAnUnvotedArticleSinksButStaysListed(): void
     {
+        $all = $this->repository()->all();
+
         $this->castVotes('refunds', 6, 6);
 
-        $order = array_values(new LayoutData()->topRatedHelp(5));
+        $order = array_values(new LayoutData()->topRatedHelp(count($all)));
 
-        self::assertCount(count($this->repository()->all()), $order);
+        self::assertCount(count($all), $order);
         self::assertSame('/help/refunds', $order[0], 'the only voted article should lead');
         self::assertContains('/help/baggage', $order, 'and an unvoted one is still offered');
+    }
+
+    /**
+     * And the column is a selection, not the catalogue.
+     *
+     * Worth its own test now that the two numbers differ: the footer asks for
+     * a fixed few, and an article outside them is absent from that column
+     * while still being on the hub, in the sitemap and in every aside.
+     */
+    public function testTheColumnStopsAtTheNumberItIsAskedFor(): void
+    {
+        $all = $this->repository()->all();
+
+        self::assertGreaterThan(3, count($all), 'this test needs more articles than it asks for');
+
+        self::assertCount(3, new LayoutData()->topRatedHelp(3));
     }
 
     /**
@@ -147,8 +170,12 @@ final class TopRatedHelpTest extends IntegrationTestCase
             array_keys($this->repository()->all()),
         );
 
+        // The leading slice of it, because the column takes the first few. A
+        // slice rather than the whole list is the assertion that the order is
+        // the repository's *and* that the truncation happens at the end of it
+        // rather than somewhere in the middle.
         self::assertSame(
-            $expected,
+            array_slice($expected, 0, 5),
             array_values(new LayoutData()->topRatedHelp(5)),
             'position is the tiebreaker, and with no votes it is the whole order',
         );

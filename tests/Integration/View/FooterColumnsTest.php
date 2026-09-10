@@ -108,18 +108,27 @@ final class FooterColumnsTest extends IntegrationTestCase
     /**
      * The column uses each article's short name where it has one.
      *
-     * Two of the five titles are wider than this column: "Refunds and
-     * exchanges" measured 170px against the 166 it gets, and "Changing
-     * passenger details" is two lines. Those labels have moved from config to
-     * a nullable column, and this is what says the measurement survived.
+     * Some titles are wider than this column: "Refunds and exchanges" measured
+     * 170px against the 166 it gets, and "Changing passenger details" is two
+     * lines. Those labels live in a nullable column now, and this is what says
+     * the measurement survived.
+     *
+     * Asked of the articles this column actually draws, not of every article
+     * there is. It shows a fixed few of however many exist, so one carrying a
+     * short name that did not make the cut is missing from this markup for a
+     * reason that has nothing to do with its label -- and looking for it there
+     * would fail on the catalogue growing rather than on anything breaking.
      */
     public function testTheHelpColumnUsesTheShortNamesAndNotTheTitles(): void
     {
         $html = $this->footerText();
+        $articles = new ArticleRepository($this->connection())->all();
         $shortened = 0;
 
-        foreach (new ArticleRepository($this->connection())->all() as $article) {
-            if ($article['short'] === null) {
+        foreach ($this->helpSlugsInFooter() as $slug) {
+            $article = $articles[$slug] ?? null;
+
+            if ($article === null || $article['short'] === null) {
                 continue;
             }
 
@@ -137,7 +146,28 @@ final class FooterColumnsTest extends IntegrationTestCase
             );
         }
 
-        self::assertGreaterThan(0, $shortened, 'sanity: some article should have a short name');
+        self::assertGreaterThan(
+            0,
+            $shortened,
+            'sanity: at least one article in the column should carry a short name',
+        );
+    }
+
+    /**
+     * The article slugs the footer actually links, in the order it links them.
+     *
+     * Read off the markup rather than recomputed, so this follows the column
+     * however it is ordered and however many it is told to show.
+     *
+     * @return list<string>
+     */
+    private function helpSlugsInFooter(): array
+    {
+        preg_match_all('#href="/help/([a-z-]+)"#', $this->footer(), $matches);
+
+        self::assertNotEmpty($matches[1], 'the footer should link some articles');
+
+        return array_values(array_unique($matches[1]));
     }
 
     /**
