@@ -108,6 +108,14 @@ jobs:
       - name: Provision database schema + seed data
         run: php noah app:install --no-ansi
 
+      # The help articles have no seeder CSV on purpose, so app:install does
+      # not create them -- see src/Noah/Articles/Import.php for why, and the
+      # README's install steps, which say the same thing to a person. That
+      # makes this the second half of the install rather than an extra, and
+      # the integration tests read the rows it writes.
+      - name: Import the help articles
+        run: php noah articles:import --no-ansi
+
       # The integration tests search real routes on real dates and skip
       # themselves when a route has nothing, so without generated flights the
       # whole integration suite passes by doing nothing. The count is a density
