@@ -208,11 +208,12 @@ class Rates extends AbstractCommand
     }
 
     /**
-     * The few lines that talk to the internet.
+     * The few lines that talk to the internet, and now the only ones in this
+     * tool: Grab\Suppliers was the other, and it is gone.
      *
-     * Not modelled on Grab\Suppliers, which is the only other network code here
-     * and has no timeout, no status check and writes straight into a file
-     * handle. It is commented out of `noah` for a reason.
+     * Which makes what is set below the standard rather than one command's
+     * good manners -- a timeout, a connect timeout, a status check, and a
+     * redirect that is refused rather than followed quietly.
      */
     private function fetch(string $url): string
     {
