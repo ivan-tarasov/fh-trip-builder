@@ -58,6 +58,89 @@ final class PlacePickerGroupingTest extends TestCase
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | The nearby block
+    |--------------------------------------------------------------------------
+    */
+
+    public function testTheTemplateNamesTheAnchorTheBlockWasBuiltFor(): void
+    {
+        $form = $this->read('frontend/template/search/form.html.twig');
+
+        self::assertStringContainsString('data-nearby="{{ near|join(\',\') }}"', $form, 'the codes');
+        self::assertStringContainsString('data-nearby-for="{{ place.value }}"', $form, 'and what they were measured from');
+    }
+
+    /**
+     * And the block hides itself once the field holds something else.
+     *
+     * The rows are computed with the page, so picking another place and
+     * reopening would otherwise offer the neighbours of the old one. A block
+     * that disappears is honest; one that quietly describes the wrong airport
+     * is not, and nothing on screen would say which had happened.
+     */
+    public function testTheComboboxShowsItOnlyWhileTheAnchorIsStillChosen(): void
+    {
+        self::assertStringContainsString(
+            'chosenNow.value === anchored',
+            $this->read('frontend/js/global.js'),
+            'without this the block outlives the value it was built for',
+        );
+    }
+
+    /**
+     * The block and the list share one row builder.
+     *
+     * Two builders is how the nesting rules drift: the block would keep
+     * indenting after the list stopped, or the other way about, and each looks
+     * right on its own.
+     */
+    public function testBothBlocksRenderThroughTheSameRowBuilder(): void
+    {
+        $js = $this->read('frontend/js/global.js');
+
+        self::assertSame(
+            2,
+            substr_count($js, 'rowFor(option,'),
+            'the nearby block and the list should be the only two callers, and both should be there',
+        );
+
+        self::assertSame(
+            1,
+            substr_count($js, 'const rowFor = function'),
+            'one builder',
+        );
+    }
+
+    /**
+     * The block asks for the radius `nearby()` argues for.
+     *
+     * 300km because that is a drive somebody would make, and past it "the
+     * answers stop being drives" -- a widened radius would fill the block for
+     * the 102 airports it is supposed to drop for, with advice nobody would
+     * take. Pinned because it is a decision with a reason, and a constant is
+     * the easiest thing in the file to nudge.
+     */
+    public function testTheBlockKeepsTheRadiusItWasArguedFor(): void
+    {
+        // On the repository, not on a controller: the homepage and the
+        // results page both draw this block, and two copies of a radius is
+        // how the two pages start disagreeing about what "nearby" means.
+        $repository = $this->read('src/Repository/AirportRepository.php');
+
+        self::assertStringContainsString('NEARBY_KM = 300', $repository);
+        self::assertStringContainsString('NEARBY_CITIES = 4', $repository);
+
+        // A tighter question than the block's, and a separate decision:
+        // 300km is a drive to another airport, 100km is a claim about where
+        // somebody is. Measured on a real request -- 13.9km to Montreal,
+        // 164km to Ottawa -- so 100 fills the right city and refuses the
+        // wrong one. Widening it silently is how a filled field starts being
+        // wrong for people it used to leave alone.
+        self::assertStringContainsString('HERE_KM = 100', $repository);
+    }
+
     private function read(string $path): string
     {
         return (string) file_get_contents(Helper::getRootDir() . '/' . $path);

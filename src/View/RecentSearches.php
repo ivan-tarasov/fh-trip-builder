@@ -33,6 +33,19 @@ final readonly class RecentSearches
     private const int MAX_AGE = 60 * 60 * 24 * 365;
 
     /**
+     * Where the last search left from, or null.
+     *
+     * The homepage opens its "From" field on this. No new cookie for it: a
+     * search identity is already stored here and SearchUrl::parse() has
+     * already validated it, so the origin is a field on something proven
+     * rather than a second thing to keep in step.
+     */
+    public static function latestOrigin(Input $cookies): ?string
+    {
+        return (self::read($cookies)[0] ?? null)?->from;
+    }
+
+    /**
      * The stored searches, newest first, with anything unparseable dropped.
      *
      * @return list<SearchUrl>

@@ -773,6 +773,84 @@
                 return option.dataset.short || option.textContent.trim();
             };
 
+            /**
+             * Which cities are in a set of options, so an airport in it can
+             * tell whether it is being shown under its own city.
+             *
+             * The set and not the whole list: typing "trudeau" finds one
+             * airport and no city, and indenting it under a heading that is not
+             * there would be an orphan. Typing "london" finds the city and its
+             * three, which are children. Keyed on the city code rather than on
+             * the name it displays -- a display string is not a relationship,
+             * and matching on one breaks the day two cities share a name.
+             */
+            const citiesIn = function (options) {
+                return new Set(
+                    options.filter(o => o.hasAttribute('data-city')).map(o => o.dataset.inCity),
+                );
+            };
+
+            /**
+             * One row. Shared by the list and by the nearby block above it, so
+             * the city/child/second-line rules are written once.
+             */
+            const rowFor = function (option, citiesShown) {
+                const li = document.createElement('li');
+                li.className = 'combo__option';
+                li.setAttribute('role', 'option');
+                li.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
+                li.dataset.value = option.value;
+
+                // One line where there is only a name, two where the option
+                // carries a place under it. The code sits at the end, which
+                // is where a traveller who knows it looks.
+                if (option.dataset.sub) {
+                    // A span drawn by CSS, not a Font Awesome <i>. Its
+                    // script rewrites every <i> into an <svg>, and with a
+                    // few hundred rows that scan blocks the main thread for
+                    // most of two seconds -- the list took seconds to
+                    // appear. Same trap the breadcrumb separator documents.
+                    const icon = document.createElement('span');
+                    icon.className = option.hasAttribute('data-city')
+                        ? 'combo__icon combo__icon--city'
+                        : 'combo__icon combo__icon--airport';
+                    icon.setAttribute('aria-hidden', 'true');
+
+                    const name = document.createElement('span');
+                    name.className = 'combo__name';
+                    name.textContent = option.textContent.trim();
+
+                    const code = document.createElement('span');
+                    code.className = 'combo__code';
+                    code.textContent = option.value;
+
+                    const underItsCity = !option.hasAttribute('data-city')
+                        && citiesShown.has(option.dataset.inCity);
+
+                    li.classList.add('combo__option--stacked');
+                    if (option.hasAttribute('data-city')) { li.classList.add('combo__option--city'); }
+                    if (underItsCity) { li.classList.add('combo__option--child'); }
+                    li.append(icon, name, code);
+
+                    // The second line is where the airport is, and under
+                    // its own city that is already on screen a line above:
+                    // "London, United Kingdom" three times under "London"
+                    // is the same fact restated. Indented and one line, the
+                    // three read as the city's airports. On its own the row
+                    // keeps it, because then nothing else says where it is.
+                    if (!underItsCity) {
+                        const sub = document.createElement('span');
+                        sub.className = 'combo__sub';
+                        sub.textContent = option.dataset.sub;
+                        li.append(sub);
+                    }
+                } else {
+                    li.textContent = option.textContent.trim();
+                }
+
+                return li;
+            };
+
             const render = function (query) {
                 const needle = query.trim().toLowerCase();
                 // Rank, do not just filter. Alphabetical order alone answered
@@ -811,12 +889,54 @@
                 // scrolling. What is cut is always the worst-ranked.
                 const found = ranked.slice(0, SHOWN_AT_ONCE);
 
-                entries = found.map(option => ({ option }));
-
                 list.innerHTML = '';
+
+                let leading = [];
+
+                // Where else somebody could fly from, when the field is open on
+                // a place. Only with an empty box, for the same reason the
+                // recent searches are: once they are typing they know what they
+                // are looking for.
+                //
+                // Shown only while the chosen option is still the one the server
+                // measured from. The list is rendered with the page, so picking
+                // something else and reopening would otherwise offer the
+                // neighbours of the old place -- and a block that quietly
+                // describes the wrong airport is worse than no block. It
+                // disappears instead.
+                const anchored = select.dataset.nearbyFor;
+                const chosenNow = select.selectedOptions[0];
+
+                if (needle === '' && anchored && chosenNow && chosenNow.value === anchored) {
+                    const wanted = (select.dataset.nearby || '').split(',').filter(Boolean);
+                    const near = wanted
+                        .map(code => options.find(o => o.value === code))
+                        .filter(Boolean);
+
+                    if (near.length > 0) {
+                        const heading = document.createElement('li');
+                        heading.className = 'combo__group';
+                        heading.setAttribute('role', 'presentation');
+                        heading.textContent = 'Airports nearby';
+                        list.appendChild(heading);
+
+                        // The block's own cities, so an airport nests under the
+                        // city beside it here rather than under one further
+                        // down the full list.
+                        const within = citiesIn(near);
+
+                        near.forEach(function (option) {
+                            list.appendChild(rowFor(option, within));
+                        });
+
+                        leading = near.map(option => ({ option }));
+                    }
+                }
 
                 // Only with an empty box: once someone is typing they are
                 // looking for a place, not for last week.
+                let recents = [];
+
                 if (needle === '' && recentTpl) {
                     const block = recentTpl.content.cloneNode(true);
                     const pills = [...block.querySelectorAll('[data-path]')];
@@ -829,12 +949,15 @@
                         block.querySelector('.combo__pills')?.appendChild(moreButton());
                     }
 
-                    const recents = [...block.querySelectorAll('[data-path]')]
+                    recents = [...block.querySelectorAll('[data-path]')]
                         .map(el => ({ recent: { ...el.dataset } }));
 
                     list.appendChild(block);
-                    entries = [...recents, ...entries];
                 }
+
+                // In the order they are in the DOM, so the arrow keys and
+                // aria-activedescendant agree with what is on screen.
+                entries = [...leading, ...recents, ...found.map(option => ({ option }))];
 
                 if (found.length === 0) {
                     const empty = document.createElement('li');
@@ -844,76 +967,10 @@
                     return;
                 }
 
-                // Which cities are on screen, so an airport can tell whether
-                // it is being shown under its own city or on its own.
-                //
-                // It has to be the filtered set and not the whole list: typing
-                // "trudeau" finds one airport and no city, and indenting it
-                // under a heading that is not there would be an orphan. Typing
-                // "london" finds the city and its three, which are children.
-                // Keyed on the city code rather than on the name it displays --
-                // a display string is not a relationship, and matching on one
-                // breaks the day two cities share a name.
-                const citiesShown = new Set(
-                    found.filter(o => o.hasAttribute('data-city')).map(o => o.dataset.inCity),
-                );
-
-                found.forEach(function (option, i) {
-                    const li = document.createElement('li');
-                    li.className = 'combo__option';
-                    li.setAttribute('role', 'option');
-                    li.setAttribute('aria-selected', option.value === select.value ? 'true' : 'false');
-                    li.dataset.value = option.value;
-
-                    // One line where there is only a name, two where the option
-                    // carries a place under it. The code sits at the end, which
-                    // is where a traveller who knows it looks.
-                    if (option.dataset.sub) {
-                        // A span drawn by CSS, not a Font Awesome <i>. Its
-                        // script rewrites every <i> into an <svg>, and with a
-                        // few hundred rows that scan blocks the main thread for
-                        // most of two seconds -- the list took seconds to
-                        // appear. Same trap the breadcrumb separator documents.
-                        const icon = document.createElement('span');
-                        icon.className = option.hasAttribute('data-city')
-                            ? 'combo__icon combo__icon--city'
-                            : 'combo__icon combo__icon--airport';
-                        icon.setAttribute('aria-hidden', 'true');
-
-                        const name = document.createElement('span');
-                        name.className = 'combo__name';
-                        name.textContent = option.textContent.trim();
-
-                        const code = document.createElement('span');
-                        code.className = 'combo__code';
-                        code.textContent = option.value;
-
-                        const underItsCity = !option.hasAttribute('data-city')
-                            && citiesShown.has(option.dataset.inCity);
-
-                        li.classList.add('combo__option--stacked');
-                        if (option.hasAttribute('data-city')) { li.classList.add('combo__option--city'); }
-                        if (underItsCity) { li.classList.add('combo__option--child'); }
-                        li.append(icon, name, code);
-
-                        // The second line is where the airport is, and under
-                        // its own city that is already on screen a line above:
-                        // "London, United Kingdom" three times under "London"
-                        // is the same fact restated. Indented and one line, the
-                        // three read as the city's airports. On its own the row
-                        // keeps it, because then nothing else says where it is.
-                        if (!underItsCity) {
-                            const sub = document.createElement('span');
-                            sub.className = 'combo__sub';
-                            sub.textContent = option.dataset.sub;
-                            li.append(sub);
-                        }
-                    } else {
-                        li.textContent = option.textContent.trim();
-                    }
-
-                    list.appendChild(li);
+                found.forEach(function (option) {
+                    list.appendChild(rowFor(option, citiesIn(found)));
                 });
+
 
                 if (ranked.length > found.length) {
                     const more = document.createElement('li');

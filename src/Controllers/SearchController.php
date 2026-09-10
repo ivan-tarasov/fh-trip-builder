@@ -68,6 +68,7 @@ class SearchController extends AbstractController
 
     private const string DEFAULT_SORT = 'recommended';
 
+
     // Ten is a first screen; after that the visitor is scanning, and more per
     // load means fewer round trips for the same scroll. MAX_SHOWN bounds what a
     // crafted URL can ask us to hydrate at once — ten loads' worth.
@@ -264,6 +265,10 @@ class SearchController extends AbstractController
                 // that produced these results.
                 'cabin' => $cabin,
                 'places' => $places,
+                // Where else somebody could fly from or into, keyed by the code
+                // the field holds. Both fields have one here, which is what
+                // makes this the page the block is worth drawing on.
+                'nearby' => $this->nearbyPlaces($places),
                 'recent' => RecentSearches::rows($this->request->cookies, $places),
                 'depart_city' => $this->data->depart,
                 'arrive_city' => $this->data->arrive,
@@ -1306,6 +1311,44 @@ class SearchController extends AbstractController
         ]);
 
         return $query === [] ? '' : '&' . http_build_query($query);
+    }
+
+    /**
+     * The nearby block's rows for each field, keyed by the code that field
+     * holds.
+     *
+     * Two lookups rather than one: the answer differs per field, and the
+     * template picks by the field's own value. Composed in the repository --
+     * see AirportRepository::nearbyPlaces() -- so neither the distance nor the
+     * city grouping is defined a second time here.
+     *
+     * @param list<array<string, mixed>> $places
+     * @return array<string, list<string>>
+     */
+    private function nearbyPlaces(array $places): array
+    {
+        $repository = new AirportRepository($this->connection());
+        $nearby = [];
+
+        foreach ([$this->get[self::GET_FROM], $this->get[self::GET_TO]] as $code) {
+            $code = (string) $code;
+
+            if ($code === '' || isset($nearby[$code])) {
+                continue;
+            }
+
+            $rows = $repository->nearbyPlaces(
+                $code,
+                AirportRepository::NEARBY_CITIES,
+                AirportRepository::NEARBY_KM,
+            );
+
+            if ($rows !== []) {
+                $nearby[$code] = $rows;
+            }
+        }
+
+        return $nearby;
     }
 
     /**
