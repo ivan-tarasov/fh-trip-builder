@@ -171,6 +171,42 @@ final class PlacePickerGroupingTest extends TestCase
         );
     }
 
+    /**
+     * A city gets a heading on two conditions, and both are load bearing.
+     *
+     * The row must not already name its city -- "San Diego International
+     * Airport" under a heading reading San Diego says it twice -- and a city
+     * must have been typed. Dropping the second condition put a heading
+     * reading "Rio De Janeiro" at the top of a search for `san`, over Santos
+     * Dumont, which had matched on its own name; and it turned `trudeau` into
+     * a headed group when somebody searching for an airport wants the airport
+     * with its city beside it.
+     */
+    public function testACityIsHeadedOnlyWhenItWasTypedAndTheRowDoesNotNameIt(): void
+    {
+        $js = $this->read('frontend/js/global.js');
+
+        self::assertStringContainsString('!namesItsCity(o)', $js, 'the row already saying it');
+        self::assertStringContainsString('rank(o) === 2', $js, 'and a city having been typed');
+    }
+
+    /**
+     * The accent comparison is one definition, shared.
+     *
+     * Eight of the 248 airports carry an accent their city column does not --
+     * `Cancún International` in `Cancun` -- so a plain `includes` answers no
+     * where a reader would say yes. The checkout's autofill wants the same
+     * fold to build an address from a name, and two copies of
+     * `normalize('NFD')` is how the two would drift.
+     */
+    public function testTheAccentFoldIsSharedRatherThanCopied(): void
+    {
+        $js = $this->read('frontend/js/global.js');
+
+        self::assertSame(1, substr_count($js, 'const folded ='), 'one definition');
+        self::assertSame(0, substr_count($js, "normalize('NFD')") - 1, 'and only that one strips accents');
+    }
+
     private function read(string $path): string
     {
         return (string) file_get_contents(Helper::getRootDir() . '/' . $path);
