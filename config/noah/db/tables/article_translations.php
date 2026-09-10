@@ -29,7 +29,16 @@ return [
     |
     | `updated_at` is here and not on `articles` because it dates the words a
     | reader sees. A translation is rewritten without the icon moving, and an
-    | icon changes without the prose being touched.
+    | icon changes without the prose being touched. `articles:import` moves it
+    | only when the body it is importing differs from the body already stored,
+    | so re-running the import does not claim an edit that never happened.
+    |
+    | `body` is markdown, not HTML and not Twig. Not a stylistic choice: the
+    | Twig environment registers `config` as a bare Config::get with no
+    | allow-list, so a body treated as template source could resolve
+    | `{{ config('db.password') }}`. Markdown goes through the converter
+    | /about already runs, which escapes raw HTML rather than passing it
+    | through and drops unsafe link schemes -- see View\Markdown.
     |
     */
 
@@ -84,6 +93,19 @@ return [
             'nullable' => false,
             'auto_inc' => false,
             'comment' => 'One sentence: the meta description, the hub card and the lead',
+        ],
+        [
+            'name' => 'body',
+            'type' => 'text',
+            // No length, so Install emits a bare TEXT -- it only writes the
+            // parens when `length` is truthy. TEXT holds 64KB; the longest
+            // article is about 2KB, and MEDIUMTEXT would be inviting somebody
+            // to paste a book into a help page.
+            'length' => null,
+            'default' => false,
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => 'Markdown. Rendered through the same converter /about uses',
         ],
         [
             'name' => 'updated_at',

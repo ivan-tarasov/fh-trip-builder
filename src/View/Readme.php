@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace TripBuilder\View;
 
-use League\CommonMark\Environment\Environment;
-use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
-use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
-use League\CommonMark\MarkdownConverter;
 use Throwable;
 use TripBuilder\Helper;
 
@@ -138,21 +134,14 @@ final class Readme
         return trim($body) . "\n\n" . implode("\n", $matches[0]) . "\n";
     }
 
+    /**
+     * Shared with the help articles, so the escaping settings cannot drift
+     * apart -- see View\Markdown for what they are and why one of them is a
+     * safety setting rather than a preference.
+     */
     private function convert(string $markdown): string
     {
-        $environment = new Environment([
-            // The file is version-controlled rather than submitted, but escaping
-            // is still the right default: it means a stray tag renders as text
-            // instead of becoming markup in the page.
-            'html_input' => 'escape',
-            'allow_unsafe_links' => false,
-        ]);
-
-        $environment->addExtension(new CommonMarkCoreExtension());
-        // Tables and autolinks, which a README written on GitHub will use.
-        $environment->addExtension(new GithubFlavoredMarkdownExtension());
-
-        return (string) new MarkdownConverter($environment)->convert($markdown);
+        return Markdown::toHtml($markdown);
     }
 
     /**

@@ -356,6 +356,9 @@ final class ArticleHeroTest extends TestCase
             return ['help/view.html.twig', [
                 'breadcrumbs' => Breadcrumbs::trail($path, (string) $articles[$slug]['title']),
                 'article' => $articles[$slug] + ['slug' => $slug],
+                // The prose arrives converted now; this test is about the band
+                // above it, so any well-formed body will do.
+                'article_html' => '<h2>A heading</h2><p>Some prose.</p>',
                 'more' => $more,
                 'verdict' => ['slug' => $slug, 'votes' => 0, 'yes' => 0, 'shown' => false, 'mine' => null],
             ]];

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use RuntimeException;
 use Throwable;
 use TripBuilder\ArticleRating;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\View\Breadcrumbs;
+use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
 use TripBuilder\Voter;
 
@@ -76,7 +78,22 @@ class HelpController extends AbstractController
         $article = $articles[$slug] + ['slug' => $slug];
 
         try {
+            // The prose, converted here rather than in the template, the way
+            // AboutController converts the README: a template that was handed
+            // markdown would have to know how to render it, and the one thing
+            // this app never does is treat stored text as template source.
+            $prose = $this->prose($slug);
+
             echo new TwigRenderer()->renderPage('help/view.html.twig', [
+                'article_html' => $prose['html'],
+                // The date the answer changed, which is the thing a reader
+                // wants to know about a help page and the thing a template
+                // could not tell them while the prose was a file: every
+                // article's file carried the mtime of the last deploy that
+                // touched the checkout. `articles:import` moves this only
+                // where the prose it is loading differs from the prose
+                // already stored, so it dates the words.
+                'updated_at' => $prose['updated_at'],
                 // Home / Help / Baggage. Derived from the path the trail would
                 // end in the slug, which is the address rather than the name --
                 // "ticket-not-received" where the page is called "Ticket did
@@ -97,6 +114,36 @@ class HelpController extends AbstractController
             error_log('Help page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this page. Please try again later.';
         }
+    }
+
+    /**
+     * The article's prose, converted from markdown, and the date it changed.
+     *
+     * Both off one row, because both come from the same read and the date is
+     * only meaningful about the words it arrived with.
+     *
+     * Unguarded on purpose, unlike verdict(). A page with no rating figures is
+     * still the page somebody came for; a page with no prose is not, so this
+     * failing has to reach the catch in show() and answer honestly rather than
+     * render an article that says nothing.
+     *
+     * @return array{html: string, updated_at: string}
+     */
+    private function prose(string $slug): array
+    {
+        $article = new ArticleRepository($this->connection())->find($slug);
+
+        if ($article === null) {
+            // all() said this slug exists, so find() disagreeing means the row
+            // went between two queries in one request -- or the two methods
+            // have drifted apart, which is worth hearing about loudly.
+            throw new RuntimeException(sprintf('No prose stored for `%s`.', $slug));
+        }
+
+        return [
+            'html' => Markdown::toHtml($article['body']),
+            'updated_at' => $article['updated_at'],
+        ];
     }
 
     /**

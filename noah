@@ -11,6 +11,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
+use TripBuilder\Noah\Articles\Import as ArticlesImport;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
@@ -147,6 +148,24 @@ try {
     */
 
     $application->add(new CurrencyRates());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Articles
+    |--------------------------------------------------------------------------
+    |
+    | Loads config/content/help/*.md into the articles tables. There is no
+    | seeder CSV for those tables on purpose: `app:install` refreshes every
+    | column of every seeded row, so a seeded article would be reverted to the
+    | committed copy on every install, and the point of moving articles into
+    | the database was that something could edit them.
+    |
+    | Which means a fresh install does need this, unlike currency:rates. It is
+    | in the README's install steps for that reason, alongside flights:add.
+    |
+    */
+
+    $application->add(new ArticlesImport());
 
     // FIXME: for image grabbing
     // $application->add(new GrabSuppliers());

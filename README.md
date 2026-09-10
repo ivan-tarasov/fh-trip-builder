@@ -120,13 +120,25 @@ Execute the following command to run the installation process:
 php noah install
 ```
 
-### 5. Generate Flights
+### 5. Import Help Articles
+The help articles live in `config/content/help` as markdown and are loaded into
+the database by their own command:
+```bash
+php noah articles:import
+```
+This is a separate step on purpose. `php noah install` seeds every table from a
+CSV and refreshes every column as it goes, so an article that had been edited
+would be reverted on the next install. Keeping articles out of the seeders means
+the install cannot overwrite them, and this command is the only thing that
+writes them.
+
+### 6. Generate Flights
 To generate flight data, use the following command:
 ```bash
 php noah flights:add
 ```
 
-### 6. Access the Project
+### 7. Access the Project
 You're all set! Open your preferred web browser and navigate to the project URL to start using the application.
 
 ## Releases
@@ -220,6 +232,27 @@ php noah install
    php noah flights:cleaning
    ```
    This will delete flights older than today date from the database.
+
+#### Articles Management
+1. `articles:import`: Load the help articles from `config/content/help` into the
+   database.
+   ```bash
+   php noah articles:import
+   ```
+   One file per article: a `key: value` header between `---` fences, then the
+   prose as markdown. The header carries `title`, `icon`, `position` and
+   `summary`, and optionally a `short` label for the footer. A file that is
+   missing a key, repeats one or misspells one is refused by name rather than
+   imported with a gap.
+
+   Re-running it is safe and quiet. Every article is written on every run, but
+   `updated_at` only moves when the title, short label, summary or prose
+   actually differs from the stored copy — so the date on an article is the date
+   its content last changed, not the date somebody last ran the import. To see
+   what would be written without writing it:
+   ```bash
+   php noah articles:import --dry-run
+   ```
 
 #### Currency Management
 1. `currency:rates`: Refresh the conversion rates every price is converted with.
