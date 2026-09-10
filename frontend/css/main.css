@@ -4458,6 +4458,19 @@ body:has(.hero) header#top {
 .combo__option--stacked + .combo__option--stacked { box-shadow: inset 0 1px 0 var(--line); }
 .combo__option--city + .combo__option--stacked { box-shadow: none; }
 
+/* An airport shown under its own city, indented so the group reads as one.
+   Set to the icon column and its gap, so a child's icon lands where the city's
+   *name* starts -- a relationship rather than a number picked by eye, and the
+   same way the help hub indents a group's list under its heading.
+
+   These rows are one line: the second line said where the airport is, and the
+   city a line above has just said it. JS drops it and this only has to place
+   what is left. */
+.combo__option--child {
+  --combo-indent: calc(1rem + .625rem);
+  padding-left: calc(.75rem + var(--combo-indent));
+}
+
 /* Masked SVG rather than a Font Awesome <i>. Its script rewrites every <i> it
    finds into an <svg>, and scanning a few hundred rows blocked the main thread
    for most of two seconds -- the dropdown took seconds to open. A mask keeps

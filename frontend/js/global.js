@@ -844,6 +844,20 @@
                     return;
                 }
 
+                // Which cities are on screen, so an airport can tell whether
+                // it is being shown under its own city or on its own.
+                //
+                // It has to be the filtered set and not the whole list: typing
+                // "trudeau" finds one airport and no city, and indenting it
+                // under a heading that is not there would be an orphan. Typing
+                // "london" finds the city and its three, which are children.
+                // Keyed on the city code rather than on the name it displays --
+                // a display string is not a relationship, and matching on one
+                // breaks the day two cities share a name.
+                const citiesShown = new Set(
+                    found.filter(o => o.hasAttribute('data-city')).map(o => o.dataset.inCity),
+                );
+
                 found.forEach(function (option, i) {
                     const li = document.createElement('li');
                     li.className = 'combo__option';
@@ -870,17 +884,30 @@
                         name.className = 'combo__name';
                         name.textContent = option.textContent.trim();
 
-                        const sub = document.createElement('span');
-                        sub.className = 'combo__sub';
-                        sub.textContent = option.dataset.sub;
-
                         const code = document.createElement('span');
                         code.className = 'combo__code';
                         code.textContent = option.value;
 
+                        const underItsCity = !option.hasAttribute('data-city')
+                            && citiesShown.has(option.dataset.inCity);
+
                         li.classList.add('combo__option--stacked');
                         if (option.hasAttribute('data-city')) { li.classList.add('combo__option--city'); }
-                        li.append(icon, name, code, sub);
+                        if (underItsCity) { li.classList.add('combo__option--child'); }
+                        li.append(icon, name, code);
+
+                        // The second line is where the airport is, and under
+                        // its own city that is already on screen a line above:
+                        // "London, United Kingdom" three times under "London"
+                        // is the same fact restated. Indented and one line, the
+                        // three read as the city's airports. On its own the row
+                        // keeps it, because then nothing else says where it is.
+                        if (!underItsCity) {
+                            const sub = document.createElement('span');
+                            sub.className = 'combo__sub';
+                            sub.textContent = option.dataset.sub;
+                            li.append(sub);
+                        }
                     } else {
                         li.textContent = option.textContent.trim();
                     }

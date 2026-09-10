@@ -150,9 +150,9 @@ final readonly class AirportRepository
     {
         $cities = CityRepository::namesSql();
 
-        $sql = 'SELECT code, label, sub, city, is_city FROM ('
+        $sql = 'SELECT code, label, sub, city, city_code, is_city FROM ('
             . ' SELECT a.city_code AS code, cn.name AS label, MIN(c.title) AS sub, cn.name AS city,'
-            . '  1 AS is_city, cn.name AS in_city, 0 AS depth'
+            . '  a.city_code AS city_code, 1 AS is_city, cn.name AS in_city, 0 AS depth'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' JOIN (' . $cities . ') cn ON cn.code = a.city_code'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
@@ -170,7 +170,7 @@ final readonly class AirportRepository
             // it, the airport's title already says Newark, and it is what
             // makes typing "New York" reach it.
             . ' SELECT a.code, a.title, CONCAT(cn.name, \', \', c.title), cn.name,'
-            . '  0, cn.name, 1'
+            . '  a.city_code, 0, cn.name, 1'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' JOIN (' . $cities . ') cn ON cn.code = a.city_code'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'

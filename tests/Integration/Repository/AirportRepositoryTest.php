@@ -158,6 +158,35 @@ final class AirportRepositoryTest extends IntegrationTestCase
     }
 
     /**
+     * Every row says which city it is in, by code.
+     *
+     * The picker indents an airport under its city when both are on screen,
+     * and it decides that by comparing `data-in-city` against the city rows in
+     * the filtered list. Matching on the displayed name would work today --
+     * no two sellable cities share one -- and would break silently the day two
+     * did, so the relationship travels as the code.
+     */
+    public function testEveryPlaceSaysWhichCityItIsIn(): void
+    {
+        $places = $this->repository()->pickable();
+
+        self::assertNotEmpty($places);
+
+        foreach ($places as $place) {
+            self::assertArrayHasKey('city_code', $place, $place['code'] . ' does not say');
+            self::assertNotSame('', (string) $place['city_code'], $place['code'] . ' says nothing');
+
+            if ((int) $place['is_city'] === 1) {
+                self::assertSame(
+                    (string) $place['code'],
+                    (string) $place['city_code'],
+                    'a city is in itself',
+                );
+            }
+        }
+    }
+
+    /**
      * The airports a city row stands for, as the list offers them: everything
      * in the city bar the one whose code *is* the city code, which pickable()
      * drops because picking it already searches the whole city.
