@@ -28,6 +28,13 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
+        // Nothing was written, so there is nothing to tidy -- and a skip
+        // raised from a teardown is a failure rather than a skip. See
+        // IntegrationTestCase::connectionOrNull().
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
         $this->connection()->execute(
             'DELETE FROM currency_rates WHERE code = ?',
             [self::TEST_CODE],

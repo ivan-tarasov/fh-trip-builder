@@ -36,6 +36,13 @@ final class MigrateTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
+        // Nothing was written, so there is nothing to tidy -- and a skip
+        // raised from a teardown is a failure rather than a skip. See
+        // IntegrationTestCase::connectionOrNull().
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
         // Guarded: an early failure can leave the ledger absent, and cleaning up
         // after it should not raise a second, less useful error on the way out.
         if ($this->ledgerExists()) {

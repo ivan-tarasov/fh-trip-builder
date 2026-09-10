@@ -4,10 +4,14 @@
     "license": "proprietary",
     "type": "project",
     "autoload": {
-      "psr-4": {"TripBuilder\\": "src/"}
+        "psr-4": {
+            "TripBuilder\\": "src/"
+        }
     },
     "autoload-dev": {
-      "psr-4": {"TripBuilder\\Tests\\": "tests/"}
+        "psr-4": {
+            "TripBuilder\\Tests\\": "tests/"
+        }
     },
     "require": {
         "php": "^8.4",
@@ -27,6 +31,8 @@
         "lint": "parallel-lint --exclude vendor src tests index.php noah",
         "stan": "phpstan analyse --memory-limit=512M",
         "test": "phpunit",
+        "test:unit": "phpunit --testsuite Unit",
+        "test:integration": "phpunit --testsuite Integration --fail-on-skipped",
         "csfix": "php-cs-fixer fix",
         "cscheck": "php-cs-fixer fix --dry-run --diff",
         "rector": "rector process --dry-run"

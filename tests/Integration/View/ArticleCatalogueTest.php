@@ -68,6 +68,13 @@ final class ArticleCatalogueTest extends IntegrationTestCase
      */
     protected function tearDown(): void
     {
+        // Nothing was written, so there is nothing to tidy -- and a skip
+        // raised from a teardown is a failure rather than a skip. See
+        // IntegrationTestCase::connectionOrNull().
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
         foreach (['article_translations', 'articles'] as $table) {
             foreach ([self::SENTINEL, self::SENTINEL_TWO] as $slug) {
                 $this->connection()->execute('DELETE FROM ' . $table . ' WHERE slug = ?', [$slug]);
@@ -661,8 +668,10 @@ final class ArticleCatalogueTest extends IntegrationTestCase
      */
     private function articlePage(string $slug): string
     {
-        // Started because renderPage() reports how long the page took; see
-        // testTheControllerPutsTheDateOnThePage.
+        // See hub(): the controller finds its own connection, so this asks
+        // for one first to turn a missing database into a skip.
+        $this->connection();
+
         Timer::start();
 
         $controller = new HelpController(
@@ -690,6 +699,13 @@ final class ArticleCatalogueTest extends IntegrationTestCase
      */
     private function hub(): string
     {
+        // Asked for and thrown away, so the test skips rather than explodes
+        // where there is no database. The controller reaches for its own
+        // connection through Connection::fromEnv() and knows nothing about
+        // this suite's guard, so without this the page raises a PDOException
+        // instead of the skip every other test here gets.
+        $this->connection();
+
         // Started because renderPage() reports how long the page took; see
         // testTheControllerPutsTheDateOnThePage.
         Timer::start();

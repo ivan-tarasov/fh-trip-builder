@@ -142,6 +142,56 @@ php noah flights:add
 ### 7. Access the Project
 You're all set! Open your preferred web browser and navigate to the project URL to start using the application.
 
+## Tests
+
+```bash
+composer test
+```
+
+Runs both suites. The unit suite needs nothing but PHP — no database, no
+`.env`, nothing installed beyond `composer install` — so on a fresh clone it
+either passes or has found a real defect. There is no third answer, and a test
+is kept out of it if it needs rows.
+
+### The integration tests need a database
+
+There are about a hundred and seventy of them, and they read and write real
+rows: repositories, the installer, the migration ledger, and the pages built
+out of all three. Without a database they skip themselves, and `composer test`
+still reports success — which is fine when you are working on something else
+and misleading when you meant to run them. So there is a second script that
+does not accept a skip for an answer:
+
+```bash
+composer test:integration
+```
+
+That fails if it cannot reach a database, rather than passing with a fifth of
+the suite unrun.
+
+It takes its settings from `.env`, the same ones `php noah install` uses, so if
+the install worked the tests will too. Where your MySQL is somewhere else —
+MAMP's port, a container, a socket you would rather not use — export the
+difference and it wins over `.env`:
+
+```bash
+DB_HOST=127.0.0.1 DB_PORT=8889 DB_SOCKET= composer test:integration
+```
+
+An empty value counts as an answer: `DB_SOCKET=` above is how you say "connect
+over TCP", rather than through the socket `.env` names.
+
+### The rest of the gates
+
+```bash
+composer lint
+composer stan
+composer cscheck
+```
+
+A syntax check across every file, static analysis, and the coding standard.
+`composer csfix` writes the standard's fixes rather than reporting them.
+
 ## Releases
 
 Merging a pull request into `develop` tags a release automatically

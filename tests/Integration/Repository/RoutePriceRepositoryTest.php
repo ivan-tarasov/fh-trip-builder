@@ -50,6 +50,13 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
      */
     protected function tearDown(): void
     {
+        // Nothing was written, so there is nothing to tidy -- and a skip
+        // raised from a teardown is a failure rather than a skip. See
+        // IntegrationTestCase::connectionOrNull().
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
         foreach ([[self::FROM, self::TO], ['ZZZ', 'ZZY'], ['LON', 'NYC'], ['LHR', 'JFK']] as [$from, $to]) {
             $this->forget($from, $to);
         }

@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace TripBuilder\Tests\Unit\Controllers;
+namespace TripBuilder\Tests\Integration\Controllers;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
 use Throwable;
 use TripBuilder\Config;
 use TripBuilder\Controllers\SearchController;
@@ -13,6 +12,7 @@ use TripBuilder\Http\Input;
 use TripBuilder\Http\Request;
 use TripBuilder\Routes;
 use TripBuilder\SearchUrl;
+use TripBuilder\Tests\Integration\IntegrationTestCase;
 use TripBuilder\Timer;
 
 /**
@@ -30,7 +30,7 @@ use TripBuilder\Timer;
  * bug was never in the 404 itself -- it was in nothing reaching for one. The
  * guard sits ahead of any database work, so this costs a config load.
  */
-final class NotFoundAnswerTest extends TestCase
+final class NotFoundAnswerTest extends IntegrationTestCase
 {
     protected function setUp(): void
     {
@@ -111,6 +111,13 @@ final class NotFoundAnswerTest extends TestCase
     private function answer(string $path, array $query = []): array
     {
         http_response_code(200);
+
+        // Asked for and thrown away. The controller finds its own connection
+        // through Connection::fromEnv() and the page it renders reads rows for
+        // the footer, so without a database this failed with the searching
+        // error instead of the 404 page -- and it failed rather than skipped,
+        // which is what kept it looking like a real defect on a fresh clone.
+        $this->connection();
 
         $controller = new SearchController(
             new Request(new Input($query), new Input(), new Input(), uri: $path),

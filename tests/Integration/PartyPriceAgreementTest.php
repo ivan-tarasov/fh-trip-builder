@@ -64,6 +64,13 @@ final class PartyPriceAgreementTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
+        // Nothing was written, so there is nothing to tidy -- and a skip
+        // raised from a teardown is a failure rather than a skip. See
+        // IntegrationTestCase::connectionOrNull().
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
         if ($this->fixtures !== []) {
             $placeholders = implode(', ', array_fill(0, count($this->fixtures), '?'));
             $this->connection()->execute("DELETE FROM flights WHERE id IN ($placeholders)", $this->fixtures);

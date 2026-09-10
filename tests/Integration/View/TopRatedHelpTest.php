@@ -39,6 +39,13 @@ final class TopRatedHelpTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
+        // Nothing was written, so there is nothing to tidy -- and a skip
+        // raised from a teardown is a failure rather than a skip. See
+        // IntegrationTestCase::connectionOrNull().
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
         $this->connection()->execute(
             'DELETE FROM article_votes WHERE voter LIKE ?',
             [self::VOTER_PREFIX . '%'],
