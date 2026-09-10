@@ -128,26 +128,51 @@ final readonly class AirportRepository
      * (which resolveAirportCodes() expands to all three) sits with the three it
      * expands to rather than somewhere else alphabetically.
      *
+     * One city code is one city, and the name comes from
+     * CityRepository::namesSql() rather than from each airport's own `city`
+     * column. This used to group by the code *and* the name, which split any
+     * code whose airports disagreed -- NYC, where EWR says "Newark" and JFK
+     * and LGA say "New York". The list then offered two airports under New
+     * York while picking it searched three, since resolveAirportCodes() matches
+     * `code = ? OR city_code = ?`; and EWR could not be found by typing "New
+     * York" at all, which the ranking in global.js says is exactly wrong --
+     * "an airport is looked up by its city at least as often as by its own
+     * name, and 'Montreal' must find Trudeau".
+     *
+     * Joining that derived table is the idiom the search SQL already uses, and
+     * it means the city's name, the sort key and each airport's sub line come
+     * from one definition instead of three. `/city/new-york-nyc` is the same
+     * name, because it is the same source.
+     *
      * @return list<array<string, mixed>>
      */
     public function pickable(): array
     {
+        $cities = CityRepository::namesSql();
+
         $sql = 'SELECT code, label, sub, city, is_city FROM ('
-            . ' SELECT a.city_code AS code, a.city AS label, c.title AS sub, a.city AS city,'
-            . '  1 AS is_city, a.city AS in_city, 0 AS depth'
+            . ' SELECT a.city_code AS code, cn.name AS label, MIN(c.title) AS sub, cn.name AS city,'
+            . '  1 AS is_city, cn.name AS in_city, 0 AS depth'
             . ' FROM ' . Table::Airports->value . ' a'
+            . ' JOIN (' . $cities . ') cn ON cn.code = a.city_code'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
             . ' WHERE a.enabled = 1 AND a.is_major = 1'
-            . ' GROUP BY a.city_code, a.city, c.title'
+            . ' GROUP BY a.city_code, cn.name'
             // Only where it means something. A city with one airport shares that
             // airport's code, so the row would be a second way to pick the same
             // place -- and two options carrying one value is a list that looks
             // like it offers a choice it does not.
             . ' HAVING COUNT(*) > 1'
             . ' UNION ALL'
-            . ' SELECT a.code, a.title, CONCAT(a.city, \', \', c.title), a.city,'
-            . '  0, a.city, 1'
+            // The sub line and the sort key are the city's name, not the
+            // airport's own municipality: "Newark Liberty International --
+            // New York, United States" is how every flight search presents
+            // it, the airport's title already says Newark, and it is what
+            // makes typing "New York" reach it.
+            . ' SELECT a.code, a.title, CONCAT(cn.name, \', \', c.title), cn.name,'
+            . '  0, cn.name, 1'
             . ' FROM ' . Table::Airports->value . ' a'
+            . ' JOIN (' . $cities . ') cn ON cn.code = a.city_code'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON a.country_code = c.code'
             . ' WHERE a.enabled = 1 AND a.is_major = 1'
             // In a multi-airport city, one airport often carries the city's own
