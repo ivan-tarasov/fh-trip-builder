@@ -1,6 +1,19 @@
 {% import 'partials/money.html.twig' as money %}
 {% set row_id = (flight.outbound_ids|merge(flight.return_ids))|join('-') %}
 
+{# What a save is keyed by. Carries the cabin, because the same legs in another
+   cabin are another flight at another price -- two saves, two cards.
+
+   Economy is left off, so the key stays `12-34`. It is the default the rest of
+   the app already omits -- SearchController writes no `class=economy` into any
+   URL -- and it keeps every key written before this meaning exactly what it
+   always meant, with no cookie to migrate.
+
+   Its own variable, and not folded into `row_id`: that is also the collapse
+   panel's DOM id, and a colon in `#details-…` opens a pseudo-class rather than
+   matching, so the details would quietly stop opening. #}
+{% set flight_key = cabin is defined and cabin.value != 'economy' ? row_id ~ ':' ~ cabin.code : row_id %}
+
 {# Badges sit above the card and overlap it, so they read as a label on it.
    The "currently chosen" marker joins them, because it is the same kind of
    statement about the row and belongs in the same place -- and it comes first,
@@ -72,7 +85,7 @@
 
                 <div class="d-flex align-items-center gap-2">
                     <button type="button" class="icon-btn js-like" aria-label="Save this flight"
-                            data-flight-key="{{ row_id }}" data-toggle="tooltip" data-placement="top" title="Save this flight">
+                            data-flight-key="{{ flight_key }}" data-toggle="tooltip" data-placement="top" title="Save this flight">
                         <i class="far fa-heart icon-idle"></i>
                         <i class="fas fa-heart icon-done"></i>
                     </button>
