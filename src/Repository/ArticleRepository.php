@@ -54,12 +54,12 @@ final readonly class ArticleRepository
      * titles. Putting the body in all() would pull ten kilobytes of markdown
      * into the footer of every page on the site.
      *
-     * @return array{title: string, short: ?string, icon: string, summary: string, body: string, updated_at: string}|null
+     * @return array{title: string, short: ?string, icon: string, category: string, summary: string, body: string, updated_at: string}|null
      */
     public function find(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
     {
         $row = $this->connection->fetchOne(
-            'SELECT a.icon, t.title, t.short, t.summary, t.body, t.updated_at'
+            'SELECT a.icon, a.category, t.title, t.short, t.summary, t.body, t.updated_at'
             . ' FROM ' . Table::Articles->value . ' a'
             . ' JOIN ' . Table::ArticleTranslations->value . ' t ON t.slug = a.slug'
             . ' WHERE a.slug = ? AND a.enabled = 1 AND t.locale = ?',
@@ -74,6 +74,7 @@ final readonly class ArticleRepository
             'title' => (string) $row['title'],
             'short' => $row['short'] === null ? null : (string) $row['short'],
             'icon' => (string) $row['icon'],
+            'category' => (string) $row['category'],
             'summary' => (string) $row['summary'],
             'body' => (string) $row['body'],
             'updated_at' => (string) $row['updated_at'],
@@ -94,7 +95,7 @@ final readonly class ArticleRepository
      * `<=>` and not `=`, because `short` is nullable and NULL = NULL is not
      * true.
      *
-     * @param array{icon: string, position: int} $article
+     * @param array{category: string, icon: string, position: int} $article
      * @param array{title: string, short: ?string, summary: string, body: string} $translation
      * @return bool whether the stored words differ from the ones passed in
      */
@@ -123,10 +124,12 @@ final readonly class ArticleRepository
         ];
 
         $this->connection->execute(
-            'INSERT INTO ' . Table::Articles->value . ' (slug, icon, position, enabled, created_at)'
-            . ' VALUES (?, ?, ?, 1, NOW())'
-            . ' ON DUPLICATE KEY UPDATE icon = VALUES(icon), position = VALUES(position)',
-            [$slug, $article['icon'], $article['position']],
+            'INSERT INTO ' . Table::Articles->value
+            . ' (slug, category, icon, position, enabled, created_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW())'
+            . ' ON DUPLICATE KEY UPDATE category = VALUES(category),'
+            . '  icon = VALUES(icon), position = VALUES(position)',
+            [$slug, $article['category'], $article['icon'], $article['position']],
         );
 
         $this->connection->execute(
@@ -168,18 +171,32 @@ final readonly class ArticleRepository
      * footer column falls back on when nobody has voted -- which, with no
      * seeder for article_votes, is every fresh install.
      *
-     * @return array<string, array{title: string, short: ?string, icon: string, summary: string}>
+     * @return array<string, array{title: string, short: ?string, icon: string, category: string, summary: string}>
      */
     public function all(string $locale = self::DEFAULT_LOCALE): array
     {
         $rows = $this->connection->fetchAll(
-            'SELECT a.slug, a.icon, t.title, t.short, t.summary'
+            'SELECT a.slug, a.icon, a.category, t.title, t.short, t.summary'
             . ' FROM ' . Table::Articles->value . ' a'
             . ' JOIN ' . Table::ArticleTranslations->value . ' t ON t.slug = a.slug'
+            // LEFT, and deliberately. There is no foreign key here -- this
+            // schema has none anywhere -- so `category` can name a row that
+            // does not exist, and an inner join would answer that by dropping
+            // the article out of the footer, the sitemap and every aside at
+            // once. Losing a page silently is a worse failure than showing it
+            // in an odd place, so an orphan stays in this list and the hub,
+            // which is the one reader that must group, is where it is handled.
+            // The importer refuses an unknown category, so this can only come
+            // from something editing the table directly.
+            . ' LEFT JOIN ' . Table::ArticleCategories->value . ' c ON c.slug = a.category'
             . ' WHERE a.enabled = 1 AND t.locale = ?'
-            // Slug second so two articles sharing a position still come back in
-            // a fixed order, rather than whichever the storage engine offers.
-            . ' ORDER BY a.position ASC, a.slug ASC',
+            // Category first, so a caller can walk this once and get its
+            // groups in order without sorting again. `IS NULL` ahead of it
+            // because MySQL sorts NULL first ascending, which would put an
+            // orphan at the top of the footer column. Slug last so two
+            // articles sharing a position still come back in a fixed order
+            // rather than whichever the storage engine offers.
+            . ' ORDER BY c.position IS NULL ASC, c.position ASC, a.position ASC, a.slug ASC',
             [$locale],
         );
 
@@ -192,6 +209,7 @@ final readonly class ArticleRepository
                 // three articles whose titles fit into empty labels.
                 'short' => $row['short'] === null ? null : (string) $row['short'],
                 'icon' => (string) $row['icon'],
+                'category' => (string) $row['category'],
                 'summary' => (string) $row['summary'],
             ];
         }

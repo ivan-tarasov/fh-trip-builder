@@ -1,8 +1,9 @@
 ---
 title: Refunds and exchanges
 short: Refunds & exchanges
+category: changes-and-refunds
 icon: fa-rotate-left
-position: 20
+position: 10
 summary: Whether a ticket can be changed or given back is fixed by the fare when it is bought, not decided afterwards.
 ---
 

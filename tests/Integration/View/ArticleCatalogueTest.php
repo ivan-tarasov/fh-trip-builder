@@ -10,6 +10,7 @@ use TripBuilder\Controllers\HelpController;
 use TripBuilder\Http\Input;
 use TripBuilder\Http\Request;
 use TripBuilder\Party;
+use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Routes;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -282,6 +283,60 @@ final class ArticleCatalogueTest extends IntegrationTestCase
 
 
     /**
+     * Articles come back grouped by category, in category order.
+     *
+     * The contract `all()` gained with categories, and the one every caller
+     * quietly leans on: the hub walks this list once and starts a new card
+     * whenever the category changes, so a list that returned two runs of the
+     * same category would draw that category twice. The footer column and the
+     * sitemap take their order from here too.
+     */
+    public function testArticlesComeBackGroupedByCategoryInOrder(): void
+    {
+        $categories = array_keys(new ArticleCategoryRepository($this->connection())->all());
+
+        $runs = [];
+
+        foreach (new ArticleRepository($this->connection())->all() as $article) {
+            if ($runs === [] || end($runs) !== $article['category']) {
+                $runs[] = (string) $article['category'];
+            }
+        }
+
+        self::assertNotEmpty($runs, 'no articles to group');
+
+        // Compared against the categories that actually have articles, so a
+        // category written with none in it yet does not fail this.
+        self::assertSame(
+            array_values(array_intersect($categories, $runs)),
+            $runs,
+            'a category appears more than once, or out of order',
+        );
+    }
+
+    /**
+     * An article whose category is missing is kept, and sorted last.
+     *
+     * The deliberate consequence of the LEFT JOIN in `all()`. There is no
+     * foreign key on `category` -- this schema has none anywhere -- so a row
+     * can point at nothing, and an inner join would answer that by dropping
+     * the article out of the footer, the sitemap and every aside at once.
+     * Showing it in an odd place is the better failure, and "last" rather than
+     * "first" is the whole reason the ordering leads with `IS NULL`: MySQL
+     * sorts NULL first ascending, which would have put an orphan at the top of
+     * the footer column.
+     */
+    public function testAnArticleWithNoSuchCategoryIsKeptAndSortsLast(): void
+    {
+        $this->insertSentinel('no-such-category-exists');
+
+        $all = new ArticleRepository($this->connection())->all();
+
+        self::assertArrayHasKey(self::SENTINEL, $all, 'an orphan should not vanish from the site');
+        self::assertSame(self::SENTINEL, array_key_last($all), 'an orphan should sort last, not first');
+    }
+
+    /**
      * Every article page says when it last changed.
      *
      * The plainest half of it: the line is only on the page while the
@@ -312,22 +367,7 @@ final class ArticleCatalogueTest extends IntegrationTestCase
      */
     public function testTheDateShownIsTheDateStored(): void
     {
-        $this->connection()->execute(
-            'INSERT INTO articles (slug, icon, position, enabled, created_at) VALUES (?, ?, ?, 1, NOW())',
-            [self::SENTINEL, 'fa-clock', 900],
-        );
-        $this->connection()->execute(
-            'INSERT INTO article_translations (slug, locale, title, short, summary, body, updated_at)'
-            . ' VALUES (?, ?, ?, NULL, ?, ?, ?)',
-            [
-                self::SENTINEL,
-                ArticleRepository::DEFAULT_LOCALE,
-                'When this changed',
-                'A row the test suite inserts and removes again.',
-                "## Heading\n\nOne paragraph.",
-                self::SENTINEL_DATE,
-            ],
-        );
+        $this->insertSentinel();
 
         preg_match('/Last updated ([^.<]+)\./', $this->page(self::SENTINEL), $shown);
 
@@ -376,7 +416,39 @@ final class ArticleCatalogueTest extends IntegrationTestCase
         self::assertStringContainsString('Last updated', $html, $slug . ' arrived with no date on it');
     }
 
-    /** @return array<string, array{title: string, short: ?string, icon: string, summary: string}> */
+    /**
+     * One throwaway article, removed again in tearDown().
+     *
+     * `category` is NOT NULL with no default, so an insert that skipped it
+     * would fail outright. The default is read from the table rather than
+     * written out here, so renaming a category does not break this.
+     */
+    private function insertSentinel(?string $category = null): void
+    {
+        $category ??= (string) array_key_first(new ArticleCategoryRepository($this->connection())->all());
+
+        self::assertNotSame('', $category, 'there should be a category to file the sentinel under');
+
+        $this->connection()->execute(
+            'INSERT INTO articles (slug, category, icon, position, enabled, created_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW())',
+            [self::SENTINEL, $category, 'fa-clock', 900],
+        );
+        $this->connection()->execute(
+            'INSERT INTO article_translations (slug, locale, title, short, summary, body, updated_at)'
+            . ' VALUES (?, ?, ?, NULL, ?, ?, ?)',
+            [
+                self::SENTINEL,
+                ArticleRepository::DEFAULT_LOCALE,
+                'When this changed',
+                'A row the test suite inserts and removes again.',
+                "## Heading\n\nOne paragraph.",
+                self::SENTINEL_DATE,
+            ],
+        );
+    }
+
+    /** @return array<string, array{title: string, short: ?string, icon: string, category: string, summary: string}> */
     private function articles(): array
     {
         $articles = new ArticleRepository($this->connection())->all();

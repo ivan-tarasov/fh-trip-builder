@@ -1,7 +1,8 @@
 ---
 title: Baggage
+category: before-you-book
 icon: fa-suitcase-rolling
-position: 10
+position: 20
 summary: What you can bring is set by the fare you pick, and every fare says so in six lines before you pay.
 ---
 
