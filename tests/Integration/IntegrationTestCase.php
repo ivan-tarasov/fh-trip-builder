@@ -24,6 +24,31 @@ abstract class IntegrationTestCase extends TestCase
 
     protected function connection(): Connection
     {
+        $connection = $this->connectionOrNull();
+
+        if ($connection === null) {
+            self::markTestSkipped('No test database available (set DB_DATABASE and DB_SOCKET or DB_HOST).');
+        }
+
+        return $connection;
+    }
+
+    /**
+     * The connection, or null where there is nothing to connect to.
+     *
+     * For setUp and tearDown, and the reason they need their own accessor:
+     * `markTestSkipped` raised from a tearDown is a *failure* in PHPUnit and
+     * not a skip. So a class that tidied up after itself failed where an
+     * otherwise identical class that did not tidy up, skipped -- and which of
+     * the two a class happened to be decided whether a run with no database
+     * reported sixty-four failures or none of them.
+     *
+     * Skipping is the right answer for a test body, which cannot do its job
+     * without rows. It is the wrong answer for a teardown, which has nothing
+     * to do when nothing was written.
+     */
+    protected function connectionOrNull(): ?Connection
+    {
         if (!self::$attempted) {
             self::$attempted = true;
 
@@ -32,10 +57,6 @@ abstract class IntegrationTestCase extends TestCase
             } catch (Throwable) {
                 self::$connection = null;
             }
-        }
-
-        if (self::$connection === null) {
-            self::markTestSkipped('No test database available (set DB_DATABASE and DB_SOCKET or DB_HOST).');
         }
 
         return self::$connection;

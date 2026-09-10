@@ -35,6 +35,13 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
 
     protected function tearDown(): void
     {
+        // Nothing was written, so there is nothing to tidy -- and a skip
+        // raised from a teardown is a failure rather than a skip. See
+        // IntegrationTestCase::connectionOrNull().
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
         $this->connection()->execute('DELETE FROM currency_rates WHERE rate_date = ?', [self::FUTURE]);
         unset($_COOKIE[Currency::COOKIE]);
         Money::forget();
@@ -81,6 +88,11 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
      */
     public function testABookingIgnoresTheCookieEvenWhenTheCookieResolves(): void
     {
+        // Money reads the rates itself, so this asks for a connection only to
+        // turn a missing database into a skip rather than a failed
+        // precondition. See IntegrationTestCase::connectionOrNull().
+        $this->connection();
+
         $_COOKIE[Currency::COOKIE] = 'JPY';
         Money::forget();
 
