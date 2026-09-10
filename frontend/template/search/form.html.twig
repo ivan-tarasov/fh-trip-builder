@@ -50,7 +50,7 @@
                         {{ recent is not empty ? 'data-recent="searchbar-recent"' : '' }} required>
                     <option value="">City or airport</option>
                     {% for row in places|default([]) %}
-                        <option value="{{ row.code }}" data-sub="{{ row.sub }}" data-short="{{ row.city|default(row.label) }}"{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
+                        <option value="{{ row.code }}" data-sub="{{ row.sub }}" data-short="{{ row.city|default(row.label) }}" data-in-city="{{ row.city_code }}"{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
                     {% endfor %}
                 </select>
                 {# Filled by the combobox from whatever the select holds, and

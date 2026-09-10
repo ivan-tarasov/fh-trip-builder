@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\CityRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
 final class AirportRepositoryTest extends IntegrationTestCase
@@ -81,6 +82,13 @@ final class AirportRepositoryTest extends IntegrationTestCase
     {
         // Picking the city searches all of them, so it belongs with them rather
         // than somewhere else alphabetically.
+        //
+        // This used to assert only that a city is followed by *a* non-city, and
+        // that is why it passed while the list was wrong: New York was followed
+        // by JFK, so the check was satisfied, while EWR sat in a group of its
+        // own because its `city` column says "Newark". The property the list
+        // actually needs is the whole set, contiguously -- what the city
+        // expands to is what has to follow it, and nothing else.
         $places = $this->repository()->pickable();
         $cities = array_values(array_filter($places, static fn(array $p): bool => (int) $p['is_city'] === 1));
 
@@ -91,12 +99,112 @@ final class AirportRepositoryTest extends IntegrationTestCase
 
             self::assertIsInt($at);
             self::assertArrayHasKey($at + 1, $places, $city['label'] . ' leads nothing');
+
+            // Walked while the rows still belong to *this* city, not merely
+            // while they are airports. A single-airport city has no city row
+            // of its own, so its airport is a bare row -- and a walk that
+            // stopped only at the next city row swept Barcelona's BCN into
+            // Bangkok's group, which is a bug in the reading and not in the
+            // list. `city` is the group's name for every row in it.
+            $following = [];
+
+            for (
+                $i = $at + 1;
+                isset($places[$i]) && (string) $places[$i]['city'] === (string) $city['label'];
+                $i++
+            ) {
+                if ((int) $places[$i]['is_city'] === 0) {
+                    $following[] = (string) $places[$i]['code'];
+                }
+            }
+
+            sort($following);
+
             self::assertSame(
-                0,
-                (int) $places[$at + 1]['is_city'],
-                $city['label'] . ' is followed by another city rather than its airports',
+                $this->airportsOffered((string) $city['code']),
+                $following,
+                $city['label'] . ' is not followed by exactly the airports it expands to',
             );
         }
+    }
+
+    /**
+     * One city code is one city, named the way the rest of the app names it.
+     *
+     * The picker used to group by the code *and* each airport's own `city`
+     * column, which split any code whose airports disagree -- one does, NYC.
+     * `CityRepository` has always grouped by the code alone over the identical
+     * filter, so the two disagreed about how many cities there are and what
+     * one is called. A picker that labels a place differently from the page it
+     * leads to is two answers to one question.
+     */
+    public function testTheCityNamesAgreeWithTheRestOfTheApp(): void
+    {
+        $canonical = new CityRepository($this->connection())->names();
+
+        $labels = [];
+
+        foreach ($this->repository()->pickable() as $place) {
+            if ((int) $place['is_city'] === 1) {
+                $labels[(string) $place['code']] = (string) $place['label'];
+            }
+        }
+
+        self::assertNotEmpty($labels, 'no multi-airport city in the data');
+
+        foreach ($labels as $code => $label) {
+            self::assertSame($canonical[$code] ?? null, $label, $code . ' is called two different things');
+        }
+    }
+
+    /**
+     * Every row says which city it is in, by code.
+     *
+     * The picker indents an airport under its city when both are on screen,
+     * and it decides that by comparing `data-in-city` against the city rows in
+     * the filtered list. Matching on the displayed name would work today --
+     * no two sellable cities share one -- and would break silently the day two
+     * did, so the relationship travels as the code.
+     */
+    public function testEveryPlaceSaysWhichCityItIsIn(): void
+    {
+        $places = $this->repository()->pickable();
+
+        self::assertNotEmpty($places);
+
+        foreach ($places as $place) {
+            self::assertArrayHasKey('city_code', $place, $place['code'] . ' does not say');
+            self::assertNotSame('', (string) $place['city_code'], $place['code'] . ' says nothing');
+
+            if ((int) $place['is_city'] === 1) {
+                self::assertSame(
+                    (string) $place['code'],
+                    (string) $place['city_code'],
+                    'a city is in itself',
+                );
+            }
+        }
+    }
+
+    /**
+     * The airports a city row stands for, as the list offers them: everything
+     * in the city bar the one whose code *is* the city code, which pickable()
+     * drops because picking it already searches the whole city.
+     *
+     * @return list<string>
+     */
+    private function airportsOffered(string $cityCode): array
+    {
+        $codes = array_column(
+            $this->connection()->fetchAll(
+                'SELECT code FROM airports WHERE city_code = ? AND enabled = 1 AND is_major = 1'
+                . ' AND code <> city_code ORDER BY code',
+                [$cityCode],
+            ),
+            'code',
+        );
+
+        return array_map(strval(...), $codes);
     }
 
     private function repository(): AirportRepository
