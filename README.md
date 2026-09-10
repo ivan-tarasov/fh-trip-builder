@@ -121,8 +121,9 @@ php noah install
 ```
 
 ### 5. Import Help Articles
-The help articles live in `config/content/help` as markdown and are loaded into
-the database by their own command:
+The help articles and the categories grouping them live in
+`config/content/help` as markdown, and are loaded into the database by their
+own command:
 ```bash
 php noah articles:import
 ```
@@ -234,16 +235,31 @@ php noah install
    This will delete flights older than today date from the database.
 
 #### Articles Management
-1. `articles:import`: Load the help articles from `config/content/help` into the
-   database.
+1. `articles:import`: Load the help categories and articles from
+   `config/content/help` into the database.
    ```bash
    php noah articles:import
    ```
-   One file per article: a `key: value` header between `---` fences, then the
-   prose as markdown. The header carries `title`, `icon`, `position` and
-   `summary`, and optionally a `short` label for the footer. A file that is
-   missing a key, repeats one or misspells one is refused by name rather than
-   imported with a gap.
+   One file per article, and one per category in the `categories` subdirectory.
+   Both are a `key: value` header between `---` fences followed by markdown,
+   and both are refused by name — naming the file and the key — if a key is
+   missing, repeated or misspelled, rather than imported with a gap.
+
+   An **article** header carries `title`, `category`, `icon`, `position` and
+   `summary`, and optionally a `short` label for the footer, where some titles
+   are wider than the column. Its markdown is the article.
+
+   A **category** header carries `title`, `icon` and `position`, and optionally
+   an `accent`, which names a palette colour rather than being one: `blue`,
+   `green`, `orange`, `violet` or `pink`. Anything else is not an error — it
+   draws the default blue, because a colour is not worth failing an import
+   over. It has no `summary` key: its markdown is the one sentence shown under
+   the heading on the hub, so a category with nothing to say is refused the way
+   an article with no prose is.
+
+   `position` orders articles within their category, and categories against
+   each other. An article naming a category that does not exist stops the
+   import rather than being filed somewhere plausible.
 
    Re-running it is safe and quiet. Every article is written on every run, but
    `updated_at` only moves when the title, short label, summary or prose
