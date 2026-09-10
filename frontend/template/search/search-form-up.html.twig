@@ -15,7 +15,8 @@
             'return_date': return_date,
             'depart_flex': depart_flex,
             'return_flex': return_flex,
-            'cabin_value': cabin.value|default('economy')
+            'cabin_value': cabin.value|default('economy'),
+            'nearby': nearby|default({})
         } only %}
     </div>
 </div>

@@ -45,8 +45,16 @@
         ] %}
             <div class="searchbar__field searchbar__field--place">
                 <label class="searchbar__label" for="{{ place.id }}">{{ place.label }}</label>
+                {# Where else somebody could fly from this one, as codes: the
+                   combobox renders them through the row builder it already
+                   has, so the city and airport rows are drawn one way. Named
+                   with the code it was measured from, so the block can hide
+                   itself once the field holds something else -- see the note in
+                   global.js. #}
+                {% set near = nearby[place.value]|default([]) %}
                 <select class="searchbar__input" id="{{ place.id }}" name="{{ place.name }}"
                         data-searchable data-empty="No airport matches that."
+                        {% if near is not empty %}data-nearby="{{ near|join(',') }}" data-nearby-for="{{ place.value }}"{% endif %}
                         {{ recent is not empty ? 'data-recent="searchbar-recent"' : '' }} required>
                     <option value="">City or airport</option>
                     {% for row in places|default([]) %}

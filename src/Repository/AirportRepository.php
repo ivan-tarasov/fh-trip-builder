@@ -26,6 +26,13 @@ final readonly class AirportRepository
     private const string ONLY_SELLABLE = ' a.enabled = 1 AND a.is_major = 1';
 
     /**
+     * How many neighbours to ask for per city wanted. New York's three
+     * nearest airports are all its own, so asking for one per city would
+     * return a block of one group.
+     */
+    private const int NEARBY_PER_CITY = 4;
+
+    /**
      * The tables COLUMNS is read from.
      *
      * A method rather than a constant because the city-name subquery is built,
@@ -264,6 +271,124 @@ final readonly class AirportRepository
             . ' WHERE' . self::ONLY_SELLABLE . ' AND a.code = ?',
             [strtoupper($code)],
         );
+    }
+
+    /**
+     * What to offer at the top of the picker when it is opened on a place:
+     * the nearby cities with their own airports under them, nearest first.
+     *
+     * Codes in list order, and nothing else. The labels, the country lines and
+     * the icons are already on the options the select ships, so the combobox
+     * renders these through the row builder it already has -- putting the row
+     * markup in Twig as well would keep the city/child/sub logic in two
+     * places.
+     *
+     * Composed from pickable() and nearby() rather than from a query of its
+     * own, so neither the city grouping nor the distance gains a second
+     * definition. A haversine in JavaScript would have been a third, after the
+     * `ST_Distance_Sphere` this uses and the one in GreatCircle.
+     *
+     * The anchor is resolved to an airport first. It can arrive as a city code
+     * -- somebody picks "New York" -- and nearby() measures from a row in the
+     * airports table, so a city anchors on the first airport the list offers
+     * for it. Airports of one city are a few kilometres apart, so which one is
+     * immaterial to who the neighbours are.
+     *
+     * Empty where there is nothing within reach, which nearby() says is 102 of
+     * the 254 airports. The block is meant to drop for those rather than reach
+     * further to fill itself.
+     *
+     * @return list<string>
+     */
+    public function nearbyPlaces(string $code, int $cities, int $maxKm): array
+    {
+        $code = strtoupper($code);
+        $places = $this->pickable();
+
+        $airportsOf = [];
+        $cityRow = [];
+
+        foreach ($places as $place) {
+            if ((int) $place['is_city'] === 1) {
+                $cityRow[(string) $place['city_code']] = (string) $place['code'];
+
+                continue;
+            }
+
+            $airportsOf[(string) $place['city_code']][] = (string) $place['code'];
+        }
+
+        $home = null;
+
+        foreach ($places as $place) {
+            if ((string) $place['code'] === $code) {
+                $home = (string) $place['city_code'];
+
+                break;
+            }
+        }
+
+        if ($home === null) {
+            return [];
+        }
+
+        // A city code anchors on the first airport offered for it.
+        $from = in_array($code, $airportsOf[$home] ?? [], true)
+            ? $code
+            : ($airportsOf[$home][0] ?? null);
+
+        if ($from === null) {
+            return [];
+        }
+
+        // Enough neighbours to fill `$cities` groups even where one city holds
+        // several of them -- New York's first three are all its own.
+        $neighbours = $this->nearby($from, $cities * self::NEARBY_PER_CITY, $maxKm);
+
+        if ($neighbours === []) {
+            return [];
+        }
+
+        // The city the picker was opened on comes first: its own other
+        // airports are the most useful answer to "what else is near here".
+        $order = [$home];
+
+        foreach ($neighbours as $neighbour) {
+            $city = (string) $neighbour['city_code'];
+
+            if (!in_array($city, $order, true)) {
+                $order[] = $city;
+            }
+        }
+
+        $codes = [];
+
+        foreach (array_slice($order, 0, $cities) as $city) {
+            $group = $airportsOf[$city] ?? [];
+
+            // A city row only exists where the city holds more than one, which
+            // is the same rule pickable() draws it by.
+            if (isset($cityRow[$city])) {
+                $codes[] = $cityRow[$city];
+            }
+
+            foreach ($group as $airport) {
+                $codes[] = $airport;
+            }
+        }
+
+        // No guard on the size, because there is nothing left to guard. This
+        // had one for "at least two groups", which threw the block away for
+        // the sixteen airports whose only neighbours are their own city's --
+        // Chicago's O'Hare, Beijing's two, Bangkok's -- and those are the most
+        // useful answers it has: offering Midway to somebody on O'Hare is what
+        // nearby()'s own note calls the point. Narrowed to "at least two rows",
+        // it stopped being reachable: a block always holds the home group, and
+        // any neighbour adds a row either to that group or to another one.
+        // Counted across all 266 anchors, the blocks come out at 0, 2, 3, 4, 5,
+        // 6, 7 and 9 rows -- never 1. The empty case is nearby()'s own, 102
+        // airports with nothing within reach.
+        return $codes;
     }
 
     /**
