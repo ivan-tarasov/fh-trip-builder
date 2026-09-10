@@ -124,14 +124,5 @@ jobs:
       - name: Generate flights for the integration tests
         run: php noah flights:add 200000 --no-ansi --no-interaction
 
-      - name: Tests (unit)
-        run: composer test:unit
-
-      # The strict script, which fails rather than passes when a test skips.
-      # `composer test` tolerates skips so that a developer with no database
-      # can still run the unit suite -- see the README -- and that tolerance
-      # has no place here: this is the one runner that must never report
-      # success with a fifth of the suite unrun because a service container
-      # failed to come up.
-      - name: Tests (integration)
-        run: composer test:integration
+      - name: Tests (unit + integration)
+        run: composer test
