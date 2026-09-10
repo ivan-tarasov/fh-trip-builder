@@ -2,7 +2,7 @@
 title: Flying with children
 category: before-you-book
 icon: fa-child
-position: 40
+position: 50
 summary: Whether a child gets a seat of their own decides both what they pay and how many of you can travel together.
 ---
 

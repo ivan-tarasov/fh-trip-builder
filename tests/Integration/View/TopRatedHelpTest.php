@@ -207,12 +207,18 @@ final class TopRatedHelpTest extends IntegrationTestCase
     public function testADisabledArticleIsNotOffered(): void
     {
         $connection = $this->connection();
-        $before = count(new LayoutData()->topRatedHelp(9));
+
+        // The whole catalogue as the limit, not a number that happened to be
+        // its size when this was written. A literal 9 kept truncating once
+        // there were twelve articles, so the count could not drop and the
+        // assertion below could not fail.
+        $limit = count($this->repository()->all());
+        $before = count(new LayoutData()->topRatedHelp($limit));
 
         $connection->execute('UPDATE articles SET enabled = 0 WHERE slug = ?', ['refunds']);
 
         try {
-            $links = new LayoutData()->topRatedHelp(9);
+            $links = new LayoutData()->topRatedHelp($limit);
 
             self::assertCount($before - 1, $links, 'the disabled article should be gone');
             self::assertNotContains('/help/refunds', array_values($links));
@@ -222,7 +228,7 @@ final class TopRatedHelpTest extends IntegrationTestCase
 
         self::assertContains(
             '/help/refunds',
-            array_values(new LayoutData()->topRatedHelp(9)),
+            array_values(new LayoutData()->topRatedHelp($limit)),
             'and back once it is enabled again',
         );
     }

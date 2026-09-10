@@ -3,7 +3,7 @@ title: Changing passenger details
 short: Passenger details
 category: changes-and-refunds
 icon: fa-passport
-position: 20
+position: 30
 summary: Names are checked against the document you travel on, so checkout is the moment to get them right.
 ---
 

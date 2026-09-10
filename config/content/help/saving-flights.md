@@ -24,9 +24,11 @@ would be worse than no shortlist, because you would only find out at checkout.
 
 ## It belongs to this browser
 
-The list lives in this browser, like your currency choice and your bookings.
-There are no accounts here, so it does not follow you to a phone, and clearing
-your browsing data clears it. Left alone, it keeps for a year.
+The list lives in this browser, like your currency choice. There are no
+accounts here, so it does not follow you to a phone, and clearing your browsing
+data clears it. Left alone, it keeps for a year — which is longer than your
+bookings last, since those go with the browsing session and not with the
+browser. See [Ticket did not arrive](/help/ticket-not-received).
 
 ## When one disappears
 
