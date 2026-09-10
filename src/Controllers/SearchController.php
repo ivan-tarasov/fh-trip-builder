@@ -71,6 +71,12 @@ class SearchController extends AbstractController
     // Ten is a first screen; after that the visitor is scanning, and more per
     // load means fewer round trips for the same scroll. MAX_SHOWN bounds what a
     // crafted URL can ask us to hydrate at once — ten loads' worth.
+    //
+    // Constants, and not config. `site.pagination` held 'search' => 7 and
+    // 'booking' => 100 and nothing ever read either: the page has always shown
+    // ten, and the bookings list has no limit at all. Both are gone. A number
+    // in config that disagrees with the code is worse than no config, because
+    // it is the one somebody edits.
     private const int FIRST_SLICE = 10;
     private const int NEXT_SLICE = 20;
     private const int MAX_SHOWN = 210;

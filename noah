@@ -21,7 +21,6 @@ use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 use TripBuilder\Noah\Flights\Realign as RealignFlights;
 use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
-use TripBuilder\Noah\Grab\Suppliers as GrabSuppliers;
 
 try {
     /*
@@ -166,9 +165,6 @@ try {
     */
 
     $application->add(new ArticlesImport());
-
-    // FIXME: for image grabbing
-    // $application->add(new GrabSuppliers());
 
     /*
     |--------------------------------------------------------------------------

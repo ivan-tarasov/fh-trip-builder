@@ -521,6 +521,62 @@ a {
 }
 
 /* ==========================================================================
+   #SKIP LINK
+   ==========================================================================
+   Off-screen until it takes focus, then the first thing on the page.
+
+   Not Bootstrap's .visually-hidden-focusable, which is already loaded and
+   would have done: it un-hides the link in normal flow, so taking focus pushes
+   the whole page down by its height and the reader's first act on the page is
+   watching it jump. Fixed and translated costs no layout at all.
+
+   translateY by percentage, which is a percentage of the element's own height,
+   plus the offset it sits at when shown -- so it clears the top edge
+   completely instead of leaving a sliver of itself visible. A number here
+   would be a guess at the height of one line of 14px text plus its padding.
+
+   :focus and not :focus-visible. There is nothing to be careful about: the
+   link is invisible until focused, so the only way to reach it is the keyboard
+   anyway, and the heuristic that separates the two has no work to do.
+
+   White on navy rather than the navy pill this started as. The header is
+   `bg-primary` on every page in the app, so this always arrives on top of the
+   navy -- and a navy pill there has no edge of its own: what you saw was the
+   focus ring doing the pill's job, which is a link that vanishes the moment
+   anything touches the ring. White measures 15.60 against that header, and it
+   is the same white sheet the rest of the app puts on a dark ground.
+
+   The ring is the footer's, for the footer's reason: --brand-accent is a dark
+   teal on a dark blue, and the gap the offset opens shows the navy through. */
+.skip-link {
+  position: fixed;
+  top: .75rem;
+  left: .75rem;
+  z-index: 1070;
+  padding: .625rem 1rem;
+  border-radius: .5rem;
+  background-color: #fff;
+  color: var(--brand-ink);
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(calc(-100% - .75rem));
+}
+
+.skip-link:focus {
+  transform: none;
+  outline: 2px solid var(--ink-on-dark-lead);
+  outline-offset: 2px;
+}
+
+/* Where it lands. No ring: the wrapper is focusable only so the cursor
+   follows the link, and a ring drawn around the whole of a page's content
+   would say "you have selected this" -- the same call .help-group:focus makes,
+   for the same reason. What tells a sighted reader it worked is the link
+   itself disappearing and the next Tab landing inside the content. */
+.page:focus { outline: none; }
+
+/* ==========================================================================
    #PAGE WRAPPER
    ========================================================================== */
 .page-wrapper {

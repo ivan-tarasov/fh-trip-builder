@@ -20,14 +20,24 @@ use TripBuilder\Money;
  */
 class ItineraryPresenter
 {
-    // What counts as worth warning about on an itinerary.
     /**
-     * Cabin codes to names. FlightFinder currently supplies these itself with
-     * a FIXME -- 'Y' outbound, 'X' return -- because the flights table has no
-     * cabin column yet. 'Y' is a real IATA economy code and resolves; 'X' is
-     * not a cabin at all and deliberately resolves to nothing, so a return leg
-     * shows no cabin rather than a made-up one. Both start reporting correctly
-     * the moment the column exists.
+     * Cabin codes to names.
+     *
+     * The code on a leg is the cabin the search asked for --
+     * CabinClass::code(), which FlightFinder passes for every leg of both
+     * directions. That is not a guess: `flights.cabins` is a bitmask of what
+     * each flight sells and the search filters on it, so a leg only reaches
+     * here if it sells the cabin being labelled.
+     *
+     * This used to say the flights table had no cabin column and that a return
+     * leg was handed 'X' -- not a cabin at all -- so that it showed none. Both
+     * stopped being true: the column is `cabins`, and returns take the same
+     * code as the outbound. What is still missing is narrower, and it is why
+     * itinerary() defaults to economy: a saved flight is a cookie of leg ids,
+     * so the cabin it was found in was never recorded anywhere.
+     *
+     * 'J' is here and never arrives. It is the other real IATA business code,
+     * and nothing in this app emits it -- code() has four cases.
      */
     private const array CABIN_NAMES = [
         'Y' => 'Economy',
@@ -39,6 +49,7 @@ class ItineraryPresenter
 
     private ?Money $money = null;
 
+    // What counts as worth warning about on an itinerary.
     private const int LAYOVER_TIGHT_MINUTES = 90;
     private const int LAYOVER_LONG_MINUTES = 300;
     private const int LONG_TRIP_MINUTES = 1440;
