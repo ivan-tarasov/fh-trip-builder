@@ -87,10 +87,11 @@
    the currency switcher and the first crumb -- on every page in the app.
 
    `#main` is the box layout.html.twig wraps every page's content in, and not a
-   <main> element, because there is no <main> every page has: thirteen
-   templates open one of their own and three -- the homepage, the results and
-   the 404 -- open none. The wrapper is drawn by the layout, so it cannot
-   drift. #}
+   <main> element. That began as necessity -- three pages opened no <main> at
+   all -- and E3.3 fixed those, so what keeps it here now is that the wrapper
+   is drawn by the layout in one place and cannot drift, where an id on a
+   <main> needs every page template to agree. See SkipLinkTest, which holds
+   the rest of the argument and says what is still open about it. #}
 <a class="skip-link" href="#main">Skip to main content</a>
 <header class="p-3 bg-primary text-white" id="top">
     <div class="container">

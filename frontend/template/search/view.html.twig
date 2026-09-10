@@ -5,6 +5,21 @@
 {% block title %}{% if step == 3 %}Review your trip{% else %}{{ depart_city }} to {{ arrive_city }}{% endif %}{% endblock %}
 
 {% block content %}
+{# The landmark this page did not have, around the whole block for the same
+   reason the homepage's is: `.searchbar-band` is `position: sticky` above
+   992px and a sticky element is measured against its containing block, so
+   this box has to be exactly `.page`'s or the band's travel changes. It
+   sticks at `top: 0` rather than under the header, because on this page the
+   header scrolls away and the band takes the top of the screen.
+
+   The band is inside the landmark and belongs there: on a results page the
+   search is content, not chrome -- adjusting a date is what somebody scrolling
+   a list of flights is here to do.
+
+   `.filters__apply` in the sidebar is sticky too, and its containing block is
+   `DIV.card-body < DIV.card < DIV.col-xl-4`, entirely inside the column, so
+   nothing above it moves. Measured, not assumed. #}
+<main role="main">
 {% include 'search/search-form-up.html.twig' %}
 <div class="container py-5">
   <div class="row">
@@ -24,4 +39,5 @@
 
   </div>
 </div>
+</main>
 {% endblock %}

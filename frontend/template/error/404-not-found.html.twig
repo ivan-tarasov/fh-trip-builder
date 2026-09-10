@@ -7,6 +7,15 @@
    it, so `frontend/css/404.css` was a file nothing could reach: editing it
    changed nothing, and the deployed copy was the only one that counted. #}
 <link href="{{ asset(config('site.directory.css') ~ '/404.css') }}" rel="stylesheet" media="all" />
+{# The landmark this page did not have. Around `.wrapper` and not around the
+   whole block, so the stylesheet link above and the script below stay outside
+   it -- neither is content, and a <link> in a landmark is metadata in the
+   wrong place.
+
+   Inert to look at: `.wrapper` is `width: 100%` of its parent and the new
+   <main> is a plain block filling the same box, so nothing about the flex
+   centring inside it changes. #}
+<main role="main">
 <div class="wrapper">
     <div class="text_group">
         <p class="text_404">404</p>
@@ -23,6 +32,7 @@
         </div>
     </div>
 </div>
+</main>
 <script>
     let starContainer = document.querySelector(".stars");
 

@@ -22,13 +22,17 @@ use TripBuilder\View\TwigRenderer;
  * Three things here break silently, and each has a test below.
  *
  * The link points at `#main`, which is the box `layout.html.twig` wraps every
- * page's content in. It is not a <main> element, and that is the decision this
- * suite exists to hold: thirteen templates open a <main> of their own and
- * three -- the homepage, the search results and the 404 -- open none, so there
- * is no <main> to point at that every page has. The layout's wrapper is drawn
- * in one place and cannot drift. Move the id onto a <main> and the link is
- * dead on three pages, with nothing to show for it: a dangling fragment does
- * not throw, it just does nothing when it is followed.
+ * page's content in, rather than at a <main> element. When that was decided,
+ * three pages opened no <main> at all and so there was nothing every page had
+ * to point at. E3.3 gave them one, so that half of the reasoning is gone --
+ * what survives is the other half: the wrapper is drawn in one place and
+ * cannot drift, where an id on a <main> needs sixteen templates to agree, and
+ * a fragment that points at nothing does not throw. It simply does nothing
+ * when it is followed.
+ *
+ * Whether to move it is a live question rather than a settled one, and it is
+ * the owner's: the breadcrumb <nav> sits above `.page` and outside <main>, so
+ * a reader who skips to the wrapper lands on the trail instead of past it.
  *
  * The target has to be able to hold focus. Without `tabindex="-1"` a browser
  * moves only the sequential focus starting point -- the next Tab lands in the
@@ -48,18 +52,19 @@ final class SkipLinkTest extends TestCase
     }
 
     /**
-     * Two pages, chosen for what they disagree about.
+     * Two pages that reach the layout by different routes.
      *
-     * /about opens a <main>, by way of the article partial. The 404 opens none
-     * at all, and is one of the three pages that made the wrapper the target
-     * rather than the landmark.
+     * /about comes through the article partial and the 404 renders its own
+     * markup, so between them they show the target is the layout's rather
+     * than anything a page supplies. What they no longer disagree about is
+     * the landmark: both have one as of E3.3.
      *
      * @return iterable<string, array{string}>
      */
     public static function pages(): iterable
     {
-        yield 'a page with a <main>' => ['/about'];
-        yield 'a page without one' => ['/nothing-here'];
+        yield 'a page built from the article partial' => ['/about'];
+        yield 'a page that draws its own markup' => ['/nothing-here'];
     }
 
     #[DataProvider('pages')]
@@ -105,21 +110,6 @@ final class SkipLinkTest extends TestCase
             '/<div class="page" id="main" tabindex="-1">/',
             $this->page($path),
         );
-    }
-
-    /**
-     * The case that decided the target, asserted rather than left to a comment.
-     *
-     * The 404 has no <main>, and it still has somewhere for the link to go. If
-     * this page ever gains one, moving the id onto it is still the wrong
-     * change -- the homepage and the search results have none either.
-     */
-    public function testAPageWithNoMainElementStillHasSomewhereToSkipTo(): void
-    {
-        $html = $this->page('/nothing-here');
-
-        self::assertStringNotContainsString('<main', $html, 'sanity: this page opens no landmark');
-        self::assertStringContainsString('id="main"', $html);
     }
 
     /**
