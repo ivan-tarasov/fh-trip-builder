@@ -1283,15 +1283,6 @@ class SearchController extends AbstractController
     }
 
     /**
-     * Where this page lives.
-     *
-     * Every link this controller builds is this same page with a different
-     * query string, so they take the canonical path rather than the one the
-     * visitor happened to arrive on. Otherwise reaching `/search` renders links
-     * to `/search` while the form above them posts to `/search/` -- the same
-     * destination spelled two ways on one screen.
-     */
-    /**
      * Leg ids of the flight a Change link is replacing, if any.
      *
      * @return list<int>
@@ -1301,10 +1292,6 @@ class SearchController extends AbstractController
         return new Input($this->get)->ids(self::GET_CURRENT);
     }
 
-    /**
-     * The search as a path segment, so every URL this page builds carries it
-     * instead of six query parameters.
-     */
     /**
      * The party as a query fragment for the checkout links, empty for a lone
      * adult so the common URL stays clean.
@@ -1321,15 +1308,21 @@ class SearchController extends AbstractController
         return $query === [] ? '' : '&' . http_build_query($query);
     }
 
+    /**
+     * Where this page lives: the search as a path segment, so every URL this
+     * page builds carries it instead of six query parameters.
+     *
+     * Every link this controller builds is this same page with a different
+     * query string, so they take the canonical path rather than the one the
+     * visitor happened to arrive on. Otherwise reaching `/search` renders links
+     * to `/search` while the form above them posts to `/search/` -- the same
+     * destination spelled two ways on one screen.
+     */
     private function searchPath(): string
     {
         return $this->searchUrl?->path() ?? (string) Config::get('site.paths.search', '/search/');
     }
 
-    /**
-     * Where an old-format link should have landed: the short path, keeping
-     * whatever filtering and sorting rode along with it.
-     */
     /**
      * A link to this search, with whatever is being changed applied on top.
      *
@@ -1517,9 +1510,6 @@ class SearchController extends AbstractController
         return ['primary' => $primary, 'more' => $more, 'current' => $current];
     }
 
-    /**
-     * A duration in hours and minutes, without rolling over into days.
-     */
     /**
      * This search, sorted differently. Page one, since the order changed.
      */
