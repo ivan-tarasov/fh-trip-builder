@@ -78,6 +78,20 @@
       data-currency-before="{{ currency.before ? '1' : '0' }}"
       data-currency-group="{{ currency.group }}"
       data-currency-rate="{{ currency.rate }}">
+{# The first focusable thing in the document, which is the only place a skip
+   link does anything: one Tab from a fresh page reaches it.
+
+   Every page carries this same header, so without this a keyboard reader tabs
+   through all of it before arriving at what the page is about. Measured on a
+   wide screen: six stops before the content -- the brand, three menu items,
+   the currency switcher and the first crumb -- on every page in the app.
+
+   `#main` is the box layout.html.twig wraps every page's content in, and not a
+   <main> element, because there is no <main> every page has: thirteen
+   templates open one of their own and three -- the homepage, the results and
+   the 404 -- open none. The wrapper is drawn by the layout, so it cannot
+   drift. #}
+<a class="skip-link" href="#main">Skip to main content</a>
 <header class="p-3 bg-primary text-white" id="top">
     <div class="container">
         {# Named because the breadcrumb below is a second <nav>, and two

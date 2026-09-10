@@ -64,7 +64,12 @@
    the way past. A scroll runs on the compositor and a scroll handler does not,
    so that is a frame late every time -- the same jump the hero tray had before
    it was rebuilt on `position: sticky`. #}
-<div class="page">
+{# Also where the skip link lands. `tabindex="-1"` because a fragment target
+   that cannot hold focus only moves the sequential focus starting point: the
+   next Tab goes to the right place but focus itself never left the header, so
+   a screen reader's cursor is still up in the menu. Same reason the help hub's
+   group sections carry it. #}
+<div class="page" id="main" tabindex="-1">
     {% block content %}{{ page_content|default('')|raw }}{% endblock %}
 </div>
 
