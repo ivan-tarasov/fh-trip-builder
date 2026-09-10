@@ -465,24 +465,91 @@ final class HelpRenderTest extends TestCase
      */
     public function testTheHubListsEveryArticle(): void
     {
+        $groups = self::helpGroups();
+        $html = $this->render('help/index.html.twig', '/help', ['groups' => $groups]);
+
+        foreach ($groups as $group) {
+            // The group's own heading and sentence, and a rail link to it.
+            self::assertStringContainsString('href="#' . $group['slug'] . '"', $html);
+            self::assertStringContainsString(htmlspecialchars($group['title'], ENT_QUOTES), $html);
+            self::assertStringContainsString(htmlspecialchars($group['summary'], ENT_QUOTES), $html);
+
+            foreach ($group['articles'] as $article) {
+                self::assertStringContainsString('href="' . $article['url'] . '"', $html);
+                self::assertStringContainsString(
+                    htmlspecialchars((string) $article['title'], ENT_QUOTES),
+                    $html,
+                );
+            }
+        }
+    }
+
+    /**
+     * And it prints no per-article summary.
+     *
+     * The reversal worth writing down, because the page used to be built on
+     * the opposite claim: five cards each carried a summary, on the reasoning
+     * that the summary was the half telling somebody which page they wanted.
+     * With nine articles in three groups the group's sentence does that, and
+     * nine summaries in one column is a page nobody reads to the bottom of.
+     *
+     * Asserted rather than left to the template, because putting them back is
+     * a one-line change that would look like an improvement in review.
+     */
+    public function testTheHubDoesNotRepeatEveryArticlesSummary(): void
+    {
+        $groups = self::helpGroups();
+        $html = $this->render('help/index.html.twig', '/help', ['groups' => $groups]);
+
+        foreach ($groups as $group) {
+            foreach ($group['articles'] as $article) {
+                self::assertStringNotContainsString(
+                    htmlspecialchars((string) $article['summary'], ENT_QUOTES),
+                    $html,
+                    $article['slug'] . ' should be a row on the hub, not a card with a sentence',
+                );
+            }
+        }
+    }
+
+    /**
+     * The fixture catalogue, arranged into groups the way HelpController does.
+     *
+     * Two groups rather than the three the site has, and uneven ones: a hub
+     * that only ever renders equal groups would pass with a template that drew
+     * the first article of each.
+     *
+     * @return list<array{slug: string, title: string, summary: string, icon: string, accent: string, articles: list<array<string, mixed>>}>
+     */
+    private static function helpGroups(): array
+    {
         $articles = [];
 
         foreach (self::articles() as $slug => $article) {
-            $articles[] = $article + ['slug' => $slug, 'url' => '/help/' . $slug];
+            $articles[$slug] = $article + ['slug' => $slug, 'url' => '/help/' . $slug];
         }
 
-        $html = $this->render('help/index.html.twig', '/help', ['articles' => $articles]);
-
-        foreach ($articles as $article) {
-            self::assertStringContainsString('href="' . $article['url'] . '"', $html);
-            self::assertStringContainsString(
-                htmlspecialchars((string) $article['title'], ENT_QUOTES),
-                $html,
-            );
-            self::assertStringContainsString(
-                htmlspecialchars((string) $article['summary'], ENT_QUOTES),
-                $html,
-            );
-        }
+        return [
+            [
+                'slug' => 'fixture-before',
+                'title' => 'Fixture: before you book',
+                'summary' => 'A fixture sentence standing in for the first group.',
+                'icon' => 'fa-magnifying-glass',
+                'accent' => 'blue',
+                'articles' => [$articles['baggage'], $articles['flying-with-children']],
+            ],
+            [
+                'slug' => 'fixture-after',
+                'title' => 'Fixture: after you book',
+                'summary' => 'A fixture sentence standing in for the second group.',
+                'icon' => 'fa-credit-card',
+                'accent' => 'green',
+                'articles' => [
+                    $articles['ticket-not-received'],
+                    $articles['refunds'],
+                    $articles['passenger-details'],
+                ],
+            ],
+        ];
     }
 }

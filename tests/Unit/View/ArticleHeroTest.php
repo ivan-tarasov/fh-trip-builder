@@ -293,7 +293,10 @@ final class ArticleHeroTest extends TestCase
 
         self::assertNotFalse($open, 'no band to read');
 
-        $end = strpos($html, '<div class="container article__layout"', $open);
+        // No closing quote in the needle: the hub carries a modifier beside
+        // this class, and matching up to the quote would only ever find the
+        // pages that do not.
+        $end = strpos($html, '<div class="container article__layout', $open);
 
         self::assertNotFalse($end, 'the sheet should follow the band');
 
@@ -331,16 +334,25 @@ final class ArticleHeroTest extends TestCase
         }
 
         if ($path === '/help') {
-            $articles = self::articles();
             $listed = [];
 
-            foreach ($articles as $slug => $article) {
+            foreach (self::articles() as $slug => $article) {
                 $listed[] = $article + ['slug' => $slug, 'url' => '/help/' . $slug];
             }
 
+            // One group holding all of them. This suite is about the band and
+            // the trail above it, so the hub only needs to be a hub -- how the
+            // groups themselves are drawn is HelpRenderTest's.
             return ['help/index.html.twig', [
                 'breadcrumbs' => Breadcrumbs::trail($path),
-                'articles' => $listed,
+                'groups' => [[
+                    'slug' => 'fixture-group',
+                    'title' => 'Fixture: everything',
+                    'summary' => 'A fixture sentence standing in for a group.',
+                    'icon' => 'fa-circle-question',
+                    'accent' => 'blue',
+                    'articles' => $listed,
+                ]],
             ]];
         }
 

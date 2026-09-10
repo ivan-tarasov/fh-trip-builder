@@ -43,6 +43,9 @@ final class ArticleCatalogueTest extends IntegrationTestCase
     /** A date no import could have written, so the clock cannot be mistaken for it. */
     private const string SENTINEL_DATE = '2019-03-04 09:12:00';
 
+    /** An empty category, for the one test that needs a group with nothing in it. */
+    private const string SENTINEL_CATEGORY = 'zzz-category-sentinel';
+
     protected function setUp(): void
     {
         new Config('common');
@@ -58,6 +61,13 @@ final class ArticleCatalogueTest extends IntegrationTestCase
     {
         foreach (['article_translations', 'articles'] as $table) {
             $this->connection()->execute('DELETE FROM ' . $table . ' WHERE slug = ?', [self::SENTINEL]);
+        }
+
+        foreach (['article_category_translations', 'article_categories'] as $table) {
+            $this->connection()->execute(
+                'DELETE FROM ' . $table . ' WHERE slug = ?',
+                [self::SENTINEL_CATEGORY],
+            );
         }
     }
 
@@ -283,6 +293,108 @@ final class ArticleCatalogueTest extends IntegrationTestCase
 
 
     /**
+     * The hub draws every category, with its own articles under it.
+     *
+     * Driven through the controller because the grouping is the controller's
+     * -- the two repositories deliberately do not join, so a test that built
+     * the groups itself would be checking its own arithmetic.
+     */
+    public function testTheHubDrawsEveryCategoryAndItsArticles(): void
+    {
+        $html = $this->hub();
+        $categories = new ArticleCategoryRepository($this->connection())->all();
+        $articles = new ArticleRepository($this->connection())->all();
+
+        self::assertNotEmpty($categories, 'no categories to draw');
+
+        foreach ($categories as $slug => $category) {
+            self::assertStringContainsString('href="#' . $slug . '"', $html, $slug . ' has no rail link');
+            self::assertStringContainsString('id="' . $slug . '"', $html, $slug . ' has no card');
+            self::assertStringContainsString(
+                htmlspecialchars($category['title'], ENT_QUOTES),
+                $html,
+                $slug . ' is not named',
+            );
+        }
+
+        foreach ($articles as $slug => $article) {
+            self::assertStringContainsString(
+                'href="/help/' . $slug . '"',
+                $html,
+                $slug . ' is not linked from the hub',
+            );
+        }
+    }
+
+    /**
+     * An orphaned article is left off the hub, and stays everywhere else.
+     *
+     * The other half of the LEFT JOIN decision. `all()` keeps a row whose
+     * category names nothing so the footer, the sitemap and every aside still
+     * carry it; the hub is a page of groups and has none to draw it in, so it
+     * is the one reader that drops it. What must not happen is the reverse of
+     * either: a page vanishing from the site, or a card with no heading.
+     */
+    public function testAnOrphanedArticleIsLeftOffTheHubButStaysOnTheSite(): void
+    {
+        $this->insertSentinel('no-such-category-exists');
+
+        self::assertArrayHasKey(
+            self::SENTINEL,
+            new ArticleRepository($this->connection())->all(),
+            'the orphan should still be part of the site',
+        );
+
+        $html = $this->hub();
+
+        self::assertStringNotContainsString('/help/' . self::SENTINEL, $html, 'the hub should not draw it');
+        self::assertStringNotContainsString(
+            'no-such-category-exists',
+            $html,
+            'and it should certainly not invent a group for it',
+        );
+    }
+
+    /**
+     * A category with nothing in it is not drawn.
+     *
+     * It would otherwise be a heading, a sentence and a rule with no rows
+     * under it, plus a rail link that scrolls to it -- which reads as an
+     * article list that failed to load rather than as a group nobody has
+     * written for yet. Held back deliberately, since the admin panel will let
+     * a category exist before its first article does.
+     */
+    public function testACategoryWithNoArticlesIsNotDrawn(): void
+    {
+        $this->connection()->execute(
+            'INSERT INTO article_categories (slug, icon, accent, position, enabled, created_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW())',
+            [self::SENTINEL_CATEGORY, 'fa-clock', 'violet', 990],
+        );
+        $this->connection()->execute(
+            'INSERT INTO article_category_translations (slug, locale, title, summary, updated_at)'
+            . ' VALUES (?, ?, ?, ?, NOW())',
+            [
+                self::SENTINEL_CATEGORY,
+                ArticleCategoryRepository::DEFAULT_LOCALE,
+                'A group with nothing in it',
+                'Inserted by the test suite and removed again.',
+            ],
+        );
+
+        // The repository still offers it -- it is a real, enabled category.
+        self::assertArrayHasKey(
+            self::SENTINEL_CATEGORY,
+            new ArticleCategoryRepository($this->connection())->all(),
+        );
+
+        $html = $this->hub();
+
+        self::assertStringNotContainsString(self::SENTINEL_CATEGORY, $html, 'no card and no rail link');
+        self::assertStringNotContainsString('A group with nothing in it', $html);
+    }
+
+    /**
      * Articles come back grouped by category, in category order.
      *
      * The contract `all()` gained with categories, and the one every caller
@@ -414,6 +526,35 @@ final class ArticleCatalogueTest extends IntegrationTestCase
 
         self::assertStringNotContainsString('Something went wrong', $html, $slug . ' did not render');
         self::assertStringContainsString('Last updated', $html, $slug . ' arrived with no date on it');
+    }
+
+    /**
+     * The hub, as HelpController draws it.
+     */
+    private function hub(): string
+    {
+        // Started because renderPage() reports how long the page took; see
+        // testTheControllerPutsTheDateOnThePage.
+        Timer::start();
+
+        $controller = new HelpController(
+            new Request(new Input(), new Input(), new Input(), uri: '/help'),
+        );
+
+        ob_start();
+
+        try {
+            $controller->index();
+            $html = (string) ob_get_clean();
+        } catch (Throwable $e) {
+            ob_end_clean();
+
+            throw $e;
+        }
+
+        self::assertStringNotContainsString('Something went wrong', $html, 'the hub did not render');
+
+        return $html;
     }
 
     /**
