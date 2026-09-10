@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use TripBuilder\Noah\Articles\Import;
+use TripBuilder\Repository\ArticleCategoryRepository;
 
 /**
  * Reading an article file, and refusing a broken one.
@@ -28,12 +29,19 @@ use TripBuilder\Noah\Articles\Import;
  */
 final class ArticlesImportTest extends TestCase
 {
-    /** A real header, in the shape the five committed files carry. */
+    /** A real article header, in the shape the committed files carry. */
     private const string HEADER = "title: Baggage\n"
         . "short: Bags\n"
+        . "category: before-you-book\n"
         . "icon: fa-suitcase-rolling\n"
         . "position: 10\n"
         . 'summary: What you can bring is set by the fare you pick.';
+
+    /** And a category header, which carries neither `short` nor `summary`. */
+    private const string CATEGORY = "title: Before you book\n"
+        . "icon: fa-magnifying-glass\n"
+        . "accent: blue\n"
+        . 'position: 10';
 
     public function testAGoodFileIsRead(): void
     {
@@ -41,6 +49,7 @@ final class ArticlesImportTest extends TestCase
 
         self::assertSame('Baggage', $parsed['title']);
         self::assertSame('Bags', $parsed['short']);
+        self::assertSame('before-you-book', $parsed['category']);
         self::assertSame('fa-suitcase-rolling', $parsed['icon']);
         self::assertSame(10, $parsed['position']);
         self::assertSame('What you can bring is set by the fare you pick.', $parsed['summary']);
@@ -172,12 +181,77 @@ final class ArticlesImportTest extends TestCase
         yield 'the same key twice' => [self::file(self::HEADER . "\ntitle: Bags"), 'appears twice'];
         yield 'a key with no value' => [self::file(str_replace('title: Baggage', 'title:', self::HEADER)), '`title` has no value'];
         yield 'no title' => [self::file(str_replace("title: Baggage\n", '', self::HEADER)), 'missing `title`'];
+        yield 'no category' => [
+            self::file(str_replace("category: before-you-book\n", '', self::HEADER)),
+            'missing `category`',
+        ];
         yield 'no summary' => [
             self::file(str_replace('summary: What you can bring is set by the fare you pick.', '', self::HEADER)),
             'missing `summary`',
         ];
         yield 'no icon' => [self::file(str_replace("icon: fa-suitcase-rolling\n", '', self::HEADER)), 'missing `icon`'];
         yield 'no position' => [self::file(str_replace("position: 10\n", '', self::HEADER)), 'missing `position`'];
+    }
+
+    /**
+     * A category file is read the same way, and its prose is its sentence.
+     *
+     * The one shape difference worth a test: a category has no `summary` key,
+     * because the body is the summary. A file that carried both would be two
+     * places to write the same line.
+     */
+    public function testACategoryFileIsRead(): void
+    {
+        $parsed = Import::parseCategory(self::file(self::CATEGORY, 'What the fare decides, before you pay.'));
+
+        self::assertSame('Before you book', $parsed['title']);
+        self::assertSame('fa-magnifying-glass', $parsed['icon']);
+        self::assertSame('blue', $parsed['accent']);
+        self::assertSame(10, $parsed['position']);
+        self::assertSame('What the fare decides, before you pay.', $parsed['summary']);
+    }
+
+    /**
+     * `accent` is the optional one, and its absence is the repository's default.
+     *
+     * Taken from ArticleCategoryRepository rather than written out here, so a
+     * change to the default cannot leave this test asserting the old one.
+     */
+    public function testAccentIsOptionalAndFallsBackToTheDefault(): void
+    {
+        $header = str_replace("accent: blue\n", '', self::CATEGORY);
+
+        self::assertSame(
+            ArticleCategoryRepository::DEFAULT_ACCENT,
+            Import::parseCategory(self::file($header))['accent'],
+        );
+    }
+
+    /**
+     * A category's summary is refused by length rather than by the column.
+     *
+     * With STRICT_TRANS_TABLES a long paragraph is a SQL error naming a
+     * column; this names the file and says what the file should be instead.
+     * The article summary is a header value and cannot run away like this --
+     * a category's is free prose, which is why only this one is measured.
+     */
+    public function testACategoryDescriptionLongerThanTheColumnIsRefused(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/one sentence, not a page/');
+
+        Import::parseCategory(self::file(self::CATEGORY, str_repeat('word ', 60)));
+    }
+
+    /**
+     * And a category with no key an article needs is still refused by name.
+     */
+    public function testACategoryHeaderIsCheckedAgainstItsOwnKeys(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/unknown header key `summary`/');
+
+        Import::parseCategory(self::file(self::CATEGORY . "\nsummary: not here"));
     }
 
     /** One file, composed the way the committed ones are written. */

@@ -6853,6 +6853,286 @@ body:has(.cookie-notice) .to-top { display: none; }
   .article-card:hover { background-color: var(--line); }
 }
 
+/* The help hub: a heading, a rail, and a stack of cards.
+
+   No band, unlike every article under it -- see the note in
+   help/index.html.twig. What that buys is the cards being the first thing on
+   the page after one line of heading, which is what a page of nine choices
+   wants. The old hub was one sheet holding five cards with a summary each; the
+   summary moved up to the group, so what is left per article is a row, and a
+   row wants a target the width of the card rather than a card of its own. */
+.help {
+  padding-bottom: 3rem;
+}
+
+.help-intro {
+  /* Generous on both sides. The heading is the widest thing on the page and
+     the cards below it are the busiest, so the two need to be told apart by
+     space rather than by anything drawn. */
+  padding: 2.5rem 0 3.5rem;
+  text-align: center;
+}
+
+.help-intro__title {
+  /* Wider than the measure the cards use, and centred, so it reads as a
+     statement rather than as the first line of something. */
+  max-width: 24ch;
+  margin: 0 auto;
+  color: var(--brand-ink);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+
+.help-intro__pill {
+  display: inline-block;
+  margin: .875rem 0 0;
+  padding: .4375rem 1.125rem;
+  color: #fff;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  background-color: var(--brand-accent);
+  border-radius: 999px;
+}
+
+.help-layout {
+  display: grid;
+  /* Wider than --content-column on purpose: that measure is for prose, and
+     this column holds rows. The rail is fixed and the cards take the rest, so
+     the cards keep the reading width they had while the rail sits outside it. */
+  grid-template-columns: minmax(0, 14.5rem) minmax(0, var(--content-column));
+  gap: 1.5rem;
+  align-items: start;
+  justify-content: center;
+}
+
+.help-rail {
+  /* Sticky rather than scrolling with the cards: the whole point of a rail is
+     to still be there when you are three cards down. Offset by the header,
+     which is sticky on pages carrying a `.hero` -- this one does not, so the
+     offset is only the breathing room the cards get. */
+  position: sticky;
+  top: 1.5rem;
+  padding: .5rem 0 0;
+}
+
+/* No card behind it. On a band page the rail would have had to be one to sit
+   on navy; on the page background it is a list of links, and a white panel
+   around three of them would weigh more than the cards it points at. */
+.help-rail__title {
+  margin: 0 0 .75rem;
+  padding-left: .875rem;
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.help-rail__list {
+  display: grid;
+  gap: .125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-rail__link {
+  display: block;
+  /* The left edge carries the current marker, so every link is indented by it
+     whether it is current or not -- otherwise the text steps sideways as you
+     scroll, which is more distracting than the marker is useful. */
+  padding: .4375rem .5rem .4375rem .875rem;
+  border-left: 2px solid transparent;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.help-rail__link[aria-current="true"] {
+  border-left-color: var(--brand-accent);
+  color: var(--brand-ink);
+  font-weight: 700;
+}
+
+@media (hover: hover) {
+  .help-rail__link:hover { color: var(--brand-ink); }
+}
+
+.help-groups {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.help-group {
+  /* The icon column, named because the rows below the heading line up with the
+     far side of it rather than with the card's own edge -- see
+     .help-group__list. Change either of these and the alignment follows. */
+  --help-group-icon: 2.5rem;
+  --help-group-icon-gap: 1rem;
+  padding: 1.75rem 2rem 1.25rem;
+  background-color: #fff;
+  border-radius: 1rem;
+  /* Room above a card followed to from the rail, so its heading does not land
+     hard against the top of the viewport. */
+  scroll-margin-top: 1.5rem;
+}
+
+/* No focus ring on the section itself. It is only focusable so a rail link
+   moves the cursor as well as the viewport; drawing a ring around a whole card
+   would say "you have selected this", which is not what happened. The heading
+   inside it is what the reader is looking at. */
+.help-group:focus { outline: none; }
+
+.help-group__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--help-group-icon-gap);
+  margin-bottom: 1.25rem;
+}
+
+.help-group__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--help-group-icon);
+  height: var(--help-group-icon);
+  color: #fff;
+  font-size: 1rem;
+  border-radius: 50%;
+  /* The fallback matters: `accent` is a string in a row, so a value the
+     stylesheet has never heard of has to draw something rather than a
+     transparent hole where an icon should be. */
+  background-color: var(--cat-blue);
+}
+
+/* The palette is the one the place rails already use, so a category cannot
+   introduce a sixth colour by having a column typed into it. */
+.help-group__icon--green  { background-color: var(--cat-green); }
+.help-group__icon--blue   { background-color: var(--cat-blue); }
+.help-group__icon--orange { background-color: var(--cat-orange); }
+.help-group__icon--violet { background-color: var(--cat-violet); }
+.help-group__icon--pink   { background-color: var(--cat-pink); }
+
+.help-group__heading {
+  min-width: 0;
+}
+
+.help-group__title {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.help-group__summary {
+  margin: .3125rem 0 0;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  line-height: 1.5;
+}
+
+.help-group__list {
+  /* Indented past the icon, so a row starts where the heading above it starts.
+     The rules go with it: a hairline running out to the card's edge under a
+     heading that begins 56px in reads as two columns rather than one list. */
+  margin: 0 0 0 calc(var(--help-group-icon) + var(--help-group-icon-gap));
+  padding: 0;
+  list-style: none;
+}
+
+/* A rule between rows and not under the last one, so the card does not finish
+   on a line with nothing below it. */
+.help-group__item + .help-group__item {
+  border-top: 1px solid var(--line);
+}
+
+.help-group__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  /* Negative side margins so the row's hover fills the card's padding: a row
+     that highlights short of its own edge looks like a mistake. */
+  margin: 0 -.75rem;
+  padding: .9375rem .75rem;
+  border-radius: .5rem;
+  color: var(--brand-ink);
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.help-group__label {
+  min-width: 0;
+}
+
+.help-group__chevron {
+  flex: 0 0 auto;
+  color: var(--brand-accent);
+  font-size: .8125rem;
+  transition: transform var(--dur-fast) ease;
+}
+
+@media (hover: hover) {
+  .help-group__link:hover { background-color: var(--surface-sunken); }
+  /* A short nudge rather than a slide. The row is already highlighted, so this
+     only has to say which way it goes. */
+  .help-group__link:hover .help-group__chevron { transform: translateX(2px); }
+}
+
+.help-group__link:active {
+  background-color: var(--line);
+}
+
+@media (max-width: 61.9375em) {
+  /* The rail stops being a rail before the cards get narrow enough to hurt:
+     it becomes a row of the same links above them, still sticky-free, still
+     the same table of contents. */
+  .help-layout {
+    grid-template-columns: minmax(0, var(--content-column));
+  }
+
+  .help-rail {
+    position: static;
+    padding: 0;
+  }
+
+  .help-rail__title { padding-left: 0; }
+
+  .help-rail__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem .5rem;
+  }
+
+  .help-rail__link {
+    padding: .375rem .625rem;
+    border-left: 0;
+    border-radius: 999px;
+    background-color: var(--surface-sunken);
+  }
+
+  .help-rail__link[aria-current="true"] {
+    color: #fff;
+    background-color: var(--brand-accent);
+  }
+}
+
+@media (max-width: 47.9375em) {
+  .help-intro { padding: .25rem 0 1.5rem; }
+  .help-intro__title { font-size: 1.875rem; }
+  .help-intro__pill { font-size: .9375rem; }
+  .help-group { padding: 1.25rem 1.25rem 1rem; }
+  .help-group__title { font-size: 1.1875rem; }
+}
+
 @media (max-width: 47.9375em) {
   .article__sheet,
   .article__aside {

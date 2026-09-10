@@ -41,6 +41,15 @@ return [
     'engine' => 'InnoDB',
     'charset' => 'ascii',
 
+    'indexes' => [
+        // Every read of this table is "the articles in this category, in
+        // order", so the two columns are asked for together and indexed
+        // together. Not unique: two articles in one category can share a
+        // position and fall back on the slug, which is what kept the order
+        // stable before categories existed.
+        ['name' => 'category_position', 'columns' => ['category', 'position']],
+    ],
+
     'columns' => [
         [
             'name' => 'slug',
@@ -50,6 +59,15 @@ return [
             'nullable' => false,
             'auto_inc' => false,
             'comment' => 'The article URL, and the key article_votes joins on',
+        ],
+        [
+            'name' => 'category',
+            'type' => 'varchar',
+            'length' => 64,
+            'default' => false,
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => 'The article_categories row this belongs to',
         ],
         [
             'name' => 'icon',

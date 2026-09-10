@@ -3035,4 +3035,98 @@
         apply();
     }());
 
+    /* The help hub's rail: which card you are looking at.
+
+       Progressive, and deliberately so. Without this the rail is a list of
+       anchors that already works -- following one jumps to its card, because
+       that is what an href does. What the script adds is the marker saying
+       where you are now, which is the one part that needs the scroll position.
+
+       A scroll listener rather than an IntersectionObserver, which is what
+       this was first written as. The question here is "which card is under the
+       header", and that is answered by comparing every card's top against one
+       line -- so the observer's own entries were being thrown away and all of
+       them measured again on every callback. An observer used as a bare
+       "something moved" ping, with its data discarded, is a harder thing to
+       read than the listener it was standing in for.
+
+       The header is sticky on this page, so a card becomes current when it
+       reaches the header's underside rather than the top of the viewport;
+       otherwise the marker changes one card late, when the heading it names is
+       already hidden behind the header. */
+    (function () {
+        const links = Array.from(document.querySelectorAll('.js-help-rail-link'));
+
+        if (!links.length) {
+            return;
+        }
+
+        const sections = links
+            .map((link) => document.getElementById(link.getAttribute('href').slice(1)))
+            .filter(Boolean);
+
+        // Every link or none. A rail half of whose anchors are missing is a
+        // template and a controller that have stopped agreeing, and marking
+        // the half that resolved would hide that rather than show it.
+        if (sections.length !== links.length) {
+            return;
+        }
+
+        const header = document.getElementById('top');
+
+        const mark = function (id) {
+            links.forEach(function (link) {
+                // Removed rather than set to "false": aria-current has no false
+                // value, and a present attribute reads as current either way.
+                if (link.getAttribute('href') === '#' + id) {
+                    link.setAttribute('aria-current', 'true');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+            });
+        };
+
+        const current = function () {
+            const line = header ? header.offsetHeight : 0;
+
+            // The last card that has reached the line, which is the one being
+            // read. Before any of them have, the first stays marked: the
+            // reader is above the stack looking at the top of it.
+            let found = sections[0];
+
+            sections.forEach(function (section) {
+                if (section.getBoundingClientRect().top - line <= 1) {
+                    found = section;
+                }
+            });
+
+            return found;
+        };
+
+        // Coalesced into a frame. Scroll fires far faster than anything can be
+        // painted, and this reads layout, which is the one thing worth not
+        // doing per event.
+        let queued = false;
+
+        const update = function () {
+            if (queued) {
+                return;
+            }
+
+            queued = true;
+
+            window.requestAnimationFrame(function () {
+                queued = false;
+                mark(current().id);
+            });
+        };
+
+        window.addEventListener('scroll', update, {passive: true});
+        window.addEventListener('resize', update);
+
+        // Once at the start, so the rail agrees with the page before anything
+        // is scrolled.
+        mark(current().id);
+    }());
+
 })(jQuery);

@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use RuntimeException;
 use Throwable;
 use TripBuilder\ArticleRating;
+use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\View\Breadcrumbs;
@@ -48,8 +49,59 @@ class HelpController extends AbstractController
     public function index(): void
     {
         echo new TwigRenderer()->renderPage('help/index.html.twig', [
-            'articles' => self::addressable($this->articles()),
+            'groups' => $this->groups(),
         ]);
+    }
+
+    /**
+     * The categories, each with the articles filed under it.
+     *
+     * Built here rather than in the template because it is a join the
+     * repositories deliberately do not do: one answers "what groups are
+     * there, in order" and the other "what articles are there, in order",
+     * and the hub is the only page that needs them woven together.
+     *
+     * Two things are dropped on the way, both deliberately:
+     *
+     *   - An article whose category names no enabled row. `all()` keeps those
+     *     -- see the LEFT JOIN there -- so the footer, the sitemap and every
+     *     aside still carry it. But this page is a page of groups, and there
+     *     is no group to draw it in. It stays reachable by URL and from
+     *     everywhere else rather than being deleted from the site by a bad
+     *     value in one column.
+     *   - A category with nothing in it, which would otherwise render as a
+     *     heading, a sentence and an empty rule.
+     *
+     * @return list<array{slug: string, title: string, summary: string, icon: string, accent: string, articles: list<array<string, mixed>>}>
+     */
+    private function groups(): array
+    {
+        $categories = new ArticleCategoryRepository($this->connection())->all();
+        $filed = [];
+
+        foreach ($this->articles() as $slug => $article) {
+            $filed[(string) $article['category']][] = $article + [
+                'slug' => $slug,
+                'url' => '/help/' . $slug,
+            ];
+        }
+
+        $groups = [];
+
+        // Driven by the categories and not by the articles, which is the whole
+        // of both exclusions above. An article filed under a category that is
+        // disabled or missing has a key in `$filed` that nothing here reads,
+        // and a category with nothing filed under it is skipped rather than
+        // drawn as a heading over an empty rule.
+        foreach ($categories as $slug => $category) {
+            if (!isset($filed[$slug])) {
+                continue;
+            }
+
+            $groups[] = $category + ['slug' => $slug, 'articles' => $filed[$slug]];
+        }
+
+        return $groups;
     }
 
     public function show(): void

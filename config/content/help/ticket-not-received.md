@@ -1,5 +1,6 @@
 ---
 title: Ticket did not arrive
+category: paying-and-tickets
 icon: fa-envelope
 position: 30
 summary: The booking exists from the moment you see a reference. The email is a copy of it, not the ticket itself.

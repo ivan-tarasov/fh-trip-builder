@@ -374,10 +374,14 @@ return [
             // not fit -- but they are facts about the articles, and this
             // column is built from that table now.
             //
-            // Ordered by the votes on each article, with `articles.position`
-            // as the tiebreaker. On a database nobody has voted on every
+            // Ordered by the votes on each article, with the repository's own
+            // order as the tiebreaker. On a database nobody has voted on every
             // article is level, so the tiebreaker is what shows -- which is
-            // bags and money first, the order the list has always been in.
+            // category order first and `articles.position` within it, so the
+            // column reads down the hub rather than across it.
+            //
+            // It shows `count` of however many articles exist, which stopped
+            // being all of them when the catalogue grew past five.
             'title' => 'Help & tips',
             'source' => 'top-rated-help',
             'count' => 5,

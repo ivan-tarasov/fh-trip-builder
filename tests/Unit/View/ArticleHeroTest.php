@@ -44,11 +44,17 @@ final class ArticleHeroTest extends TestCase
         $_SESSION = [];
     }
 
-    /** @return iterable<string, array{string}> */
+    /**
+     * @return iterable<string, array{string}>
+     *
+     * The hub is not one of these, and /about never was. A band names the one
+     * subject a page is about; the hub is a page of nine of them and the
+     * README page is somebody else's prose. Both still draw a trail, which is
+     * why they are in everyArticleFamilyPage() below.
+     */
     public static function bandedPages(): iterable
     {
         yield 'a help article' => ['/help/baggage'];
-        yield 'the help hub' => ['/help'];
         yield 'a legal document' => ['/privacy'];
     }
 
@@ -89,6 +95,28 @@ final class ArticleHeroTest extends TestCase
             substr_count($this->page($page), '<nav class="breadcrumbs'),
             $page . ' should draw the breadcrumb trail exactly once',
         );
+    }
+
+    /**
+     * The hub has no band, and takes the ordinary trail instead.
+     *
+     * Asserted rather than left to the absence of a test. The hub had a band
+     * for two releases and giving it one back is a one-word change --
+     * `{% block hero %}` -- that would look like consistency in review. What
+     * it would actually do is put a navy panel between the reader and the nine
+     * choices the page exists to offer.
+     */
+    public function testTheHubHasNoBand(): void
+    {
+        $html = $this->page('/help');
+
+        self::assertStringNotContainsString('article__hero', $html, 'the hub should not draw a band');
+        self::assertStringNotContainsString('article--hero', $html, 'nor rise into one');
+        self::assertStringContainsString('help-intro__title', $html, 'it has a heading of its own instead');
+
+        // The strip the layout draws for a page without a band, which is where
+        // the trail goes when the band is not there to hold it.
+        self::assertStringNotContainsString('breadcrumbs--on-dark', $html);
     }
 
     /** @return iterable<string, array{string}> */
@@ -293,7 +321,10 @@ final class ArticleHeroTest extends TestCase
 
         self::assertNotFalse($open, 'no band to read');
 
-        $end = strpos($html, '<div class="container article__layout"', $open);
+        // No closing quote in the needle: the hub carries a modifier beside
+        // this class, and matching up to the quote would only ever find the
+        // pages that do not.
+        $end = strpos($html, '<div class="container article__layout', $open);
 
         self::assertNotFalse($end, 'the sheet should follow the band');
 
@@ -331,16 +362,25 @@ final class ArticleHeroTest extends TestCase
         }
 
         if ($path === '/help') {
-            $articles = self::articles();
             $listed = [];
 
-            foreach ($articles as $slug => $article) {
+            foreach (self::articles() as $slug => $article) {
                 $listed[] = $article + ['slug' => $slug, 'url' => '/help/' . $slug];
             }
 
+            // One group holding all of them. This suite is about the band and
+            // the trail above it, so the hub only needs to be a hub -- how the
+            // groups themselves are drawn is HelpRenderTest's.
             return ['help/index.html.twig', [
                 'breadcrumbs' => Breadcrumbs::trail($path),
-                'articles' => $listed,
+                'groups' => [[
+                    'slug' => 'fixture-group',
+                    'title' => 'Fixture: everything',
+                    'summary' => 'A fixture sentence standing in for a group.',
+                    'icon' => 'fa-circle-question',
+                    'accent' => 'blue',
+                    'articles' => $listed,
+                ]],
             ]];
         }
 

@@ -2,39 +2,84 @@
 
 {% block title %}Help{% endblock %}
 
-{% block description %}Baggage, refunds, tickets, passenger details and flying with children — what this site decides, what the fare decides, and what the airline decides.{% endblock %}
+{% block description %}Searching, paying, baggage, refunds and travelling with children — what this site decides, what the fare decides, and what the airline decides.{% endblock %}
 
-{# Paired with `'hero': true` below. The hub gets the band its five articles
-   get, because it is the way in to them: without it, following a card from
-   here changes the shape of the page rather than its contents. #}
-{% block hero %}yes{% endblock %}
+{# No `hero` block, unlike every article under it.
 
+   The band is for a page with one subject: it names the thing you came for and
+   the sheet rises into it. The hub has nine subjects and its job is to get out
+   of the way of choosing one, so it takes the ordinary breadcrumb strip the
+   layout draws and puts its own heading on the page background instead.
+   ArticleHeroTest holds the articles to the band and this page to no band. #}
 {% block content %}
-{% embed 'partials/article.html.twig' with {
-    'title': 'Help',
-    'icon': 'fa-circle-question',
-    'lead': 'Five things people ask before they book and after. Most answers come down to the same split: the fare decides what a ticket allows, and the airline decides what happens at the airport.',
-    'hero': true
-} %}
-    {# A card each rather than a list of links: the summary is the half that
-       tells somebody which of five pages they want, and a footer-style list of
-       titles makes them open two to find out. #}
-    {% block body %}
-        <ul class="article-list">
-            {% for article in articles %}
-                <li>
-                    <a class="article-card" href="{{ article.url }}">
-                        <span class="article-card__icon">
-                            <i class="fas {{ article.icon }}" aria-hidden="true"></i>
-                        </span>
-                        <span class="article-card__text">
-                            <span class="article-card__title">{{ article.title }}</span>
-                            <span class="article-card__summary">{{ article.summary }}</span>
-                        </span>
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endblock %}
-{% endembed %}
+<main role="main" class="help">
+    <div class="container">
+        {# A sentence and not the word "Help". The tab, the trail and the
+           footer link all say Help already, so repeating it here as a heading
+           spends the widest line on the page saying what the reader just
+           clicked. The pill carries the qualifier the sentence would otherwise
+           trail off into. #}
+        <div class="help-intro">
+            <h1 class="help-intro__title">Everything worth knowing</h1>
+            <p class="help-intro__pill">about tickets and flying</p>
+        </div>
+
+        <div class="help-layout">
+            {# The rail. Anchors rather than pages of their own: there are
+               three groups and nine articles, so a page each would be three
+               pages holding two or three links, and the reader would pay a
+               page load to find out. `aria-current` is written by the script
+               that watches which card is on screen; without it the rail is
+               still a working table of contents. #}
+            <nav class="help-rail" aria-labelledby="help-rail-title">
+                <h2 class="help-rail__title" id="help-rail-title">On this page</h2>
+                <ul class="help-rail__list">
+                    {% for group in groups %}
+                        <li>
+                            <a class="help-rail__link js-help-rail-link" href="#{{ group.slug }}">{{ group.title }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+
+            <div class="help-groups">
+                {% for group in groups %}
+                    {# `tabindex="-1"` so following a rail link moves focus here
+                       and not just the scroll position: without it a keyboard
+                       reader jumps the viewport and leaves the cursor at the
+                       top of the page, and the next Tab goes back to the rail. #}
+                    <section class="help-group" id="{{ group.slug }}" tabindex="-1"
+                             aria-labelledby="{{ group.slug }}-title">
+                        <div class="help-group__head">
+                            <span class="help-group__icon help-group__icon--{{ group.accent }}">
+                                <i class="fas {{ group.icon }}" aria-hidden="true"></i>
+                            </span>
+                            <div class="help-group__heading">
+                                <h2 class="help-group__title" id="{{ group.slug }}-title">{{ group.title }}</h2>
+                                <p class="help-group__summary">{{ group.summary }}</p>
+                            </div>
+                        </div>
+
+                        {# Titles and no summaries, which reverses what this page
+                           used to do. The old hub gave each of five articles a
+                           summary because there was nothing else to tell them
+                           apart; the group and its sentence do that job now, and
+                           nine summaries stacked in one column is a page nobody
+                           reads to the bottom of. #}
+                        <ul class="help-group__list">
+                            {% for article in group.articles %}
+                                <li class="help-group__item">
+                                    <a class="help-group__link" href="{{ article.url }}">
+                                        <span class="help-group__label">{{ article.title }}</span>
+                                        <i class="fas fa-chevron-right help-group__chevron" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </section>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</main>
 {% endblock %}

@@ -6,6 +6,7 @@ namespace TripBuilder\Tests\Integration\View;
 
 use TripBuilder\ArticleRating;
 use TripBuilder\Config;
+use TripBuilder\Database\Table;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -96,21 +97,44 @@ final class TopRatedHelpTest extends IntegrationTestCase
     }
 
     /**
-     * An article nobody has voted on keeps its place in the column.
+     * An article nobody has voted on keeps its place in the ordering.
      *
-     * At the bottom rather than missing: the set of articles comes from config
-     * and the votes only order it, so a newly written article is linked from
-     * the footer the day it exists.
+     * Below the voted ones rather than missing: the set comes from the table
+     * and the votes only order it, so a newly written article is eligible for
+     * the column the day it exists.
+     *
+     * Asked for the whole catalogue rather than the footer's five. Those were
+     * the same number until the catalogue grew, and the old assertion -- the
+     * result holds every article -- passed on that coincidence rather than on
+     * anything this test means. What truncation does is the next test's job.
      */
     public function testAnUnvotedArticleSinksButStaysListed(): void
     {
+        $all = $this->repository()->all();
+
         $this->castVotes('refunds', 6, 6);
 
-        $order = array_values(new LayoutData()->topRatedHelp(5));
+        $order = array_values(new LayoutData()->topRatedHelp(count($all)));
 
-        self::assertCount(count($this->repository()->all()), $order);
+        self::assertCount(count($all), $order);
         self::assertSame('/help/refunds', $order[0], 'the only voted article should lead');
         self::assertContains('/help/baggage', $order, 'and an unvoted one is still offered');
+    }
+
+    /**
+     * And the column is a selection, not the catalogue.
+     *
+     * Worth its own test now that the two numbers differ: the footer asks for
+     * a fixed few, and an article outside them is absent from that column
+     * while still being on the hub, in the sitemap and in every aside.
+     */
+    public function testTheColumnStopsAtTheNumberItIsAskedFor(): void
+    {
+        $all = $this->repository()->all();
+
+        self::assertGreaterThan(3, count($all), 'this test needs more articles than it asks for');
+
+        self::assertCount(3, new LayoutData()->topRatedHelp(3));
     }
 
     /**
@@ -131,26 +155,44 @@ final class TopRatedHelpTest extends IntegrationTestCase
     }
 
     /**
-     * With nobody having voted, the column is in `position` order.
+     * Where nobody has voted, the order is the repository's own.
      *
      * Moved here from the unit suite, where it had quietly become vacuous: the
      * catalogue it compared against was config, and when config went the
      * assertion was an empty array against an empty array. It needs rows to
      * mean anything, and this is the case a fresh install is actually in --
-     * there is no seeder for article_votes, so `position` decides the whole
-     * column until a reader clicks.
+     * there is no seeder for article_votes, so the repository's order decides
+     * the whole column until a reader clicks.
+     *
+     * Scoped to the articles that really have no votes rather than assuming
+     * the table is empty, which is what this used to do. It passed anyway
+     * until categories changed the order: a single real vote on `baggage` had
+     * been sitting in the development database agreeing with position order,
+     * where it was invisible, and the moment the order moved it was not. A
+     * test that needs an empty table has to say so, and this one does not
+     * need one -- it needs to know which rows are unvoted, which it can ask.
      */
     public function testWithNobodyVotingTheColumnIsInPositionOrder(): void
     {
-        $expected = array_map(
-            static fn(string $slug): string => '/help/' . $slug,
-            array_keys($this->repository()->all()),
+        $voted = array_map(
+            static fn(array $row): string => (string) $row['slug'],
+            $this->connection()->fetchAll('SELECT DISTINCT slug FROM ' . Table::ArticleVotes->value),
         );
+
+        $unvoted = array_values(array_diff(array_keys($this->repository()->all()), $voted));
+
+        self::assertNotEmpty($unvoted, 'every article has a vote, so this proves nothing');
+
+        $expected = array_map(static fn(string $slug): string => '/help/' . $slug, $unvoted);
+
+        // The whole catalogue as the limit, so truncation is not what is being
+        // measured here -- testTheColumnStopsAtTheNumberItIsAskedFor is.
+        $column = array_values(new LayoutData()->topRatedHelp(count($this->repository()->all())));
 
         self::assertSame(
             $expected,
-            array_values(new LayoutData()->topRatedHelp(5)),
-            'position is the tiebreaker, and with no votes it is the whole order',
+            array_values(array_intersect($column, $expected)),
+            'among articles nobody has voted on, the order is the one the repository gave',
         );
     }
 

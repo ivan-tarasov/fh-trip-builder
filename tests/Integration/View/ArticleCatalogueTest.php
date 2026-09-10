@@ -10,6 +10,7 @@ use TripBuilder\Controllers\HelpController;
 use TripBuilder\Http\Input;
 use TripBuilder\Http\Request;
 use TripBuilder\Party;
+use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Routes;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -42,6 +43,9 @@ final class ArticleCatalogueTest extends IntegrationTestCase
     /** A date no import could have written, so the clock cannot be mistaken for it. */
     private const string SENTINEL_DATE = '2019-03-04 09:12:00';
 
+    /** An empty category, for the one test that needs a group with nothing in it. */
+    private const string SENTINEL_CATEGORY = 'zzz-category-sentinel';
+
     protected function setUp(): void
     {
         new Config('common');
@@ -57,6 +61,13 @@ final class ArticleCatalogueTest extends IntegrationTestCase
     {
         foreach (['article_translations', 'articles'] as $table) {
             $this->connection()->execute('DELETE FROM ' . $table . ' WHERE slug = ?', [self::SENTINEL]);
+        }
+
+        foreach (['article_category_translations', 'article_categories'] as $table) {
+            $this->connection()->execute(
+                'DELETE FROM ' . $table . ' WHERE slug = ?',
+                [self::SENTINEL_CATEGORY],
+            );
         }
     }
 
@@ -282,6 +293,162 @@ final class ArticleCatalogueTest extends IntegrationTestCase
 
 
     /**
+     * The hub draws every category, with its own articles under it.
+     *
+     * Driven through the controller because the grouping is the controller's
+     * -- the two repositories deliberately do not join, so a test that built
+     * the groups itself would be checking its own arithmetic.
+     */
+    public function testTheHubDrawsEveryCategoryAndItsArticles(): void
+    {
+        $html = $this->hub();
+        $categories = new ArticleCategoryRepository($this->connection())->all();
+        $articles = new ArticleRepository($this->connection())->all();
+
+        self::assertNotEmpty($categories, 'no categories to draw');
+
+        foreach ($categories as $slug => $category) {
+            self::assertStringContainsString('href="#' . $slug . '"', $html, $slug . ' has no rail link');
+            self::assertStringContainsString('id="' . $slug . '"', $html, $slug . ' has no card');
+            self::assertStringContainsString(
+                htmlspecialchars($category['title'], ENT_QUOTES),
+                $html,
+                $slug . ' is not named',
+            );
+        }
+
+        foreach ($articles as $slug => $article) {
+            self::assertStringContainsString(
+                'href="/help/' . $slug . '"',
+                $html,
+                $slug . ' is not linked from the hub',
+            );
+        }
+    }
+
+    /**
+     * An orphaned article is left off the hub, and stays everywhere else.
+     *
+     * The other half of the LEFT JOIN decision. `all()` keeps a row whose
+     * category names nothing so the footer, the sitemap and every aside still
+     * carry it; the hub is a page of groups and has none to draw it in, so it
+     * is the one reader that drops it. What must not happen is the reverse of
+     * either: a page vanishing from the site, or a card with no heading.
+     */
+    public function testAnOrphanedArticleIsLeftOffTheHubButStaysOnTheSite(): void
+    {
+        $this->insertSentinel('no-such-category-exists');
+
+        self::assertArrayHasKey(
+            self::SENTINEL,
+            new ArticleRepository($this->connection())->all(),
+            'the orphan should still be part of the site',
+        );
+
+        $html = $this->hub();
+
+        self::assertStringNotContainsString('/help/' . self::SENTINEL, $html, 'the hub should not draw it');
+        self::assertStringNotContainsString(
+            'no-such-category-exists',
+            $html,
+            'and it should certainly not invent a group for it',
+        );
+    }
+
+    /**
+     * A category with nothing in it is not drawn.
+     *
+     * It would otherwise be a heading, a sentence and a rule with no rows
+     * under it, plus a rail link that scrolls to it -- which reads as an
+     * article list that failed to load rather than as a group nobody has
+     * written for yet. Held back deliberately, since the admin panel will let
+     * a category exist before its first article does.
+     */
+    public function testACategoryWithNoArticlesIsNotDrawn(): void
+    {
+        $this->connection()->execute(
+            'INSERT INTO article_categories (slug, icon, accent, position, enabled, created_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW())',
+            [self::SENTINEL_CATEGORY, 'fa-clock', 'violet', 990],
+        );
+        $this->connection()->execute(
+            'INSERT INTO article_category_translations (slug, locale, title, summary, updated_at)'
+            . ' VALUES (?, ?, ?, ?, NOW())',
+            [
+                self::SENTINEL_CATEGORY,
+                ArticleCategoryRepository::DEFAULT_LOCALE,
+                'A group with nothing in it',
+                'Inserted by the test suite and removed again.',
+            ],
+        );
+
+        // The repository still offers it -- it is a real, enabled category.
+        self::assertArrayHasKey(
+            self::SENTINEL_CATEGORY,
+            new ArticleCategoryRepository($this->connection())->all(),
+        );
+
+        $html = $this->hub();
+
+        self::assertStringNotContainsString(self::SENTINEL_CATEGORY, $html, 'no card and no rail link');
+        self::assertStringNotContainsString('A group with nothing in it', $html);
+    }
+
+    /**
+     * Articles come back grouped by category, in category order.
+     *
+     * The contract `all()` gained with categories, and the one every caller
+     * quietly leans on: the hub walks this list once and starts a new card
+     * whenever the category changes, so a list that returned two runs of the
+     * same category would draw that category twice. The footer column and the
+     * sitemap take their order from here too.
+     */
+    public function testArticlesComeBackGroupedByCategoryInOrder(): void
+    {
+        $categories = array_keys(new ArticleCategoryRepository($this->connection())->all());
+
+        $runs = [];
+
+        foreach (new ArticleRepository($this->connection())->all() as $article) {
+            if ($runs === [] || end($runs) !== $article['category']) {
+                $runs[] = (string) $article['category'];
+            }
+        }
+
+        self::assertNotEmpty($runs, 'no articles to group');
+
+        // Compared against the categories that actually have articles, so a
+        // category written with none in it yet does not fail this.
+        self::assertSame(
+            array_values(array_intersect($categories, $runs)),
+            $runs,
+            'a category appears more than once, or out of order',
+        );
+    }
+
+    /**
+     * An article whose category is missing is kept, and sorted last.
+     *
+     * The deliberate consequence of the LEFT JOIN in `all()`. There is no
+     * foreign key on `category` -- this schema has none anywhere -- so a row
+     * can point at nothing, and an inner join would answer that by dropping
+     * the article out of the footer, the sitemap and every aside at once.
+     * Showing it in an odd place is the better failure, and "last" rather than
+     * "first" is the whole reason the ordering leads with `IS NULL`: MySQL
+     * sorts NULL first ascending, which would have put an orphan at the top of
+     * the footer column.
+     */
+    public function testAnArticleWithNoSuchCategoryIsKeptAndSortsLast(): void
+    {
+        $this->insertSentinel('no-such-category-exists');
+
+        $all = new ArticleRepository($this->connection())->all();
+
+        self::assertArrayHasKey(self::SENTINEL, $all, 'an orphan should not vanish from the site');
+        self::assertSame(self::SENTINEL, array_key_last($all), 'an orphan should sort last, not first');
+    }
+
+    /**
      * Every article page says when it last changed.
      *
      * The plainest half of it: the line is only on the page while the
@@ -312,22 +479,7 @@ final class ArticleCatalogueTest extends IntegrationTestCase
      */
     public function testTheDateShownIsTheDateStored(): void
     {
-        $this->connection()->execute(
-            'INSERT INTO articles (slug, icon, position, enabled, created_at) VALUES (?, ?, ?, 1, NOW())',
-            [self::SENTINEL, 'fa-clock', 900],
-        );
-        $this->connection()->execute(
-            'INSERT INTO article_translations (slug, locale, title, short, summary, body, updated_at)'
-            . ' VALUES (?, ?, ?, NULL, ?, ?, ?)',
-            [
-                self::SENTINEL,
-                ArticleRepository::DEFAULT_LOCALE,
-                'When this changed',
-                'A row the test suite inserts and removes again.',
-                "## Heading\n\nOne paragraph.",
-                self::SENTINEL_DATE,
-            ],
-        );
+        $this->insertSentinel();
 
         preg_match('/Last updated ([^.<]+)\./', $this->page(self::SENTINEL), $shown);
 
@@ -376,7 +528,68 @@ final class ArticleCatalogueTest extends IntegrationTestCase
         self::assertStringContainsString('Last updated', $html, $slug . ' arrived with no date on it');
     }
 
-    /** @return array<string, array{title: string, short: ?string, icon: string, summary: string}> */
+    /**
+     * The hub, as HelpController draws it.
+     */
+    private function hub(): string
+    {
+        // Started because renderPage() reports how long the page took; see
+        // testTheControllerPutsTheDateOnThePage.
+        Timer::start();
+
+        $controller = new HelpController(
+            new Request(new Input(), new Input(), new Input(), uri: '/help'),
+        );
+
+        ob_start();
+
+        try {
+            $controller->index();
+            $html = (string) ob_get_clean();
+        } catch (Throwable $e) {
+            ob_end_clean();
+
+            throw $e;
+        }
+
+        self::assertStringNotContainsString('Something went wrong', $html, 'the hub did not render');
+
+        return $html;
+    }
+
+    /**
+     * One throwaway article, removed again in tearDown().
+     *
+     * `category` is NOT NULL with no default, so an insert that skipped it
+     * would fail outright. The default is read from the table rather than
+     * written out here, so renaming a category does not break this.
+     */
+    private function insertSentinel(?string $category = null): void
+    {
+        $category ??= (string) array_key_first(new ArticleCategoryRepository($this->connection())->all());
+
+        self::assertNotSame('', $category, 'there should be a category to file the sentinel under');
+
+        $this->connection()->execute(
+            'INSERT INTO articles (slug, category, icon, position, enabled, created_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW())',
+            [self::SENTINEL, $category, 'fa-clock', 900],
+        );
+        $this->connection()->execute(
+            'INSERT INTO article_translations (slug, locale, title, short, summary, body, updated_at)'
+            . ' VALUES (?, ?, ?, NULL, ?, ?, ?)',
+            [
+                self::SENTINEL,
+                ArticleRepository::DEFAULT_LOCALE,
+                'When this changed',
+                'A row the test suite inserts and removes again.',
+                "## Heading\n\nOne paragraph.",
+                self::SENTINEL_DATE,
+            ],
+        );
+    }
+
+    /** @return array<string, array{title: string, short: ?string, icon: string, category: string, summary: string}> */
     private function articles(): array
     {
         $articles = new ArticleRepository($this->connection())->all();
