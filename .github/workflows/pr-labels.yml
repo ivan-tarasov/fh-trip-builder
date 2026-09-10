@@ -9,11 +9,19 @@ name: PR labels
 #
 # Failing this check only *blocks* a merge once it is added as a required
 # status check in the branch protection rules for develop.
+#
+# The labels are read from the API at run time and not from the event payload.
+# release.yml still reads its own from the payload, and should: it fires on
+# `closed`, whose snapshot is taken at merge, by which point the labels have
+# been settled for as long as the pull request has been open.
 
 on:
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled, ready_for_review]
     branches: [develop]
+
+permissions:
+  pull-requests: read
 
 jobs:
   release-label:
@@ -23,15 +31,55 @@ jobs:
     steps:
       - name: Require exactly one release label
         env:
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
 
+          # Read the labels now, rather than out of the event payload.
+          #
+          # The payload is a snapshot taken when the event fired, and
+          # `gh pr create --label` opens the pull request before it attaches
+          # the label -- so the `opened` run saw an empty list and failed on
+          # two of four consecutive pull requests, each of them correctly
+          # labelled a second later. The `labeled` run then passed, GitHub
+          # took the later result for the check name, and the merge was never
+          # actually blocked. That is the worst version of this: a red check
+          # that means nothing, on a check whose whole job is to be believed.
+          #
+          # Retried, because reading live state does not on its own close the
+          # race -- a run that starts inside the same second can still be ahead
+          # of the label. Three reads five seconds apart cost ten seconds on
+          # the path that would otherwise be a false failure, and nothing at
+          # all on the path that passes first time. A pull request that
+          # genuinely has no label still fails, ten seconds later than before.
+          release_labels() {
+            local labels found=""
+
+            labels=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json labels --jq '[.labels[].name] | join(",")')
+
+            for label in release:major release:minor release:patch no-release; do
+              case ",${labels}," in
+                *",${label},"*) found="${found} ${label}" ;;
+              esac
+            done
+
+            echo "$found"
+          }
+
           found=""
-          for label in release:major release:minor release:patch no-release; do
-            case ",${LABELS}," in
-              *",${label},"*) found="${found} ${label}" ;;
-            esac
+
+          for attempt in 1 2 3; do
+            found=$(release_labels)
+
+            if [ -n "$found" ]; then
+              break
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "No release label yet -- reading again in 5s (${attempt} of 3)."
+              sleep 5
+            fi
           done
 
           count=$(echo $found | wc -w | tr -d ' ')
