@@ -374,11 +374,6 @@ final readonly class FlightRepository
         foreach ($measures as $dimension => $measure) {
             $lows = [];
             $highs = [];
-            // A direct flight has no wait to fall outside a range, so it meets
-            // any ceiling — while it is on offer the ceiling handle cannot
-            // empty the results. It cannot meet a floor, though, so the floor's
-            // reach is still measured from the itineraries that connect.
-            $meetsAnyCeiling = false;
 
             foreach ($candidates as $candidate) {
                 if (!$filters->matches($candidate, $dimension)) {
@@ -387,9 +382,10 @@ final readonly class FlightRepository
 
                 $values = $measure($candidate);
 
+                // An itinerary this range cannot constrain — a direct flight
+                // has no wait at all — says nothing about how far either
+                // handle can travel. See the note on both ends below.
                 if ($values === []) {
-                    $meetsAnyCeiling = true;
-
                     continue;
                 }
 
@@ -418,11 +414,26 @@ final readonly class FlightRepository
             //
             // Where a measure yields one value per itinerary these collapse to
             // the ends themselves, which is the same as no limit at all.
+            //
+            // Measured only from itineraries the range can constrain, both
+            // ends. The ceiling used to drop to `min` whenever a direct flight
+            // was on offer, on the reasoning that a flight with no wait meets
+            // any ceiling. It does — but only a ceiling with no floor under
+            // it, and that is not what the control submits:
+            // sidebar/slider.html.twig writes `value="{from}-{to}"`, so the
+            // floor handle rides along at `min` even untouched, and
+            // FlightFilters::waitsWithin() refuses an itinerary with no waits
+            // the moment a range has a floor. That left a stretch of ceiling
+            // track which could only ever answer with an empty page — the one
+            // thing these bounds exist to prevent. It reached CI as an
+            // intermittent failure, on the runs where the generator happened
+            // to put a direct flight on a connecting route. See
+            // LayoverRangeWithADirectFlightTest.
             $bounds[$dimension] = [
                 'min' => $min,
                 'max' => $max,
                 'floor_max' => (int) floor(max($lows)),
-                'ceiling_min' => $meetsAnyCeiling ? $min : (int) ceil(min($highs)),
+                'ceiling_min' => (int) ceil(min($highs)),
             ];
         }
 
