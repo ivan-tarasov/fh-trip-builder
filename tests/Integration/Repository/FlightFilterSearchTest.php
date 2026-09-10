@@ -23,9 +23,18 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     private const TO = 'NYC';
     private const DATE = '2026-09-15';
 
-    // A long route nobody flies non-stop. A direct itinerary has no wait to
-    // fall outside a layover range, so it satisfies every one — on a route with
-    // directs the range never binds and a test of its ends proves nothing.
+    // A long route, picked for having connections to measure a layover range
+    // against at all.
+    //
+    // This used to say a direct itinerary "satisfies every one" range, so a
+    // route selling directs would prove nothing. That was not true --
+    // FlightFilters::waitsWithin() refuses an itinerary with no waits as soon
+    // as a range carries a floor -- and picking a route on it did not avoid
+    // the case anyway: the generator put a direct on this pair on at least two
+    // runs in one day, and each time this class failed CI rather than proving
+    // nothing. What the bounds should do about a direct flight is pinned by
+    // LayoverRangeWithADirectFlightTest now, on a fixture rather than on
+    // whatever happened to be generated.
     private const CONNECTING_FROM = 'CMN';
     private const CONNECTING_TO = 'YVR';
     private const CONNECTING_DATE = '2026-09-23';
