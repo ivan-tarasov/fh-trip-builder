@@ -268,11 +268,6 @@ class ItineraryPresenter
      * journeys. Each notice is deduplicated by label so a two-stop trip doesn't
      * repeat the same warning.
      *
-     * @param list<object> $segments
-     * @param list<object> $layovers
-     * @return list<array<string, string>>
-     */
-    /**
      * Three severities, because these six things are not equally serious and
      * rendering them identically made the reader weigh them equally:
      *
