@@ -44,11 +44,17 @@ final class ArticleHeroTest extends TestCase
         $_SESSION = [];
     }
 
-    /** @return iterable<string, array{string}> */
+    /**
+     * @return iterable<string, array{string}>
+     *
+     * The hub is not one of these, and /about never was. A band names the one
+     * subject a page is about; the hub is a page of nine of them and the
+     * README page is somebody else's prose. Both still draw a trail, which is
+     * why they are in everyArticleFamilyPage() below.
+     */
     public static function bandedPages(): iterable
     {
         yield 'a help article' => ['/help/baggage'];
-        yield 'the help hub' => ['/help'];
         yield 'a legal document' => ['/privacy'];
     }
 
@@ -89,6 +95,28 @@ final class ArticleHeroTest extends TestCase
             substr_count($this->page($page), '<nav class="breadcrumbs'),
             $page . ' should draw the breadcrumb trail exactly once',
         );
+    }
+
+    /**
+     * The hub has no band, and takes the ordinary trail instead.
+     *
+     * Asserted rather than left to the absence of a test. The hub had a band
+     * for two releases and giving it one back is a one-word change --
+     * `{% block hero %}` -- that would look like consistency in review. What
+     * it would actually do is put a navy panel between the reader and the nine
+     * choices the page exists to offer.
+     */
+    public function testTheHubHasNoBand(): void
+    {
+        $html = $this->page('/help');
+
+        self::assertStringNotContainsString('article__hero', $html, 'the hub should not draw a band');
+        self::assertStringNotContainsString('article--hero', $html, 'nor rise into one');
+        self::assertStringContainsString('help-intro__title', $html, 'it has a heading of its own instead');
+
+        // The strip the layout draws for a page without a band, which is where
+        // the trail goes when the band is not there to hold it.
+        self::assertStringNotContainsString('breadcrumbs--on-dark', $html);
     }
 
     /** @return iterable<string, array{string}> */

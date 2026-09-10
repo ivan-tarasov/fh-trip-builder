@@ -6853,33 +6853,73 @@ body:has(.cookie-notice) .to-top { display: none; }
   .article-card:hover { background-color: var(--line); }
 }
 
-/* The help hub: a rail beside a stack of cards.
+/* The help hub: a heading, a rail, and a stack of cards.
 
-   The old hub was one sheet holding five cards with a summary each. Nine
-   articles in three groups is a different page, and the summary moved up to
-   the group -- so what is left per article is a row, and a row wants a target
-   the width of the card rather than a card of its own. */
-.article__layout--hub {
+   No band, unlike every article under it -- see the note in
+   help/index.html.twig. What that buys is the cards being the first thing on
+   the page after one line of heading, which is what a page of nine choices
+   wants. The old hub was one sheet holding five cards with a summary each; the
+   summary moved up to the group, so what is left per article is a row, and a
+   row wants a target the width of the card rather than a card of its own. */
+.help {
+  padding-bottom: 3rem;
+}
+
+.help-intro {
+  padding: .5rem 0 2rem;
+  text-align: center;
+}
+
+.help-intro__title {
+  /* Wider than the measure the cards use, and centred, so it reads as a
+     statement rather than as the first line of something. */
+  max-width: 24ch;
+  margin: 0 auto;
+  color: var(--brand-ink);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+
+.help-intro__pill {
+  display: inline-block;
+  margin: .875rem 0 0;
+  padding: .4375rem 1.125rem;
+  color: #fff;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  background-color: var(--brand-accent);
+  border-radius: 999px;
+}
+
+.help-layout {
+  display: grid;
   /* Wider than --content-column on purpose: that measure is for prose, and
      this column holds rows. The rail is fixed and the cards take the rest, so
      the cards keep the reading width they had while the rail sits outside it. */
   grid-template-columns: minmax(0, 14.5rem) minmax(0, var(--content-column));
+  gap: 1.5rem;
   align-items: start;
+  justify-content: center;
 }
 
 .help-rail {
   /* Sticky rather than scrolling with the cards: the whole point of a rail is
-     to still be there when you are three cards down. Offset by the sticky
-     header, which .article__hero pages have. */
+     to still be there when you are three cards down. Offset by the header,
+     which is sticky on pages carrying a `.hero` -- this one does not, so the
+     offset is only the breathing room the cards get. */
   position: sticky;
-  top: 5.5rem;
-  padding: 1.25rem 1.25rem 1.5rem;
-  background-color: #fff;
-  border-radius: 1rem;
+  top: 1.5rem;
+  padding: .5rem 0 0;
 }
 
+/* No card behind it. On a band page the rail would have had to be one to sit
+   on navy; on the page background it is a list of links, and a white panel
+   around three of them would weigh more than the cards it points at. */
 .help-rail__title {
   margin: 0 0 .75rem;
+  padding-left: .875rem;
   color: var(--ink-secondary);
   font-size: .8125rem;
   font-weight: 700;
@@ -6929,9 +6969,9 @@ body:has(.cookie-notice) .to-top { display: none; }
   padding: 1.75rem 2rem 1.25rem;
   background-color: #fff;
   border-radius: 1rem;
-  /* Cleared for the sticky header, so following a rail link does not park the
-     heading underneath it. */
-  scroll-margin-top: 5.5rem;
+  /* Room above a card followed to from the rail, so its heading does not land
+     hard against the top of the viewport. */
+  scroll-margin-top: 1.5rem;
 }
 
 /* No focus ring on the section itself. It is only focusable so a rail link
@@ -7044,14 +7084,16 @@ body:has(.cookie-notice) .to-top { display: none; }
   /* The rail stops being a rail before the cards get narrow enough to hurt:
      it becomes a row of the same links above them, still sticky-free, still
      the same table of contents. */
-  .article__layout--hub {
+  .help-layout {
     grid-template-columns: minmax(0, var(--content-column));
   }
 
   .help-rail {
     position: static;
-    padding: 1rem 1.25rem;
+    padding: 0;
   }
+
+  .help-rail__title { padding-left: 0; }
 
   .help-rail__list {
     display: flex;
@@ -7073,6 +7115,9 @@ body:has(.cookie-notice) .to-top { display: none; }
 }
 
 @media (max-width: 47.9375em) {
+  .help-intro { padding: .25rem 0 1.5rem; }
+  .help-intro__title { font-size: 1.875rem; }
+  .help-intro__pill { font-size: .9375rem; }
   .help-group { padding: 1.25rem 1.25rem 1rem; }
   .help-group__title { font-size: 1.1875rem; }
 }
