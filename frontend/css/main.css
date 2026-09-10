@@ -5057,7 +5057,26 @@ body:has(main.article) .breadcrumbs__list {
    an <svg>, so a rule selecting the icon element stops applying once it runs. */
 .breadcrumbs__item + .breadcrumbs__item::before {
   content: '\203A';
-  color: var(--line-strongest);
+  /* --ink-faint, and not the rule colour this used to take. --line-strongest
+     measures 1.46 against --surface, which is the same defect the on-dark
+     separators were fixed for in PR #76 and almost exactly the same number:
+     that rule's note says --line-on-dark is 1.44 on the band and "disappears
+     as a glyph". Both sides of the trail were drawing a separator in a colour
+     mixed for hairlines between panels, and only one side was corrected.
+
+     --ink-faint is the palette's ornament tier and measures 3.04 here, which
+     clears the 3:1 a non-text mark needs. Not --ink-muted, which is what the
+     crumbs themselves take and what the on-dark rule chose: on that ground
+     the separators are load bearing, because the trail stops before the page
+     and the last one points into the heading. Here the trail ends at the page
+     it is on, so the chevron is ornament -- it should be visible and it should
+     not compete with the words. The whisper was the intent; being inaudible
+     was the bug.
+
+     The same call the datepicker's today marker already makes, in the same
+     words: the rule tier is for hairlines between panels, and a mark carrying
+     meaning has to clear 3:1 before it is worth drawing at all. */
+  color: var(--ink-faint);
   /* The glyph carries no meaning a screen reader needs -- the <ol> already
      says these are ordered steps -- and generated content is not announced. */
 }
