@@ -330,11 +330,6 @@ final class HelpRenderTest extends TestCase
     private function article(string $slug, ?array $verdict = null): string
     {
         $articles = self::articles();
-        $more = [];
-
-        foreach (array_diff_key($articles, [$slug => null]) as $key => $article) {
-            $more[] = $article + ['slug' => $key, 'url' => '/help/' . $key];
-        }
 
         return $this->render('help/view.html.twig', '/help/' . $slug, [
             'breadcrumbs' => [],
@@ -344,7 +339,7 @@ final class HelpRenderTest extends TestCase
             // this suite tests is that the template places it -- what the five
             // published articles actually say is ArticleCatalogueTest's.
             'article_html' => self::PROSE,
-            'more' => $more,
+            'siblings' => self::siblings($slug),
             'verdict' => $verdict ?? self::verdict($slug),
         ]);
     }
@@ -438,26 +433,101 @@ final class HelpRenderTest extends TestCase
     }
 
     /**
-     * The other four, and not this one.
+     * The rest of this article's group, and not this article.
      *
-     * An article has no data of its own to link out with, so the siblings are
-     * the whole of it -- and an article listing itself is a link back to the
-     * page it is on.
+     * An article has no data of its own to link out with, so its siblings are
+     * the whole of what it offers -- and an article listing itself is a link
+     * back to the page it is on.
+     *
+     * The group and not the catalogue, which is what this used to assert.
+     * Eight links under a finished article is a second hub; the two or three
+     * about the same thing are a next step.
      */
     #[\PHPUnit\Framework\Attributes\DataProvider('articleProvider')]
-    public function testMoreHelpNamesTheOtherArticlesAndNotThisOne(string $slug): void
+    public function testTheAsideListsTheRestOfTheGroupAndNotThisArticle(string $slug): void
     {
         $html = $this->article($slug);
+        $group = self::siblings($slug);
 
-        preg_match('#<aside class="article__aside".*?</aside>#s', $html, $aside);
-        self::assertNotEmpty($aside, 'the more-help list should be findable');
+        // No closing quote in the pattern: the help page's aside carries a
+        // modifier beside this class, and matching to the quote would find
+        // only the pages that do not.
+        preg_match('#<aside class="article__aside.*?</aside>#s', $html, $aside);
+        self::assertNotEmpty($aside, 'the siblings list should be findable');
+
+        self::assertStringContainsString(
+            htmlspecialchars($group['title'], ENT_QUOTES),
+            $aside[0],
+            'the card should be titled with the group',
+        );
 
         preg_match_all('#href="(/help/[^"]+)"#', $aside[0], $links);
 
         self::assertSame(
-            array_values(array_diff(array_keys(self::articles()), [$slug])),
+            array_column($group['articles'], 'slug'),
             array_map(static fn(string $href): string => substr($href, strlen('/help/')), $links[1]),
         );
+        self::assertNotContains($slug, array_column($group['articles'], 'slug'));
+    }
+
+    /**
+     * The card is the hub's card: the group's icon in the group's colour.
+     *
+     * The whole reason both pages share one partial. An icon here and a
+     * different one there would be two designs for one thing, and the rows'
+     * alignment is measured from this icon's width -- so a card that lost it
+     * would indent its rows past nothing.
+     */
+    public function testTheAsideCarriesTheGroupsIconAndColour(): void
+    {
+        $html = $this->article('baggage');
+        $group = self::siblings('baggage');
+
+        preg_match('#<aside class="article__aside.*?</aside>#s', $html, $aside);
+
+        self::assertStringContainsString('fas ' . $group['icon'], $aside[0], 'the group icon should be drawn');
+        self::assertStringContainsString(
+            'help-group__icon--' . $group['accent'],
+            $aside[0],
+            'and in the group colour the hub gives it',
+        );
+    }
+
+    /**
+     * But not the group's sentence, which the hub does print.
+     *
+     * The one difference between the two cards, and deliberate: a reader at
+     * the foot of an article has just read the thing that sentence describes,
+     * so repeating it there is a line spent saying nothing new.
+     */
+    public function testTheAsideLeavesOutTheGroupsSentence(): void
+    {
+        $html = $this->article('baggage');
+        $group = self::siblings('baggage');
+
+        self::assertNotSame('', $group['summary'], 'the fixture group should have a sentence to leave out');
+        self::assertStringNotContainsString(htmlspecialchars($group['summary'], ENT_QUOTES), $html);
+    }
+
+    /**
+     * And no card at all where the group has nobody else in it.
+     *
+     * A heading over an empty rule reads as a list that failed to load. The
+     * controller answers null for an article alone in its group and for one
+     * whose category row has gone, and this is the template's half of that.
+     */
+    public function testAnArticleWithNoSiblingsDrawsNoCard(): void
+    {
+        $html = $this->render('help/view.html.twig', '/help/baggage', [
+            'breadcrumbs' => [],
+            'article' => self::articles()['baggage'] + ['slug' => 'baggage'],
+            'article_html' => self::PROSE,
+            'siblings' => null,
+            'verdict' => self::verdict('baggage'),
+        ]);
+
+        self::assertStringNotContainsString('article__aside', $html);
+        self::assertStringContainsString('article__body', $html, 'the page itself should still render');
     }
 
     /**
@@ -510,6 +580,37 @@ final class HelpRenderTest extends TestCase
                 );
             }
         }
+    }
+
+    /**
+     * The group one fixture article belongs to, minus that article.
+     *
+     * Derived from the same fixture groups the hub test uses, so the two
+     * pages cannot disagree about which article is in which group.
+     *
+     * @return array{slug: string, title: string, summary: string, icon: string, accent: string, articles: list<array<string, mixed>>}
+     */
+    private static function siblings(string $slug): array
+    {
+        foreach (self::helpGroups() as $group) {
+            $slugs = array_column($group['articles'], 'slug');
+
+            if (!in_array($slug, $slugs, true)) {
+                continue;
+            }
+
+            // The whole group row and not just its name: the card carries the
+            // group's icon too, so the fixture has to be the shape the
+            // controller hands over.
+            return array_replace($group, [
+                'articles' => array_values(array_filter(
+                    $group['articles'],
+                    static fn(array $article): bool => $article['slug'] !== $slug,
+                )),
+            ]);
+        }
+
+        self::fail($slug . ' is in none of the fixture groups');
     }
 
     /**
