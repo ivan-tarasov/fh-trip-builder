@@ -575,8 +575,9 @@
                 return pad(1 + Math.floor(Math.random() * 12)) + '/' + String(year).slice(-2);
             };
 
+
             // Strip the accents a name might carry before it becomes an address.
-            const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+            const slug = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
             autofillBar.querySelector('[data-autofill-button]').addEventListener('click', function () {
                 const form = autofillBar.closest('form');
@@ -791,6 +792,26 @@
             };
 
             /**
+             * A section heading: the nearby block's, and a city's.
+             *
+             * `role="presentation"` so the arrow keys walk past it. A label
+             * rather than something to choose -- and for a city it has to be,
+             * because the city is not selectable. pickable() draws a city row
+             * only where the city sells from more than one airport, which is
+             * 18 of 231 of them, and offering a second code for the rest would
+             * be two ways to run one search: measured, `YMQ` and `YUL` both
+             * resolve to exactly `YUL`.
+             */
+            const headingFor = function (text) {
+                const li = document.createElement('li');
+                li.className = 'combo__group';
+                li.setAttribute('role', 'presentation');
+                li.textContent = text;
+
+                return li;
+            };
+
+            /**
              * One row. Shared by the list and by the nearby block above it, so
              * the city/child/second-line rules are written once.
              */
@@ -875,12 +896,51 @@
                     return -1;
                 };
 
-                const ranked = options
-                    .map(o => ({ option: o, rank: rank(o) }))
-                    .filter(m => m.rank >= 0)
-                    // Stable within a rank, so each band stays alphabetical.
-                    .sort((a, b) => a.rank - b.rank)
-                    .map(m => m.option);
+                // Ranked by city rather than row by row, so a city's airports
+                // stay together.
+                //
+                // Row by row they did not. `par` put Paro International in
+                // the middle of Paris: "Paris Orly Airport" matches on its
+                // name and lands in band 0, Charles De Gaulle matches on its
+                // city line and lands in band 2, and Paro sorts between them
+                // -- so Paris was drawn as two halves around an airport in
+                // Bhutan. The nesting made it visible and the grouping is what
+                // fixes it.
+                //
+                // A group takes its best member's band, which is what makes
+                // "lon" answer with London and its three before anything else
+                // that merely contains those letters. Within a group the
+                // original order stands: the select ships a city immediately
+                // above its own airports, and `sort` is stable, so the city
+                // still leads and ties between groups stay alphabetical.
+                const groups = new Map();
+
+                options.forEach(function (option) {
+                    const band = rank(option);
+
+                    if (band < 0) {
+                        return;
+                    }
+
+                    // Keyed on the city, so an airport joins the group its
+                    // city leads even when the two matched for different
+                    // reasons -- which is the whole of the Paro problem.
+                    const key = option.dataset.inCity || option.value;
+                    const group = groups.get(key);
+
+                    if (group === undefined) {
+                        groups.set(key, { band: band, rows: [option] });
+
+                        return;
+                    }
+
+                    group.band = Math.min(group.band, band);
+                    group.rows.push(option);
+                });
+
+                const ranked = [...groups.values()]
+                    .sort((a, b) => a.band - b.band)
+                    .flatMap(group => group.rows);
 
                 // Only the first screenful. Every row costs layout, and a few
                 // hundred of them held the thread long enough that the list
@@ -914,11 +974,7 @@
                         .filter(Boolean);
 
                     if (near.length > 0) {
-                        const heading = document.createElement('li');
-                        heading.className = 'combo__group';
-                        heading.setAttribute('role', 'presentation');
-                        heading.textContent = 'Airports nearby';
-                        list.appendChild(heading);
+                        list.appendChild(headingFor('Airports nearby'));
 
                         // The block's own cities, so an airport nests under the
                         // city beside it here rather than under one further
@@ -967,10 +1023,25 @@
                     return;
                 }
 
+                // A city's own airports nest under it where the city is on
+                // screen as a row of its own, which is the 18 cities that sell
+                // from more than one airport.
+                //
+                // A heading stood here for the other 213, whose city is not
+                // selectable -- "Montreal, Canada" over Trudeau. It went back
+                // out: for a city with one airport the row already carries the
+                // city on its second line, and a heading over a single row
+                // says the same thing twice and costs a line to do it.
+                //
+                // Measured before removing it, over every city name and every
+                // 2-6 letter prefix of one: with the heading kept only for
+                // cities offering two airports or more, it fired on 0 of 1,062
+                // queries. There is no version of it that draws for a city
+                // worth grouping, because a city with two airports has a row
+                // of its own and takes the nesting path above instead.
                 found.forEach(function (option) {
                     list.appendChild(rowFor(option, citiesIn(found)));
                 });
-
 
                 if (ranked.length > found.length) {
                     const more = document.createElement('li');
