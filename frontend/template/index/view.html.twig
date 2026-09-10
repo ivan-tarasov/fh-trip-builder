@@ -5,6 +5,19 @@
 {% block description %}Search one-way and return flights, with the cheapest fare marked on every day of the calendar and dates you can flex by up to three days.{% endblock %}
 
 {% block content %}
+{# The landmark this page did not have, around the whole block rather than
+   around part of it -- and that is a constraint, not a preference.
+
+   `.hero__bar` is `position: sticky` above 768px, and a sticky element is
+   measured against its containing block. `.page` is what bounds it today, and
+   layout.html.twig's own note records what happens without a bound: the bar
+   "stayed pinned over the footer". Wrapping everything makes this box exactly
+   `.page`'s, so the bar's travel is unchanged. Wrapping any subset of the five
+   bands would move that boundary, silently, and only once somebody scrolled.
+
+   The bands stay siblings of each other, so `.hero-cards`' negative top margin
+   still straddles `.hero__tail` the way it did. #}
+<main role="main">
 {# The hero is a flat band, not a photograph.
 
    It used to be one of ten background JPEGs picked at random per request, with
@@ -96,4 +109,5 @@
         {% endfor %}
     </div>
 </div>
+</main>
 {% endblock %}
