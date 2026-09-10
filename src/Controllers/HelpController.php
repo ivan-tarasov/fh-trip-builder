@@ -80,10 +80,7 @@ class HelpController extends AbstractController
         $filed = [];
 
         foreach ($this->articles() as $slug => $article) {
-            $filed[(string) $article['category']][] = $article + [
-                'slug' => $slug,
-                'url' => '/help/' . $slug,
-            ];
+            $filed[(string) $article['category']][] = self::link($slug, $article);
         }
 
         $groups = [];
@@ -155,11 +152,17 @@ class HelpController extends AbstractController
                     (string) $article['title'],
                 ),
                 'article' => $article,
-                // The other four. An article is the one page on this site with
-                // no data of its own to link out with, so its siblings are what
-                // it offers -- and they are what stop each of these being
-                // reachable only from the footer.
-                'more' => self::addressable(array_diff_key($articles, [$slug => null])),
+                // The rest of this article's own group, and the group's name
+                // to put over them. An article is the one page on this site
+                // with no data of its own to link out with, so its siblings
+                // are what it offers -- and they are what stop each of these
+                // being reachable only from the footer.
+                //
+                // Its own group and not all eight others, which is what this
+                // was. Eight links under a finished article is a second hub
+                // rather than a next step, and the two most useful of them
+                // were always the ones about the same thing.
+                'siblings' => $this->siblings($slug, (string) $article['category']),
                 'verdict' => $this->verdict($slug),
             ]);
         } catch (Throwable $e) {
@@ -195,6 +198,49 @@ class HelpController extends AbstractController
         return [
             'html' => Markdown::toHtml($article['body']),
             'updated_at' => $article['updated_at'],
+        ];
+    }
+
+    /**
+     * The rest of this article's group, with the group's own title.
+     *
+     * Null where there is nothing to show, so the template can leave the card
+     * out rather than draw an empty one. That happens two ways, and both are
+     * real: an article can be the only one in its group, and an article's
+     * category can name a row that is not there -- `all()` keeps such a row
+     * deliberately, so it is still readable, and this is the other place that
+     * has to decide what to do about it. See ArticleRepository::all().
+     *
+     * Unguarded, unlike verdict(), for the reason prose() is: this is one read
+     * against tables the page has already read, and a failure here means the
+     * page is broken rather than merely bare.
+     *
+     * @return array{title: string, icon: string, accent: string, articles: list<array<string, mixed>>}|null
+     */
+    private function siblings(string $slug, string $category): ?array
+    {
+        $categories = new ArticleCategoryRepository($this->connection())->all();
+
+        if (!isset($categories[$category])) {
+            return null;
+        }
+
+        $articles = [];
+
+        foreach ($this->articles() as $other => $article) {
+            if ($other === $slug || $article['category'] !== $category) {
+                continue;
+            }
+
+            $articles[] = self::link($other, $article);
+        }
+
+        // The whole group row, not just its name: the card at the foot of an
+        // article is the hub's card, icon and all, so it takes the same shape
+        // the hub's groups do.
+        return $articles === [] ? null : $categories[$category] + [
+            'slug' => $category,
+            'articles' => $articles,
         ];
     }
 
@@ -264,23 +310,19 @@ class HelpController extends AbstractController
     }
 
     /**
-     * The articles as a list, each with the address it is reached at.
+     * One article as a template wants it: its fields, its slug and its address.
      *
      * The slug is the address here, unlike every other family on the site, so
-     * this is the one place that writes "/help/" in front of one.
+     * this stays the one place that writes "/help/" in front of one. That was
+     * addressable()'s reason for existing, and it outlived the whole-list
+     * shape that method had -- both readers now filter as they go.
      *
-     * @param array<string, array<string, mixed>> $articles
-     * @return list<array<string, mixed>>
+     * @param array<string, mixed> $article
+     * @return array<string, mixed>
      */
-    private static function addressable(array $articles): array
+    private static function link(string $slug, array $article): array
     {
-        $links = [];
-
-        foreach ($articles as $slug => $article) {
-            $links[] = $article + ['slug' => $slug, 'url' => '/help/' . $slug];
-        }
-
-        return $links;
+        return $article + ['slug' => $slug, 'url' => '/help/' . $slug];
     }
 
     /**

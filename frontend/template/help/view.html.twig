@@ -45,23 +45,38 @@
         {% endif %}
     {% endblock %}
 
-    {# The other four. An article has no data of its own to link out with, so
-       its siblings are what it offers -- and they are what keep each of these
-       reachable from somewhere other than the footer. #}
+    {# The rest of this article's own group. An article has no data of its own
+       to link out with, so its siblings are what it offers -- and they are
+       what keep each of these reachable from somewhere other than the footer.
+
+       Drawn as the hub's own card and not as chips -- the same partial, so it
+       is the same icon, heading and rows a reader met on the way here. Titled
+       with the group rather than "More help", which is what makes it a
+       continuation of the article instead of a pile of everything else. The
+       group's sentence is left off: by the time somebody is at the foot of an
+       article they have read the thing it describes.
+
+       Absent entirely where there is nothing to list -- an article alone in
+       its group, or one whose category row has gone. The controller returns
+       null for both, so this draws no empty card.
+
+       `default(false)` for the reason the date below the prose carries one:
+       null is a real answer here and `{% if %}` reads it correctly, but an
+       *undefined* variable throws under strict_variables, and the suites that
+       render this page to look at the band should not have to know about
+       siblings. What stops the controller quietly dropping the card is a test
+       that drives it -- see ArticleCatalogueTest. #}
     {% block aside %}
-        <aside class="article__aside" aria-labelledby="more-help-title">
-            <h2 class="article__aside-title" id="more-help-title">More help</h2>
-            <ul class="chips">
-                {% for topic in more %}
-                    <li>
-                        <a class="chip chip--link" href="{{ topic.url }}">
-                            <i class="fas {{ topic.icon }} chip__icon" aria-hidden="true"></i>
-                            {{ topic.title }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        </aside>
+        {% if siblings|default(false) %}
+            <aside class="article__aside article__aside--group"
+                   aria-labelledby="more-help-title">
+                {% include 'partials/help-group.html.twig' with {
+                    'group': siblings,
+                    'heading_id': 'more-help-title',
+                    'summary': false
+                } only %}
+            </aside>
+        {% endif %}
     {% endblock %}
 {% endembed %}
 {% endblock %}

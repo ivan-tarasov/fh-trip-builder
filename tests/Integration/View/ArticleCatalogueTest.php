@@ -46,6 +46,15 @@ final class ArticleCatalogueTest extends IntegrationTestCase
     /** An empty category, for the one test that needs a group with nothing in it. */
     private const string SENTINEL_CATEGORY = 'zzz-category-sentinel';
 
+    /**
+     * A second throwaway article, for the one case that needs two.
+     *
+     * An orphan on its own has no siblings and is answered by that, so it
+     * never reaches the check for whether its category exists. Two orphans
+     * sharing a missing category do.
+     */
+    private const string SENTINEL_TWO = 'zzz-date-sentinel-two';
+
     protected function setUp(): void
     {
         new Config('common');
@@ -60,7 +69,9 @@ final class ArticleCatalogueTest extends IntegrationTestCase
     protected function tearDown(): void
     {
         foreach (['article_translations', 'articles'] as $table) {
-            $this->connection()->execute('DELETE FROM ' . $table . ' WHERE slug = ?', [self::SENTINEL]);
+            foreach ([self::SENTINEL, self::SENTINEL_TWO] as $slug) {
+                $this->connection()->execute('DELETE FROM ' . $table . ' WHERE slug = ?', [$slug]);
+            }
         }
 
         foreach (['article_category_translations', 'article_categories'] as $table) {
@@ -491,6 +502,123 @@ final class ArticleCatalogueTest extends IntegrationTestCase
         self::assertNotSame(date('Y-m-d'), $day, 'the page is printing today instead of the stored date');
     }
     /**
+     * Each article offers the rest of its own group, and nothing else.
+     *
+     * Driven through the controller, because that is where the grouping is
+     * decided and because the template hides the card when nothing arrives --
+     * `siblings|default(false)`, which is what keeps the band suites from
+     * having to know about this. Nothing else here would notice the controller
+     * stopping.
+     */
+    public function testAnArticleOffersTheRestOfItsGroup(): void
+    {
+        $articles = new ArticleRepository($this->connection())->all();
+        $categories = new ArticleCategoryRepository($this->connection())->all();
+
+        $checked = 0;
+
+        foreach ($articles as $slug => $article) {
+            $expected = array_keys(array_filter(
+                $articles,
+                static fn(array $other, string $key): bool
+                    => $key !== $slug && $other['category'] === $article['category'],
+                ARRAY_FILTER_USE_BOTH,
+            ));
+
+            $html = $this->articlePage($slug);
+
+            preg_match('#<aside class="article__aside.*?</aside>#s', $html, $aside);
+
+            if ($expected === []) {
+                self::assertEmpty($aside, $slug . ' is alone in its group and should offer no card');
+
+                continue;
+            }
+
+            self::assertNotEmpty($aside, $slug . ' should offer its group');
+            self::assertStringContainsString(
+                htmlspecialchars($categories[$article['category']]['title'], ENT_QUOTES),
+                $aside[0],
+                $slug . ' should name its group',
+            );
+            self::assertStringContainsString(
+                'fas ' . $categories[$article['category']]['icon'],
+                $aside[0],
+                $slug . ' should carry its group\'s icon',
+            );
+
+            preg_match_all('#href="/help/([a-z-]+)"#', $aside[0], $links);
+
+            self::assertSame($expected, $links[1], $slug . ' offers the wrong articles');
+            self::assertNotContains($slug, $links[1], $slug . ' links back to itself');
+
+            $checked++;
+        }
+
+        self::assertGreaterThan(0, $checked, 'no article had a sibling to check');
+    }
+
+    /**
+     * An article with nowhere to point offers no card, either way round.
+     *
+     * Two ways to have no siblings, and the real catalogue has neither: every
+     * group holds two or more, so the branch in the test above never runs on
+     * live rows. Both are reachable the moment somebody writes a group's first
+     * article, or edits a category out from under one, so both are made to
+     * happen here rather than waited for.
+     */
+    public function testAnArticleWithNoSiblingsOffersNoCard(): void
+    {
+        // Alone in a group of its own.
+        $this->connection()->execute(
+            'INSERT INTO article_categories (slug, icon, accent, position, enabled, created_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW())',
+            [self::SENTINEL_CATEGORY, 'fa-clock', 'violet', 990],
+        );
+        $this->connection()->execute(
+            'INSERT INTO article_category_translations (slug, locale, title, summary, updated_at)'
+            . ' VALUES (?, ?, ?, ?, NOW())',
+            [
+                self::SENTINEL_CATEGORY,
+                ArticleCategoryRepository::DEFAULT_LOCALE,
+                'A group of one',
+                'Inserted by the test suite and removed again.',
+            ],
+        );
+        $this->insertSentinel(self::SENTINEL_CATEGORY);
+
+        self::assertStringNotContainsString(
+            'article__aside',
+            $this->articlePage(self::SENTINEL),
+            'an article alone in its group should offer no card',
+        );
+
+        // And with its category gone from under it. Two of them sharing the
+        // same missing category, so this really does reach the check for
+        // whether the category exists: a single orphan has no siblings and is
+        // answered by that first, which is the weaker thing to assert.
+        foreach (['article_translations', 'articles'] as $table) {
+            $this->connection()->execute('DELETE FROM ' . $table . ' WHERE slug = ?', [self::SENTINEL]);
+        }
+
+        $this->insertSentinel('no-such-category-exists');
+        $this->insertSentinel('no-such-category-exists', self::SENTINEL_TWO);
+
+        $html = $this->articlePage(self::SENTINEL);
+
+        self::assertStringNotContainsString(
+            'article__aside',
+            $html,
+            'an orphan should offer no card rather than one with no heading',
+        );
+        self::assertStringNotContainsString(
+            'no-such-category-exists',
+            $html,
+            'and should not print the missing category as a title',
+        );
+    }
+
+    /**
      * And the controller is what actually puts the date there.
      *
      * page() below builds a page the way HelpController builds one, which
@@ -529,6 +657,35 @@ final class ArticleCatalogueTest extends IntegrationTestCase
     }
 
     /**
+     * One article page, as HelpController draws it.
+     */
+    private function articlePage(string $slug): string
+    {
+        // Started because renderPage() reports how long the page took; see
+        // testTheControllerPutsTheDateOnThePage.
+        Timer::start();
+
+        $controller = new HelpController(
+            new Request(new Input(), new Input(), new Input(), uri: '/help/' . $slug),
+        );
+
+        ob_start();
+
+        try {
+            $controller->show();
+            $html = (string) ob_get_clean();
+        } catch (Throwable $e) {
+            ob_end_clean();
+
+            throw $e;
+        }
+
+        self::assertStringNotContainsString('Something went wrong', $html, $slug . ' did not render');
+
+        return $html;
+    }
+
+    /**
      * The hub, as HelpController draws it.
      */
     private function hub(): string
@@ -564,7 +721,7 @@ final class ArticleCatalogueTest extends IntegrationTestCase
      * would fail outright. The default is read from the table rather than
      * written out here, so renaming a category does not break this.
      */
-    private function insertSentinel(?string $category = null): void
+    private function insertSentinel(?string $category = null, string $slug = self::SENTINEL): void
     {
         $category ??= (string) array_key_first(new ArticleCategoryRepository($this->connection())->all());
 
@@ -573,13 +730,13 @@ final class ArticleCatalogueTest extends IntegrationTestCase
         $this->connection()->execute(
             'INSERT INTO articles (slug, category, icon, position, enabled, created_at)'
             . ' VALUES (?, ?, ?, ?, 1, NOW())',
-            [self::SENTINEL, $category, 'fa-clock', 900],
+            [$slug, $category, 'fa-clock', 900],
         );
         $this->connection()->execute(
             'INSERT INTO article_translations (slug, locale, title, short, summary, body, updated_at)'
             . ' VALUES (?, ?, ?, NULL, ?, ?, ?)',
             [
-                self::SENTINEL,
+                $slug,
                 ArticleRepository::DEFAULT_LOCALE,
                 'When this changed',
                 'A row the test suite inserts and removes again.',

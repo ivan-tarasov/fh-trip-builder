@@ -6968,12 +6968,22 @@ body:has(.cookie-notice) .to-top { display: none; }
   min-width: 0;
 }
 
-.help-group {
-  /* The icon column, named because the rows below the heading line up with the
-     far side of it rather than with the card's own edge -- see
-     .help-group__list. Change either of these and the alignment follows. */
+/* The icon column, named because the rows below the heading line up with the
+   far side of it rather than with the card's own edge -- see
+   .help-group__list. Change either value and the alignment follows.
+
+   Declared for both cards that draw a group: the hub's own, and the article's
+   aside where it carries the same partial. On the modifier and not on
+   .article__aside itself, because a legal document's aside is that class too
+   and has no icon to clear. */
+.help-group,
+.article__aside--group {
   --help-group-icon: 2.5rem;
   --help-group-icon-gap: 1rem;
+  --help-group-indent: calc(var(--help-group-icon) + var(--help-group-icon-gap));
+}
+
+.help-group {
   padding: 1.75rem 2rem 1.25rem;
   background-color: #fff;
   border-radius: 1rem;
@@ -6990,9 +7000,17 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .help-group__head {
   display: flex;
-  align-items: flex-start;
+  /* Centred where there is no sentence under the heading, which is the
+     article's card: an icon hung from the top of a single line sits above it.
+     The hub's heading block is two lines, so `start` is what that wants and
+     the rule below restores it. */
+  align-items: center;
   gap: var(--help-group-icon-gap);
   margin-bottom: 1.25rem;
+}
+
+.help-group .help-group__head {
+  align-items: flex-start;
 }
 
 .help-group__icon {
@@ -7038,11 +7056,16 @@ body:has(.cookie-notice) .to-top { display: none; }
   line-height: 1.5;
 }
 
+/* The rows are shared with the article page's own group card, which borrows
+   this list and everything under it. Only the card around them differs: there
+   it is the article's aside, sized and titled as an aside. */
 .help-group__list {
-  /* Indented past the icon, so a row starts where the heading above it starts.
-     The rules go with it: a hairline running out to the card's edge under a
-     heading that begins 56px in reads as two columns rather than one list. */
-  margin: 0 0 0 calc(var(--help-group-icon) + var(--help-group-icon-gap));
+  /* Indented past the icon on the hub, so a row starts where the heading above
+     it starts, and the rules go with it -- a hairline running out to the
+     card's edge under a heading that begins 56px in reads as two columns
+     rather than one list. Nought by default, because a card with no icon has
+     no column to clear. */
+  margin: 0 0 0 var(--help-group-indent, 0);
   padding: 0;
   list-style: none;
 }
