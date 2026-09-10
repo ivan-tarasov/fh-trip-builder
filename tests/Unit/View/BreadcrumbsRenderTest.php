@@ -87,6 +87,47 @@ final class BreadcrumbsRenderTest extends TestCase
         }
     }
 
+    /**
+     * Neither trail draws its separator in a rule colour.
+     *
+     * This has been wrong twice, on the two halves of the same trail. The
+     * on-dark separators were `--line-on-dark` at 1.44:1 on the band, fixed in
+     * PR #76; the light ones stayed `--line-strongest` at 1.46:1 on
+     * `--surface` for two releases after, because nothing connected the two
+     * and the second half is not visible from the first.
+     *
+     * The rule tier is mixed for hairlines between panels. A chevron drawn in
+     * it is a mark carrying meaning that nobody can see -- the same call the
+     * datepicker's today marker already makes, in the same words.
+     *
+     * Asserted against the stylesheet rather than the render, the way
+     * FooterRenderTest asserts its focus rings: what a render can show is the
+     * markup, and what broke here was the colour.
+     */
+    public function testNeitherTrailDrawsItsSeparatorInARuleColour(): void
+    {
+        $css = (string) file_get_contents(__DIR__ . '/../../../frontend/css/main.css');
+
+        foreach ([
+            'the light trail' => '/\.breadcrumbs__item \+ \.breadcrumbs__item::before \{(.*?)\}/s',
+            'the trail in a band' => '/\.breadcrumbs--on-dark \.breadcrumbs__item \+ [^{]*\{(.*?)\}/s',
+        ] as $which => $pattern) {
+            self::assertSame(1, preg_match($pattern, $css, $rule), $which . ' has no separator rule to read');
+
+            self::assertMatchesRegularExpression(
+                '/color: var\(--ink-[a-z-]+\)/',
+                $rule[1],
+                $which . ' should colour its separator from the ink scale',
+            );
+
+            self::assertDoesNotMatchRegularExpression(
+                '/color: var\(--line[a-z-]*\)/',
+                $rule[1],
+                $which . ' draws a glyph in a colour mixed for hairlines',
+            );
+        }
+    }
+
     public function testTheStructuredDataIsRenderedBesideTheCrumbs(): void
     {
         $xp = $this->render('/airlines');
