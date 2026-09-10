@@ -131,6 +131,14 @@ final class PlacePickerGroupingTest extends TestCase
 
         self::assertStringContainsString('NEARBY_KM = 300', $repository);
         self::assertStringContainsString('NEARBY_CITIES = 4', $repository);
+
+        // A tighter question than the block's, and a separate decision:
+        // 300km is a drive to another airport, 100km is a claim about where
+        // somebody is. Measured on a real request -- 13.9km to Montreal,
+        // 164km to Ottawa -- so 100 fills the right city and refuses the
+        // wrong one. Widening it silently is how a filled field starts being
+        // wrong for people it used to leave alone.
+        self::assertStringContainsString('HERE_KM = 100', $repository);
     }
 
     private function read(string $path): string

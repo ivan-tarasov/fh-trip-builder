@@ -35,6 +35,17 @@ final readonly class AirportRepository
     public const int NEARBY_KM = 300;
 
     /**
+     * How far "where you are" may reach, which is a tighter question than
+     * "what else could you fly from". 300km is a drive somebody would make to
+     * a different airport; it is not a claim about where they live. Measured
+     * on a real request from Montreal: 13.9km to Montreal, 164km to Ottawa --
+     * so 100km fills the field with the right city and refuses the wrong one.
+     * Somewhere with nothing inside 100km gets an empty field, which is the
+     * safe direction to be wrong in.
+     */
+    public const int HERE_KM = 100;
+
+    /**
      * How many neighbours to ask for per city wanted. New York's three
      * nearest airports are all its own, so asking for one per city would
      * return a block of one group.
@@ -283,6 +294,88 @@ final readonly class AirportRepository
     }
 
     /**
+     * The place the picker offers for a point on the map, or null.
+     *
+     * A city rather than an airport, which is the useful answer: it searches
+     * every airport the city has. Resolved through the same map the nearby
+     * block uses, so a city with one airport comes back as that airport --
+     * pickable() only draws a city row where the city holds more than one.
+     *
+     * `POINT(longitude, latitude)`, in that order, which is the opposite of
+     * how coordinates are written everywhere else here. CityRepository's own
+     * note says the same thing, and it is the easiest mistake to make in this
+     * file.
+     *
+     * No special case for 0,0. It is a common "unknown" sentinel and it does
+     * not need one: the nearest place we sell from is some 400km away in the
+     * Gulf of Guinea, so the radius refuses it like any other point in the
+     * sea. A guard would be one more branch nothing can reach.
+     *
+     * @param list<array<string, mixed>>|null $places the picker's rows, where
+     *     the caller already holds them -- see byCity()
+     */
+    public function nearestPlaceTo(float $latitude, float $longitude, int $maxKm, ?array $places = null): ?string
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT a.city_code,'
+            . ' ST_Distance_Sphere(POINT(?, ?), POINT(AVG(a.longitude), AVG(a.latitude))) / 1000 AS km'
+            . ' FROM ' . Table::Airports->value . ' a'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' GROUP BY a.city_code'
+            . ' HAVING km <= ?'
+            . ' ORDER BY km ASC'
+            . ' LIMIT 1',
+            [$longitude, $latitude, $maxKm],
+        );
+
+        if ($rows === []) {
+            return null;
+        }
+
+        ['cities' => $cityRow, 'airports' => $airportsOf] = self::byCity($places ?? $this->pickable());
+        $city = (string) $rows[0]['city_code'];
+
+        return $cityRow[$city] ?? $airportsOf[$city][0] ?? null;
+    }
+
+    /**
+     * The picker's rows indexed by the city they belong to: the city's own row
+     * where it has one, and the airports offered under it.
+     *
+     * One definition, because two readers now ask the same question -- the
+     * nearby block and the nearest-place lookup -- and "which code stands for
+     * this city" is exactly the kind of rule that drifts when it is written
+     * twice.
+     *
+     * Both readers accept the list as an argument as well as fetching it, and
+     * that is why: the homepage asks all three questions in one render, and
+     * pickable() is a 266-row group-by at about 3.4ms a time. Fetched once and
+     * passed along it is paid once. The same trade CityRepository::names()
+     * documents for callers that cannot afford its join -- this class is
+     * `readonly`, so there is nowhere to memoise it.
+     *
+     * @param list<array<string, mixed>> $places
+     * @return array{cities: array<string, string>, airports: array<string, list<string>>}
+     */
+    private static function byCity(array $places): array
+    {
+        $cities = [];
+        $airports = [];
+
+        foreach ($places as $place) {
+            if ((int) $place['is_city'] === 1) {
+                $cities[(string) $place['city_code']] = (string) $place['code'];
+
+                continue;
+            }
+
+            $airports[(string) $place['city_code']][] = (string) $place['code'];
+        }
+
+        return ['cities' => $cities, 'airports' => $airports];
+    }
+
+    /**
      * What to offer at the top of the picker when it is opened on a place:
      * the nearby cities with their own airports under them, nearest first.
      *
@@ -307,25 +400,16 @@ final readonly class AirportRepository
      * the 254 airports. The block is meant to drop for those rather than reach
      * further to fill itself.
      *
+     * @param list<array<string, mixed>>|null $places the picker's rows, where
+     *     the caller already holds them -- see byCity()
      * @return list<string>
      */
-    public function nearbyPlaces(string $code, int $cities, int $maxKm): array
+    public function nearbyPlaces(string $code, int $cities, int $maxKm, ?array $places = null): array
     {
         $code = strtoupper($code);
-        $places = $this->pickable();
+        $places ??= $this->pickable();
 
-        $airportsOf = [];
-        $cityRow = [];
-
-        foreach ($places as $place) {
-            if ((int) $place['is_city'] === 1) {
-                $cityRow[(string) $place['city_code']] = (string) $place['code'];
-
-                continue;
-            }
-
-            $airportsOf[(string) $place['city_code']][] = (string) $place['code'];
-        }
+        ['cities' => $cityRow, 'airports' => $airportsOf] = self::byCity($places);
 
         $home = null;
 

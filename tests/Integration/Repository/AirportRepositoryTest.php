@@ -158,6 +158,86 @@ final class AirportRepositoryTest extends IntegrationTestCase
     }
 
     /**
+     * The place nearest a point, which is what fills the homepage's field.
+     *
+     * The coordinates are from a real request through Cloudflare -- downtown
+     * Montreal -- so this is the actual path rather than a plausible one.
+     * Montreal offers one airport, so the answer is that airport; London
+     * offers three, so the answer is the city, which searches all of them.
+     */
+    public function testTheNearestPlaceToAPointIsSomethingThePickerOffers(): void
+    {
+        $offered = array_column($this->repository()->pickable(), 'code');
+
+        foreach ([
+            'downtown Montreal' => [45.50884, -73.58781, 'YUL'],
+            'central London' => [51.5074, -0.1278, 'LON'],
+        ] as $where => [$latitude, $longitude, $expected]) {
+            $found = $this->repository()->nearestPlaceTo($latitude, $longitude, 100);
+
+            self::assertSame($expected, $found, $where);
+            self::assertContains((string) $found, $offered, $where . ' is not selectable');
+        }
+    }
+
+    /**
+     * Past the radius the field is left alone rather than filled wide.
+     *
+     * 0,0 is the case worth naming: it is a common "unknown" sentinel, and it
+     * needs no special handling because the nearest place we sell from is
+     * hundreds of kilometres away in the Gulf of Guinea. The radius refuses
+     * it like any other point at sea.
+     */
+    public function testAPointWithNothingNearbyFillsNothing(): void
+    {
+        foreach ([
+            'the Gulf of Guinea, which is what 0,0 is' => [0.0, 0.0],
+            'the middle of the Atlantic' => [30.0, -40.0],
+            'Ottawa, 164km from Montreal' => [45.4215, -75.6972],
+        ] as $where => [$latitude, $longitude]) {
+            // Ottawa is its own sellable city, so it answers for itself -- the
+            // point of naming it is that Montreal is *not* the answer.
+            $found = $this->repository()->nearestPlaceTo($latitude, $longitude, 100);
+
+            self::assertNotSame('YUL', $found, $where . ' should not reach Montreal');
+        }
+
+        self::assertNull($this->repository()->nearestPlaceTo(0.0, 0.0, 100), 'nothing within 100km of 0,0');
+        self::assertNull($this->repository()->nearestPlaceTo(30.0, -40.0, 100));
+
+        // And the radius is the reason, not the absence of anywhere to find.
+        // Widened, 0,0 does answer -- so a bound that stopped being applied
+        // would start filling fields from the middle of the sea, which the
+        // two assertions above cannot tell from a query that simply failed.
+        self::assertNotNull(
+            $this->repository()->nearestPlaceTo(0.0, 0.0, 20_000),
+            'the whole world is inside 20,000km, so the bound is what refuses 100',
+        );
+    }
+
+    /**
+     * Handing over the picker's rows changes the answer not at all.
+     *
+     * Both readers take them so the homepage can fetch once and ask three
+     * questions -- pickable() is a 266-row group-by -- and an optimisation
+     * that quietly answered differently would be worse than the cost it saves.
+     */
+    public function testPassingThePlacesInAnswersTheSame(): void
+    {
+        $places = $this->repository()->pickable();
+
+        self::assertSame(
+            $this->repository()->nearestPlaceTo(45.50884, -73.58781, 100),
+            $this->repository()->nearestPlaceTo(45.50884, -73.58781, 100, $places),
+        );
+
+        self::assertSame(
+            $this->repository()->nearbyPlaces('JFK', 4, 300),
+            $this->repository()->nearbyPlaces('JFK', 4, 300, $places),
+        );
+    }
+
+    /**
      * The nearby block leads with the city the field is open on.
      *
      * Its own other airports are the most useful answer to "what else is near
