@@ -79,7 +79,9 @@
         {% include 'search/form.html.twig' with {
             'places': places,
             'recent': recent,
-            'depart_date': today_date
+            'depart_date': today_date,
+            'depart_code': depart_code,
+            'nearby': nearby
         } only %}
     </div>
 </div>

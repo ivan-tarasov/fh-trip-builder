@@ -124,10 +124,13 @@ final class PlacePickerGroupingTest extends TestCase
      */
     public function testTheBlockKeepsTheRadiusItWasArguedFor(): void
     {
-        $controller = $this->read('src/Controllers/SearchController.php');
+        // On the repository, not on a controller: the homepage and the
+        // results page both draw this block, and two copies of a radius is
+        // how the two pages start disagreeing about what "nearby" means.
+        $repository = $this->read('src/Repository/AirportRepository.php');
 
-        self::assertStringContainsString('NEARBY_KM = 300', $controller);
-        self::assertStringContainsString('NEARBY_CITIES = 4', $controller);
+        self::assertStringContainsString('NEARBY_KM = 300', $repository);
+        self::assertStringContainsString('NEARBY_CITIES = 4', $repository);
     }
 
     private function read(string $path): string

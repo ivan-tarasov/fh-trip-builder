@@ -26,6 +26,15 @@ final readonly class AirportRepository
     private const string ONLY_SELLABLE = ' a.enabled = 1 AND a.is_major = 1';
 
     /**
+     * What the picker's nearby block asks for, so both pages ask the same
+     * thing. The radius is nearby()'s own argument -- 300km is a drive
+     * somebody would make, and past it "the answers stop being drives" --
+     * and four cities is a block rather than a second list.
+     */
+    public const int NEARBY_CITIES = 4;
+    public const int NEARBY_KM = 300;
+
+    /**
      * How many neighbours to ask for per city wanted. New York's three
      * nearest airports are all its own, so asking for one per city would
      * return a block of one group.

@@ -36,6 +36,37 @@ final class RecentSearchesTest extends TestCase
         ]);
     }
 
+    /**
+     * Where the last search left from, which is what the homepage opens on.
+     */
+    public function testTheLatestOriginIsTheNewestSearchsDeparture(): void
+    {
+        $origin = RecentSearches::latestOrigin(self::cookie([
+            '/search/YUL151026LHRY1',
+            '/search/YYZ011126CDGY1',
+        ]));
+
+        self::assertSame('YUL', $origin, 'newest first, so the first entry decides');
+    }
+
+    public function testThereIsNoOriginWithoutASearch(): void
+    {
+        self::assertNull(RecentSearches::latestOrigin(self::cookie([])));
+        self::assertNull(RecentSearches::latestOrigin(new Input([])));
+    }
+
+    /**
+     * A hand-edited cookie has no origin either.
+     *
+     * read() drops anything SearchUrl::parse() refuses, so this needs no
+     * validation of its own -- asserted rather than assumed, because the
+     * homepage would otherwise open on whatever somebody typed into a cookie.
+     */
+    public function testAnUnparseablePathHasNoOrigin(): void
+    {
+        self::assertNull(RecentSearches::latestOrigin(self::cookie(['/search/nonsense'])));
+    }
+
     public function testAWellFormedCookieReadsBackNewestFirst(): void
     {
         $searches = RecentSearches::read(self::cookie([self::ROUND_TRIP, self::ONE_WAY]));

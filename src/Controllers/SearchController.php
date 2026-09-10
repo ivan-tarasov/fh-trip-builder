@@ -68,13 +68,6 @@ class SearchController extends AbstractController
 
     private const string DEFAULT_SORT = 'recommended';
 
-    // How far the nearby block reaches, and how many places it names. The
-    // radius is AirportRepository::nearby()'s own: 300km is a drive somebody
-    // would make, and past it the answers stop being drives. Four cities
-    // because that is a block rather than a second list -- New York's are
-    // itself, Philadelphia, Baltimore and Boston.
-    private const int NEARBY_CITIES = 4;
-    private const int NEARBY_KM = 300;
 
     // Ten is a first screen; after that the visitor is scanning, and more per
     // load means fewer round trips for the same scroll. MAX_SHOWN bounds what a
@@ -1344,7 +1337,11 @@ class SearchController extends AbstractController
                 continue;
             }
 
-            $rows = $repository->nearbyPlaces($code, self::NEARBY_CITIES, self::NEARBY_KM);
+            $rows = $repository->nearbyPlaces(
+                $code,
+                AirportRepository::NEARBY_CITIES,
+                AirportRepository::NEARBY_KM,
+            );
 
             if ($rows !== []) {
                 $nearby[$code] = $rows;
