@@ -121,7 +121,13 @@ final class FooterColumnsTest extends IntegrationTestCase
      */
     public function testTheHelpColumnUsesTheShortNamesAndNotTheTitles(): void
     {
-        $html = $this->footerText();
+        // The column and not the whole footer, which is what this looked at
+        // before. An article's title can appear elsewhere down there for
+        // reasons that have nothing to do with a label: the fare-alert form
+        // carries a heading of its own, and it names the same thing the
+        // article about it does. Looking at the whole footer made that a
+        // failure of the labels, which it is not.
+        $html = $this->helpColumn();
         $articles = new ArticleRepository($this->connection())->all();
         $shortened = 0;
 
@@ -151,6 +157,26 @@ final class FooterColumnsTest extends IntegrationTestCase
             $shortened,
             'sanity: at least one article in the column should carry a short name',
         );
+    }
+
+    /**
+     * Just the help column: its heading and the list under it.
+     *
+     * Sliced out of the rendered footer rather than rebuilt, so it follows the
+     * column however it is ordered and however many rows it is told to show.
+     */
+    private function helpColumn(): string
+    {
+        $html = $this->footerText();
+        $start = strpos($html, 'Help & tips');
+
+        self::assertNotFalse($start, 'the help column should be findable');
+
+        $end = strpos($html, '</ul>', $start);
+
+        self::assertNotFalse($end, 'the column should hold a list');
+
+        return substr($html, $start, $end - $start);
     }
 
     /**

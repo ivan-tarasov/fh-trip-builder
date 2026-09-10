@@ -36,6 +36,8 @@ that total is converted.
 ## What you get afterwards
 
 A booking reference on the confirmation page, and the booking under
-[My bookings](/my/bookings) in the browser you used. Nothing is emailed — see
+[My bookings](/my/bookings) for as long as the browsing session lasts — which
+is until you close the browser, and no longer. Nothing is emailed either, so
+the reference really is the part you keep. See
 [Ticket did not arrive](/help/ticket-not-received), which is the article about
 what that does and does not mean.

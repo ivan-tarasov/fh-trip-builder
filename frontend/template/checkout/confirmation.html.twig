@@ -29,11 +29,17 @@
                The address is still worth printing: it is what was typed, it is
                what is stored against the booking, and seeing it is how somebody
                notices they mistyped it. #}
+            {# "in this browser" was too generous, and this is the first place
+               anybody reads it. Bookings are found by session id, and the
+               session cookie carries no lifetime -- so the list goes when the
+               browser closes, not merely when somebody clears their data or
+               opens another device. Saying "in this browser" invited people to
+               come back tomorrow and find nothing. #}
             <p class="done__lead">
-                Kept under <a href="/my/bookings">My bookings</a> in this browser, with
-                <strong>{{ email }}</strong> as the contact address. Nothing is emailed
-                &mdash; {{ config('app.name') }} issues no ticket &mdash; so the reference
-                below is the part worth writing down.
+                Kept under <a href="/my/bookings">My bookings</a> until you close the
+                browser, with <strong>{{ email }}</strong> as the contact address.
+                Nothing is emailed &mdash; {{ config('app.name') }} issues no ticket
+                &mdash; so the reference below is the part worth writing down.
             </p>
 
             <div class="done__reference">
