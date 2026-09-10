@@ -1,0 +1,428 @@
+<?php
+
+declare(strict_types=1);
+
+namespace TripBuilder\Noah\Airside;
+
+use RuntimeException;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
+use TripBuilder\Helper;
+use TripBuilder\Noah\AbstractCommand;
+use TripBuilder\Repository\PostRepository;
+
+#[AsCommand(
+    name: 'airside:import',
+    description: 'Make the Airside posts in the database match the files in config/content/airside.',
+    aliases: [],
+    hidden: false,
+)]
+
+/**
+ * The Airside posts, from files into rows.
+ *
+ * The sibling of `articles:import`, and deliberately the same command: read
+ * every file, refuse the whole run on a bad one, write what parsed, then delete
+ * the rows no file describes any more. The files are the whole truth, which is
+ * what stops a database that has already imported a post from keeping it after
+ * the file is deleted while a fresh install never has it.
+ *
+ * What differs from help, and only this: a post carries a date it chooses
+ * rather than a position somebody assigns, and it may carry a hero image.
+ */
+final class Import extends AbstractCommand
+{
+    private const string CONTENT_DIR = 'config/content/airside';
+
+    /**
+     * Where a hero image has to be, and the first images this repository
+     * serves -- there is no `frontend/img` before this and nothing in the
+     * templates renders an `<img>` from the repo at all.
+     *
+     * A8.2 owns the pipeline: uploads, many images per post, responsive sizes.
+     * This is the smallest thing that lets a post have a picture, and it makes
+     * one decision A8.2 will revisit -- a directory. Which is why the column
+     * holds the *file name* and not a path: moving these somewhere else, or
+     * onto the CDN `site.static.endpoint.images` names and nothing yet uses,
+     * is then a change to one template rather than to every row.
+     */
+    private const string IMAGE_DIR = 'frontend/img/airside';
+
+    private const array REQUIRED = ['title', 'published', 'author', 'summary'];
+
+    /**
+     * `hero_alt` is optional only because `hero` is. Given one, the other is
+     * required -- see `parse()`.
+     */
+    private const array OPTIONAL = ['hero', 'hero_alt'];
+
+    private const int TITLE_LIMIT = 120;
+    private const int SUMMARY_LIMIT = 255;
+    private const int ALT_LIMIT = 160;
+
+    protected function configure(): void
+    {
+        $this->addOption(
+            'dry-run',
+            null,
+            InputOption::VALUE_NONE,
+            'Parse and report, without writing anything.',
+        );
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        try {
+            $posts = self::read(self::CONTENT_DIR, self::parse(...));
+        } catch (Throwable $e) {
+            $this->io->error($e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        if ($posts === []) {
+            // Also what stops a mistyped or unmounted directory emptying the
+            // table: nothing is removed on a run that found nothing to keep.
+            $this->io->error(sprintf(
+                'Nothing to import: %s holds no .md files.',
+                self::CONTENT_DIR,
+            ));
+
+            return Command::FAILURE;
+        }
+
+        // Before the connection, because nothing about it needs one: a post
+        // naming an image that is not there now costs no writes at all.
+        $missing = self::missingImages($posts);
+
+        if ($missing !== []) {
+            $this->io->error(implode("\n", $missing));
+
+            return Command::FAILURE;
+        }
+
+        try {
+            $repository = new PostRepository($this->connection());
+        } catch (Throwable $e) {
+            $this->io->error('No database: ' . $e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        if ($input->getOption('dry-run')) {
+            foreach ($posts as $slug => $post) {
+                $this->formatOutput(
+                    sprintf('%s (%s)', $slug, $post['published_at']),
+                    'post',
+                    'info',
+                );
+            }
+
+            // The half of a dry run that matters, since the command deletes. A
+            // preview that stayed quiet about removals would preview only the
+            // safe half.
+            foreach (array_diff($repository->slugs(), array_keys($posts)) as $slug) {
+                $this->formatOutput($slug, 'would remove', 'comment');
+            }
+
+            $this->io->note(sprintf('%d post(s) parsed. Nothing written.', count($posts)));
+
+            return Command::SUCCESS;
+        }
+
+        $changed = 0;
+
+        foreach ($posts as $slug => $post) {
+            try {
+                $moved = $repository->store(
+                    $slug,
+                    [
+                        'published_at' => $post['published_at'],
+                        'author' => $post['author'],
+                        'hero' => $post['hero'],
+                    ],
+                    [
+                        'title' => $post['title'],
+                        'summary' => $post['summary'],
+                        'hero_alt' => $post['hero_alt'],
+                        'body' => $post['body'],
+                    ],
+                );
+            } catch (Throwable $e) {
+                $this->io->error(sprintf('%s: %s', $slug, $e->getMessage()));
+
+                return Command::FAILURE;
+            }
+
+            $changed += $moved ? 1 : 0;
+            $this->formatOutput($slug, $moved ? 'updated' : 'unchanged', $moved ? 'success' : 'info');
+        }
+
+        try {
+            $removed = 0;
+
+            foreach (array_diff($repository->slugs(), array_keys($posts)) as $slug) {
+                $repository->delete($slug);
+
+                $removed++;
+                $this->formatOutput($slug, 'removed', 'comment');
+            }
+        } catch (Throwable $e) {
+            $this->io->error('Could not remove what the files no longer describe: ' . $e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $this->io->success(sprintf(
+            '%d post(s) imported, %d changed, %d removed.',
+            count($posts),
+            $changed,
+            $removed,
+        ));
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Every `.md` file in one directory, parsed and keyed by slug.
+     *
+     * @param callable(string): array<string, mixed> $parse
+     * @return array<string, array<string, mixed>>
+     */
+    private static function read(string $directory, callable $parse): array
+    {
+        $path = Helper::getRootDir() . '/' . $directory;
+        $found = [];
+
+        foreach (glob($path . '/*.md') ?: [] as $file) {
+            $slug = basename($file, '.md');
+            $contents = @file_get_contents($file);
+
+            if ($contents === false) {
+                throw new RuntimeException(sprintf('Could not read %s.', $file));
+            }
+
+            try {
+                $found[$slug] = $parse($contents);
+            } catch (Throwable $e) {
+                // Named, because "invalid front matter" across a dozen files
+                // is a message that sends somebody looking through all of them.
+                throw new RuntimeException(sprintf('%s/%s.md: %s', $directory, $slug, $e->getMessage()));
+            }
+        }
+
+        ksort($found);
+
+        return $found;
+    }
+
+    /**
+     * Posts naming an image that is not committed, one per line.
+     *
+     * Checked here rather than left to the page, because a hero that is not
+     * there is a broken image on the card, in the section and in whatever
+     * A8.5's in-body card renders -- three broken things from one typo, none
+     * of which fails anything.
+     *
+     * Public and static for the reason `parse()` is: it is a judgement the
+     * import makes, and testing it needs neither the table nor the command.
+     *
+     * @param array<string, array<string, mixed>> $posts
+     * @return list<string>
+     */
+    public static function missingImages(array $posts): array
+    {
+        $missing = [];
+
+        foreach ($posts as $slug => $post) {
+            $hero = $post['hero'];
+
+            if ($hero === null) {
+                continue;
+            }
+
+            $path = Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $hero;
+
+            if (!is_file($path)) {
+                $missing[] = sprintf(
+                    '%s.md names hero `%s`, which is not in %s.',
+                    $slug,
+                    (string) $hero,
+                    self::IMAGE_DIR,
+                );
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * One post file, split into its header and its prose.
+     *
+     * Every refusal is a way a broken file becomes a broken page rather than
+     * an error. The lengths are checked here and not left to the columns:
+     * with STRICT_TRANS_TABLES an over-long summary is a SQL error naming a
+     * column, where this names the file and says what to do about it.
+     *
+     * @return array{title: string, published_at: string, author: string, summary: string, hero: ?string, hero_alt: ?string, body: string}
+     */
+    public static function parse(string $contents): array
+    {
+        ['fields' => $fields, 'body' => $body] = self::header($contents, self::REQUIRED, self::OPTIONAL);
+
+        $hero = $fields['hero'] ?? null;
+        $alt = $fields['hero_alt'] ?? null;
+
+        // Alt text is content, not decoration: it is what a reader who cannot
+        // see the image receives instead. A hero is never decorative, so one
+        // without alt text is an accessibility defect that would ship in
+        // silence -- nothing renders differently and nothing fails.
+        if ($hero !== null && $alt === null) {
+            throw new RuntimeException('a post with a `hero` must say what it shows in `hero_alt`');
+        }
+
+        if ($hero === null && $alt !== null) {
+            throw new RuntimeException('`hero_alt` describes nothing: there is no `hero`');
+        }
+
+        self::within('title', $fields['title'], self::TITLE_LIMIT);
+        self::within('summary', $fields['summary'], self::SUMMARY_LIMIT);
+
+        if ($alt !== null) {
+            self::within('hero_alt', $alt, self::ALT_LIMIT);
+        }
+
+        return [
+            'title' => $fields['title'],
+            'published_at' => self::published($fields['published']),
+            'author' => $fields['author'],
+            'summary' => $fields['summary'],
+            'hero' => $hero,
+            'hero_alt' => $alt,
+            'body' => $body,
+        ];
+    }
+
+    /**
+     * `published` as a datetime the column will take, or a refusal.
+     *
+     * Written as a date, stored as a datetime, because the ordering wants a
+     * tiebreaker finer than a day and an author has no reason to type a
+     * time.
+     *
+     * Not `strtotime`, and measured rather than assumed: it reads `2026-02-30`
+     * as 2 March rather than refusing it, `March 2026` as the first of that
+     * month, and `next tuesday` as whichever day the import happens to run
+     * near. Every one of those turns a typo into a real, plausible, wrong date
+     * that nothing mentions -- and the section is ordered by this column, so a
+     * wrong date moves a post to the top. One shape, and `checkdate` to ask
+     * whether the day exists.
+     */
+    private static function published(string $value): string
+    {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})\z/', $value, $parts) !== 1) {
+            throw new RuntimeException(sprintf('published must be written YYYY-MM-DD, not `%s`', $value));
+        }
+
+        [, $year, $month, $day] = $parts;
+
+        if (!checkdate((int) $month, (int) $day, (int) $year)) {
+            throw new RuntimeException(sprintf('published names a day that does not exist: `%s`', $value));
+        }
+
+        return $value . ' 00:00:00';
+    }
+
+    /**
+     * A header value the column can actually hold.
+     */
+    private static function within(string $key, string $value, int $limit): void
+    {
+        if (mb_strlen($value) > $limit) {
+            throw new RuntimeException(sprintf(
+                '%s is %d characters and the column holds %d',
+                $key,
+                mb_strlen($value),
+                $limit,
+            ));
+        }
+    }
+
+    /**
+     * The fenced header and the prose under it.
+     *
+     * The same reader `articles:import` uses, and the same refusals: an
+     * unknown key is a typo that would otherwise be silently dropped, which is
+     * how `publised: 2026-01-01` ends up as a missing-header error somewhere
+     * far from the file that caused it.
+     *
+     * @param list<string> $required
+     * @param list<string> $optional
+     * @return array{fields: array<string, string>, body: string}
+     */
+    private static function header(string $contents, array $required, array $optional): array
+    {
+        // Normalised first, so a file saved on Windows is not a parse error.
+        $text = str_replace(["\r\n", "\r"], "\n", $contents);
+
+        if (!str_starts_with($text, "---\n")) {
+            throw new RuntimeException('no header: the file must open with a --- fence');
+        }
+
+        $end = strpos($text, "\n---", 3);
+
+        if ($end === false) {
+            throw new RuntimeException('the header is never closed by a --- fence');
+        }
+
+        $header = substr($text, 4, $end - 3);
+        $body = trim(substr($text, $end + 4));
+
+        if ($body === '') {
+            throw new RuntimeException('no prose after the header');
+        }
+
+        $fields = [];
+
+        foreach (explode("\n", trim($header)) as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            $colon = strpos($line, ':');
+
+            if ($colon === false) {
+                throw new RuntimeException(sprintf('header line is not `key: value`: %s', trim($line)));
+            }
+
+            $key = trim(substr($line, 0, $colon));
+            $value = trim(substr($line, $colon + 1));
+
+            if (!in_array($key, [...$required, ...$optional], true)) {
+                throw new RuntimeException(sprintf('unknown header key `%s`', $key));
+            }
+
+            if (isset($fields[$key])) {
+                throw new RuntimeException(sprintf('header key `%s` appears twice', $key));
+            }
+
+            if ($value === '') {
+                throw new RuntimeException(sprintf('header key `%s` has no value', $key));
+            }
+
+            $fields[$key] = $value;
+        }
+
+        foreach ($required as $key) {
+            if (!isset($fields[$key])) {
+                throw new RuntimeException(sprintf('header is missing `%s`', $key));
+            }
+        }
+
+        return ['fields' => $fields, 'body' => $body];
+    }
+}

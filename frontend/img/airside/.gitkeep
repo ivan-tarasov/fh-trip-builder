@@ -1,0 +1,4 @@
+Hero images live here, named by a post's `hero:` header.
+
+The first images this repository serves. A8.2 owns the pipeline and may move
+them, which is why a row stores the file name and not a path.
