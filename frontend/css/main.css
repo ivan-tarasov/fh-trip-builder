@@ -6866,7 +6866,10 @@ body:has(.cookie-notice) .to-top { display: none; }
 }
 
 .help-intro {
-  padding: .5rem 0 2rem;
+  /* Generous on both sides. The heading is the widest thing on the page and
+     the cards below it are the busiest, so the two need to be told apart by
+     space rather than by anything drawn. */
+  padding: 2.5rem 0 3.5rem;
   text-align: center;
 }
 
@@ -6966,6 +6969,11 @@ body:has(.cookie-notice) .to-top { display: none; }
 }
 
 .help-group {
+  /* The icon column, named because the rows below the heading line up with the
+     far side of it rather than with the card's own edge -- see
+     .help-group__list. Change either of these and the alignment follows. */
+  --help-group-icon: 2.5rem;
+  --help-group-icon-gap: 1rem;
   padding: 1.75rem 2rem 1.25rem;
   background-color: #fff;
   border-radius: 1rem;
@@ -6983,7 +6991,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 .help-group__head {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
+  gap: var(--help-group-icon-gap);
   margin-bottom: 1.25rem;
 }
 
@@ -6992,8 +7000,8 @@ body:has(.cookie-notice) .to-top { display: none; }
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--help-group-icon);
+  height: var(--help-group-icon);
   color: #fff;
   font-size: 1rem;
   border-radius: 50%;
@@ -7031,7 +7039,10 @@ body:has(.cookie-notice) .to-top { display: none; }
 }
 
 .help-group__list {
-  margin: 0;
+  /* Indented past the icon, so a row starts where the heading above it starts.
+     The rules go with it: a hairline running out to the card's edge under a
+     heading that begins 56px in reads as two columns rather than one list. */
+  margin: 0 0 0 calc(var(--help-group-icon) + var(--help-group-icon-gap));
   padding: 0;
   list-style: none;
 }
