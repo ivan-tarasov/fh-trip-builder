@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\ArticleRating;
+use TripBuilder\Repository\PostImageRepository;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
 use TripBuilder\Repository\PostVoteRepository;
@@ -86,6 +87,7 @@ class AirsideController extends AbstractController
         // The card takes first pick and the footer list drops what it took, so
         // a reader does not meet the same link twice on one page. The card is
         // the more prominent of the two, which is why it chooses first.
+        $sizes = $this->sizes();
         $related = $this->related($slug);
         $carded = array_key_first($related);
         $card = $carded === null ? null : ['slug' => $carded] + $related[$carded];
@@ -99,8 +101,14 @@ class AirsideController extends AbstractController
             // do it: a template handed markdown would have to know how to
             // render it, and the one thing this app never does is treat
             // stored text as template source.
-            'post_html' => Markdown::toPostHtml($post['body'], $card),
+            'post_html' => Markdown::toPostHtml($post['body'], $card, $sizes),
             'post' => $post + ['slug' => $slug],
+            // The hero's own size, for the same reason the body's images get
+            // theirs: `.airside-post__hero` is `width: 100%` with no ratio in
+            // the stylesheet, so without these the tallest thing on the page
+            // reserves no height and every paragraph under it moves when the
+            // picture lands.
+            'hero_size' => $post['hero'] === null ? null : ($sizes[$post['hero']] ?? null),
             // Guarded rather than allowed to break the page: a post with no
             // pills is a smaller loss than no post.
             'tags' => $this->tags($slug),
@@ -168,6 +176,26 @@ class AirsideController extends AbstractController
             return new PostTagRepository($this->connection())->forPost($slug);
         } catch (Throwable $e) {
             error_log('Airside tags failed: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    /**
+     * How big every Airside picture is, or nothing if the table cannot be read.
+     *
+     * Guarded like the other secondary lookups here: without these the images
+     * still load and still fit, they just reserve no space first. That is a
+     * worse page, not a broken one, and not worth losing the post over.
+     *
+     * @return array<string, array{0: int, 1: int}>
+     */
+    private function sizes(): array
+    {
+        try {
+            return new PostImageRepository($this->connection())->all();
+        } catch (Throwable $e) {
+            error_log('Airside image sizes failed: ' . $e->getMessage());
 
             return [];
         }
