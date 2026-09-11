@@ -80,12 +80,23 @@ class AirsideController extends AbstractController
             return;
         }
 
+        // The card takes first pick and the footer list drops what it took, so
+        // a reader does not meet the same link twice on one page. The card is
+        // the more prominent of the two, which is why it chooses first.
+        $related = $this->related($slug);
+        $carded = array_key_first($related);
+        $card = $carded === null ? null : ['slug' => $carded] + $related[$carded];
+
+        if ($carded !== null) {
+            unset($related[$carded]);
+        }
+
         echo new TwigRenderer()->renderPage('airside/view.html.twig', [
             // Converted here and not in the template, the way help and /about
             // do it: a template handed markdown would have to know how to
             // render it, and the one thing this app never does is treat
             // stored text as template source.
-            'post_html' => Markdown::toPostHtml($post['body']),
+            'post_html' => Markdown::toPostHtml($post['body'], $card),
             'post' => $post + ['slug' => $slug],
             // Guarded rather than allowed to break the page: a post with no
             // pills is a smaller loss than no post.
@@ -94,9 +105,7 @@ class AirsideController extends AbstractController
             // usual case: the page draws their initials instead.
             'author_image' => PostImages::author($post['author']),
             'author_initials' => PostImages::initials($post['author']),
-            // Guarded like the tags: a post with nothing to follow it is a
-            // smaller loss than no post.
-            'related' => $this->related($slug),
+            'related' => $related,
             // Home / Airside / the post's name. Derived from the path the
             // trail would end in the slug, which is the address rather than
             // the title.
@@ -160,15 +169,18 @@ class AirsideController extends AbstractController
     /**
      * Other posts sharing a tag with this one, or none if the read fails.
      *
-     * Three, which is what fills a row beside the card and stops short of
-     * being a second hub at the foot of every article.
+     * Four rather than three: the in-body card takes the first of them, so the
+     * footer is left with the three it was always meant to show.
      *
-     * @return array<string, array<string, mixed>>
+     * Guarded like the tags -- a post with nothing to follow it is a smaller
+     * loss than no post.
+     *
+     * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
      */
     private function related(string $slug): array
     {
         try {
-            return new PostRepository($this->connection())->related($slug, 3);
+            return new PostRepository($this->connection())->related($slug, 4);
         } catch (Throwable $e) {
             error_log('Airside related failed: ' . $e->getMessage());
 

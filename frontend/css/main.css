@@ -7517,6 +7517,63 @@ body:has(.cookie-notice) .to-top { display: none; }
   list-style: none;
 }
 
+/* The card standing in the middle of a post, naming another one.
+ *
+ * Tinted rather than white, because it sits inside the sheet and a white box
+ * on white is a box nobody sees. It is the one thing in a body that is not the
+ * author talking, so it should read as an interruption -- politely.
+ */
+.airside-inline {
+  margin: 2.5rem 0;
+}
+
+.airside-inline__link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  text-decoration: none;
+  background-color: var(--brand-tint);
+  border-radius: var(--bs-border-radius-lg);
+  transition: background-color var(--dur-fast) ease;
+}
+
+.airside-inline__image {
+  /* Fixed and square: the card is a row, and a hero's 16:9 would set the
+     height of everything beside it. */
+  flex: 0 0 auto;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: .5rem;
+}
+
+.airside-inline__text {
+  min-width: 0;
+}
+
+.airside-inline__label {
+  margin: 0 0 .25rem;
+  color: var(--brand-accent);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.airside-inline__title {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+@media (hover: hover) {
+  .airside-inline__link:hover { background-color: var(--brand-tint-edge); }
+  .airside-inline__link:hover .airside-inline__title { color: var(--brand-accent); }
+}
+
 /* Related posts: rows, the shape help uses for the same job at the foot of an
    article. Cards were tried and nesting a bordered card inside a card is as
    fussy as it sounds -- and with one related post it left a lonely 239px card

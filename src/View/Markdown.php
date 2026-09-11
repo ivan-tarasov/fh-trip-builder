@@ -15,6 +15,7 @@ use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
 use League\CommonMark\Extension\TableOfContents\TableOfContentsExtension;
 use League\CommonMark\MarkdownConverter;
 use TripBuilder\View\Airside\PostImages;
+use TripBuilder\View\Airside\PostRelatedCard;
 
 /**
  * Markdown to HTML, configured once.
@@ -58,18 +59,26 @@ final class Markdown
     }
 
     /**
-     * The converter Airside posts use: everything above, plus images.
+     * The converter Airside posts use: everything above, plus images and the
+     * card that names another post in the middle of this one.
      *
      * A separate entry point rather than a flag on the one above, because the
      * difference is not a setting -- it is that a post body resolves image
      * file names against a directory `/about` and `/help` know nothing about.
-     * A8.5's in-body card will want the same seam, which is the other reason
-     * it is built now rather than twice.
+     * A8.5's card wanted the same seam, which is the second time building it
+     * once has paid.
+     *
+     * @param array{slug: string, title: string, summary: string, hero: ?string, hero_alt: ?string}|null $card
+     *     another post to name in the middle of this one, or null for none
      */
-    public static function toPostHtml(string $markdown): string
+    public static function toPostHtml(string $markdown, ?array $card = null): string
     {
         $environment = self::environment();
         $environment->addExtension(new PostImages());
+
+        if ($card !== null) {
+            $environment->addExtension(new PostRelatedCard($card));
+        }
 
         // Measured on a 4,900-word fixture: 12 screens of scrolling, 24
         // headings, no ids, and no way to see the shape of the post or jump
