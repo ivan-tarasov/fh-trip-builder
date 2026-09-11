@@ -139,6 +139,31 @@ final class PromisesTest extends TestCase
     }
 
     /**
+     * Nor does an Airside post, which is the newest place prose can be written.
+     *
+     * Added when the section got its first posts. The whole lesson of this
+     * test is that a promise nobody is checking survives, so a second body of
+     * prose arriving unscanned would be the same mistake with a different
+     * directory -- and a travel post about what to do when something goes
+     * wrong is exactly where a sentence about an email would go.
+     *
+     * Counted separately from the articles rather than folded in with them,
+     * because a merged sweep that found one family would look healthy while
+     * the other was missing entirely.
+     */
+    public function testNoPostPromisesMailNothingCanSend(): void
+    {
+        $files = self::posts();
+
+        self::assertNotEmpty($files, 'there should be post files to scan');
+        self::assertSame([], self::offences(
+            $files,
+            static fn(string $path): string => (string) file_get_contents($path),
+            self::UNKEEPABLE,
+        ));
+    }
+
+    /**
      * And nothing tells a reader their card stays in the browser.
      *
      * Both halves are checked, for the reason the mail guard checks both: the
@@ -156,6 +181,12 @@ final class PromisesTest extends TestCase
             [],
             self::offences(self::sources(), self::stringLiterals(...), self::UNTRUE_OF_THE_CARD),
         );
+
+        self::assertSame([], self::offences(
+            [...self::articles(), ...self::posts()],
+            static fn(string $path): string => (string) file_get_contents($path),
+            self::UNTRUE_OF_THE_CARD,
+        ));
     }
 
     /**
@@ -235,6 +266,16 @@ final class PromisesTest extends TestCase
     private static function articles(): array
     {
         return self::filesUnder(__DIR__ . '/../../../config/content/help', '.md');
+    }
+
+    /**
+     * The committed copy of each Airside post.
+     *
+     * @return list<string>
+     */
+    private static function posts(): array
+    {
+        return self::filesUnder(__DIR__ . '/../../../config/content/airside', '.md');
     }
 
     /** @return list<string> */

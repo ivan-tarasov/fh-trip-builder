@@ -11,6 +11,8 @@ use League\CommonMark\Extension\DescriptionList\DescriptionListExtension;
 use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension;
 use League\CommonMark\Extension\Footnote\FootnoteExtension;
 use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
+use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
+use League\CommonMark\Extension\TableOfContents\TableOfContentsExtension;
 use League\CommonMark\MarkdownConverter;
 use TripBuilder\View\Airside\PostImages;
 
@@ -68,6 +70,36 @@ final class Markdown
     {
         $environment = self::environment();
         $environment->addExtension(new PostImages());
+
+        // Measured on a 4,900-word fixture: 12 screens of scrolling, 24
+        // headings, no ids, and no way to see the shape of the post or jump
+        // within it. A8.1 left these out because they were a change to the
+        // shared converter and so would have landed on every help article and
+        // the README, where a table of contents over three headings is noise.
+        // `toPostHtml()` is the seam that makes them affordable here alone.
+        //
+        // `placeholder` rather than `top`: a long post asks for a contents
+        // list by writing `[TOC]`, and the other four get nothing. A threshold
+        // on heading count would be a rule nobody could see in the file.
+        $environment->mergeConfig([
+            'heading_permalink' => [
+                'min_heading_level' => 2,
+                'max_heading_level' => 3,
+                'symbol' => '',
+                'html_class' => 'heading-anchor',
+            ],
+            'table_of_contents' => [
+                'position' => 'placeholder',
+                'placeholder' => '[TOC]',
+                'style' => 'bullet',
+                'min_heading_level' => 2,
+                'max_heading_level' => 3,
+                'normalize' => 'relative',
+            ],
+        ]);
+
+        $environment->addExtension(new HeadingPermalinkExtension());
+        $environment->addExtension(new TableOfContentsExtension());
 
         return (string) new MarkdownConverter($environment)->convert($markdown);
     }

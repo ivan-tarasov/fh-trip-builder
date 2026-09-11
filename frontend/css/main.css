@@ -7646,6 +7646,51 @@ body:has(.cookie-notice) .to-top { display: none; }
   display: none;
 }
 
+/* The contents list, which only appears where a post writes `[TOC]` -- so a
+   short post has none rather than a two-line list of its own headings. */
+.article__body > .table-of-contents {
+  padding: 1.25rem 1.5rem;
+  margin: 0 0 2.5rem;
+  background-color: var(--surface-sunken);
+  border-radius: var(--bs-border-radius-lg);
+  list-style: none;
+}
+
+.article__body .table-of-contents ul {
+  margin: .375rem 0 0;
+  padding-left: 1.125rem;
+  list-style: none;
+}
+
+.article__body .table-of-contents li {
+  margin: .3125rem 0;
+  font-size: .9375rem;
+  line-height: 1.4;
+}
+
+.article__body .table-of-contents > li > a {
+  font-weight: 600;
+}
+
+.article__body .table-of-contents a {
+  color: var(--brand-ink);
+  text-decoration: none;
+}
+
+.article__body .table-of-contents a:hover,
+.article__body .table-of-contents a:focus-visible {
+  color: var(--brand-accent);
+  text-decoration: underline;
+}
+
+/* The anchor a heading carries so the contents list has somewhere to land. It
+   renders no symbol on purpose -- the id is the whole point, and a row of
+   pilcrows down the page is decoration for a feature nobody clicks. */
+.article__body .heading-anchor {
+  display: inline;
+  scroll-margin-top: 1.5rem;
+}
+
 /* A figure: an image that stands on its own, with an optional caption. The
    body's measure is the prose measure, so a figure runs the full width of it
    and the caption sits under the image rather than beside it. */

@@ -128,6 +128,53 @@ final class MarkdownTest extends TestCase
         self::assertStringContainsString('<dd>', $html);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | A contents list, on posts only
+    |--------------------------------------------------------------------------
+    |
+    | Measured on a 4,900-word post: twelve screens of scrolling, 24 headings,
+    | no ids, and no way to see the shape of it or jump within it. A8.1 left
+    | these out because they were a change to the shared converter and would
+    | have put a contents list over three headings on every help article and
+    | the README. `toPostHtml()` is what makes them affordable for posts alone.
+    |
+    */
+
+    public function testAPostAsksForItsContentsListByWritingOne(): void
+    {
+        $html = Markdown::toPostHtml("[TOC]\n\n## First\n\nText.\n\n### Under it\n\nText.");
+
+        self::assertStringContainsString('class="table-of-contents"', $html);
+        self::assertStringContainsString('href="#content-first"', $html);
+        // And the link has somewhere to land.
+        self::assertStringContainsString('id="content-first"', $html);
+    }
+
+    /** A post that does not ask gets none, however many headings it has. */
+    public function testAPostWithoutThePlaceholderGetsNoContentsList(): void
+    {
+        $html = Markdown::toPostHtml("## One\n\nText.\n\n## Two\n\nText.\n\n## Three\n\nText.");
+
+        self::assertStringNotContainsString('table-of-contents', $html);
+    }
+
+    /**
+     * And help and `/about` never get one, which is the deferral A8.1 made.
+     *
+     * The regression this guards: moving the extensions onto the shared
+     * converter would put a contents list on five help articles and the
+     * README, none of which asked for one.
+     */
+    public function testTheSharedConverterHasNoContentsListAtAll(): void
+    {
+        $html = Markdown::toHtml("[TOC]\n\n## First\n\nText.\n\n## Second\n\nText.");
+
+        self::assertStringNotContainsString('table-of-contents', $html);
+        self::assertStringNotContainsString('id="content-first"', $html);
+        self::assertStringContainsString('[TOC]', $html, 'the placeholder stays as text where nothing consumes it');
+    }
+
     /**
      * Nothing already written renders differently.
      *
