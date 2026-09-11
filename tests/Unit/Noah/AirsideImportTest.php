@@ -280,6 +280,30 @@ final class AirsideImportTest extends TestCase
         self::assertSame([], Import::missingImages(['picking-a-seat' => ['hero' => null]]));
     }
 
+    /** An image inside the prose has to be committed too. */
+    public function testABodyImageThatIsNotCommittedIsNamed(): void
+    {
+        $missing = Import::missingImages([
+            'picking-a-seat' => ['hero' => null, 'body' => 'Look: ![a wing](never-committed.jpg)'],
+        ]);
+
+        self::assertCount(1, $missing);
+        self::assertStringContainsString('names image `never-committed.jpg`', $missing[0]);
+    }
+
+    /**
+     * But an example inside a code block is not a request for a file.
+     *
+     * A post explaining how to write markdown is exactly the post somebody
+     * will file, and it would otherwise be unimportable.
+     */
+    public function testAnImageInACodeBlockIsNotAMissingImage(): void
+    {
+        self::assertSame([], Import::missingImages([
+            'writing-posts' => ['hero' => null, 'body' => "Write:\n\n```\n![alt](example.jpg)\n```"],
+        ]));
+    }
+
     private static function file(string $header, string $body): string
     {
         return "---\n" . $header . "\n---\n\n" . $body . "\n";

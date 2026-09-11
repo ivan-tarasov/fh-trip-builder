@@ -7646,6 +7646,30 @@ body:has(.cookie-notice) .to-top { display: none; }
   display: none;
 }
 
+/* A figure: an image that stands on its own, with an optional caption. The
+   body's measure is the prose measure, so a figure runs the full width of it
+   and the caption sits under the image rather than beside it. */
+.article__body figure {
+  margin: 2rem 0;
+}
+
+.article__body figure img,
+.article__body p > img {
+  /* Never wider than the column, and always the shape the file is -- the
+     width and height attributes come off the file itself, so `height: auto`
+     is what keeps the two from fighting. */
+  width: 100%;
+  height: auto;
+  border-radius: var(--bs-border-radius-lg);
+}
+
+.article__body figcaption {
+  margin-top: .625rem;
+  color: var(--ink-muted);
+  font-size: .875rem;
+  line-height: 1.45;
+}
+
 .airside-post__hero {
   /* Inside `.article__body`, so it takes the prose measure rather than the
      full width, and sits above the first paragraph. */
