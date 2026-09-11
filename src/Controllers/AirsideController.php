@@ -114,7 +114,7 @@ class AirsideController extends AbstractController
             'tags' => $this->tags($slug),
             // Null where the author has no committed picture, which is the
             // usual case: the page draws their initials instead.
-            'author_image' => PostImages::author($post['author']),
+            'author_image' => PostImages::author($post['author'], $sizes),
             'author_initials' => PostImages::initials($post['author']),
             'related' => $related,
             // Guarded like the rest: a post without its thumbs is still the

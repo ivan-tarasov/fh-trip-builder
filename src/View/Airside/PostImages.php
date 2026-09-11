@@ -13,7 +13,6 @@ use League\CommonMark\Node\Block\Paragraph;
 use League\CommonMark\Parser\MarkdownParser;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
-use TripBuilder\Helper;
 
 /**
  * Images inside an Airside post body.
@@ -87,29 +86,53 @@ final readonly class PostImages implements ExtensionInterface
     }
 
     /**
-     * Where an author's picture lives, if they have one.
+     * The names an author's picture could have, in the order they are tried.
      *
      * Derived from the name rather than stored, because `posts.author` is the
      * only record of who wrote a post and a second column naming a file would
-     * be a second thing to keep in step. `Ivan Tarasov` looks for
+     * be a second thing to keep in step. `Ivan Tarasov` gives
      * `authors/ivan-tarasov.jpg` and its siblings.
      *
-     * Null is a real answer and not a failure: nothing here ships an invented
-     * portrait, so the page draws initials instead. A photograph added later
-     * replaces them with no row to change.
+     * Spelled here and used twice: the importer asks disk which of these is
+     * there, and `author()` asks the table. Two spellings of the same three
+     * names would eventually disagree about an extension, and the symptom
+     * would be a portrait that uploads and never appears.
+     *
+     * @return list<string>
      */
-    public static function author(string $name): ?string
+    public static function authorFiles(string $name): array
     {
         $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($name)), '-');
 
         if ($slug === '') {
-            return null;
+            return [];
         }
 
-        foreach (['jpg', 'png', 'webp'] as $extension) {
-            $file = 'authors/' . $slug . '.' . $extension;
+        return array_map(
+            static fn(string $extension): string => 'authors/' . $slug . '.' . $extension,
+            ['jpg', 'png', 'webp'],
+        );
+    }
 
-            if (is_file(Helper::getRootDir() . '/' . self::DIRECTORY . '/' . $file)) {
+    /**
+     * Where an author's picture lives, if they have one.
+     *
+     * `$known` and not `is_file()`. It used to look on disk, which worked until
+     * A8.6 sent these to a bucket and stopped committing the directory -- after
+     * which every deployed page drew initials with the photograph sitting in
+     * the distribution, and looked finished while doing it.
+     *
+     * Null is still a real answer and not a failure: nothing here ships an
+     * invented portrait, so the page draws initials instead. What changed is
+     * that a photograph added later needs an import to be seen, the way every
+     * other image already does.
+     *
+     * @param array<string, mixed> $known every file the section has a row for
+     */
+    public static function author(string $name, array $known = []): ?string
+    {
+        foreach (self::authorFiles($name) as $file) {
+            if (array_key_exists($file, $known)) {
                 return self::url($file);
             }
         }
