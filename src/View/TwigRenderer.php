@@ -12,6 +12,8 @@ use TripBuilder\Currency;
 use TripBuilder\Helper;
 use TripBuilder\Money;
 use TripBuilder\Party;
+use TripBuilder\View\Airside\PostImages;
+use TripBuilder\View\Airside\PostImageSet;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
@@ -46,6 +48,15 @@ final readonly class TwigRenderer
 
         // Helpers the templates need (CDN asset URLs and config lookups)...
         $this->twig->addFunction(new TwigFunction('cdn', Cdn::getUrl(...)));
+
+        // Airside images. Three functions and not one `asset()` call, because
+        // where these live is a decision -- the distribution when there is one
+        // and the staging directory when there is not -- and a template
+        // spelling out a path would hard-code the half that is wrong in
+        // production. See View\Airside\PostImages::url().
+        $this->twig->addFunction(new TwigFunction('post_image', PostImages::url(...)));
+        $this->twig->addFunction(new TwigFunction('post_srcset', PostImageSet::srcset(...)));
+        $this->twig->addFunction(new TwigFunction('post_square_srcset', PostImageSet::squareSrcset(...)));
         $this->twig->addFunction(new TwigFunction('config', Config::get(...)));
         // A date that carries its year only when that year is not this one, so
         // a trip crossing New Year cannot print two dates eleven months apart

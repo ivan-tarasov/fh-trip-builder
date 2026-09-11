@@ -21,9 +21,20 @@
            through and drops unsafe link schemes, so escaping again here would
            print tags instead of prose. The controller converts; this places. #}
         {% if post.hero %}
+            {# The largest thing above the fold, so almost certainly what the
+               browser measures as the largest contentful paint. That makes the
+               two attributes here the opposite of the card's: `fetchpriority`
+               high and no `loading="lazy"`, which would tell the browser to
+               deprioritise the one image the reader is actually waiting for.
+
+               The measure is 748px, so 750 serves it at 1x and 1500 at 2x. #}
             <img class="airside-post__hero"
-                 src="{{ asset('/frontend/img/airside/' ~ post.hero) }}"
-                 alt="{{ post.hero_alt }}" />
+                 src="{{ post_image(post.hero) }}"
+                 srcset="{{ post_srcset(post.hero) }}"
+                 sizes="(min-width: 52em) 748px, calc(100vw - 3rem)"
+                 alt="{{ post.hero_alt }}"
+                 fetchpriority="high"
+                 decoding="async" />
         {% endif %}
         {{ post_html|raw }}
     {% endblock %}

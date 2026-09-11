@@ -1,5 +1,5 @@
 <div class="col">
-    <div class="card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg" style="background-image: url('{{ config('site.static.url') }}/{{ config('site.static.endpoint.poi') }}/{{ poi.image }}');">
+    <div class="card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg" style="background-image: url('{{ cdn(config('site.static.endpoint.poi') ~ '/' ~ poi.image) }}');">
         <div class="d-flex flex-column h-100 p-5 pb-3 text-white text-shadow-1">
             {# Plain heading, not an anchor. It used to be an <a> with no href:
                styled as a link, skipped by the keyboard, and on click it

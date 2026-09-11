@@ -16,6 +16,7 @@ use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
 use TripBuilder\View\Airside\PostImages;
+use TripBuilder\View\Airside\PostImageSet;
 
 #[AsCommand(
     name: 'airside:import',
@@ -160,7 +161,12 @@ final class Import extends AbstractCommand
                     [
                         'published_at' => $post['published_at'],
                         'author' => $post['author'],
-                        'hero' => $post['hero'],
+                        // The staged file's name goes in the file; the row gets
+                        // the canonical one, carrying a hash of the bytes. The
+                        // author writes `hero: wing.jpg` and the row says
+                        // `wing.3f9a2b1c.jpg`, which is what the page asks the
+                        // distribution for.
+                        'hero' => self::canonicalHero($post['hero']),
                     ],
                     [
                         'title' => $post['title'],
@@ -325,6 +331,33 @@ final class Import extends AbstractCommand
         }
 
         return $missing;
+    }
+
+    /**
+     * A staged file's canonical name, or null where there is no hero.
+     *
+     * Read here rather than in `parse()`, which is pure and takes a string:
+     * this needs the bytes on disk, and the bytes are what the hash is of.
+     *
+     * The file has to be there. `missingImages()` has already refused the run
+     * if it is not, so reaching this with an unreadable file means something
+     * removed it between the two, and a hero named after nothing is worse than
+     * a failed import.
+     */
+    private static function canonicalHero(?string $hero): ?string
+    {
+        if ($hero === null) {
+            return null;
+        }
+
+        $path = Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $hero;
+        $contents = @file_get_contents($path);
+
+        if ($contents === false) {
+            throw new RuntimeException(sprintf('could not read the hero `%s`', $hero));
+        }
+
+        return PostImageSet::canonical($hero, $contents);
     }
 
     /**

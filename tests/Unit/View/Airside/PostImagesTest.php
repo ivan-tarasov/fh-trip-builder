@@ -24,13 +24,31 @@ final class PostImagesTest extends TestCase
     private const string PNG = 'iVBORw0KGgoAAAANSUhEUgAAABgAAAAJCAIAAACnn3uRAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAA'
         . 'GElEQVQokWM8cekOAzUAE1VMGTVopBsEAGXaAoh6w0xbAAAAAElFTkSuQmCC';
 
+    private ?string $cdn = null;
+
+    /**
+     * The distribution is switched off for most of these, and that is the
+     * point rather than convenience: `url()` answers differently depending on
+     * whether there is one, and a test that inherits whatever the developer's
+     * `.env` happens to say is testing the machine rather than the code. This
+     * environment does configure one, which is how that was noticed.
+     */
     protected function setUp(): void
     {
+        $this->cdn = $_ENV['AWS_CLOUDFRONT'] ?? null;
+        $_ENV['AWS_CLOUDFRONT'] = '';
+
         file_put_contents(self::path(), (string) base64_decode(self::PNG, true));
     }
 
     protected function tearDown(): void
     {
+        if ($this->cdn === null) {
+            unset($_ENV['AWS_CLOUDFRONT']);
+        } else {
+            $_ENV['AWS_CLOUDFRONT'] = $this->cdn;
+        }
+
         @unlink(self::path());
     }
 
@@ -120,6 +138,25 @@ final class PostImagesTest extends TestCase
 
         self::assertStringNotContainsString('<figure>', $html);
         self::assertStringContainsString('<p>Look at <img', $html);
+    }
+
+    /**
+     * With a distribution, the same file is asked for from it.
+     *
+     * Under the `images` prefix the carrier logos and POI cards already use,
+     * so Airside is a directory in the existing store rather than a second
+     * store beside it.
+     */
+    public function testWithADistributionTheFileComesFromIt(): void
+    {
+        $_ENV['AWS_CLOUDFRONT'] = 'cdn.example.net';
+
+        self::assertSame('//cdn.example.net/images/airside/wing.jpg', PostImages::url('wing.jpg'));
+    }
+
+    public function testWithoutOneTheStagingCopyIsUsed(): void
+    {
+        self::assertSame('/frontend/img/airside/wing.jpg', PostImages::url('wing.jpg'));
     }
 
     /*

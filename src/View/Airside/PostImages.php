@@ -11,6 +11,8 @@ use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
 use League\CommonMark\Extension\ExtensionInterface;
 use League\CommonMark\Node\Block\Paragraph;
 use League\CommonMark\Parser\MarkdownParser;
+use TripBuilder\Cdn;
+use TripBuilder\Config;
 use TripBuilder\Helper;
 
 /**
@@ -54,11 +56,28 @@ final readonly class PostImages implements ExtensionInterface
     }
 
     /**
-     * The public path for a file name, as the page will ask for it.
+     * Where the page asks for one of these files.
+     *
+     * The distribution when there is one, and the staging directory when there
+     * is not. Those are not two ways of saying the same thing: the bucket holds
+     * the sized copies and the staging directory holds the original somebody
+     * dropped there before importing. So locally a page shows the full-size
+     * file and in production it shows the right one, which is the correct
+     * behaviour in both places and not a fallback that pretends otherwise.
+     *
+     * `Cdn::isConfigured()` first, because `getUrl()` with no host returns
+     * `///images/...` -- a URL that reads as a path on the current host and
+     * breaks without saying so.
      */
     public static function url(string $file): string
     {
-        return '/' . self::DIRECTORY . '/' . $file;
+        return Cdn::isConfigured()
+            // A default, because this is reached from a unit test with no
+            // Config booted, and without one the key silently loses its
+            // prefix -- `//host/airside/x.jpg` rather than
+            // `//host/images/airside/x.jpg`, which 404s rather than erroring.
+            ? Cdn::getUrl(Config::get('site.static.endpoint.images', 'images') . '/airside/' . $file)
+            : '/' . self::DIRECTORY . '/' . $file;
     }
 
     /**
