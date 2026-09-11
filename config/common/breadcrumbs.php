@@ -46,6 +46,7 @@ return [
         // The articles under this are deliberately absent: each is named by its
         // title rather than by its slug, so HelpController passes the label.
         '/help' => 'Help',
+        '/airside' => 'Airside',
         '/privacy' => 'Privacy',
         '/terms' => 'Terms',
         '/cookies' => 'Cookies',

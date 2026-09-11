@@ -200,6 +200,21 @@ final class Import extends AbstractCommand
 
         foreach (glob($path . '/*.md') ?: [] as $file) {
             $slug = basename($file, '.md');
+
+            // A file name is a URL here, so one the route cannot match is a
+            // post nothing can reach -- and lower case specifically, because
+            // AirsideController 301s a capital to lower case and then looks up
+            // what it redirected to. Kept in step with the pattern in
+            // Routes::DYNAMIC_ROUTES.
+            if (preg_match('/^[a-z0-9-]+\z/', $slug) !== 1) {
+                throw new RuntimeException(sprintf(
+                    '%s/%s.md: a file name becomes the URL, so it can only hold'
+                    . ' lower-case letters, digits and hyphens',
+                    $directory,
+                    $slug,
+                ));
+            }
+
             $contents = @file_get_contents($file);
 
             if ($contents === false) {

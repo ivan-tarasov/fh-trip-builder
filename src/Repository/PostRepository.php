@@ -109,25 +109,6 @@ final readonly class PostRepository
     }
 
     /**
-     * Whether the section has anything in it.
-     *
-     * The nav link asks this, and it is why the link can ship before the
-     * writing does: a menu item leading to an empty page is worse than no
-     * menu item. `LIMIT 1` rather than counting, because the answer is
-     * "any", and rather than `all()` because that is the whole set plus its
-     * translations on every page that draws a header.
-     */
-    public function any(string $locale = self::DEFAULT_LOCALE): bool
-    {
-        return $this->connection->fetchOne(
-            'SELECT 1 FROM ' . Table::Posts->value . ' p'
-            . ' JOIN ' . Table::PostTranslations->value . ' t ON t.slug = p.slug'
-            . ' WHERE p.enabled = 1 AND t.locale = ? LIMIT 1',
-            [$locale],
-        ) !== null;
-    }
-
-    /**
      * Every post slug, enabled or not.
      *
      * Unfiltered on purpose, and the only read here that is: the importer
@@ -199,7 +180,13 @@ final readonly class PostRepository
         $this->connection->execute(
             'INSERT INTO ' . Table::PostTranslations->value
             . ' (slug, locale, title, summary, hero_alt, body, updated_at)'
-            . ' VALUES (?, ?, ?, ?, ?, ?, NOW())'
+            // The publication date and not NOW() on a first insert. A post
+            // written in March and imported in September was not edited in
+            // September -- the words are the published words, and the page
+            // prints "updated" only where this is later than publication. With
+            // NOW() here every backdated post claimed an edit it never had, on
+            // the day it was first imported.
+            . ' VALUES (?, ?, ?, ?, ?, ?, ?)'
             . ' ON DUPLICATE KEY UPDATE'
             // First, while the old values are still readable.
             . '  updated_at = IF('
@@ -216,6 +203,7 @@ final readonly class PostRepository
                 $translation['summary'],
                 $translation['hero_alt'],
                 $translation['body'],
+                $post['published_at'],
             ],
         );
 

@@ -133,6 +133,20 @@ final class PostRepositoryTest extends IntegrationTestCase
     }
 
     /**
+     * A freshly imported post has not been edited.
+     *
+     * `updated_at` used to be `NOW()` on a first insert, so a post published
+     * in March and imported in September read "updated 10 September" on the
+     * day it arrived. Found by looking at the page.
+     */
+    public function testANewPostWasUpdatedWhenItWasPublished(): void
+    {
+        $slug = $this->write('fresh', ['published_at' => '2020-06-05 12:00:00']);
+
+        self::assertSame('2020-06-05 12:00:00', $this->repository()->find($slug)['updated_at']);
+    }
+
+    /**
      * Re-importing unchanged words must not claim an edit.
      */
     public function testStoringTheSameWordsLeavesTheDateAlone(): void
@@ -233,19 +247,6 @@ final class PostRepositoryTest extends IntegrationTestCase
         self::assertNull($this->repository()->find($slug));
         self::assertArrayNotHasKey($slug, $this->repository()->all());
         self::assertContains($slug, $this->repository()->slugs(), 'the importer still has to see its row');
-    }
-
-    public function testTheNavAsksWhetherThereIsAnythingToLinkTo(): void
-    {
-        $slug = $this->write('any');
-        self::assertTrue($this->repository()->any());
-
-        $this->connection()->execute('UPDATE posts SET enabled = 0 WHERE slug = ?', [$slug]);
-        self::assertSame(
-            $this->repository()->all() !== [],
-            $this->repository()->any(),
-            'any() and all() have to agree about what counts as a post',
-        );
     }
 
     public function testDeletingAPostTakesItsWordsWithIt(): void

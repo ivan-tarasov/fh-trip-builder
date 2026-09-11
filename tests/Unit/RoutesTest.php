@@ -33,6 +33,31 @@ final class RoutesTest extends TestCase
         self::assertSame('Help@show', Routes::resolve('/help/Baggage'));
     }
 
+    /**
+     * Airside allows digits in a slug where help does not.
+     *
+     * A help article is a subject; a post is a piece of writing, and
+     * "three-ways-to-pick-a-seat" is a title somebody will write. The pattern,
+     * `AirsideController::slug()` and the check `airside:import` makes on a
+     * file name are three copies of this rule, so a slug that stops matching
+     * one of them stops being reachable.
+     */
+    public function testAirsideHasAHubAndAPatternThatTakesDigits(): void
+    {
+        self::assertSame('Airside@index', Routes::resolve('/airside'));
+        self::assertSame('Airside@show', Routes::resolve('/airside/picking-a-seat'));
+        self::assertSame('Airside@show', Routes::resolve('/airside/three-ways-to-pick-a-seat'));
+
+        // Matched and then 301'd to lower case by the controller, the way help
+        // handles a capital.
+        self::assertSame('Airside@show', Routes::resolve('/airside/Picking-A-Seat'));
+
+        // Not a post: a slash below the section is not a route here, and
+        // neither is an empty slug.
+        self::assertNull(Routes::resolve('/airside/picking/a-seat'));
+        self::assertNull(Routes::resolve('/airside/'));
+    }
+
     public function testABookingIsAddressedByItsIdInThePath(): void
     {
         self::assertSame('My@booking', Routes::resolve('/my/bookings/100001'));

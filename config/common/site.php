@@ -112,6 +112,15 @@ return [
             'enabled' => true,
             'header' => false,
         ],
+        // Off until A8.4 writes the first posts. The same idiom as
+        // software-tests below: a menu item leading to an empty section is
+        // worse than no menu item, and `enabled` is where this file already
+        // says "not yet".
+        '/airside/' => [
+            'text' => 'Airside',
+            'icon' => 'fas fa-plane-departure',
+            'enabled' => false,
+        ],
         '/software-tests/' => [
             'text' => 'Software tests',
             'icon' => 'fas fa-code',
