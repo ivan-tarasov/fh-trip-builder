@@ -109,6 +109,27 @@ final readonly class Signature
         ]);
     }
 
+    /**
+     * Query parameters as the signature requires them: sorted, encoded, joined.
+     *
+     * Built here rather than by the caller because the string that is signed
+     * and the string that is sent have to be the same one, character for
+     * character. A parameter ordered differently in the two places is a
+     * `SignatureDoesNotMatch` that looks like a credential problem.
+     *
+     * @param array<string, string> $params
+     */
+    public static function canonicalQuery(array $params): string
+    {
+        ksort($params);
+
+        return implode('&', array_map(
+            static fn(string $name, string $value): string => rawurlencode($name) . '=' . rawurlencode($value),
+            array_keys($params),
+            $params,
+        ));
+    }
+
     public function stringToSign(string $canonicalRequest, string $stamp, string $scope): string
     {
         return implode("\n", [
