@@ -62,7 +62,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: mysqli, pdo_mysql, curl, mbstring
+          extensions: mysqli, pdo_mysql, curl, mbstring, gd
           coverage: none
           tools: composer:v2
 

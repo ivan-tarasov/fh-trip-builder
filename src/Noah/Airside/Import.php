@@ -11,10 +11,12 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
+use TripBuilder\Cdn;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
+use TripBuilder\Service\PostImageUploader;
 use TripBuilder\View\Airside\PostImages;
 use TripBuilder\View\Airside\PostImageSet;
 
@@ -79,6 +81,13 @@ final class Import extends AbstractCommand
             null,
             InputOption::VALUE_NONE,
             'Parse and report, without writing anything.',
+        );
+
+        $this->addOption(
+            'no-upload',
+            null,
+            InputOption::VALUE_NONE,
+            'Write the rows but send nothing to the bucket.',
         );
     }
 
@@ -152,9 +161,39 @@ final class Import extends AbstractCommand
             return Command::SUCCESS;
         }
 
+        // Only when there is a distribution to serve them from. With none,
+        // `PostImages::url()` points at the staging directory and the files
+        // are already where the pages look -- so a local import needs no
+        // credential, and a deployed one cannot silently skip the upload.
+        $uploader = null;
+
+        if (!$input->getOption('no-upload') && Cdn::isConfigured()) {
+            try {
+                $uploader = PostImageUploader::fromEnvironment();
+            } catch (Throwable $e) {
+                $this->io->error('No uploader: ' . $e->getMessage());
+
+                return Command::FAILURE;
+            }
+        }
+
         $changed = 0;
+        $uploaded = 0;
 
         foreach ($posts as $slug => $post) {
+            // Before the row, so a post is never stored pointing at a picture
+            // that is not there. The reverse order can fail halfway and leave
+            // a page with a broken hero; this order fails halfway and leaves
+            // unreferenced objects, which cost about nothing and are the same
+            // bytes the next run would have sent anyway.
+            try {
+                $uploaded += count($uploader === null ? [] : self::uploadImages($uploader, $post));
+            } catch (Throwable $e) {
+                $this->io->error(sprintf('%s images: %s', $slug, $e->getMessage()));
+
+                return Command::FAILURE;
+            }
+
             try {
                 $moved = $repository->store(
                     $slug,
@@ -220,10 +259,11 @@ final class Import extends AbstractCommand
         }
 
         $this->io->success(sprintf(
-            '%d post(s) imported, %d changed, %d removed.',
+            '%d post(s) imported, %d changed, %d removed%s.',
             count($posts),
             $changed,
             $removed,
+            $uploader === null ? '' : sprintf(', %d image(s) uploaded', $uploaded),
         ));
 
         return Command::SUCCESS;
@@ -346,18 +386,59 @@ final class Import extends AbstractCommand
      */
     private static function canonicalHero(?string $hero): ?string
     {
-        if ($hero === null) {
-            return null;
+        return $hero === null
+            ? null
+            : PostImageSet::canonical($hero, self::stagedContents($hero));
+    }
+
+    /**
+     * Every copy of every picture one post names, sent if it is not already up.
+     *
+     * The hero and the body images are not the same job. A hero is stored
+     * under a hashed name in six sizes, because the markup picks a size; a
+     * body image is stored under the name the author typed, at one size,
+     * because the markup asks for it by that name.
+     *
+     * @param array{hero: string|null, body: string, ...} $post
+     * @return list<string>
+     */
+    private static function uploadImages(PostImageUploader $uploader, array $post): array
+    {
+        $sent = [];
+
+        if ($post['hero'] !== null) {
+            $contents = self::stagedContents($post['hero']);
+            $sent = $uploader->upload(PostImageSet::canonical($post['hero'], $contents), $contents);
         }
 
-        $path = Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $hero;
-        $contents = @file_get_contents($path);
+        foreach (PostImages::inBody($post['body']) as $file) {
+            $key = $uploader->uploadOne($file, self::stagedContents($file));
+
+            if ($key !== null) {
+                $sent[] = $key;
+            }
+        }
+
+        return $sent;
+    }
+
+    /**
+     * The bytes of a staged file.
+     *
+     * `missingImages()` has already refused the run if one is absent, so
+     * reaching this with an unreadable file means something removed it between
+     * the two checks -- and a post named after nothing is worse than a failed
+     * import.
+     */
+    private static function stagedContents(string $file): string
+    {
+        $contents = @file_get_contents(Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $file);
 
         if ($contents === false) {
-            throw new RuntimeException(sprintf('could not read the hero `%s`', $hero));
+            throw new RuntimeException(sprintf('could not read `%s`', $file));
         }
 
-        return PostImageSet::canonical($hero, $contents);
+        return $contents;
     }
 
     /**
