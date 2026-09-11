@@ -28,23 +28,6 @@
         {{ post_html|raw }}
     {% endblock %}
 
-    {% block aside %}
-        {# At the foot, after the prose, because a tag is where to go next
-           rather than something to read first. Links and not labels: a pill
-           that cannot be clicked is a word in a box. #}
-        {% if tags|default({}) is not empty %}
-            <nav class="airside-tags" aria-label="Tags">
-                <ul class="airside-tags__list">
-                    {% for slug, name in tags %}
-                        <li>
-                            <a class="airside-tags__pill" href="/airside/tag/{{ slug }}">{{ name }}</a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            </nav>
-        {% endif %}
-    {% endblock %}
-
     {% block note %}
         {# A byline and two dates. `published_at` is what the post claims and
            what the section is ordered by; `updated_at` moves only when
@@ -59,6 +42,26 @@
                 · updated {{ post.updated_at|date('j F Y') }}
             {%- endif %}
         </p>
+
+        {# Inside the sheet, and last. They were in the `aside` block, which the
+           partial renders *outside* it -- so three grey lozenges floated in the
+           gutter between the article and the footer, belonging to neither.
+
+           Last because a tag is where to go next: the byline closes the piece,
+           these open the next one. The label is doing real work -- without it a
+           reader meets three words in boxes and has to infer what they are. #}
+        {% if tags|default({}) is not empty %}
+            <nav class="airside-tags" aria-labelledby="airside-tags-label">
+                <h2 class="airside-tags__label" id="airside-tags-label">Filed under</h2>
+                <ul class="airside-tags__list">
+                    {% for slug, name in tags %}
+                        <li>
+                            <a class="airside-tags__pill" href="/airside/tag/{{ slug }}">{{ name }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        {% endif %}
     {% endblock %}
 {% endembed %}
 {% endblock %}

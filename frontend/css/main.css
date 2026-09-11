@@ -7646,12 +7646,36 @@ body:has(.cookie-notice) .to-top { display: none; }
   display: none;
 }
 
-/* The tags at the foot of a post. Pills, and every one of them a link -- a
-   pill that cannot be clicked is a word in a box. */
+/* The tags that close a post.
+ *
+ * Inside the sheet and after the byline. They began in the partial's `aside`
+ * block, which renders outside it, so three lozenges floated in the gutter
+ * between the article and the footer and read as page furniture.
+ *
+ * Outlined rather than filled. The site's existing pill -- `.help-intro__pill`
+ * -- is solid accent, which is right for one pill carrying a page's subtitle
+ * and wrong for three sitting under a byline, where it would out-shout the
+ * heading. The border says "control", the hover says "link".
+ */
 .airside-tags {
-  margin: 2rem 0 0;
+  margin: 1.5rem 0 0;
   padding-top: 1.5rem;
   border-top: 1px solid var(--line);
+}
+
+.airside-tags__label {
+  /* Small, quiet, and not optional: without it a reader meets three words in
+     boxes and has to work out what they are.
+
+     `--ink-muted` and not `--ink-faint`, which is 3.41:1 on white and fails
+     the 4.5:1 this needs at 12px. Measured, after writing `--ink-faint` first
+     because it looked right. */
+  margin: 0 0 .75rem;
+  color: var(--ink-muted);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 .airside-tags__list {
@@ -7665,19 +7689,33 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .airside-tags__pill {
   display: inline-block;
-  padding: .375rem .875rem;
+  /* 2.25rem tall at this padding, which clears the 24px minimum target size
+     without making three tags look like three buttons. */
+  padding: .4375rem 1rem;
   color: var(--brand-ink);
   font-size: .875rem;
   font-weight: 600;
+  line-height: 1.3;
   text-decoration: none;
-  background-color: var(--surface-sunken);
+  background-color: #fff;
+  /* The border is what says "control", so it has to clear 3:1 against the
+     sheet. Every `--line-*` token here fails that -- 1.25, 1.41 and 1.64 to
+     one -- which is correct for what they are for, a hairline between blocks,
+     and wrong for the edge of something clickable. `--ink-faint` is 3.41. */
+  border: 1px solid var(--ink-faint);
   border-radius: 999px;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease;
 }
 
 .airside-tags__pill:hover,
 .airside-tags__pill:focus-visible {
-  color: #fff;
-  background-color: var(--brand-accent);
+  color: var(--brand-accent);
+  background-color: var(--brand-tint);
+  border-color: var(--brand-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .airside-tags__pill { transition: none; }
 }
 
 /* The contents list, which only appears where a post writes `[TOC]` -- so a
