@@ -7646,38 +7646,6 @@ body:has(.cookie-notice) .to-top { display: none; }
   display: none;
 }
 
-/* ==========================================================================
-   #ARTICLE MEASURE
-   ==========================================================================
-   Measured at 1280: the body column is 748px, which is 96 characters a line.
-   Comfortable reading is nearer 65, and the gap only hurts in proportion to
-   length -- a 223-word help article gets away with it and a 4,900-word post
-   does not.
-
-   Capped on the text rather than on the column, so a figure still runs the
-   full width of the sheet. That is the ordinary article shape: wide pictures,
-   narrow prose.
-
-   In rem and not in `ch`, which was the first attempt and did nothing. `1ch`
-   is the advance of the "0" glyph, not an average character: measured here it
-   is 9.6px against 7.53px for real prose, so `68ch` resolved to 796px -- wider
-   than the 748px column it was meant to narrow. 34rem is 544px, which is about
-   72 characters of this font at this size.
-   ========================================================================== */
-
-.article__body > p,
-.article__body > ul,
-.article__body > ol,
-.article__body > dl,
-.article__body > blockquote,
-.article__body > h2,
-.article__body > h3,
-.article__body > h4,
-.article__body > .footnotes,
-.article__body > .table-of-contents {
-  max-width: 34rem;
-}
-
 /* The contents list, which only appears where a post writes `[TOC]` -- so a
    short post has none rather than a two-line list of its own headings. */
 .article__body > .table-of-contents {
