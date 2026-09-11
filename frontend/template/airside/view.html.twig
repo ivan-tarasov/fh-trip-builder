@@ -27,12 +27,21 @@
                high and no `loading="lazy"`, which would tell the browser to
                deprioritise the one image the reader is actually waiting for.
 
-               The measure is 748px, so 750 serves it at 1x and 1500 at 2x. #}
+               The measure is 748px, so 750 serves it at 1x and 1500 at 2x.
+
+               `width` and `height` are the file's own, recorded at import --
+               the picture is in a bucket, so the page cannot measure it. They
+               are what the browser turns into an aspect ratio and reserves
+               space with; `srcset` sizes the file it fetches and says nothing
+               about the shape of it. Omitted rather than guessed where the
+               size is unknown, because a wrong box moves the page later
+               instead of not at all. #}
             <img class="airside-post__hero"
                  src="{{ post_image(post.hero) }}"
                  srcset="{{ post_srcset(post.hero) }}"
                  sizes="(min-width: 52em) 748px, calc(100vw - 3rem)"
                  alt="{{ post.hero_alt }}"
+                 {% if hero_size %}width="{{ hero_size[0] }}" height="{{ hero_size[1] }}"{% endif %}
                  fetchpriority="high"
                  decoding="async" />
         {% endif %}

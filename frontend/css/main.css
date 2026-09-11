@@ -7956,6 +7956,11 @@ body:has(.cookie-notice) .to-top { display: none; }
   /* Inside `.article__body`, so it takes the prose measure rather than the
      full width, and sits above the first paragraph. */
   width: 100%;
+  /* Required by the `width`/`height` attributes, not decoration. The browser
+     reads the two as an aspect ratio and reserves the box before the file
+     lands; `width: 100%` alone would then stretch it to the attribute's
+     height. `auto` lets the ratio do the work. */
+  height: auto;
   margin: 0 0 1.5rem;
   border-radius: var(--bs-border-radius-lg);
 }
