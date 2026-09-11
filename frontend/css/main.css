@@ -110,6 +110,17 @@
   --brand-ink-fill:     var(--brand-ink);
   --brand-ink-fill-700: var(--brand-ink-700);
 
+  /* And one more division inside the fill, which only a dark palette forces.
+     `--brand-ink-fill` is an expanse -- `html` itself, the hero, the search
+     band, the footer -- and wants to be the darkest thing on the page. The
+     chips wearing the same navy today (a primary badge, the current sort tab,
+     the current directory letter, the ink button) sit *on* a panel and have
+     to be seen against it. Measured: a navy dark enough to be the page is 1.09
+     against the panel, which is no edge at all. The chip lifts to #4F6D9C in
+     the dark block -- 3.25 on the panel, 5.25 for the white glyph on it. */
+  --brand-ink-chip:     var(--brand-ink);
+  --brand-ink-chip-700: var(--brand-ink-700);
+
   /* The same split, for every other colour that is worn both ways. Measured
      against a #141C2B panel: teal #14988C reads at 4.79 and carries white at
      3.56; green #1E9E5E reads at 4.96 and carries 3.44; red #D1434F reads at
@@ -248,6 +259,102 @@
   --bs-success-rgb: 20, 108, 67;
   --bs-danger: var(--brand-danger);
   --bs-danger-rgb: 176, 42, 55;
+
+  /* The dark palette, defined here and assigned twice below. Spelled once
+     so a value is changed in one place; the two assignment blocks cannot be
+     one rule, because a media query and an attribute selector do not combine. */
+  --d-surface-raised:      #141C2B;   /* panels lift toward the light, not away */
+  --d-surface:             #0B111C;   /* the ground they sit on */
+  --d-surface-sunken:      #070C14;   /* and the well below it */
+  --d-line:                #232C3D;
+  --d-line-strong:         #2F3A4E;
+  --d-line-strongest:      #3D4A61;
+  --d-ink-body:            #E4E8EF;   /* 13.88 on a panel -- not pure white, which haloes */
+  --d-ink-secondary:       #B4BDCB;   /* 9.00 */
+  --d-ink-muted:           #8D97A7;   /* 5.78 */
+  --d-ink-faint:           #6A7484;   /* 3.61, the 3:1 ornament bar */
+  --d-brand-ink:           #7FA3C4;   /* 6.45 -- the text half of the navy */
+  --d-brand-ink-700:       #9CBADA;   /* 8.49 */
+  --d-brand-ink-fill:      #0A101C;   /* the expanses: html, hero, footer */
+  --d-brand-ink-chip:      #4F6D9C;   /* 3.25 on a panel, 5.25 for the glyph */
+  --d-brand-ink-chip-700:  #5D7FB0;
+  --d-brand-accent:        #2AC3B2;   /* 7.76 */
+  --d-brand-accent-700:    #5EEAD4;   /* 11.53 */
+  --d-brand-success:       #3DD68C;   /* 9.10 */
+  --d-brand-danger:        #F1707C;   /* 5.97 */
+  --d-brand-tint:          #0E2A28;   /* the pale teal surface, inverted */
+  --d-brand-tint-edge:     #1B4340;
+  --d-success-tint:        #0E2A1B;
+  --d-success-tint-edge:   #1C4A31;
+  --d-danger-tint:         #2A1216;
+  --d-danger-tint-edge:    #4A2027;
+}
+
+/* Dark, two ways in.
+
+   The media query is the one that works with no JavaScript, and it yields to
+   an explicit choice: `:not([data-theme="light"])` means a reader who asked
+   for light keeps it on a machine set to dark. The attribute rule is what the
+   switcher writes, and it comes second so it wins in both directions.
+
+   Only tokens are redefined. Nothing below this point in the file knows there
+   are two palettes, which is what the four preparation commits bought. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-raised: var(--d-surface-raised);
+    --surface: var(--d-surface);
+    --surface-sunken: var(--d-surface-sunken);
+    --line: var(--d-line);
+    --line-strong: var(--d-line-strong);
+    --line-strongest: var(--d-line-strongest);
+    --ink-body: var(--d-ink-body);
+    --ink-secondary: var(--d-ink-secondary);
+    --ink-muted: var(--d-ink-muted);
+    --ink-faint: var(--d-ink-faint);
+    --brand-ink: var(--d-brand-ink);
+    --brand-ink-700: var(--d-brand-ink-700);
+    --brand-ink-fill: var(--d-brand-ink-fill);
+    --brand-ink-chip: var(--d-brand-ink-chip);
+    --brand-ink-chip-700: var(--d-brand-ink-chip-700);
+    --brand-accent: var(--d-brand-accent);
+    --brand-accent-700: var(--d-brand-accent-700);
+    --brand-success: var(--d-brand-success);
+    --brand-danger: var(--d-brand-danger);
+    --brand-tint: var(--d-brand-tint);
+    --brand-tint-edge: var(--d-brand-tint-edge);
+    --success-tint: var(--d-success-tint);
+    --success-tint-edge: var(--d-success-tint-edge);
+    --danger-tint: var(--d-danger-tint);
+    --danger-tint-edge: var(--d-danger-tint-edge);
+  }
+}
+
+:root[data-theme="dark"] {
+    --surface-raised: var(--d-surface-raised);
+    --surface: var(--d-surface);
+    --surface-sunken: var(--d-surface-sunken);
+    --line: var(--d-line);
+    --line-strong: var(--d-line-strong);
+    --line-strongest: var(--d-line-strongest);
+    --ink-body: var(--d-ink-body);
+    --ink-secondary: var(--d-ink-secondary);
+    --ink-muted: var(--d-ink-muted);
+    --ink-faint: var(--d-ink-faint);
+    --brand-ink: var(--d-brand-ink);
+    --brand-ink-700: var(--d-brand-ink-700);
+    --brand-ink-fill: var(--d-brand-ink-fill);
+    --brand-ink-chip: var(--d-brand-ink-chip);
+    --brand-ink-chip-700: var(--d-brand-ink-chip-700);
+    --brand-accent: var(--d-brand-accent);
+    --brand-accent-700: var(--d-brand-accent-700);
+    --brand-success: var(--d-brand-success);
+    --brand-danger: var(--d-brand-danger);
+    --brand-tint: var(--d-brand-tint);
+    --brand-tint-edge: var(--d-brand-tint-edge);
+    --success-tint: var(--d-success-tint);
+    --success-tint-edge: var(--d-success-tint-edge);
+    --danger-tint: var(--d-danger-tint);
+    --danger-tint-edge: var(--d-danger-tint-edge);
 }
 
 /* Bootstrap declares --bs-card-border-radius on .card itself, so setting it in
@@ -297,14 +404,14 @@
    the results page had fifteen of them competing. */
 .btn-ink {
   --bs-btn-color: var(--on-brand);
-  --bs-btn-bg: var(--brand-ink-fill);
-  --bs-btn-border-color: var(--brand-ink-fill);
+  --bs-btn-bg: var(--brand-ink-chip);
+  --bs-btn-border-color: var(--brand-ink-chip);
   --bs-btn-hover-color: var(--on-brand);
-  --bs-btn-hover-bg: var(--brand-ink-fill-700);
-  --bs-btn-hover-border-color: var(--brand-ink-fill-700);
+  --bs-btn-hover-bg: var(--brand-ink-chip-700);
+  --bs-btn-hover-border-color: var(--brand-ink-chip-700);
   --bs-btn-active-color: var(--on-brand);
-  --bs-btn-active-bg: var(--brand-ink-fill-700);
-  --bs-btn-active-border-color: var(--brand-ink-fill-700);
+  --bs-btn-active-bg: var(--brand-ink-chip-700);
+  --bs-btn-active-border-color: var(--brand-ink-chip-700);
   --bs-btn-focus-shadow-rgb: 16, 36, 63;
 }
 
@@ -323,11 +430,11 @@
   --bs-btn-color: var(--brand-ink);
   --bs-btn-border-color: var(--brand-ink);
   --bs-btn-hover-color: var(--on-brand);
-  --bs-btn-hover-bg: var(--brand-ink-fill);
-  --bs-btn-hover-border-color: var(--brand-ink-fill);
+  --bs-btn-hover-bg: var(--brand-ink-chip);
+  --bs-btn-hover-border-color: var(--brand-ink-chip);
   --bs-btn-active-color: var(--on-brand);
-  --bs-btn-active-bg: var(--brand-ink-fill);
-  --bs-btn-active-border-color: var(--brand-ink-fill);
+  --bs-btn-active-bg: var(--brand-ink-chip);
+  --bs-btn-active-border-color: var(--brand-ink-chip);
   --bs-btn-focus-shadow-rgb: 16, 36, 63;
 }
 
@@ -2656,7 +2763,7 @@ textarea {
 }
 
 .badge--primary {
-  background-color: var(--brand-ink-fill);
+  background-color: var(--brand-ink-chip);
   color: var(--on-brand);
 }
 
@@ -3147,7 +3254,7 @@ textarea {
    forward -- and leaving the accent free for the Select buttons is what stops
    the two reading as the same kind of thing. */
 .sort-bar__tab.is-current {
-  background-color: var(--brand-ink-fill);
+  background-color: var(--brand-ink-chip);
   border-right-color: var(--brand-ink-fill);
   color: var(--on-brand);
 }
@@ -7415,7 +7522,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .directory__letter.is-current {
   color: var(--on-brand);
-  background-color: var(--brand-ink-fill);
+  background-color: var(--brand-ink-chip);
 }
 
 /* ---------- The groups ---------- */
