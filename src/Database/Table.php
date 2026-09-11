@@ -26,6 +26,8 @@ enum Table: string
     case Flights = 'flights';
     case Posts = 'posts';
     case PostTranslations = 'post_translations';
+    case PostTagMap = 'post_tag_map';
+    case PostTagTranslations = 'post_tag_translations';
     case RouteDayPrice = 'route_day_price';
     case RoutePriceBuild = 'route_price_build';
     case Search = 'search';

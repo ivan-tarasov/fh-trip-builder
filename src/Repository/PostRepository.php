@@ -92,6 +92,70 @@ final readonly class PostRepository
             [$locale],
         );
 
+        return self::hydrate($rows);
+    }
+
+    /**
+     * Every post carrying one tag, newest first.
+     *
+     * The listing page behind a pill. Shaped exactly like `all()`, so the hub's
+     * card partial draws this list without knowing it was filtered.
+     *
+     * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
+     */
+    public function taggedWith(string $tag, string $locale = self::DEFAULT_LOCALE): array
+    {
+        return self::hydrate($this->connection->fetchAll(
+            'SELECT p.slug, p.author, p.hero, p.published_at, t.title, t.summary, t.hero_alt'
+            . ' FROM ' . Table::Posts->value . ' p'
+            . ' JOIN ' . Table::PostTranslations->value . ' t ON t.slug = p.slug'
+            . ' JOIN ' . Table::PostTagMap->value . ' m ON m.post = p.slug'
+            . ' WHERE m.tag = ? AND p.enabled = 1 AND t.locale = ?'
+            . ' ORDER BY p.published_at DESC, p.slug',
+            [$tag, $locale],
+        ));
+    }
+
+    /**
+     * Other posts sharing a tag with this one, newest first.
+     *
+     * `DISTINCT` because two posts can share more than one tag, and without it
+     * a post appears once per tag they have in common -- which would also make
+     * the limit count duplicates rather than posts.
+     *
+     * The post itself is excluded rather than filtered afterwards, so the limit
+     * is a limit on what is actually offered.
+     *
+     * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
+     */
+    public function related(string $slug, int $limit = 3, string $locale = self::DEFAULT_LOCALE): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        return self::hydrate($this->connection->fetchAll(
+            'SELECT DISTINCT p.slug, p.author, p.hero, p.published_at, t.title, t.summary, t.hero_alt'
+            . ' FROM ' . Table::PostTagMap->value . ' mine'
+            . ' JOIN ' . Table::PostTagMap->value . ' theirs'
+            . '  ON theirs.tag = mine.tag AND theirs.post <> mine.post'
+            . ' JOIN ' . Table::Posts->value . ' p ON p.slug = theirs.post'
+            . ' JOIN ' . Table::PostTranslations->value . ' t ON t.slug = p.slug'
+            . ' WHERE mine.post = ? AND p.enabled = 1 AND t.locale = ?'
+            . ' ORDER BY p.published_at DESC, p.slug'
+            . ' LIMIT ' . $limit,
+            [$slug, $locale],
+        ));
+    }
+
+    /**
+     * One row shape, written once.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
+     */
+    private static function hydrate(array $rows): array
+    {
         $posts = [];
 
         foreach ($rows as $row) {
