@@ -2,6 +2,7 @@
 title: Travelling with a pet, and the questions to settle first
 published: 2026-07-24
 author: Ivan Tarasov
+tags: Rules, Before you fly, Animals
 summary: Whether an animal can fly at all is decided by the route, the breed and the paperwork, and each of those is settled somewhere other than the airline.
 ---
 

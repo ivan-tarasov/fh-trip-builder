@@ -7517,6 +7517,54 @@ body:has(.cookie-notice) .to-top { display: none; }
   list-style: none;
 }
 
+/* Related posts: rows, the shape help uses for the same job at the foot of an
+   article. Cards were tried and nesting a bordered card inside a card is as
+   fussy as it sounds -- and with one related post it left a lonely 239px card
+   in a 748px block. */
+.airside-related__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.airside-related__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  /* Negative side margins so the row's hover fills the card's padding: a row
+     that highlights short of its own edge looks like a mistake. */
+  margin: 0 -.75rem;
+  padding: .9375rem .75rem;
+  border-radius: .5rem;
+  color: var(--brand-ink);
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.airside-related__label {
+  min-width: 0;
+}
+
+.airside-related__chevron {
+  flex: 0 0 auto;
+  color: var(--brand-accent);
+  font-size: .8125rem;
+  transition: transform var(--dur-fast) ease;
+}
+
+@media (hover: hover) {
+  .airside-related__link:hover { background-color: var(--surface-sunken); }
+  /* A short nudge rather than a slide: the row is already highlighted, so this
+     only has to say which way it goes. */
+  .airside-related__link:hover .airside-related__chevron { transform: translateX(2px); }
+}
+
+.airside-related__link:active {
+  background-color: var(--line);
+}
+
 .airside-card {
   background-color: var(--surface);
   border: 1px solid var(--line);
@@ -7644,6 +7692,121 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .article__body .footnotes hr {
   display: none;
+}
+
+/* The tags that close a post.
+ *
+ * Inside the sheet and after the byline. They began in the partial's `aside`
+ * block, which renders outside it, so three lozenges floated in the gutter
+ * between the article and the footer and read as page furniture.
+ *
+ * Outlined rather than filled. The site's existing pill -- `.help-intro__pill`
+ * -- is solid accent, which is right for one pill carrying a page's subtitle
+ * and wrong for three sitting under a byline, where it would out-shout the
+ * heading. The border says "control", the hover says "link".
+ */
+/* The author, in a card of its own. No border and no rule: it is
+   `.article__aside`, so the card edge and the grid's gap do the dividing that
+   a hairline was doing badly. */
+.airside-author {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.airside-author__portrait {
+  /* Fixed, because the two states have to occupy the same box: a photograph
+     and a pair of letters that stand in for one. */
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  overflow: hidden;
+  background-color: var(--brand-tint);
+  border-radius: 50%;
+}
+
+.airside-author__picture {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.airside-author__initials {
+  color: var(--brand-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.airside-author__name {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: .9375rem;
+  font-weight: 700;
+}
+
+.airside-author__date {
+  margin: .125rem 0 0;
+  color: var(--ink-muted);
+  font-size: .875rem;
+}
+
+.airside-tags__label {
+  /* Small, quiet, and not optional: without it a reader meets three words in
+     boxes and has to work out what they are.
+
+     `--ink-muted` and not `--ink-faint`, which is 3.41:1 on white and fails
+     the 4.5:1 this needs at 12px. Measured, after writing `--ink-faint` first
+     because it looked right. */
+  margin: 0 0 .75rem;
+  color: var(--ink-muted);
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.airside-tags__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.airside-tags__pill {
+  display: inline-block;
+  /* 2.25rem tall at this padding, which clears the 24px minimum target size
+     without making three tags look like three buttons. */
+  padding: .4375rem 1rem;
+  color: var(--brand-ink);
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+  background-color: #fff;
+  /* The border is what says "control", so it has to clear 3:1 against the
+     sheet. Every `--line-*` token here fails that -- 1.25, 1.41 and 1.64 to
+     one -- which is correct for what they are for, a hairline between blocks,
+     and wrong for the edge of something clickable. `--ink-faint` is 3.41. */
+  border: 1px solid var(--ink-faint);
+  border-radius: 999px;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+
+.airside-tags__pill:hover,
+.airside-tags__pill:focus-visible {
+  color: var(--brand-accent);
+  background-color: var(--brand-tint);
+  border-color: var(--brand-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .airside-tags__pill { transition: none; }
 }
 
 /* The contents list, which only appears where a post writes `[TOC]` -- so a

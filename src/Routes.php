@@ -153,6 +153,11 @@ class Routes
         // step with AirsideController::slug() and with the check
         // `airside:import` makes on a file name.
         '#^/airside/[A-Za-z0-9-]+$#' => 'Airside@show',
+        // A tag's own page. Lower case only: a tag slug is derived from its
+        // name by `airside:import`, which lower-cases it, so there is no
+        // capitalised spelling to redirect from -- unlike a post, whose slug a
+        // reader may well have typed.
+        '#^/airside/tag/[a-z0-9-]+$#' => 'Airside@tag',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

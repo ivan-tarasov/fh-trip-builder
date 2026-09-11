@@ -28,20 +28,85 @@
         {{ post_html|raw }}
     {% endblock %}
 
-    {% block note %}
-        {# A byline and two dates. `published_at` is what the post claims and
-           what the section is ordered by; `updated_at` moves only when
-           `airside:import` finds prose that differs from the stored copy, so
-           it dates the words rather than the last deploy. Printed only when it
-           is later than publication, because on a post nobody has revised the
-           two are the same day and saying it twice says nothing. #}
-        <p class="article__note">
-            By {{ post.author }} ·
-            <time datetime="{{ post.published_at|date('Y-m-d') }}">{{ post.published_at|date('j F Y') }}</time>
-            {%- if post.updated_at|date('Y-m-d') > post.published_at|date('Y-m-d') %}
-                · updated {{ post.updated_at|date('j F Y') }}
-            {%- endif %}
-        </p>
+    {# The two things that close a post -- who wrote it, and where to go next --
+       as two cards rather than one with two rows. Each is a separate thing to
+       take in, and they are divided the way the article is divided from them:
+       by the card edge and the grid's gap, not by a rule.
+
+       Both are `.article__aside`, the card a help article's sibling list uses,
+       so three different blocks on two pages read as one design. #}
+    {% block aside %}
+        <aside class="article__aside airside-author" aria-label="Author">
+            <div class="airside-author__portrait" aria-hidden="true">
+                {% if author_image %}
+                    {# Decorative: the name is right beside it in text, so alt
+                       text here would be the same words read twice. #}
+                    <img class="airside-author__picture" src="{{ author_image }}" alt="" width="48" height="48" />
+                {% else %}
+                    {# Not a missing image. Nothing here ships an invented
+                       portrait, so an author with no file gets their initials
+                       -- a photograph added later replaces this with no row to
+                       change. #}
+                    <span class="airside-author__initials">{{ author_initials }}</span>
+                {% endif %}
+            </div>
+            <div class="airside-author__text">
+                <p class="airside-author__name">{{ post.author }}</p>
+                {# `published_at` is what the post claims and what the section
+                   is ordered by; `updated_at` moves only when `airside:import`
+                   finds prose that differs from the stored copy, so it dates
+                   the words rather than the last deploy. Printed only when it
+                   is later than publication, because on a post nobody has
+                   revised the two are the same day. #}
+                <p class="airside-author__date">
+                    <time datetime="{{ post.published_at|date('Y-m-d') }}">{{ post.published_at|date('j F Y') }}</time>
+                    {%- if post.updated_at|date('Y-m-d') > post.published_at|date('Y-m-d') %}
+                        · updated {{ post.updated_at|date('j F Y') }}
+                    {%- endif %}
+                </p>
+            </div>
+        </aside>
+
+        {% if tags|default({}) is not empty %}
+            <aside class="article__aside airside-tags" aria-labelledby="airside-tags-label">
+                {# The label earns its place: without it a reader meets three
+                   words in boxes and has to infer what they are. #}
+                <h2 class="airside-tags__label" id="airside-tags-label">Tags</h2>
+                <ul class="airside-tags__list">
+                    {% for slug, name in tags %}
+                        <li>
+                            <a class="airside-tags__pill" href="/airside/tag/{{ slug }}">{{ name }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </aside>
+        {% endif %}
+
+        {# Where to go next, and the last thing on the page. Nothing renders
+           when a post shares a tag with nobody -- a heading over an empty row
+           is worse than ending on the tags.
+
+           Rows and not cards. The hub's card carries a summary because it is a
+           page of posts and the line is what tells somebody which one they
+           want; here there are three at most and the reader has just finished
+           one, so a title is enough. It is also the shape help already uses for
+           the same job at the foot of an article, and nesting a bordered card
+           inside a card looked exactly as fussy as it sounds. #}
+        {% if related|default({}) is not empty %}
+            <aside class="article__aside airside-related" aria-labelledby="airside-related-label">
+                <h2 class="article__aside-title" id="airside-related-label">More from Airside</h2>
+                <ul class="airside-related__list">
+                    {% for slug, post in related %}
+                        <li>
+                            <a class="airside-related__link" href="/airside/{{ slug }}">
+                                <span class="airside-related__label">{{ post.title }}</span>
+                                <i class="fas fa-chevron-right airside-related__chevron" aria-hidden="true"></i>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </aside>
+        {% endif %}
     {% endblock %}
 {% endembed %}
 {% endblock %}

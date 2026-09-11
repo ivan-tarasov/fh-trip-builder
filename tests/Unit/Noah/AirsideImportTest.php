@@ -255,6 +255,80 @@ final class AirsideImportTest extends TestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Tags
+    |--------------------------------------------------------------------------
+    |
+    | The author writes the name and the slug comes off it, rather than the
+    | other way round: the name is what appears in the pill, and keeping a slug
+    | and a name in step by hand is asking for them to drift.
+    |
+    */
+
+    public function testTagsBecomeSlugsAndNames(): void
+    {
+        $parsed = Import::parse(self::file(self::HEADER . "\ntags: Security, Hand luggage", 'Prose.'));
+
+        self::assertSame(['security' => 'Security', 'hand-luggage' => 'Hand luggage'], $parsed['tags']);
+    }
+
+    public function testTagsAreOptional(): void
+    {
+        self::assertSame([], Import::parse(self::file(self::HEADER, 'Prose.'))['tags']);
+    }
+
+    public function testAnEmptyEntryInTheListIsSkipped(): void
+    {
+        $parsed = Import::parse(self::file(self::HEADER . "\ntags: Security, , Packing", 'Prose.'));
+
+        self::assertSame(['security' => 'Security', 'packing' => 'Packing'], $parsed['tags']);
+    }
+
+    public function testATagWithNothingAUrlCanHoldIsRefused(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('cannot be a URL');
+
+        Import::parse(self::file(self::HEADER . "\ntags: ???", 'Prose.'));
+    }
+
+    public function testATagLongerThanItsColumnIsRefused(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('the column holds 48');
+
+        Import::parse(self::file(self::HEADER . "\ntags: " . str_repeat('a', 49), 'Prose.'));
+    }
+
+    /**
+     * Two spellings of one tag would let `glob()` order decide the pill.
+     *
+     * The slug comes from the name, so `Hand luggage` and `Hand Luggage` are
+     * one tag with two names and the last file imported would win -- a page
+     * changing because of the order the directory was read in. Refusing is the
+     * only answer that is the same on every run.
+     */
+    public function testTwoSpellingsOfOneTagAreRefusedAndBothNamed(): void
+    {
+        $clashes = Import::tagNameClashes([
+            'one' => ['tags' => ['hand-luggage' => 'Hand luggage']],
+            'two' => ['tags' => ['hand-luggage' => 'Hand Luggage']],
+        ]);
+
+        self::assertCount(1, $clashes);
+        self::assertStringContainsString('one.md', $clashes[0]);
+        self::assertStringContainsString('two.md', $clashes[0]);
+    }
+
+    public function testTheSameSpellingInTwoFilesIsFine(): void
+    {
+        self::assertSame([], Import::tagNameClashes([
+            'one' => ['tags' => ['security' => 'Security']],
+            'two' => ['tags' => ['security' => 'Security']],
+        ]));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | The image check
     |--------------------------------------------------------------------------
     |

@@ -62,6 +62,59 @@ final readonly class PostImages implements ExtensionInterface
     }
 
     /**
+     * Where an author's picture lives, if they have one.
+     *
+     * Derived from the name rather than stored, because `posts.author` is the
+     * only record of who wrote a post and a second column naming a file would
+     * be a second thing to keep in step. `Ivan Tarasov` looks for
+     * `authors/ivan-tarasov.jpg` and its siblings.
+     *
+     * Null is a real answer and not a failure: nothing here ships an invented
+     * portrait, so the page draws initials instead. A photograph added later
+     * replaces them with no row to change.
+     */
+    public static function author(string $name): ?string
+    {
+        $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($name)), '-');
+
+        if ($slug === '') {
+            return null;
+        }
+
+        foreach (['jpg', 'png', 'webp'] as $extension) {
+            $file = 'authors/' . $slug . '.' . $extension;
+
+            if (is_file(Helper::getRootDir() . '/' . self::DIRECTORY . '/' . $file)) {
+                return self::url($file);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The letters to draw when there is no picture.
+     *
+     * First letter of the first and last words, which is what a reader
+     * recognises; one letter where there is only one word.
+     */
+    public static function initials(string $name): string
+    {
+        $words = preg_split('/\s+/', trim($name)) ?: [];
+        $words = array_values(array_filter($words));
+
+        if ($words === []) {
+            return '?';
+        }
+
+        $first = mb_strtoupper(mb_substr($words[0], 0, 1));
+
+        return count($words) === 1
+            ? $first
+            : $first . mb_strtoupper(mb_substr($words[count($words) - 1], 0, 1));
+    }
+
+    /**
      * Width and height as the file actually has them, or null.
      *
      * Null rather than a guess: attributes that disagree with the file are

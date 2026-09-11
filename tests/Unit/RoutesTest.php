@@ -58,6 +58,27 @@ final class RoutesTest extends TestCase
         self::assertNull(Routes::resolve('/airside/'));
     }
 
+    /**
+     * A tag's page sits under the section, and is lower case only.
+     *
+     * Unlike a post slug, which the controller 301s from capitals because a
+     * reader may well have typed one: a tag slug is derived from its name by
+     * `airside:import`, which lower-cases it, so there is no other spelling in
+     * existence to redirect from.
+     */
+    public function testATagHasItsOwnPageBeneathTheSection(): void
+    {
+        self::assertSame('Airside@tag', Routes::resolve('/airside/tag/security'));
+        self::assertSame('Airside@tag', Routes::resolve('/airside/tag/hand-luggage'));
+
+        self::assertNull(Routes::resolve('/airside/tag/Security'));
+        self::assertNull(Routes::resolve('/airside/tag/a/b'));
+
+        // The bare prefix is not a listing. It matches the post pattern, and
+        // answers the way any other unknown slug does.
+        self::assertSame('Airside@show', Routes::resolve('/airside/tag'));
+    }
+
     public function testABookingIsAddressedByItsIdInThePath(): void
     {
         self::assertSame('My@booking', Routes::resolve('/my/bookings/100001'));

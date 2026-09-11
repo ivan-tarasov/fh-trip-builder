@@ -11,6 +11,8 @@ use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
+use TripBuilder\Repository\PostRepository;
+use TripBuilder\Repository\PostTagRepository;
 use TripBuilder\Repository\RouteRepository;
 use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
@@ -54,6 +56,8 @@ class SitemapController extends AbstractController
             $urls = [
                 ...$this->staticPaths(),
                 ...$this->articlePaths(),
+                ...$this->postPaths(),
+                ...$this->postTagPaths(),
                 ...$this->cityPaths(),
                 ...$this->countryPaths(),
                 ...$this->airportPaths(),
@@ -162,6 +166,52 @@ class SitemapController extends AbstractController
 
         foreach (array_keys(new ArticleRepository($this->connection())->all()) as $slug) {
             $paths[] = '/help/' . $slug;
+        }
+
+        return $paths;
+    }
+
+    /**
+     * Every Airside post.
+     *
+     * `all()` and not `slugs()`: the first filters on `enabled` and the second
+     * deliberately does not, because the importer needs to see a held-back
+     * row. A sitemap offering a crawler a post the site will not show is a
+     * promise of a page that answers 404.
+     *
+     * @return list<string>
+     */
+    private function postPaths(): array
+    {
+        $paths = [];
+
+        foreach (array_keys(new PostRepository($this->connection())->all()) as $slug) {
+            $paths[] = '/airside/' . $slug;
+        }
+
+        return $paths;
+    }
+
+    /**
+     * And every tag with something behind it.
+     *
+     * `inUse()` rather than every name, because it joins to the map: a tag no
+     * post carries is a page the controller answers 404 for, and listing one
+     * would be the same broken promise.
+     *
+     * Included at all because the site links to them from the foot of every
+     * post. A page worth offering a reader is a page worth telling a crawler
+     * about, and leaving them out would describe a site whose own navigation
+     * goes somewhere the sitemap denies exists.
+     *
+     * @return list<string>
+     */
+    private function postTagPaths(): array
+    {
+        $paths = [];
+
+        foreach (array_keys(new PostTagRepository($this->connection())->inUse()) as $tag) {
+            $paths[] = '/airside/tag/' . $tag;
         }
 
         return $paths;

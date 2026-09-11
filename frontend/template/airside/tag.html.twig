@@ -1,0 +1,30 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ tag_name }}{% endblock %}
+
+{% block description %}Airside posts tagged {{ tag_name }}: {{ posts|length }} {{ posts|length == 1 ? 'piece' : 'pieces' }} of travel writing on the subject.{% endblock %}
+
+{# No `hero` block, for the reason the hub has none: a list of posts has as many
+   subjects as it has rows. #}
+{% block content %}
+<main role="main" class="airside">
+    <div class="container">
+        <div class="airside-intro">
+            {# The tag's own name as the heading, and the section's name under
+               it -- the reverse of the hub, where "Airside" is the heading. A
+               reader arrives here from a pill and already knows the subject;
+               what they may not know is which section they have landed in. #}
+            <h1 class="airside-intro__title">{{ tag_name }}</h1>
+            <p class="airside-intro__tagline">
+                {{ posts|length }} {{ posts|length == 1 ? 'post' : 'posts' }} in <a href="/airside">Airside</a>
+            </p>
+        </div>
+
+        <ul class="airside-list">
+            {% for slug, post in posts %}
+                {% include 'partials/airside-card.html.twig' with {'slug': slug, 'post': post} only %}
+            {% endfor %}
+        </ul>
+    </div>
+</main>
+{% endblock %}
