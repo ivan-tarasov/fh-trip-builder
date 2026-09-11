@@ -14,6 +14,7 @@ use Throwable;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\PostRepository;
+use TripBuilder\Repository\PostTagRepository;
 use TripBuilder\View\Airside\PostImages;
 
 #[AsCommand(
@@ -59,11 +60,12 @@ final class Import extends AbstractCommand
      * `hero_alt` is optional only because `hero` is. Given one, the other is
      * required -- see `parse()`.
      */
-    private const array OPTIONAL = ['hero', 'hero_alt'];
+    private const array OPTIONAL = ['hero', 'hero_alt', 'tags'];
 
     private const int TITLE_LIMIT = 120;
     private const int SUMMARY_LIMIT = 255;
     private const int ALT_LIMIT = 160;
+    private const int TAG_LIMIT = 48;
 
     protected function configure(): void
     {
@@ -106,8 +108,18 @@ final class Import extends AbstractCommand
             return Command::FAILURE;
         }
 
+        $clashes = self::tagNameClashes($posts);
+
+        if ($clashes !== []) {
+            $this->io->error(implode("\n", $clashes));
+
+            return Command::FAILURE;
+        }
+
         try {
-            $repository = new PostRepository($this->connection());
+            $connection = $this->connection();
+            $repository = new PostRepository($connection);
+            $tags = new PostTagRepository($connection);
         } catch (Throwable $e) {
             $this->io->error('No database: ' . $e->getMessage());
 
@@ -159,6 +171,18 @@ final class Import extends AbstractCommand
                 return Command::FAILURE;
             }
 
+            try {
+                foreach ($post['tags'] as $tag => $name) {
+                    $tags->store($tag, $name);
+                }
+
+                $tags->map($slug, array_keys($post['tags']));
+            } catch (Throwable $e) {
+                $this->io->error(sprintf('%s tags: %s', $slug, $e->getMessage()));
+
+                return Command::FAILURE;
+            }
+
             $changed += $moved ? 1 : 0;
             $this->formatOutput($slug, $moved ? 'updated' : 'unchanged', $moved ? 'success' : 'info');
         }
@@ -167,11 +191,18 @@ final class Import extends AbstractCommand
             $removed = 0;
 
             foreach (array_diff($repository->slugs(), array_keys($posts)) as $slug) {
+                // The map first: a row pointing at a post that no longer exists
+                // is a listing page offering a link to a 404.
+                $tags->forget($slug);
                 $repository->delete($slug);
 
                 $removed++;
                 $this->formatOutput($slug, 'removed', 'comment');
             }
+
+            // And then the names nothing points at any more. After the loop, so
+            // one run both removes a post and forgets the tag only it used.
+            $tags->pruneUnused();
         } catch (Throwable $e) {
             $this->io->error('Could not remove what the files no longer describe: ' . $e->getMessage());
 
@@ -293,6 +324,46 @@ final class Import extends AbstractCommand
     }
 
     /**
+     * Tags whose slug is shared by two different names, one per line.
+     *
+     * The slug comes from the name, so `Hand luggage` and `Hand Luggage` are
+     * one tag with two names and the last file imported would decide what the
+     * pill says -- a page changing because of the order `glob()` returned.
+     * Refusing is the only answer that stays the same on every run.
+     *
+     * Public and static for the reason `parse()` is.
+     *
+     * @param array<string, array<string, mixed>> $posts
+     * @return list<string>
+     */
+    public static function tagNameClashes(array $posts): array
+    {
+        $seen = [];
+        $clashes = [];
+
+        foreach ($posts as $slug => $post) {
+            foreach ($post['tags'] ?? [] as $tag => $name) {
+                if (isset($seen[$tag]) && $seen[$tag]['name'] !== $name) {
+                    $clashes[] = sprintf(
+                        'tag `%s` is written `%s` in %s.md and `%s` in %s.md -- pick one.',
+                        $tag,
+                        $seen[$tag]['name'],
+                        $seen[$tag]['slug'],
+                        (string) $name,
+                        $slug,
+                    );
+
+                    continue;
+                }
+
+                $seen[$tag] = ['name' => $name, 'slug' => $slug];
+            }
+        }
+
+        return $clashes;
+    }
+
+    /**
      * One post file, split into its header and its prose.
      *
      * Every refusal is a way a broken file becomes a broken page rather than
@@ -300,7 +371,7 @@ final class Import extends AbstractCommand
      * with STRICT_TRANS_TABLES an over-long summary is a SQL error naming a
      * column, where this names the file and says what to do about it.
      *
-     * @return array{title: string, published_at: string, author: string, summary: string, hero: ?string, hero_alt: ?string, body: string}
+     * @return array{title: string, published_at: string, author: string, summary: string, hero: ?string, hero_alt: ?string, tags: array<string, string>, body: string}
      */
     public static function parse(string $contents): array
     {
@@ -349,8 +420,68 @@ final class Import extends AbstractCommand
             'summary' => $fields['summary'],
             'hero' => $hero,
             'hero_alt' => $alt,
+            'tags' => self::tags($fields['tags'] ?? ''),
             'body' => $body,
         ];
+    }
+
+    /**
+     * `tags: Security, Packing` as slug => name.
+     *
+     * The author writes the name and the slug is derived from it, rather than
+     * the other way round: a name is the thing that appears on the page and in
+     * the pill, and asking somebody to keep a slug and a name in step by hand
+     * is asking for them to drift.
+     *
+     * @return array<string, string>
+     */
+    private static function tags(string $value): array
+    {
+        $tags = [];
+
+        foreach (explode(',', $value) as $written) {
+            $name = trim($written);
+
+            if ($name === '') {
+                continue;
+            }
+
+            $slug = self::slugify($name);
+
+            if ($slug === '') {
+                throw new RuntimeException(sprintf(
+                    'tag `%s` has no letters or digits in it, so it cannot be a URL',
+                    $name,
+                ));
+            }
+
+            if (mb_strlen($name) > self::TAG_LIMIT) {
+                throw new RuntimeException(sprintf(
+                    'tag `%s` is %d characters and the column holds %d',
+                    $name,
+                    mb_strlen($name),
+                    self::TAG_LIMIT,
+                ));
+            }
+
+            $tags[$slug] = $name;
+        }
+
+        return $tags;
+    }
+
+    /**
+     * A name reduced to something a URL can hold.
+     *
+     * Kept in step with the route pattern and with the slug rule `read()`
+     * applies to a file name, because a tag nothing can route to is a pill
+     * that 404s.
+     */
+    private static function slugify(string $name): string
+    {
+        $slug = preg_replace('/[^a-z0-9]+/', '-', mb_strtolower($name));
+
+        return trim((string) $slug, '-');
     }
 
     /**

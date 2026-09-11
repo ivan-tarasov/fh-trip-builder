@@ -2,6 +2,7 @@
 title: What you can actually carry in hand luggage
 published: 2026-09-08
 author: Ivan Tarasov
+tags: Security, Packing, Rules
 summary: How much you can bring is decided by the fare. What you can bring is decided by security, customs and the aircraft, and those three do not always agree.
 ---
 

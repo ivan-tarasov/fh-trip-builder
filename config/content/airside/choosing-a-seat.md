@@ -2,6 +2,7 @@
 title: How to choose a seat, and when it stops mattering
 published: 2026-06-12
 author: Ivan Tarasov
+tags: Comfort, Fares, Before you fly
 summary: Most of what a seat is like was decided by the fare, the aircraft and the row number, long before anyone opened the seat map.
 ---
 

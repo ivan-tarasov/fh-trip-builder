@@ -2,6 +2,7 @@
 title: What the meal service actually is
 published: 2026-08-30
 author: Ivan Tarasov
+tags: Comfort, On board
 summary: Whether there is food, whether it costs anything and whether it resembles what you ordered are three different questions with three different answers.
 ---
 
