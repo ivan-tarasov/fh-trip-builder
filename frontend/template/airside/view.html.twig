@@ -35,6 +35,22 @@
 
        Both are `.article__aside`, the card a help article's sibling list uses,
        so three different blocks on two pages read as one design. #}
+    {% block note %}
+        {# The same thumbs a help article carries, asking the question a post
+           asks rather than the one an article does. Everything but the copy
+           and the action is shared -- see the partial. #}
+        {% include 'partials/article-verdict.html.twig' with {
+            'verdict': verdict,
+            'vote_action': '/ajax/post-vote',
+            'vote_title': 'Was this worth reading?',
+            'vote_yes': 'Yes, this was worth reading',
+            'vote_no': 'No, not really',
+            'vote_said_yes': 'You said this was worth reading.',
+            'vote_said_no': 'You said it was not.',
+            'vote_tally': '%yes% of %votes% readers liked this'
+        } %}
+    {% endblock %}
+
     {% block aside %}
         <aside class="article__aside airside-author" aria-label="Author">
             <div class="airside-author__portrait" aria-hidden="true">

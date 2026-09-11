@@ -59,6 +59,19 @@ final class RoutesTest extends TestCase
     }
 
     /**
+     * Each family votes at its own endpoint.
+     *
+     * Two endpoints and not one taking a "which table" parameter: the
+     * allow-list is the difference between them, and an allow-list the caller
+     * chooses is not one.
+     */
+    public function testEachFamilyHasItsOwnVoteEndpoint(): void
+    {
+        self::assertSame('Ajax@articleVote', Routes::resolve('/ajax/article-vote'));
+        self::assertSame('Ajax@postVote', Routes::resolve('/ajax/post-vote'));
+    }
+
+    /**
      * A tag's page sits under the section, and is lower case only.
      *
      * Unlike a post slug, which the controller 301s from capitals because a

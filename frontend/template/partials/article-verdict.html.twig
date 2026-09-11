@@ -15,19 +15,37 @@
    The tally is printed only when `verdict.shown` says so. Below that it is one
    or two people, and "100% helpful" over a single vote is a claim rather than
    a figure. #}
+{# Two callers now: a help article asking whether it answered the question, and
+   an Airside post asking whether it was worth reading. Everything but the copy
+   and the form's action is the same, so they share this rather than fork it --
+   including the section id, which is what the endpoint's redirect lands on,
+   and the `js-article-vote` hook, which the script finds by class and drives
+   entirely from `form.action`. #}
 {% set notice = article_vote_notice() %}
+{# Every name here is prefixed, and that is not tidiness. The first version
+   read `title|default(...)`, and `title` already exists in an article's
+   context -- so the heading asking whether the page helped became the word
+   "Baggage". A partial that takes options has to take them under names the
+   page cannot already be using. #}
+{% set vote_action = vote_action|default('/ajax/article-vote') %}
+{% set vote_title = vote_title|default('Did this answer it, or are you still stuck?') %}
+{% set vote_yes = vote_yes|default('Yes, this answered it') %}
+{% set vote_no = vote_no|default('No, still stuck') %}
+{% set vote_said_yes = vote_said_yes|default('You said this sorted it.') %}
+{% set vote_said_no = vote_said_no|default('You said you were still stuck.') %}
+{% set vote_tally = vote_tally|default('%yes% of %votes% readers found this helpful') %}
 <section class="article__verdict" id="article-verdict" aria-labelledby="article-verdict-title">
     <div class="article__verdict-ask">
-        <h2 class="article__verdict-title" id="article-verdict-title">Did this answer it, or are you still stuck?</h2>
+        <h2 class="article__verdict-title" id="article-verdict-title">{{ vote_title }}</h2>
 
         <p class="article__verdict-status js-vote-status" role="status" aria-live="polite"
            {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>
             {%- if notice -%}
                 {{ notice.message }}
             {%- elseif verdict.mine is same as(true) -%}
-                You said this sorted it.
+                {{ vote_said_yes }}
             {%- elseif verdict.mine is same as(false) -%}
-                You said you were still stuck.
+                {{ vote_said_no }}
             {%- endif -%}
         </p>
 
@@ -35,27 +53,27 @@
            attribute after a vote, so the sentence a reader sees before and
            after cannot drift apart -- the reason the cookie notice and the
            currency switcher take their names off data attributes too. #}
-        {% set tally = '%yes% of %votes% readers found this helpful' %}
+        {% set tally = vote_tally %}
         <p class="article__verdict-tally js-vote-tally" data-template="{{ tally }}"
            {{- verdict.shown ? '' : ' hidden' }}>
             {{- verdict.shown ? tally|replace({'%yes%': verdict.yes, '%votes%': verdict.votes}) : '' -}}
         </p>
     </div>
 
-    <form class="article__verdict-form js-article-vote" action="/ajax/article-vote" method="post">
+    <form class="article__verdict-form js-article-vote" action="{{ vote_action }}" method="post">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
         <input type="hidden" name="return_to" value="{{ current_page() }}">
         <input type="hidden" name="slug" value="{{ verdict.slug }}">
 
         <button type="submit" name="helpful" value="1"
                 class="article__verdict-button article__verdict-button--up js-vote-yes{{ verdict.mine is same as(true) ? ' article__verdict-button--chosen' : '' }}"
-                aria-label="Yes, this answered it">
+                aria-label="{{ vote_yes }}">
             <i class="fas fa-thumbs-up" aria-hidden="true"></i>
         </button>
 
         <button type="submit" name="helpful" value="0"
                 class="article__verdict-button article__verdict-button--down js-vote-no{{ verdict.mine is same as(false) ? ' article__verdict-button--chosen' : '' }}"
-                aria-label="No, still stuck">
+                aria-label="{{ vote_no }}">
             <i class="fas fa-thumbs-down" aria-hidden="true"></i>
         </button>
     </form>

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
+use TripBuilder\ArticleRating;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
+use TripBuilder\Repository\PostVoteRepository;
 use TripBuilder\View\Airside\PostImages;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
+use TripBuilder\Voter;
 
 /**
  * Airside: the posts, and the page that lists them.
@@ -106,6 +109,9 @@ class AirsideController extends AbstractController
             'author_image' => PostImages::author($post['author']),
             'author_initials' => PostImages::initials($post['author']),
             'related' => $related,
+            // Guarded like the rest: a post without its thumbs is still the
+            // post somebody came for.
+            'verdict' => $this->verdict($slug),
             // Home / Airside / the post's name. Derived from the path the
             // trail would end in the slug, which is the address rather than
             // the title.
@@ -185,6 +191,38 @@ class AirsideController extends AbstractController
             error_log('Airside related failed: ' . $e->getMessage());
 
             return [];
+        }
+    }
+
+    /**
+     * What this reader already said, and what everyone said.
+     *
+     * `shown` is the same threshold help uses: below it the page prints no
+     * figures, because "100% liked this" over a single vote is a claim rather
+     * than a number.
+     *
+     * @return array{slug: string, mine: ?bool, votes: int, yes: int, shown: bool}
+     */
+    private function verdict(string $slug): array
+    {
+        $blank = ['slug' => $slug, 'mine' => null, 'votes' => 0, 'yes' => 0, 'shown' => false];
+
+        try {
+            $votes = new PostVoteRepository($this->connection());
+            $tally = $votes->tallyFor($slug);
+            $voter = Voter::current();
+
+            return [
+                'slug' => $slug,
+                'mine' => $voter === null ? null : $votes->verdictOf($slug, $voter),
+                'votes' => $tally['votes'],
+                'yes' => $tally['helpful'],
+                'shown' => ArticleRating::worthShowing($tally['votes']),
+            ];
+        } catch (Throwable $e) {
+            error_log('Airside verdict failed: ' . $e->getMessage());
+
+            return $blank;
         }
     }
 
