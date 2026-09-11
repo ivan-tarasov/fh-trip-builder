@@ -149,6 +149,51 @@ final readonly class PostRepository
     }
 
     /**
+     * Named posts, in the order they were named.
+     *
+     * For a caller that has already decided which posts it wants and in what
+     * order -- the vote table decides the most-liked block, and knows nothing
+     * about titles. Reading `all()` and picking from it would work at four
+     * posts and pull the whole section into memory at four hundred.
+     *
+     * The order is the caller's, restored here: `IN (...)` returns rows in
+     * whatever order the engine likes, so sorting by anything of this table's
+     * own would quietly discard the ranking that was the point.
+     *
+     * @param list<string> $slugs
+     * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
+     */
+    public function bySlugs(array $slugs, string $locale = self::DEFAULT_LOCALE): array
+    {
+        $slugs = array_values(array_unique($slugs));
+
+        if ($slugs === []) {
+            return [];
+        }
+
+        $found = self::hydrate($this->connection->fetchAll(
+            'SELECT p.slug, p.author, p.hero, p.published_at, t.title, t.summary, t.hero_alt'
+            . ' FROM ' . Table::Posts->value . ' p'
+            . ' JOIN ' . Table::PostTranslations->value . ' t ON t.slug = p.slug'
+            . ' WHERE p.enabled = 1 AND t.locale = ?'
+            . ' AND p.slug IN (' . implode(', ', array_fill(0, count($slugs), '?')) . ')',
+            [$locale, ...$slugs],
+        ));
+
+        $ordered = [];
+
+        foreach ($slugs as $slug) {
+            // A slug with no row is a post that was disabled or deleted since
+            // whoever asked last looked. Skipped rather than faked.
+            if (isset($found[$slug])) {
+                $ordered[$slug] = $found[$slug];
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
      * One row shape, written once.
      *
      * @param list<array<string, mixed>> $rows

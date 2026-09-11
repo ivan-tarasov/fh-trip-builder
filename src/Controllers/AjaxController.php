@@ -12,6 +12,8 @@ use TripBuilder\Money;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Repository\PostRepository;
+use TripBuilder\Repository\PostVoteRepository;
 use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Service\FlightFinder;
@@ -436,6 +438,111 @@ class AjaxController extends AbstractController
             // thumbs-down, and saying otherwise would be the kind of promise
             // PromisesTest exists to keep out of this app.
             'message' => $helpful === 1 ? 'Thanks. Glad it helped.' : 'Thanks. Noted that it did not.',
+        ], $helpful === 1 ? 'good' : 'quiet');
+    }
+
+    /**
+     * The same endpoint for an Airside post.
+     *
+     * A copy of the one above rather than a shared method with a flag, because
+     * the two differ in the one place that matters: the allow-list. An article
+     * vote checks `articles` and a post vote checks `posts`, and a single
+     * endpoint taking a "which table" parameter from the request would be an
+     * allow-list a caller chooses -- which is not one.
+     *
+     * Everything else is shared and stays shared: the session notice, the
+     * `#article-verdict` fragment the redirect lands on, the script, and the
+     * threshold below which no figures are printed.
+     */
+    public function postVote(): void
+    {
+        $asJson = str_contains((string) $this->request->header('Accept'), 'application/json');
+
+        if ($failure = $this->guardFailure()) {
+            [$code, $message] = $failure;
+            $this->answerVote($asJson, $code, ['status' => 'error', 'message' => $message], 'bad');
+
+            return;
+        }
+
+        $slug = $this->request->body->str('slug');
+
+        // An exact key in the catalogue, on Currency::tryFrom()'s reasoning: a
+        // slug is whatever was posted, so `Baggage` is somebody editing the
+        // form by hand. Without this the table fills with votes for articles
+        // that do not exist, and `varchar(64)` would take most of them.
+        //
+        // Case-sensitive, unlike HelpController, which lower-cases and 301s.
+        // A reader following a capitalised link gets redirected to the real
+        // page; a script posting `slug=Baggage` gets refused. Deliberate.
+        //
+        // Reading the articles table means this can now fail, and a failure
+        // has to refuse rather than wave the vote through -- an allow-list
+        // that opens when the database is down is not one.
+        try {
+            $known = new PostRepository($this->connection())->all();
+        } catch (Throwable $e) {
+            error_log('Post vote allow-list unavailable: ' . $e->getMessage());
+            $this->answerVote($asJson, 500, [
+                'status' => 'error',
+                'message' => 'That did not work. Try again in a moment.',
+            ], 'bad');
+
+            return;
+        }
+
+        if (!array_key_exists($slug, $known)) {
+            $this->answerVote($asJson, 422, [
+                'status' => 'error',
+                'message' => 'That is not an article we have.',
+            ], 'bad');
+
+            return;
+        }
+
+        // -1 for missing, not a number, or anything but 0 and 1. filter_var
+        // does that inside intWithin, which matters: a plain (int) cast would
+        // turn "yes" into 0 and record an unreadable answer as a thumbs down.
+        $helpful = $this->request->body->intWithin('helpful', -1, 0, 1);
+
+        if ($helpful < 0) {
+            $this->answerVote($asJson, 422, [
+                'status' => 'error',
+                'message' => 'Say whether it helped or it did not.',
+            ], 'bad');
+
+            return;
+        }
+
+        try {
+            $repository = new PostVoteRepository($this->connection());
+            // Minted here and nowhere else, so reading an article tags nobody.
+            $repository->record($slug, Voter::identify($this->request->isSecure()), $helpful === 1);
+            $tally = $repository->tallyFor($slug);
+        } catch (Throwable $e) {
+            // The reason goes to the log, not to the page, as with subscribe:
+            // a visitor cannot act on it and a database error is not theirs.
+            error_log('Post vote failed: ' . $e->getMessage());
+            $this->answerVote($asJson, 500, [
+                'status' => 'error',
+                'message' => 'That did not work. Try again in a moment.',
+            ], 'bad');
+
+            return;
+        }
+
+        $this->answerVote($asJson, 200, [
+            'status' => 'ok',
+            'helpful' => $helpful === 1,
+            'votes' => $tally['votes'],
+            'yes' => $tally['helpful'],
+            // Whether the page may print the figures yet. Decided here so the
+            // browser and a no-script render cannot disagree about it.
+            'shown' => ArticleRating::worthShowing($tally['votes']),
+            // No undertaking to act on it. There is nobody here to read a
+            // thumbs-down, and saying otherwise would be the kind of promise
+            // PromisesTest exists to keep out of this app.
+            'message' => $helpful === 1 ? 'Thanks. Glad it was worth it.' : 'Thanks. Noted that it was not.',
         ], $helpful === 1 ? 'good' : 'quiet');
     }
 

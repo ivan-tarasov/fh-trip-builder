@@ -7574,6 +7574,23 @@ body:has(.cookie-notice) .to-top { display: none; }
   .airside-inline__link:hover .airside-inline__title { color: var(--brand-accent); }
 }
 
+/* The most-liked block: cards, deliberately unlike the rows above it. Two
+   blocks that make different claims should not read as one list broken in
+   half, which is the mistake the reference avoids by giving each its own
+   shape. Narrower tracks than the hub's, so three fit across the card. */
+.airside-list--liked {
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 0;
+}
+
+.airside-list--liked .airside-card__summary {
+  /* The card's line earns its place on the hub, where it says which of many
+     posts you want. Three cards under a heading do not need it, and it would
+     make this block taller than the post it follows. */
+  display: none;
+}
+
 /* Related posts: rows, the shape help uses for the same job at the foot of an
    article. Cards were tried and nesting a bordered card inside a card is as
    fussy as it sounds -- and with one related post it left a lonely 239px card

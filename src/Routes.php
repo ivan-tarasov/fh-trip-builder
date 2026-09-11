@@ -96,6 +96,7 @@ class Routes
 
         '/ajax/add-trip' => 'Ajax@addTrip',
         '/ajax/article-vote' => 'Ajax@articleVote',
+        '/ajax/post-vote' => 'Ajax@postVote',
         '/ajax/cancel-booking' => 'Ajax@cancelBooking',
         '/ajax/day-prices' => 'Ajax@dayPrices',
         '/ajax/subscribe' => 'Ajax@subscribe',

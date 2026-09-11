@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Throwable;
+use TripBuilder\ArticleRating;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
+use TripBuilder\Repository\PostVoteRepository;
 use TripBuilder\View\Airside\PostImages;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
+use TripBuilder\Voter;
 
 /**
  * Airside: the posts, and the page that lists them.
@@ -106,6 +109,10 @@ class AirsideController extends AbstractController
             'author_image' => PostImages::author($post['author']),
             'author_initials' => PostImages::initials($post['author']),
             'related' => $related,
+            // Guarded like the rest: a post without its thumbs is still the
+            // post somebody came for.
+            'verdict' => $this->verdict($slug),
+            'liked' => $this->liked($slug),
             // Home / Airside / the post's name. Derived from the path the
             // trail would end in the slug, which is the address rather than
             // the title.
@@ -185,6 +192,68 @@ class AirsideController extends AbstractController
             error_log('Airside related failed: ' . $e->getMessage());
 
             return [];
+        }
+    }
+
+    /**
+     * The posts readers liked best, minus this one.
+     *
+     * Empty until somebody votes, which is deliberate and is why the block is
+     * conditional: `liked()` returns nothing from an untouched table rather
+     * than letting a tiebreaker decide what "most liked" means.
+     *
+     * Overlap with the related block is allowed. They make different claims --
+     * "near this" and "readers liked it" -- and a post that is both is a post
+     * worth offering twice. What is not allowed is the same claim twice, which
+     * is why the in-body card and the related list do not overlap.
+     *
+     * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
+     */
+    private function liked(string $slug): array
+    {
+        try {
+            $connection = $this->connection();
+            // Four, so removing this post still leaves three.
+            $ranked = array_keys(new PostVoteRepository($connection)->liked(4));
+            $wanted = array_values(array_filter($ranked, static fn(string $s): bool => $s !== $slug));
+
+            return new PostRepository($connection)->bySlugs(array_slice($wanted, 0, 3));
+        } catch (Throwable $e) {
+            error_log('Airside most liked failed: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    /**
+     * What this reader already said, and what everyone said.
+     *
+     * `shown` is the same threshold help uses: below it the page prints no
+     * figures, because "100% liked this" over a single vote is a claim rather
+     * than a number.
+     *
+     * @return array{slug: string, mine: ?bool, votes: int, yes: int, shown: bool}
+     */
+    private function verdict(string $slug): array
+    {
+        $blank = ['slug' => $slug, 'mine' => null, 'votes' => 0, 'yes' => 0, 'shown' => false];
+
+        try {
+            $votes = new PostVoteRepository($this->connection());
+            $tally = $votes->tallyFor($slug);
+            $voter = Voter::current();
+
+            return [
+                'slug' => $slug,
+                'mine' => $voter === null ? null : $votes->verdictOf($slug, $voter),
+                'votes' => $tally['votes'],
+                'yes' => $tally['helpful'],
+                'shown' => ArticleRating::worthShowing($tally['votes']),
+            ];
+        } catch (Throwable $e) {
+            error_log('Airside verdict failed: ' . $e->getMessage());
+
+            return $blank;
         }
     }
 
