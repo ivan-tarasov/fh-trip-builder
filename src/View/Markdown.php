@@ -12,6 +12,7 @@ use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension;
 use League\CommonMark\Extension\Footnote\FootnoteExtension;
 use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
 use League\CommonMark\MarkdownConverter;
+use TripBuilder\View\Airside\PostImages;
 
 /**
  * Markdown to HTML, configured once.
@@ -43,7 +44,35 @@ use League\CommonMark\MarkdownConverter;
  */
 final class Markdown
 {
+    /**
+     * The converter `/about` and `/help` use.
+     *
+     * Conservative on purpose: every extension below is opt-in syntax or a
+     * safety header, so prose already written renders the way it always did.
+     */
     public static function toHtml(string $markdown): string
+    {
+        return (string) new MarkdownConverter(self::environment())->convert($markdown);
+    }
+
+    /**
+     * The converter Airside posts use: everything above, plus images.
+     *
+     * A separate entry point rather than a flag on the one above, because the
+     * difference is not a setting -- it is that a post body resolves image
+     * file names against a directory `/about` and `/help` know nothing about.
+     * A8.5's in-body card will want the same seam, which is the other reason
+     * it is built now rather than twice.
+     */
+    public static function toPostHtml(string $markdown): string
+    {
+        $environment = self::environment();
+        $environment->addExtension(new PostImages());
+
+        return (string) new MarkdownConverter($environment)->convert($markdown);
+    }
+
+    private static function environment(): Environment
     {
         $environment = new Environment([
             // Both files reaching this are version-controlled rather than
@@ -98,6 +127,6 @@ final class Markdown
         // could not add for itself.
         $environment->addExtension(new ExternalLinkExtension());
 
-        return (string) new MarkdownConverter($environment)->convert($markdown);
+        return $environment;
     }
 }

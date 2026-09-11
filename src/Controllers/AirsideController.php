@@ -83,7 +83,7 @@ class AirsideController extends AbstractController
             // do it: a template handed markdown would have to know how to
             // render it, and the one thing this app never does is treat
             // stored text as template source.
-            'post_html' => Markdown::toHtml($post['body']),
+            'post_html' => Markdown::toPostHtml($post['body']),
             'post' => $post + ['slug' => $slug],
             // Home / Airside / the post's name. Derived from the path the
             // trail would end in the slug, which is the address rather than

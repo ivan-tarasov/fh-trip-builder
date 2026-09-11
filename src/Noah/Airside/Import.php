@@ -14,6 +14,7 @@ use Throwable;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\PostRepository;
+use TripBuilder\View\Airside\PostImages;
 
 #[AsCommand(
     name: 'airside:import',
@@ -50,7 +51,7 @@ final class Import extends AbstractCommand
      * onto the CDN `site.static.endpoint.images` names and nothing yet uses,
      * is then a change to one template rather than to every row.
      */
-    private const string IMAGE_DIR = 'frontend/img/airside';
+    private const string IMAGE_DIR = PostImages::DIRECTORY;
 
     private const array REQUIRED = ['title', 'published', 'author', 'summary'];
 
@@ -238,10 +239,15 @@ final class Import extends AbstractCommand
     /**
      * Posts naming an image that is not committed, one per line.
      *
-     * Checked here rather than left to the page, because a hero that is not
-     * there is a broken image on the card, in the section and in whatever
-     * A8.5's in-body card renders -- three broken things from one typo, none
+     * Checked here rather than left to the page, because an image that is not
+     * there is a broken picture on the card, in the section and in whatever
+     * A8.5's in-body card renders -- several broken things from one typo, none
      * of which fails anything.
+     *
+     * Body images are found by parsing, not by matching: `![alt](x.jpg)` in a
+     * fenced code block is a line *about* markdown, and a post explaining how
+     * to write one is exactly the post somebody will file. See
+     * PostImages::inBody().
      *
      * Public and static for the reason `parse()` is: it is a judgement the
      * import makes, and testing it needs neither the table nor the command.
@@ -254,21 +260,32 @@ final class Import extends AbstractCommand
         $missing = [];
 
         foreach ($posts as $slug => $post) {
-            $hero = $post['hero'];
+            $wanted = [];
 
-            if ($hero === null) {
-                continue;
+            if (($post['hero'] ?? null) !== null) {
+                $wanted['hero'] = [(string) $post['hero']];
             }
 
-            $path = Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $hero;
+            $body = PostImages::inBody((string) ($post['body'] ?? ''));
 
-            if (!is_file($path)) {
-                $missing[] = sprintf(
-                    '%s.md names hero `%s`, which is not in %s.',
-                    $slug,
-                    (string) $hero,
-                    self::IMAGE_DIR,
-                );
+            if ($body !== []) {
+                $wanted['image'] = array_values(array_unique($body));
+            }
+
+            foreach ($wanted as $kind => $files) {
+                foreach ($files as $file) {
+                    if (is_file(Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $file)) {
+                        continue;
+                    }
+
+                    $missing[] = sprintf(
+                        '%s.md names %s `%s`, which is not in %s.',
+                        $slug,
+                        $kind,
+                        $file,
+                        self::IMAGE_DIR,
+                    );
+                }
             }
         }
 
