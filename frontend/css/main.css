@@ -7646,6 +7646,40 @@ body:has(.cookie-notice) .to-top { display: none; }
   display: none;
 }
 
+/* The tags at the foot of a post. Pills, and every one of them a link -- a
+   pill that cannot be clicked is a word in a box. */
+.airside-tags {
+  margin: 2rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.airside-tags__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.airside-tags__pill {
+  display: inline-block;
+  padding: .375rem .875rem;
+  color: var(--brand-ink);
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: none;
+  background-color: var(--surface-sunken);
+  border-radius: 999px;
+}
+
+.airside-tags__pill:hover,
+.airside-tags__pill:focus-visible {
+  color: #fff;
+  background-color: var(--brand-accent);
+}
+
 /* The contents list, which only appears where a post writes `[TOC]` -- so a
    short post has none rather than a two-line list of its own headings. */
 .article__body > .table-of-contents {

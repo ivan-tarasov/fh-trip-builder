@@ -28,30 +28,7 @@
         {% else %}
             <ul class="airside-list">
                 {% for slug, post in posts %}
-                    <li class="airside-card">
-                        <a class="airside-card__link" href="/airside/{{ slug }}">
-                            {% if post.hero %}
-                                {# The alt text is the post's own, written in the
-                                   file and required there whenever a hero is
-                                   named -- it is what a reader who cannot see
-                                   the image receives instead. #}
-                                <img class="airside-card__image"
-                                     src="{{ asset('/frontend/img/airside/' ~ post.hero) }}"
-                                     alt="{{ post.hero_alt }}"
-                                     loading="lazy" />
-                            {% endif %}
-                            <div class="airside-card__text">
-                                <h2 class="airside-card__title">{{ post.title }}</h2>
-                                <p class="airside-card__summary">{{ post.summary }}</p>
-                                {# `datetime` carries the machine-readable form
-                                   so the printed date can stay the short one. #}
-                                <p class="airside-card__meta">
-                                    <time datetime="{{ post.published_at|date('Y-m-d') }}">{{ post.published_at|date('j F Y') }}</time>
-                                    <span class="airside-card__author">{{ post.author }}</span>
-                                </p>
-                            </div>
-                        </a>
-                    </li>
+                    {% include 'partials/airside-card.html.twig' with {'slug': slug, 'post': post} only %}
                 {% endfor %}
             </ul>
         {% endif %}

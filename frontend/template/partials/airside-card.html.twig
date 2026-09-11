@@ -1,0 +1,34 @@
+{# One post, as a card.
+
+   Shared by the two places that list posts: the hub, which lists all of them,
+   and a tag's page, which lists the ones carrying it. They were the same markup
+   twice the moment the second list existed.
+
+   What is passed in:
+
+     slug  - the post's address
+     post  - title, summary, author, hero, hero_alt, published_at
+#}
+<li class="airside-card">
+    <a class="airside-card__link" href="/airside/{{ slug }}">
+        {% if post.hero %}
+            {# The alt text is the post's own, written in the file and required
+               there whenever a hero is named -- it is what a reader who cannot
+               see the image receives instead. #}
+            <img class="airside-card__image"
+                 src="{{ asset('/frontend/img/airside/' ~ post.hero) }}"
+                 alt="{{ post.hero_alt }}"
+                 loading="lazy" />
+        {% endif %}
+        <div class="airside-card__text">
+            <h2 class="airside-card__title">{{ post.title }}</h2>
+            <p class="airside-card__summary">{{ post.summary }}</p>
+            {# `datetime` carries the machine-readable form so the printed date
+               can stay the short one. #}
+            <p class="airside-card__meta">
+                <time datetime="{{ post.published_at|date('Y-m-d') }}">{{ post.published_at|date('j F Y') }}</time>
+                <span class="airside-card__author">{{ post.author }}</span>
+            </p>
+        </div>
+    </a>
+</li>
