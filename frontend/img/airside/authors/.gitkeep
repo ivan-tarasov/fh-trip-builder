@@ -3,4 +3,10 @@ A post's author picture, named after the author: `Ivan Tarasov` becomes
 
 Empty on purpose. Nothing here is invented: a post whose author has no file
 gets their initials in a circle instead, which is a deliberate design and not a
-missing image. Drop a photograph in and it replaces them, with no row to change.
+missing image.
+
+Drop a photograph in and run `airside:import`. It needs the import, because the
+page no longer looks in this directory -- it reads the row the import writes.
+That is A8.12, and the reason for it is that this directory is not deployed:
+the check that used to find a picture here always failed in production, and the
+page drew initials while looking perfectly finished.

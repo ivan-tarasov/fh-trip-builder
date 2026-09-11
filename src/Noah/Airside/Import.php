@@ -429,16 +429,44 @@ final class Import extends AbstractCommand
             $sizes[$file] = ImageResizer::dimensions(self::stagedContents($file));
         }
 
+        $portrait = self::stagedAuthorPicture($post['author']);
+
+        if ($portrait !== null) {
+            $sizes[$portrait] = ImageResizer::dimensions(self::stagedContents($portrait));
+        }
+
         return $sizes;
+    }
+
+    /**
+     * Which of an author's candidate file names is actually staged, if any.
+     *
+     * Disk is the right question here and the wrong one in `PostImages`: at
+     * import the files genuinely are on this machine, which is the one moment
+     * anything can discover that a photograph was added. The page cannot,
+     * which is the whole of A8.12.
+     *
+     * No picture is the ordinary case and not an error -- the page draws the
+     * author's initials, which is a design rather than a gap.
+     */
+    private static function stagedAuthorPicture(string $author): ?string
+    {
+        foreach (PostImages::authorFiles($author) as $file) {
+            if (is_file(Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $file)) {
+                return $file;
+            }
+        }
+
+        return null;
     }
 
     /**
      * Every copy of every picture one post names, sent if it is not already up.
      *
-     * The hero and the body images are not the same job. A hero is stored
-     * under a hashed name in six sizes, because the markup picks a size; a
-     * body image is stored under the name the author typed, at one size,
-     * because the markup asks for it by that name.
+     * The hero and the rest are not the same job. A hero is stored under a
+     * hashed name in six sizes, because the markup picks a size; a body image
+     * and an author's portrait are stored under the name they already have, at
+     * one size, because the markup asks for them by that name.
      *
      * @param array{hero: string|null, body: string, ...} $post
      * @return list<string>
@@ -452,7 +480,10 @@ final class Import extends AbstractCommand
             $sent = $uploader->upload(PostImageSet::canonical($post['hero'], $contents), $contents);
         }
 
-        foreach (PostImages::inBody($post['body']) as $file) {
+        $body = PostImages::inBody($post['body']);
+        $portrait = self::stagedAuthorPicture($post['author']);
+
+        foreach ($portrait === null ? $body : [...$body, $portrait] as $file) {
             $key = $uploader->uploadOne($file, self::stagedContents($file));
 
             if ($key !== null) {
