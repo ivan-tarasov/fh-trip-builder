@@ -81,6 +81,32 @@
                 </ul>
             </aside>
         {% endif %}
+
+        {# Where to go next, and the last thing on the page. Nothing renders
+           when a post shares a tag with nobody -- a heading over an empty row
+           is worse than ending on the tags.
+
+           Rows and not cards. The hub's card carries a summary because it is a
+           page of posts and the line is what tells somebody which one they
+           want; here there are three at most and the reader has just finished
+           one, so a title is enough. It is also the shape help already uses for
+           the same job at the foot of an article, and nesting a bordered card
+           inside a card looked exactly as fussy as it sounds. #}
+        {% if related|default({}) is not empty %}
+            <aside class="article__aside airside-related" aria-labelledby="airside-related-label">
+                <h2 class="article__aside-title" id="airside-related-label">More from Airside</h2>
+                <ul class="airside-related__list">
+                    {% for slug, post in related %}
+                        <li>
+                            <a class="airside-related__link" href="/airside/{{ slug }}">
+                                <span class="airside-related__label">{{ post.title }}</span>
+                                <i class="fas fa-chevron-right airside-related__chevron" aria-hidden="true"></i>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </aside>
+        {% endif %}
     {% endblock %}
 {% endembed %}
 {% endblock %}

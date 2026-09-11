@@ -94,6 +94,9 @@ class AirsideController extends AbstractController
             // usual case: the page draws their initials instead.
             'author_image' => PostImages::author($post['author']),
             'author_initials' => PostImages::initials($post['author']),
+            // Guarded like the tags: a post with nothing to follow it is a
+            // smaller loss than no post.
+            'related' => $this->related($slug),
             // Home / Airside / the post's name. Derived from the path the
             // trail would end in the slug, which is the address rather than
             // the title.
@@ -149,6 +152,25 @@ class AirsideController extends AbstractController
             return new PostTagRepository($this->connection())->forPost($slug);
         } catch (Throwable $e) {
             error_log('Airside tags failed: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    /**
+     * Other posts sharing a tag with this one, or none if the read fails.
+     *
+     * Three, which is what fills a row beside the card and stops short of
+     * being a second hub at the foot of every article.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function related(string $slug): array
+    {
+        try {
+            return new PostRepository($this->connection())->related($slug, 3);
+        } catch (Throwable $e) {
+            error_log('Airside related failed: ' . $e->getMessage());
 
             return [];
         }
