@@ -14,8 +14,10 @@ use Throwable;
 use TripBuilder\Cdn;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
+use TripBuilder\Repository\PostImageRepository;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
+use TripBuilder\Service\ImageResizer;
 use TripBuilder\Service\PostImageUploader;
 use TripBuilder\View\Airside\PostImages;
 use TripBuilder\View\Airside\PostImageSet;
@@ -134,6 +136,7 @@ final class Import extends AbstractCommand
             $connection = $this->connection();
             $repository = new PostRepository($connection);
             $tags = new PostTagRepository($connection);
+            $images = new PostImageRepository($connection);
         } catch (Throwable $e) {
             $this->io->error('No database: ' . $e->getMessage());
 
@@ -187,6 +190,14 @@ final class Import extends AbstractCommand
             // unreferenced objects, which cost about nothing and are the same
             // bytes the next run would have sent anyway.
             try {
+                // Recorded whether or not anything is uploaded. The page reads
+                // these from the table in both cases -- with no distribution
+                // the files are served from the staging directory, but the
+                // markup still has to say how big they are.
+                foreach (self::imageSizes($post) as $file => $size) {
+                    $images->store($file, $size['width'], $size['height']);
+                }
+
                 $uploaded += count($uploader === null ? [] : self::uploadImages($uploader, $post));
             } catch (Throwable $e) {
                 $this->io->error(sprintf('%s images: %s', $slug, $e->getMessage()));
@@ -389,6 +400,36 @@ final class Import extends AbstractCommand
         return $hero === null
             ? null
             : PostImageSet::canonical($hero, self::stagedContents($hero));
+    }
+
+    /**
+     * How big each of one post's pictures is, keyed as the page will ask.
+     *
+     * A hero under its canonical hashed name, because that is what the row in
+     * `posts` holds and so what the template looks up; a body image under the
+     * name the author typed, because the markdown asks for it that way.
+     *
+     * `getimagesizefromstring()` reads a header and needs no `gd`, which
+     * matters: an import that cannot resize must still record sizes, or a
+     * machine without the extension would write rows the page then cannot use.
+     *
+     * @param array{hero: string|null, body: string, ...} $post
+     * @return array<string, array{width: int, height: int}>
+     */
+    private static function imageSizes(array $post): array
+    {
+        $sizes = [];
+
+        if ($post['hero'] !== null) {
+            $contents = self::stagedContents($post['hero']);
+            $sizes[PostImageSet::canonical($post['hero'], $contents)] = ImageResizer::dimensions($contents);
+        }
+
+        foreach (PostImages::inBody($post['body']) as $file) {
+            $sizes[$file] = ImageResizer::dimensions(self::stagedContents($file));
+        }
+
+        return $sizes;
     }
 
     /**

@@ -48,10 +48,16 @@ final readonly class PostImages implements ExtensionInterface
      */
     public const string DIRECTORY = 'frontend/img/airside';
 
+    /**
+     * @param array<string, array{0: int, 1: int}> $dimensions
+     *     how big each file is, keyed by the name the markdown asks for
+     */
+    public function __construct(private array $dimensions = []) {}
+
     public function register(EnvironmentBuilderInterface $environment): void
     {
         // Above the core renderers, which are registered at 0.
-        $environment->addRenderer(Image::class, new PostImageRenderer(), 10);
+        $environment->addRenderer(Image::class, new PostImageRenderer($this->dimensions), 10);
         $environment->addRenderer(Paragraph::class, new PostFigureRenderer(), 10);
     }
 
@@ -131,23 +137,6 @@ final readonly class PostImages implements ExtensionInterface
         return count($words) === 1
             ? $first
             : $first . mb_strtoupper(mb_substr($words[count($words) - 1], 0, 1));
-    }
-
-    /**
-     * Width and height as the file actually has them, or null.
-     *
-     * Null rather than a guess: attributes that disagree with the file are
-     * worse than none, because the browser reserves the wrong box and the page
-     * jumps anyway -- only later, and by a different amount.
-     *
-     * @return array{int, int}|null
-     */
-    public static function dimensions(string $file): ?array
-    {
-        $path = Helper::getRootDir() . '/' . self::DIRECTORY . '/' . $file;
-        $size = @getimagesize($path);
-
-        return $size === false ? null : [(int) $size[0], (int) $size[1]];
     }
 
     /**

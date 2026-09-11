@@ -70,11 +70,17 @@ final class Markdown
      *
      * @param array{slug: string, title: string, summary: string, hero: ?string, hero_alt: ?string}|null $card
      *     another post to name in the middle of this one, or null for none
+     * @param array<string, array{0: int, 1: int}> $dimensions
+     *     how big each image is, so the markup can reserve its space -- passed
+     *     in because the files live in a bucket and cannot be measured here
      */
-    public static function toPostHtml(string $markdown, ?array $card = null): string
-    {
+    public static function toPostHtml(
+        string $markdown,
+        ?array $card = null,
+        array $dimensions = [],
+    ): string {
         $environment = self::environment();
-        $environment->addExtension(new PostImages());
+        $environment->addExtension(new PostImages($dimensions));
 
         if ($card !== null) {
             $environment->addExtension(new PostRelatedCard($card));

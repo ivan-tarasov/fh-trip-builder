@@ -21,6 +21,13 @@ use Stringable;
  */
 final class PostImageRenderer implements NodeRendererInterface
 {
+    /**
+     * @param array<string, array{0: int, 1: int}> $dimensions
+     *     how big each file is, recorded at import because the file itself is
+     *     no longer here to ask -- see Repository\PostImageRepository
+     */
+    public function __construct(private readonly array $dimensions = []) {}
+
     public function render(Node $node, ChildNodeRendererInterface $childRenderer): Stringable
     {
         Image::assertInstanceOf($node);
@@ -36,7 +43,10 @@ final class PostImageRenderer implements NodeRendererInterface
             'loading' => 'lazy',
         ];
 
-        $dimensions = PostImages::dimensions($file);
+        // Absent rather than guessed. Attributes that disagree with the file
+        // are worse than none: the browser reserves the wrong box and the page
+        // jumps anyway, only later and by a different amount.
+        $dimensions = $this->dimensions[$file] ?? null;
 
         if ($dimensions !== null) {
             // Strings: HtmlElement escapes every attribute value and its

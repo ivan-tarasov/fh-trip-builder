@@ -12,10 +12,11 @@ use TripBuilder\View\Markdown;
 /**
  * Images inside a post body.
  *
- * The fixture is 102 bytes of PNG written out as base64 rather than drawn,
- * because CI installs `mysqli`, `pdo_mysql`, `curl` and `mbstring` and this
- * way it does not matter whether `gd` came along with them. 24x9 so the
- * dimensions it asserts could not be a coincidence.
+ * The fixture is only a name now. It used to be written to disk, because the
+ * renderer measured the file to size it; A8.10 records sizes at import instead,
+ * so a body image's dimensions arrive as an argument and no test needs a file
+ * on disk to assert them. The base64 PNG stays for the author picture, which
+ * is still found by looking.
  */
 final class PostImagesTest extends TestCase
 {
@@ -37,8 +38,6 @@ final class PostImagesTest extends TestCase
     {
         $this->cdn = $_ENV['AWS_CLOUDFRONT'] ?? null;
         $_ENV['AWS_CLOUDFRONT'] = '';
-
-        file_put_contents(self::path(), (string) base64_decode(self::PNG, true));
     }
 
     protected function tearDown(): void
@@ -48,13 +47,6 @@ final class PostImagesTest extends TestCase
         } else {
             $_ENV['AWS_CLOUDFRONT'] = $this->cdn;
         }
-
-        @unlink(self::path());
-    }
-
-    private static function path(): string
-    {
-        return Helper::getRootDir() . '/' . PostImages::DIRECTORY . '/' . self::FIXTURE;
     }
 
     /*
@@ -72,27 +64,27 @@ final class PostImagesTest extends TestCase
     }
 
     /**
-     * Dimensions come off the file, so the page does not reflow as it loads.
+     * Dimensions come from the table, so the page does not reflow as it loads.
      */
-    public function testTheImageCarriesTheSizeTheFileActuallyIs(): void
+    public function testTheImageCarriesTheSizeRecordedForIt(): void
     {
-        $html = Markdown::toPostHtml('![A wing](' . self::FIXTURE . ')');
+        $html = Markdown::toPostHtml('![A wing](' . self::FIXTURE . ')', null, [self::FIXTURE => [24, 9]]);
 
         self::assertStringContainsString('width="24"', $html);
         self::assertStringContainsString('height="9"', $html);
     }
 
     /**
-     * A file that is not there gets no dimensions rather than invented ones.
+     * A file with no recorded size gets none rather than invented ones.
      *
      * Attributes that disagree with the file are worse than none: the browser
      * reserves the wrong box and the page jumps anyway, later and by a
-     * different amount. The importer refuses this case, so it should not
-     * reach a page -- this is what happens if one ever does.
+     * different amount. The importer records every image it reads, so this
+     * should not reach a page -- it is what happens if one ever does.
      */
-    public function testAMissingFileGetsNoDimensions(): void
+    public function testAFileWithNoRecordedSizeGetsNoDimensions(): void
     {
-        $html = Markdown::toPostHtml('![Gone](not-a-real-file.png)');
+        $html = Markdown::toPostHtml('![Gone](not-a-real-file.png)', null, [self::FIXTURE => [24, 9]]);
 
         self::assertStringNotContainsString('width=', $html);
         self::assertStringContainsString('src="/frontend/img/airside/not-a-real-file.png"', $html);
