@@ -12,6 +12,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
 use TripBuilder\Noah\Airside\Import as AirsideImport;
+use TripBuilder\Noah\Airside\Prune as AirsidePrune;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
@@ -184,6 +185,23 @@ try {
     */
 
     $application->add(new AirsideImport());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Airside housekeeping
+    |--------------------------------------------------------------------------
+    |
+    | The other half of the importer's bargain. It never deletes, because a
+    | hashed name means a changed image is a new object rather than a replaced
+    | one -- so the bucket only grows, and something has to be able to say what
+    | in it nothing points at.
+    |
+    | Lists by default and deletes only with `--force`. The staging directory is
+    | not committed, so the bucket holds the only copy of these files.
+    |
+    */
+
+    $application->add(new AirsidePrune());
 
     /*
     |--------------------------------------------------------------------------

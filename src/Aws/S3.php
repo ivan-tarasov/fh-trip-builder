@@ -95,35 +95,111 @@ final readonly class S3 implements ObjectStore
     }
 
     /**
+     * Every key under a prefix, following the continuation tokens to the end.
+     *
+     * The one operation here that answers in XML and the one that answers in
+     * pages: S3 returns at most a thousand keys and a token for the rest, so a
+     * caller that read the first page would quietly sweep against a partial
+     * picture. Paging is not an optimisation here, it is correctness.
+     *
+     * @return list<string>
+     */
+    public function keysUnder(string $prefix, int $pageSize = 1000): array
+    {
+        $keys = [];
+        $token = null;
+
+        do {
+            // `max-keys` is S3's own ceiling at its default, and an argument
+            // only so the paging can be made to happen on demand. A bucket
+            // with fewer than a thousand objects would otherwise never take
+            // the second time round this loop, and the one path that matters
+            // would go unrun until the day it mattered.
+            $query = ['list-type' => '2', 'prefix' => $prefix, 'max-keys' => (string) $pageSize];
+
+            if ($token !== null) {
+                $query['continuation-token'] = $token;
+            }
+
+            [$status, $body] = $this->send('GET', '', '', [], $query);
+
+            if ($status !== 200) {
+                throw new RuntimeException(sprintf(
+                    'S3 answered %d listing `%s`%s',
+                    $status,
+                    $prefix,
+                    self::explain($body),
+                ));
+            }
+
+            $xml = simplexml_load_string($body);
+
+            if ($xml === false) {
+                throw new RuntimeException('S3 answered a listing this could not read.');
+            }
+
+            foreach ($xml->Contents as $object) {
+                $keys[] = (string) $object->Key;
+            }
+
+            $token = isset($xml->NextContinuationToken) ? (string) $xml->NextContinuationToken : null;
+        } while ($token !== null);
+
+        return $keys;
+    }
+
+    /**
+     * Remove one object.
+     *
+     * S3 answers 204 whether or not the key was there, which is the right
+     * behaviour to pass on: a sweep that has already decided a key is
+     * unreferenced does not care to learn it was already gone.
+     */
+    public function delete(string $key): void
+    {
+        [$status, $body] = $this->send('DELETE', $key, '', []);
+
+        if ($status !== 204 && $status !== 200) {
+            throw new RuntimeException(sprintf(
+                'S3 answered %d deleting `%s`%s',
+                $status,
+                $key,
+                self::explain($body),
+            ));
+        }
+    }
+
+    /**
      * @param array<string, string> $headers
+     * @param array<string, string> $query
      * @return array{0: int, 1: string}
      */
-    private function send(string $method, string $key, string $payload, array $headers): array
+    private function send(string $method, string $key, string $payload, array $headers, array $query = []): array
     {
         $host = sprintf('%s.s3.%s.amazonaws.com', $this->bucket, $this->region);
         $path = '/' . ltrim($key, '/');
+        $canonical = Signature::canonicalQuery($query);
 
         $signed = $this->signature->headers(
             $method,
             $path,
-            '',
+            $canonical,
             ['host' => $host] + $headers,
             $payload,
         );
 
-        $handle = curl_init('https://' . $host . $path);
+        $handle = curl_init('https://' . $host . $path . ($canonical === '' ? '' : '?' . $canonical));
 
         if ($handle === false) {
             throw new RuntimeException('Could not start a request to S3.');
         }
 
-        curl_setopt_array($handle, [
+        $options = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
             CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS,
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_NOBODY => $method === 'HEAD',
-            CURLOPT_POSTFIELDS => $payload,
             // A redirect from S3 means the region is wrong, and following it
             // would send a signature made for a host it was not made for.
             CURLOPT_FOLLOWLOCATION => false,
@@ -132,7 +208,17 @@ final readonly class S3 implements ObjectStore
                 array_keys($signed),
                 $signed,
             ),
-        ]);
+        ];
+
+        // Assigned and never spread into the literal above. These constants are
+        // integers, and the spread operator renumbers integer keys -- so
+        // `...[CURLOPT_POSTFIELDS => $body]` sets whatever option happens to sit
+        // at the next index instead, curl sends no body, and S3 answers 411.
+        if ($payload !== '') {
+            $options[CURLOPT_POSTFIELDS] = $payload;
+        }
+
+        curl_setopt_array($handle, $options);
 
         $body = curl_exec($handle);
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);

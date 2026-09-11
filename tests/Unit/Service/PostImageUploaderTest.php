@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use TripBuilder\Aws\ObjectStore;
 use TripBuilder\Service\ImageResizer;
 use TripBuilder\Service\PostImageUploader;
+use TripBuilder\Tests\Fake\Bucket;
 use TripBuilder\View\Airside\PostImageSet;
 
 /**
@@ -141,33 +142,5 @@ final class PostImageUploaderTest extends TestCase
 
         self::assertNull($this->uploader->uploadOne('diagram.png', $bytes));
         self::assertSame(1, $this->bucket->puts);
-    }
-}
-
-/** A bucket that remembers, so the test can ask what reached it. */
-final class Bucket implements ObjectStore
-{
-    /** @var array<string, string> */
-    public array $objects = [];
-
-    /** @var list<string> */
-    public array $cacheControl = [];
-
-    public int $puts = 0;
-
-    public function has(string $key): bool
-    {
-        return isset($this->objects[$key]);
-    }
-
-    public function put(
-        string $key,
-        string $contents,
-        string $contentType,
-        string $cacheControl = ObjectStore::IMMUTABLE,
-    ): void {
-        $this->objects[$key] = $contents;
-        $this->cacheControl[] = $cacheControl;
-        $this->puts++;
     }
 }
