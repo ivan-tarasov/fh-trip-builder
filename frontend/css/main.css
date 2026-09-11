@@ -109,6 +109,19 @@
      dark palette it stays deep while the text lightens away from it. */
   --brand-ink-fill:     var(--brand-ink);
   --brand-ink-fill-700: var(--brand-ink-700);
+
+  /* The same split, for every other colour that is worn both ways. Measured
+     against a #141C2B panel: teal #14988C reads at 4.79 and carries white at
+     3.56; green #1E9E5E reads at 4.96 and carries 3.44; red #D1434F reads at
+     3.76 and carries 4.54. None clears AA both ways, so none can stay one
+     token once there is a dark palette to serve.
+
+     In this palette every `-fill` is its text twin, so nothing below changes
+     until the dark block redefines them apart. */
+  --brand-accent-fill:      var(--brand-accent);
+  --brand-accent-fill-700:  var(--brand-accent-700);
+  --brand-success-fill:     var(--brand-success);
+  --brand-danger-fill:      var(--brand-danger);
   --brand-accent:     #0F766E;
   --brand-accent-700: #0B5A54;
   --brand-tint:       #E6F2F1;
@@ -249,32 +262,32 @@
    the --bs-danger remap in :root never reaches a button. Needed because the
    cancel dialog dresses SweetAlert's buttons in this app's own. */
 .btn-danger {
-  --bs-btn-bg: var(--brand-danger);
-  --bs-btn-border-color: var(--brand-danger);
-  --bs-btn-hover-bg: var(--brand-danger-700);
-  --bs-btn-hover-border-color: var(--brand-danger-700);
-  --bs-btn-active-bg: var(--brand-danger-700);
-  --bs-btn-active-border-color: var(--brand-danger-700);
+  --bs-btn-bg: var(--brand-danger-fill);
+  --bs-btn-border-color: var(--brand-danger-fill);
+  --bs-btn-hover-bg: var(--brand-danger-fill);
+  --bs-btn-hover-border-color: var(--brand-danger-fill);
+  --bs-btn-active-bg: var(--brand-danger-fill);
+  --bs-btn-active-border-color: var(--brand-danger-fill);
 }
 
 .btn-primary {
-  --bs-btn-bg: var(--brand-accent);
-  --bs-btn-border-color: var(--brand-accent);
-  --bs-btn-hover-bg: var(--brand-accent-700);
-  --bs-btn-hover-border-color: var(--brand-accent-700);
-  --bs-btn-active-bg: var(--brand-accent-700);
-  --bs-btn-active-border-color: var(--brand-accent-700);
-  --bs-btn-disabled-bg: var(--brand-accent);
-  --bs-btn-disabled-border-color: var(--brand-accent);
+  --bs-btn-bg: var(--brand-accent-fill);
+  --bs-btn-border-color: var(--brand-accent-fill);
+  --bs-btn-hover-bg: var(--brand-accent-fill-700);
+  --bs-btn-hover-border-color: var(--brand-accent-fill-700);
+  --bs-btn-active-bg: var(--brand-accent-fill-700);
+  --bs-btn-active-border-color: var(--brand-accent-fill-700);
+  --bs-btn-disabled-bg: var(--brand-accent-fill);
+  --bs-btn-disabled-border-color: var(--brand-accent-fill);
 }
 
 .btn-outline-primary {
   --bs-btn-color: var(--brand-accent);
   --bs-btn-border-color: var(--brand-accent);
-  --bs-btn-hover-bg: var(--brand-accent);
-  --bs-btn-hover-border-color: var(--brand-accent);
-  --bs-btn-active-bg: var(--brand-accent);
-  --bs-btn-active-border-color: var(--brand-accent);
+  --bs-btn-hover-bg: var(--brand-accent-fill);
+  --bs-btn-hover-border-color: var(--brand-accent-fill);
+  --bs-btn-active-bg: var(--brand-accent-fill);
+  --bs-btn-active-border-color: var(--brand-accent-fill);
 }
 
 /* Two families of action, so the colour carries meaning instead of just
@@ -298,10 +311,10 @@
 .btn-outline-success {
   --bs-btn-color: var(--brand-success);
   --bs-btn-border-color: var(--brand-success);
-  --bs-btn-hover-bg: var(--brand-success);
-  --bs-btn-hover-border-color: var(--brand-success);
-  --bs-btn-active-bg: var(--brand-success);
-  --bs-btn-active-border-color: var(--brand-success);
+  --bs-btn-hover-bg: var(--brand-success-fill);
+  --bs-btn-hover-border-color: var(--brand-success-fill);
+  --bs-btn-active-bg: var(--brand-success-fill);
+  --bs-btn-active-border-color: var(--brand-success-fill);
 }
 
 /* The one place both names are needed at once: at rest this is ink on nothing,
@@ -321,7 +334,7 @@
 /* Same trap as the buttons: the pill's active background is a literal, so the
    trip-type tabs above the search form kept their Bootstrap blue. */
 .nav-pills {
-  --bs-nav-pills-link-active-bg: var(--brand-accent);
+  --bs-nav-pills-link-active-bg: var(--brand-accent-fill);
 }
 
 /* ion.rangeSlider arrives from a CDN with its own blue (#006cfa) baked into
@@ -331,7 +344,7 @@
 .irs--round .irs-from,
 .irs--round .irs-to,
 .irs--round .irs-single {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
 }
 
 .irs--round .irs-handle {
@@ -1076,7 +1089,7 @@ a:active {
 .datepicker__grid td.is-start,
 .datepicker__grid td.is-end {
   color: var(--on-brand);
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
 }
 
 /* The leg not being edited, and the days the trip covers between the two.
@@ -1118,7 +1131,7 @@ a:active {
   font-size: .9375rem;
   font-weight: 600;
   color: var(--on-brand);
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border: none;
   border-radius: .625rem;
   transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
@@ -1134,7 +1147,7 @@ a:active {
 
 .datepicker__apply-price:empty { display: none; }
 
-.datepicker__apply:hover:not(:disabled) { background-color: var(--brand-accent-700); }
+.datepicker__apply:hover:not(:disabled) { background-color: var(--brand-accent-fill-700); }
 .datepicker__apply:active:not(:disabled) { transform: scale(.98); }
 .datepicker__apply:disabled { opacity: .55; }
 
@@ -1629,13 +1642,13 @@ a.hero__mode:active { transform: scale(.97); }
   font-size: 1.0625rem;
   font-weight: 600;
   color: var(--on-brand);
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border: none;
   border-radius: .75rem;
   transition: background-color var(--dur-fast) ease;
 }
 
-.searchbar__submit:hover { background-color: var(--brand-accent-700); }
+.searchbar__submit:hover { background-color: var(--brand-accent-fill-700); }
 
 /* Stacked, the row's parts stop being a row. Each field is a card of its own,
    so the divider between them, the radii that opened and closed the white
@@ -2425,8 +2438,8 @@ textarea {
   line-height: 1;
 }
 
-.step-track__item.is-current .step-track__marker { background-color: var(--brand-accent); border-color: var(--brand-accent); color: var(--on-brand); }
-.step-track__item.is-done .step-track__marker { background-color: var(--brand-success); border-color: var(--brand-success); color: var(--on-brand); }
+.step-track__item.is-current .step-track__marker { background-color: var(--brand-accent-fill); border-color: var(--brand-accent); color: var(--on-brand); }
+.step-track__item.is-done .step-track__marker { background-color: var(--brand-success-fill); border-color: var(--brand-success); color: var(--on-brand); }
 
 /* The connector between two steps. It shrinks: at 40px fixed, three labels and
    two rules came to more than a 375px screen and pushed "Review & book" off the
@@ -2463,7 +2476,7 @@ textarea {
 .trip-package { border: 2px solid var(--brand-accent); }
 
 .trip-package__banner {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
   padding: .5rem 1rem;
   border-radius: calc(var(--bs-border-radius) - 2px) calc(var(--bs-border-radius) - 2px) 0 0;
@@ -2548,11 +2561,11 @@ textarea {
    stays latched, leaving a segment of somebody's flight highlighted for no
    reason they can undo. */
 @media (hover: hover) and (pointer: fine) {
-  .route__leg:hover::before { background-color: var(--brand-accent); }
+  .route__leg:hover::before { background-color: var(--brand-accent-fill); }
 
   .route__stop:hover::before {
     transform: scaleY(1);
-    background-color: var(--brand-accent);
+    background-color: var(--brand-accent-fill);
   }
 }
 
@@ -2638,7 +2651,7 @@ textarea {
    No new tokens. The tinted pair is the treatment .search-cabin already uses
    for the same job a few lines up. */
 .badge--success {
-  background-color: var(--brand-success);
+  background-color: var(--brand-success-fill);
   color: var(--on-brand);
 }
 
@@ -2659,7 +2672,7 @@ textarea {
   color: var(--brand-accent-700);
 }
 
-.badge--current { background-color: var(--brand-accent-700); }
+.badge--current { background-color: var(--brand-accent-fill-700); }
 
 .flight-card--badged { border-top-left-radius: .5rem; }
 
@@ -2819,7 +2832,7 @@ textarea {
 
 .leg__rail::before { top: 0; }
 /* Hollow on arrival, filled on departure -- the same read as a route bar. */
-.leg__rail::after  { top: 100%; background-color: var(--brand-accent); }
+.leg__rail::after  { top: 100%; background-color: var(--brand-accent-fill); }
 
 .leg__stop { display: flex; flex-direction: column; min-width: 0; }
 .leg__stop:first-of-type { grid-area: depart; }
@@ -2995,7 +3008,7 @@ textarea {
   justify-content: space-between;
   gap: .75rem;
   padding: .5rem 1rem;
-  background-color: var(--brand-success);
+  background-color: var(--brand-success-fill);
   color: var(--on-brand);
   border-radius: calc(var(--bs-border-radius) - 1px) calc(var(--bs-border-radius) - 1px) 0 0;
 }
@@ -3536,7 +3549,7 @@ textarea {
    defined in two places that can drift. The sidebar already needs JS for its
    sliders, so one mechanism it is. */
 .filter-pill.is-on {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
 }
 
@@ -3586,7 +3599,7 @@ textarea {
 /* Set, so it reads as a filter you have applied rather than a reading of the
    range on offer. */
 .filter-slider__value.is-on {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
   padding-right: .2rem;
 }
@@ -3732,7 +3745,7 @@ body:has(.hero) header#top {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .show-more__button:hover {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
 }
 /* Mid-request the label already says so; dimming it stops a second click
@@ -3798,7 +3811,7 @@ body:has(.hero) header#top {
   transform: none;
 }
 .to-top:hover {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
 }
 
@@ -3884,7 +3897,7 @@ body:has(.hero) header#top {
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 50%;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
   font-size: .8125rem;
 }
@@ -4063,7 +4076,7 @@ body:has(.hero) header#top {
   width: 100%;
   border: 0;
   border-radius: .625rem;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   padding: .8125rem 1rem;
   margin-top: 1.25rem;
   color: var(--on-brand);
@@ -4584,7 +4597,7 @@ body:has(.hero) header#top {
 
 .checkout__autofill-button:hover,
 .checkout__autofill-button:focus-visible {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
 }
 
@@ -5356,7 +5369,7 @@ body:has(main.article) .breadcrumbs__list {
   height: 2.75rem;
   color: var(--on-brand);
   font-size: 1.25rem;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border-radius: .875rem;
 }
 
@@ -5473,13 +5486,13 @@ body:has(main.article) .breadcrumbs__list {
   color: var(--on-brand);
   font-size: .875rem;
   font-weight: 600;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border-radius: .5rem;
   transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .footer__subscribe-submit:hover { background-color: var(--brand-accent-700); }
+  .footer__subscribe-submit:hover { background-color: var(--brand-accent-fill-700); }
 }
 
 .footer__subscribe-submit:active { transform: scale(.97); }
@@ -5729,7 +5742,7 @@ body:has(main.article) .breadcrumbs__list {
 
 .cookie-notice__button--yes {
   border-color: var(--brand-accent);
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
 }
 
@@ -5737,7 +5750,7 @@ body:has(main.article) .breadcrumbs__list {
   .cookie-notice__button:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
   .cookie-notice__button--yes:hover {
     border-color: var(--brand-accent-700);
-    background-color: var(--brand-accent-700);
+    background-color: var(--brand-accent-fill-700);
     color: var(--on-brand);
   }
 }
@@ -7007,7 +7020,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   color: var(--on-brand);
   font-size: 1.0625rem;
   font-weight: 700;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border-radius: 999px;
 }
 
@@ -7259,7 +7272,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 
   .help-rail__link[aria-current="true"] {
     color: var(--on-brand);
-    background-color: var(--brand-accent);
+    background-color: var(--brand-accent-fill);
   }
 }
 
