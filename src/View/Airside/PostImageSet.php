@@ -24,11 +24,24 @@ final class PostImageSet
     /**
      * Widths the landscape copies are cut to.
      *
-     * A hub card draws about 240px and a post hero about 748px, each of which
-     * wants a 2x copy for a dense screen. Four files, not the reference's
-     * eight -- the widths above 1500 are for layouts this site does not have.
+     * Measured rather than guessed, and the first guess was wrong. A hub card
+     * is 299 to 456 CSS pixels wide between 375 and 1440, and a post hero is
+     * 748. So each slot needs a file at 1x and one at 2x, and the ladder is
+     * those four numbers:
+     *
+     *   480   a card at 1x
+     *   750   a hero at 1x
+     *   960   a card at 2x
+     *   1500  a hero at 2x
+     *
+     * The obvious ladder -- 320, 640, 750, 1500 -- looks tidier and serves a
+     * dense card the 1500, because 456 x 2 is 912 and the next rung up was the
+     * hero's. Four files either way; these are the four that get used.
+     *
+     * Not the reference's eight: the widths above 1500 are for layouts this
+     * site does not have.
      */
-    public const array WIDTHS = [320, 640, 750, 1500];
+    public const array WIDTHS = [480, 750, 960, 1500];
 
     /**
      * And the square ones, centre-cropped.

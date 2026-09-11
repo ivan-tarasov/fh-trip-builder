@@ -41,10 +41,16 @@ final class RelatedCardRenderer implements NodeRendererInterface
             array_unshift($body, new HtmlElement('img', [
                 'class' => 'airside-inline__image',
                 'src' => PostImages::url($node->hero),
+                // The square copies. This slot is a fixed 4.5rem crop, so
+                // without them the card downloads a 1500-wide photograph in
+                // order to show 72 pixels of the middle of it.
+                'srcset' => PostImageSet::squareSrcset($node->hero),
+                'sizes' => '4.5rem',
                 // The post's own alt text, written in its file and required
                 // there whenever a hero is named.
                 'alt' => $node->heroAlt ?? '',
                 'loading' => 'lazy',
+                'decoding' => 'async',
             ], '', true));
         }
 

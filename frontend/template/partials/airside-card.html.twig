@@ -14,11 +14,23 @@
         {% if post.hero %}
             {# The alt text is the post's own, written in the file and required
                there whenever a hero is named -- it is what a reader who cannot
-               see the image receives instead. #}
+               see the image receives instead.
+
+               `sizes` is measured, not guessed: this card is between 299 and
+               456 CSS pixels wide from 375 up to 1440, and below about 30em it
+               is the column. A `sizes` that lies costs more than none at all,
+               because the browser believes it and picks the file to match.
+
+               Lazy on purpose, and the opposite of the post's own hero: a card
+               is below the fold on the hub and beside the fold at the foot of a
+               post, so none of these is what a reader is waiting for. #}
             <img class="airside-card__image"
-                 src="{{ asset('/frontend/img/airside/' ~ post.hero) }}"
+                 src="{{ post_image(post.hero) }}"
+                 srcset="{{ post_srcset(post.hero) }}"
+                 sizes="(min-width: 30em) 28rem, calc(100vw - 3rem)"
                  alt="{{ post.hero_alt }}"
-                 loading="lazy" />
+                 loading="lazy"
+                 decoding="async" />
         {% endif %}
         <div class="airside-card__text">
             <h2 class="airside-card__title">{{ post.title }}</h2>
