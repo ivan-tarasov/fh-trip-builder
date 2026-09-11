@@ -96,6 +96,19 @@
 :root {
   --brand-ink:        #10243F;
   --brand-ink-700:    #1B3A63;
+
+  /* The same navy, named twice, because in a dark palette it cannot be one
+     colour. Measured: for `--brand-ink` to clear AA as text on a dark panel it
+     has to lift to about #5B7FA8, and white on #5B7FA8 is 4.16 -- under the
+     bar. No navy clears both, because the two roles pull opposite ways. In the
+     light palette they never had to: text and fill both wanted "dark", which
+     is why one token served until now.
+
+     `--brand-ink` is the text and the outline. `--brand-ink-fill` is the band
+     behind white glyphs -- the hero bar, the footer, a filled chip -- and in a
+     dark palette it stays deep while the text lightens away from it. */
+  --brand-ink-fill:     var(--brand-ink);
+  --brand-ink-fill-700: var(--brand-ink-700);
   --brand-accent:     #0F766E;
   --brand-accent-700: #0B5A54;
   --brand-tint:       #E6F2F1;
@@ -271,14 +284,14 @@
    the results page had fifteen of them competing. */
 .btn-ink {
   --bs-btn-color: var(--on-brand);
-  --bs-btn-bg: var(--brand-ink);
-  --bs-btn-border-color: var(--brand-ink);
+  --bs-btn-bg: var(--brand-ink-fill);
+  --bs-btn-border-color: var(--brand-ink-fill);
   --bs-btn-hover-color: var(--on-brand);
-  --bs-btn-hover-bg: var(--brand-ink-700);
-  --bs-btn-hover-border-color: var(--brand-ink-700);
+  --bs-btn-hover-bg: var(--brand-ink-fill-700);
+  --bs-btn-hover-border-color: var(--brand-ink-fill-700);
   --bs-btn-active-color: var(--on-brand);
-  --bs-btn-active-bg: var(--brand-ink-700);
-  --bs-btn-active-border-color: var(--brand-ink-700);
+  --bs-btn-active-bg: var(--brand-ink-fill-700);
+  --bs-btn-active-border-color: var(--brand-ink-fill-700);
   --bs-btn-focus-shadow-rgb: 16, 36, 63;
 }
 
@@ -291,15 +304,17 @@
   --bs-btn-active-border-color: var(--brand-success);
 }
 
+/* The one place both names are needed at once: at rest this is ink on nothing,
+   and hovered it is a fill with a white glyph on it. */
 .btn-outline-ink {
   --bs-btn-color: var(--brand-ink);
   --bs-btn-border-color: var(--brand-ink);
   --bs-btn-hover-color: var(--on-brand);
-  --bs-btn-hover-bg: var(--brand-ink);
-  --bs-btn-hover-border-color: var(--brand-ink);
+  --bs-btn-hover-bg: var(--brand-ink-fill);
+  --bs-btn-hover-border-color: var(--brand-ink-fill);
   --bs-btn-active-color: var(--on-brand);
-  --bs-btn-active-bg: var(--brand-ink);
-  --bs-btn-active-border-color: var(--brand-ink);
+  --bs-btn-active-bg: var(--brand-ink-fill);
+  --bs-btn-active-border-color: var(--brand-ink-fill);
   --bs-btn-focus-shadow-rgb: 16, 36, 63;
 }
 
@@ -621,7 +636,7 @@ body {
    used to be navy against Bootstrap's #212529 -- a seam between two dark greys
    rather than a flash of white, which was the best that could be said for it.
    The footer is this colour now, so there is no seam at either end. */
-html { background-color: var(--brand-ink); }
+html { background-color: var(--brand-ink-fill); }
 
 body {
   /* Tall enough to push the footer down on a short page, and no taller.
@@ -1234,7 +1249,7 @@ button {
    above it and the search bar pinned into it, all three are the same surface
    now, and a gradient meeting a flat colour at two seams looked like three
    panels rather than one. */
-.hero { background-color: var(--brand-ink); }
+.hero { background-color: var(--brand-ink-fill); }
 
 .hero__inner {
   padding-top: 5.5rem;
@@ -1338,12 +1353,12 @@ button {
      gap between them reads as the bar having come loose. The rest of the gap it
      has at rest is the hero's bottom padding, which scrolls away. */
   padding: .5rem 0 .75rem;
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
 }
 
 /* The band's remaining depth, below the bar, out of which the cards are pulled.
    Padding on the bar would make the sticky strip this tall. */
-.hero__tail { height: 10.25rem; background-color: var(--brand-ink); }
+.hero__tail { height: 10.25rem; background-color: var(--brand-ink-fill); }
 
 /* Nothing here resizes the form. It was compacted to the results page's
    metrics when pinned, which made the fields jump the moment they stuck -- the
@@ -1688,7 +1703,7 @@ a.hero__mode:active { transform: scale(.97); }
   top: 0;
   z-index: 1020;
   padding: 1rem 0 1.25rem;
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
 }
 
 @media (max-width: 991.98px) {
@@ -2628,7 +2643,7 @@ textarea {
 }
 
 .badge--primary {
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
   color: var(--on-brand);
 }
 
@@ -3119,8 +3134,8 @@ textarea {
    forward -- and leaving the accent free for the Select buttons is what stops
    the two reading as the same kind of thing. */
 .sort-bar__tab.is-current {
-  background-color: var(--brand-ink);
-  border-right-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
+  border-right-color: var(--brand-ink-fill);
   color: var(--on-brand);
 }
 
@@ -5191,7 +5206,7 @@ body:has(main.article) .breadcrumbs__list {
    and are very slightly better here -- 7.52 and 11.98 against 7.43 and 11.85 --
    because navy carries less luminance than grey at the same darkness. */
 .footer {
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
 }
 
 .footer__inner {
@@ -6591,7 +6606,7 @@ body:has(.cookie-notice) .to-top { display: none; }
      title and the sheet's top edge is this *less* that. Change one and the
      other has to move or the gap does. */
   padding-bottom: 12.5rem;
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
   text-align: center;
 }
 
@@ -7387,7 +7402,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .directory__letter.is-current {
   color: var(--on-brand);
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
 }
 
 /* ---------- The groups ---------- */
