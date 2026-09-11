@@ -76,8 +76,28 @@ final class ReadmeTest extends TestCase
         // using them are spread through it, so a slice that dropped them would
         // leave the markup printed literally instead of resolved.
         self::assertStringNotContainsString('][', $this->html);
-        self::assertMatchesRegularExpression('/<a href="[^"]+">FlightHub<\/a>/', $this->html);
+
+        // Attributes before `href` are allowed. This asserted `<a href=`
+        // directly and broke when outbound links gained
+        // `rel="noopener noreferrer"` -- it was reading the anchor's attribute
+        // order, where what it means to check is that the reference resolved
+        // into a link at all.
+        self::assertMatchesRegularExpression('/<a [^>]*href="[^"]+">FlightHub<\/a>/', $this->html);
         self::assertStringContainsString('img.shields.io', $this->html);
+    }
+
+    /**
+     * The README's outbound links carry `rel`, and that is a deliberate change.
+     *
+     * Adding `ExternalLink` to `View\Markdown` for Airside changed this page
+     * too -- it is the one extension of the four that rewrites existing output
+     * rather than adding opt-in syntax, which I had claimed none of them did.
+     * The README is almost entirely outbound links, so the change is worth
+     * having; it is asserted here so it stays intended rather than incidental.
+     */
+    public function testOutboundLinksCarryRel(): void
+    {
+        self::assertStringContainsString('rel="noopener noreferrer"', (string) $this->html);
     }
 
     public function testDropsCommentsInsteadOfPrintingThem(): void

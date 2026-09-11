@@ -1,0 +1,47 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block description %}{{ post.summary }}{% endblock %}
+
+{% block hero %}yes{% endblock %}
+
+{% block content %}
+{# The same shell a help article uses. `icon` is not passed because a post has
+   none -- the partial only draws one when `hero` is false, and it is true
+   here, so the heading sits in the band exactly as an article's does. #}
+{% embed 'partials/article.html.twig' with {
+    'title': post.title,
+    'lead': post.summary,
+    'hero': true
+} %}
+    {% block body %}
+        {# Already-safe HTML, on the same footing as help and /about:
+           View\Markdown escapes raw HTML in the source rather than passing it
+           through and drops unsafe link schemes, so escaping again here would
+           print tags instead of prose. The controller converts; this places. #}
+        {% if post.hero %}
+            <img class="airside-post__hero"
+                 src="{{ asset('/frontend/img/airside/' ~ post.hero) }}"
+                 alt="{{ post.hero_alt }}" />
+        {% endif %}
+        {{ post_html|raw }}
+    {% endblock %}
+
+    {% block note %}
+        {# A byline and two dates. `published_at` is what the post claims and
+           what the section is ordered by; `updated_at` moves only when
+           `airside:import` finds prose that differs from the stored copy, so
+           it dates the words rather than the last deploy. Printed only when it
+           is later than publication, because on a post nobody has revised the
+           two are the same day and saying it twice says nothing. #}
+        <p class="article__note">
+            By {{ post.author }} ·
+            <time datetime="{{ post.published_at|date('Y-m-d') }}">{{ post.published_at|date('j F Y') }}</time>
+            {%- if post.updated_at|date('Y-m-d') > post.published_at|date('Y-m-d') %}
+                · updated {{ post.updated_at|date('j F Y') }}
+            {%- endif %}
+        </p>
+    {% endblock %}
+{% endembed %}
+{% endblock %}

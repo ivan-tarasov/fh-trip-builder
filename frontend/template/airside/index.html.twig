@@ -1,0 +1,60 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Airside{% endblock %}
+
+{% block description %}Everything past security: choosing a seat, travelling with a pet, what the meal service actually is. Travel writing, as against the help pages about booking here.{% endblock %}
+
+{# No `hero` block, for the reason the help hub has none: the band is for a
+   page with one subject, and a list of posts has as many subjects as it has
+   rows. Its job is to get out of the way of choosing one. #}
+{% block content %}
+<main role="main" class="airside">
+    <div class="container">
+        {# The tagline is load-bearing, not decoration. "Airside" is the
+           industry's word for everything past the security line and most
+           readers will not know it, so the line under the heading is what
+           makes the section legible on a first visit -- and it is also the
+           editorial rule an author has to apply. #}
+        <div class="airside-intro">
+            <h1 class="airside-intro__title">Airside</h1>
+            <p class="airside-intro__tagline">Everything past security</p>
+        </div>
+
+        {% if posts is empty %}
+            {# A fresh install has no posts: there is no seeder for these
+               tables on purpose, so this is the honest state rather than an
+               error. The nav link is off until there is something here. #}
+            <p class="airside-empty">Nothing here yet.</p>
+        {% else %}
+            <ul class="airside-list">
+                {% for slug, post in posts %}
+                    <li class="airside-card">
+                        <a class="airside-card__link" href="/airside/{{ slug }}">
+                            {% if post.hero %}
+                                {# The alt text is the post's own, written in the
+                                   file and required there whenever a hero is
+                                   named -- it is what a reader who cannot see
+                                   the image receives instead. #}
+                                <img class="airside-card__image"
+                                     src="{{ asset('/frontend/img/airside/' ~ post.hero) }}"
+                                     alt="{{ post.hero_alt }}"
+                                     loading="lazy" />
+                            {% endif %}
+                            <div class="airside-card__text">
+                                <h2 class="airside-card__title">{{ post.title }}</h2>
+                                <p class="airside-card__summary">{{ post.summary }}</p>
+                                {# `datetime` carries the machine-readable form
+                                   so the printed date can stay the short one. #}
+                                <p class="airside-card__meta">
+                                    <time datetime="{{ post.published_at|date('Y-m-d') }}">{{ post.published_at|date('j F Y') }}</time>
+                                    <span class="airside-card__author">{{ post.author }}</span>
+                                </p>
+                            </div>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</main>
+{% endblock %}

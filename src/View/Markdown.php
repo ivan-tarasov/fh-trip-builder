@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\Attributes\AttributesExtension;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\DescriptionList\DescriptionListExtension;
+use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension;
+use League\CommonMark\Extension\Footnote\FootnoteExtension;
 use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
 use League\CommonMark\MarkdownConverter;
 
@@ -49,10 +53,50 @@ final class Markdown
             // the articles table, which is the direction this is heading.
             'html_input' => 'escape',
             'allow_unsafe_links' => false,
+
+            // `class` and nothing else. With no allow-list the Attributes
+            // extension passes almost anything through: `onclick` it strips on
+            // its own, but `{style="position:fixed;top:0"}` survives, which is
+            // an author covering the page with one line of markdown. `id` is
+            // left out too -- a body writing `{#main}` would take the id the
+            // skip link lands on.
+            'attributes' => ['allow' => ['class']],
+
+            // `rel` and nothing else. A new window is a decision to make per
+            // link and not for every outbound link on the site, and a class
+            // would style them differently for no stated reason. Relative,
+            // anchor and mailto links are left alone with no host configured
+            // -- checked, rather than assumed from the option's name.
+            'external_link' => [
+                'open_in_new_window' => false,
+                'html_class' => '',
+            ],
         ]);
 
         $environment->addExtension(new CommonMarkCoreExtension());
         $environment->addExtension(new GithubFlavoredMarkdownExtension());
+
+        // Four additions, and each one is either opt-in syntax or a safety
+        // header, so nothing already written renders differently: there is no
+        // `{...}` anywhere in the README or the help bodies today.
+        //
+        // Attributes is the load-bearing one. A body cannot contain a `<div>`
+        // -- `html_input => 'escape'` is what makes it safe to print operator
+        // text at all -- so `{.callout}` on its own line above a blockquote is
+        // the only way to mark one up without reopening that.
+        $environment->addExtension(new AttributesExtension());
+
+        // Travel facts date. A footnote is where "as of 2026" belongs, rather
+        // than in a sentence that has to be rewritten every year.
+        $environment->addExtension(new FootnoteExtension());
+
+        // For "what you need" lists, which are a term and its explanation
+        // rather than bullets.
+        $environment->addExtension(new DescriptionListExtension());
+
+        // `rel="noopener noreferrer"` on outbound links, which the prose here
+        // could not add for itself.
+        $environment->addExtension(new ExternalLinkExtension());
 
         return (string) new MarkdownConverter($environment)->convert($markdown);
     }

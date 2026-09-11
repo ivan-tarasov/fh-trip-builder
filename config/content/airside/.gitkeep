@@ -1,0 +1,5 @@
+Airside posts live here as <slug>.md, read by `airside:import`.
+
+Empty until A8.4. The command refuses a run that finds no files, which is what
+stops a mistyped directory emptying the table -- so it is not in the install
+steps yet.

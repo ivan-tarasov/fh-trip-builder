@@ -11,6 +11,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
+use TripBuilder\Noah\Airside\Import as AirsideImport;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
@@ -165,6 +166,24 @@ try {
     */
 
     $application->add(new ArticlesImport());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Airside
+    |--------------------------------------------------------------------------
+    |
+    | Loads config/content/airside/*.md into the posts tables, on the same
+    | terms and for the same reason as the articles above: no seeder CSV, so
+    | `app:install` cannot revert a post to its committed copy.
+    |
+    | Deliberately not in the README's install steps yet. There are no posts
+    | to import until A8.4 writes them, and this command refuses a run that
+    | found nothing -- which is what stops a mistyped directory emptying the
+    | table, and would also fail an install that ran it too early.
+    |
+    */
+
+    $application->add(new AirsideImport());
 
     /*
     |--------------------------------------------------------------------------

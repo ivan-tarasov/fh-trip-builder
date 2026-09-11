@@ -148,8 +148,19 @@ final class Readme
      * Rendered HTML for this version of the file, or null when not cached.
      *
      * Converting the README costs about 10ms, which is worth avoiding on a page
-     * whose content only changes when the file does. The modification time is
-     * the cache key, so an edit invalidates it with no cache to clear.
+     * whose content only changes when the file does.
+     *
+     * The key is the README's modification time **and the renderer's**, so an
+     * edit to either invalidates it with no cache to clear. It was the README's
+     * alone, and that hid a regression for a whole commit: adding extensions to
+     * View\Markdown changed how this file renders, the key did not move, and
+     * every local run kept serving HTML converted before the change. CI, with
+     * no cache, was the only thing that saw the truth.
+     *
+     * A composer update to `league/commonmark` itself still would not move the
+     * key. That is a rarer event than editing our own converter, and the cache
+     * directory is one `rm -rf` -- but it is a known hole rather than a
+     * covered one.
      */
     private function cached(int $stamp): ?string
     {
@@ -167,7 +178,8 @@ final class Readme
                 return;
             }
 
-            // Older renders are for versions of the file that no longer exist.
+            // Older renders are for versions of the file, or of the converter, that
+            // no longer exist.
             foreach (glob($directory . '/*.html') ?: [] as $stale) {
                 @unlink($stale);
             }
@@ -181,7 +193,25 @@ final class Readme
 
     private function cachePath(int $stamp): string
     {
-        return sprintf('%s/%s/%d.html', Helper::getRootDir(), self::CACHE_DIR, $stamp);
+        return sprintf(
+            '%s/%s/%d-%d.html',
+            Helper::getRootDir(),
+            self::CACHE_DIR,
+            $stamp,
+            self::rendererStamp(),
+        );
+    }
+
+    /**
+     * When the converter last changed.
+     *
+     * `Markdown` is what decides the shape of this HTML, so its own
+     * modification time belongs in the key. Zero when the file cannot be
+     * stat'd, which only costs a cache miss.
+     */
+    private static function rendererStamp(): int
+    {
+        return (int) @filemtime(Helper::getRootDir() . '/src/View/Markdown.php');
     }
 
     private function path(): string

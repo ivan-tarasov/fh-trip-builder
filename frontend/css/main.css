@@ -7464,3 +7464,198 @@ body:has(.cookie-notice) .to-top { display: none; }
   .directory { padding: 1.25rem; }
   .directory__list { column-count: 1; }
 }
+
+/* ==========================================================================
+   #AIRSIDE
+   ==========================================================================
+   The travel section, as against the help pages about booking here. A list of
+   posts and one post, so there is less here than `.help-*` needs: no rail, no
+   groups, no rating.
+
+   Card sizes follow the help hub's scale rather than inventing a second one.
+   ========================================================================== */
+
+.airside-intro {
+  /* The help hub's spacing exactly. Two sibling sections that sat differently
+     on the page would read as two designs. */
+  padding: 2.5rem 0 3.5rem;
+  text-align: center;
+}
+
+.airside-intro__title {
+  margin: 0 auto;
+  color: var(--brand-ink);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+}
+
+.airside-intro__tagline {
+  /* Not a pill, unlike the help hub's. The help pill carries a qualifier that
+     finishes the heading's sentence; this line carries the meaning of a word
+     most readers do not know, so it wants to read as prose rather than as a
+     label. */
+  max-width: 28ch;
+  margin: .75rem auto 0;
+  color: var(--ink-secondary);
+  font-size: 1.125rem;
+}
+
+.airside-empty {
+  padding: 3rem 0 4rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.airside-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1.5rem;
+  margin: 0 0 4rem;
+  padding: 0;
+  list-style: none;
+}
+
+.airside-card {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--bs-card-border-radius);
+  overflow: hidden;
+}
+
+.airside-card__link {
+  /* The whole card, so the target is the card and not the words in it. */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.airside-card__link:hover .airside-card__title,
+.airside-card__link:focus-visible .airside-card__title {
+  color: var(--brand-accent);
+}
+
+.airside-card__image {
+  /* A fixed ratio, because the images are committed by hand and nothing
+     resizes them yet -- A8.2 owns that. Without this a tall photograph would
+     set the height of its whole grid row. */
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.airside-card__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 1.25rem;
+}
+
+.airside-card__title {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.airside-card__summary {
+  margin: .5rem 0 0;
+  color: var(--ink-secondary);
+  font-size: .9375rem;
+  line-height: 1.5;
+}
+
+.airside-card__meta {
+  /* Pushed to the bottom, so the date sits on one line across a row of cards
+     whose summaries are different lengths. */
+  display: flex;
+  gap: .5rem;
+  margin: 1rem 0 0;
+  color: var(--ink-faint);
+  font-size: .8125rem;
+}
+
+.airside-card__author::before {
+  content: '·';
+  margin-right: .5rem;
+}
+
+/* Bootstrap gives a blockquote nothing but margin, so an unstyled one is
+   indistinguishable from a paragraph. The same rule the README already has --
+   `.readme blockquote` -- but scoped to the shared article body, which is
+   where help and Airside both print their prose and where neither had it. */
+.article__body blockquote {
+  padding: .25rem 0 .25rem 1rem;
+  margin: 1.5rem 0;
+  border-left: 3px solid var(--brand-tint-edge);
+  color: var(--ink-secondary);
+}
+
+.article__body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* A callout: the one thing in a post that is louder than the prose around it.
+   `{.callout}` on its own line above a blockquote is how an author writes one,
+   because a body cannot contain a `<div>` -- see View\Markdown.
+
+   Heavier than the plain blockquote on both counts, rule and weight, so the
+   two are told apart at a glance rather than by reading them. */
+.article__body blockquote.callout {
+  padding: 1rem 0 1rem 1.25rem;
+  border-left-width: 4px;
+  border-left-color: var(--brand-accent);
+  color: var(--brand-ink);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* A term and its explanation, for the "what you need" lists a post wants and
+   bullets do not serve. */
+.article__body dl {
+  margin: 1.5rem 0;
+}
+
+.article__body dt {
+  color: var(--brand-ink);
+  font-weight: 700;
+}
+
+.article__body dd {
+  margin: .25rem 0 1rem;
+  color: var(--ink-secondary);
+}
+
+/* Footnotes, which is where a date-sensitive travel fact belongs. Smaller and
+   set off by a rule, because by the time a reader is here they have finished
+   the post. */
+.article__body .footnotes {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-secondary);
+  font-size: .875rem;
+}
+
+.article__body .footnotes hr {
+  display: none;
+}
+
+.airside-post__hero {
+  /* Inside `.article__body`, so it takes the prose measure rather than the
+     full width, and sits above the first paragraph. */
+  width: 100%;
+  margin: 0 0 1.5rem;
+  border-radius: var(--bs-border-radius-lg);
+}
+
+@media (max-width: 575.98px) {
+  .airside-intro { padding: 1.75rem 0 2.5rem; }
+  .airside-intro__title { font-size: 2rem; }
+  .airside-list { gap: 1.25rem; }
+}

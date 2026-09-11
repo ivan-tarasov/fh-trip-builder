@@ -24,6 +24,8 @@ enum Table: string
     case CurrencyRates = 'currency_rates';
     case FareBrands = 'fare_brands';
     case Flights = 'flights';
+    case Posts = 'posts';
+    case PostTranslations = 'post_translations';
     case RouteDayPrice = 'route_day_price';
     case RoutePriceBuild = 'route_price_build';
     case Search = 'search';

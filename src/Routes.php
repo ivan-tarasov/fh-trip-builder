@@ -28,6 +28,11 @@ class Routes
         // than five loose pages, so the family has somewhere to be listed and
         // each article has its siblings to point at.
         '/help' => 'Help@index',
+        // Airside: travel writing, as against help, which is what a reader
+        // needs in order to finish a booking here. The name is the industry's
+        // word for everything past the security line, so it states that
+        // boundary rather than describing a format.
+        '/airside' => 'Airside@index',
 
         // Spelled out rather than matched by a pattern: there are three, they
         // never grow from data, and a route listed here is a route the sitemap
@@ -143,6 +148,11 @@ class Routes
         // so a pattern is all the router can do; which five words are real is
         // a row in `articles`, and HelpController's question.
         '#^/help/[A-Za-z-]+$#' => 'Help@show',
+        // Digits allowed, unlike help: an article is a subject and a post is a
+        // piece of writing, which can be "three-ways-to-pick-a-seat". Kept in
+        // step with AirsideController::slug() and with the check
+        // `airside:import` makes on a file name.
+        '#^/airside/[A-Za-z0-9-]+$#' => 'Airside@show',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [
