@@ -7657,10 +7657,53 @@ body:has(.cookie-notice) .to-top { display: none; }
  * and wrong for three sitting under a byline, where it would out-shout the
  * heading. The border says "control", the hover says "link".
  */
-.airside-tags {
-  margin: 1.5rem 0 0;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--line);
+/* The author, in a card of its own. No border and no rule: it is
+   `.article__aside`, so the card edge and the grid's gap do the dividing that
+   a hairline was doing badly. */
+.airside-author {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.airside-author__portrait {
+  /* Fixed, because the two states have to occupy the same box: a photograph
+     and a pair of letters that stand in for one. */
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  overflow: hidden;
+  background-color: var(--brand-tint);
+  border-radius: 50%;
+}
+
+.airside-author__picture {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.airside-author__initials {
+  color: var(--brand-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.airside-author__name {
+  margin: 0;
+  color: var(--brand-ink);
+  font-size: .9375rem;
+  font-weight: 700;
+}
+
+.airside-author__date {
+  margin: .125rem 0 0;
+  color: var(--ink-muted);
+  font-size: .875rem;
 }
 
 .airside-tags__label {

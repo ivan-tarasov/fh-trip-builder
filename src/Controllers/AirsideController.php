@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Throwable;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
+use TripBuilder\View\Airside\PostImages;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
@@ -89,6 +90,10 @@ class AirsideController extends AbstractController
             // Guarded rather than allowed to break the page: a post with no
             // pills is a smaller loss than no post.
             'tags' => $this->tags($slug),
+            // Null where the author has no committed picture, which is the
+            // usual case: the page draws their initials instead.
+            'author_image' => PostImages::author($post['author']),
+            'author_initials' => PostImages::initials($post['author']),
             // Home / Airside / the post's name. Derived from the path the
             // trail would end in the slug, which is the address rather than
             // the title.

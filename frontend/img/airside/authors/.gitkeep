@@ -1,0 +1,6 @@
+A post's author picture, named after the author: `Ivan Tarasov` becomes
+`ivan-tarasov`, with a `.jpg`, `.png` or `.webp` extension.
+
+Empty on purpose. Nothing here is invented: a post whose author has no file
+gets their initials in a circle instead, which is a deliberate design and not a
+missing image. Drop a photograph in and it replaces them, with no row to change.

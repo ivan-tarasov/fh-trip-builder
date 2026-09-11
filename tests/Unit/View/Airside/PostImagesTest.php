@@ -124,6 +124,61 @@ final class PostImagesTest extends TestCase
 
     /*
     |--------------------------------------------------------------------------
+    | The author's picture, and what stands in for one
+    |--------------------------------------------------------------------------
+    |
+    | `posts.author` is the only record of who wrote a post, so the file is
+    | found from the name rather than stored in a second column that would have
+    | to be kept in step with the first.
+    |
+    */
+
+    public function testAnAuthorWithNoPictureGetsNone(): void
+    {
+        self::assertNull(PostImages::author('Nobody In Particular'));
+    }
+
+    public function testAPictureIsFoundFromTheAuthorsName(): void
+    {
+        $path = Helper::getRootDir() . '/' . PostImages::DIRECTORY . '/authors/a-test-writer.png';
+
+        @mkdir(dirname($path), 0o775, true);
+        file_put_contents($path, (string) base64_decode(self::PNG, true));
+
+        try {
+            self::assertSame('/frontend/img/airside/authors/a-test-writer.png', PostImages::author('A Test Writer'));
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    /**
+     * Initials are a design, not a missing image.
+     *
+     * Nothing in this repository ships an invented portrait, so every post
+     * renders these until somebody drops a photograph in -- which means they
+     * have to look deliberate for names of every shape.
+     */
+    public function testInitialsAreTheFirstAndLastWord(): void
+    {
+        self::assertSame('IT', PostImages::initials('Ivan Tarasov'));
+        self::assertSame('JF', PostImages::initials('Jean-Luc de la Fontaine'));
+    }
+
+    public function testOneWordGivesOneLetter(): void
+    {
+        self::assertSame('C', PostImages::initials('Cher'));
+    }
+
+    public function testANameOfNothingStillDrawsSomething(): void
+    {
+        // The column is not nullable, so this cannot arrive from the importer
+        // -- but a circle with nothing in it is worse than a question mark.
+        self::assertSame('?', PostImages::initials('   '));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | What the importer reads
     |--------------------------------------------------------------------------
     */
