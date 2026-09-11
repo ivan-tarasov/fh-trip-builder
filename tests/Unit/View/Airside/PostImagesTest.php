@@ -5,25 +5,22 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Unit\View\Airside;
 
 use PHPUnit\Framework\TestCase;
-use TripBuilder\Helper;
 use TripBuilder\View\Airside\PostImages;
 use TripBuilder\View\Markdown;
 
 /**
  * Images inside a post body.
  *
- * The fixture is only a name now. It used to be written to disk, because the
- * renderer measured the file to size it; A8.10 records sizes at import instead,
- * so a body image's dimensions arrive as an argument and no test needs a file
- * on disk to assert them. The base64 PNG stays for the author picture, which
- * is still found by looking.
+ * Nothing here touches the filesystem, and that is the point rather than
+ * tidiness. Both of the things this class used to answer by looking -- how big
+ * a body image is, and whether an author has a portrait -- are answered from a
+ * table now, because a deployed site has no staging directory to look in. A
+ * test that wrote a fixture and then found it would be asserting the behaviour
+ * that was wrong.
  */
 final class PostImagesTest extends TestCase
 {
     private const string FIXTURE = 'zzp-test-fixture.png';
-
-    private const string PNG = 'iVBORw0KGgoAAAANSUhEUgAAABgAAAAJCAIAAACnn3uRAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAA'
-        . 'GElEQVQokWM8cekOAzUAE1VMGTVopBsEAGXaAoh6w0xbAAAAAElFTkSuQmCC';
 
     private ?string $cdn = null;
 
@@ -169,16 +166,60 @@ final class PostImagesTest extends TestCase
 
     public function testAPictureIsFoundFromTheAuthorsName(): void
     {
-        $path = Helper::getRootDir() . '/' . PostImages::DIRECTORY . '/authors/a-test-writer.png';
+        self::assertSame(
+            '/frontend/img/airside/authors/a-test-writer.png',
+            PostImages::author('A Test Writer', ['authors/a-test-writer.png' => [48, 48]]),
+        );
+    }
 
-        @mkdir(dirname($path), 0o775, true);
-        file_put_contents($path, (string) base64_decode(self::PNG, true));
+    /**
+     * The table decides, not the disk.
+     *
+     * This is the whole of A8.12 in one assertion: the file can be sitting in
+     * the staging directory and the page still will not draw it, because a
+     * deployed site has no staging directory and the row is the only thing
+     * both places can read.
+     */
+    public function testAPictureNothingHasARowForIsNotDrawn(): void
+    {
+        self::assertNull(PostImages::author('A Test Writer'));
+    }
 
-        try {
-            self::assertSame('/frontend/img/airside/authors/a-test-writer.png', PostImages::author('A Test Writer'));
-        } finally {
-            @unlink($path);
-        }
+    public function testTheExtensionsAreTriedInOrder(): void
+    {
+        // Both present, and `jpg` wins because it is named first -- otherwise
+        // which one appeared would depend on the order rows came back in.
+        self::assertSame(
+            '/frontend/img/airside/authors/a-test-writer.jpg',
+            PostImages::author('A Test Writer', [
+                'authors/a-test-writer.png' => [48, 48],
+                'authors/a-test-writer.jpg' => [48, 48],
+            ]),
+        );
+    }
+
+    public function testAnAuthorsCandidateNamesAreTheThreeExtensions(): void
+    {
+        self::assertSame(
+            [
+                'authors/a-test-writer.jpg',
+                'authors/a-test-writer.png',
+                'authors/a-test-writer.webp',
+            ],
+            PostImages::authorFiles('A Test Writer'),
+        );
+    }
+
+    /**
+     * A name with nothing to slug asks for no files at all.
+     *
+     * Without the guard the slug is empty and every author shares one name --
+     * `authors/.jpg` -- so one portrait would stand in for all of them.
+     */
+    public function testANameThatSlugsToNothingAsksForNoFiles(): void
+    {
+        self::assertSame([], PostImages::authorFiles('!!!'));
+        self::assertNull(PostImages::author('!!!', ['authors/.jpg' => [48, 48]]));
     }
 
     /**
