@@ -18,7 +18,6 @@ return [
     ],
 
     'static' => [
-        'url' => '//d1kf00o84yn9o.cloudfront.net',
         'endpoint' => [
             'images' => 'images',
             'poi' => 'images/poi',
