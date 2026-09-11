@@ -26,6 +26,7 @@ enum Table: string
     case Flights = 'flights';
     case Posts = 'posts';
     case PostTranslations = 'post_translations';
+    case PostImages = 'post_images';
     case PostVotes = 'post_votes';
     case PostTagMap = 'post_tag_map';
     case PostTagTranslations = 'post_tag_translations';
