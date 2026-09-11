@@ -41,16 +41,20 @@ final class Import extends AbstractCommand
     private const string CONTENT_DIR = 'config/content/airside';
 
     /**
-     * Where a hero image has to be, and the first images this repository
-     * serves -- there is no `frontend/img` before this and nothing in the
-     * templates renders an `<img>` from the repo at all.
+     * Where a hero image has to be, and the first images *this repository*
+     * serves: there is no `frontend/img` before this and no template renders
+     * an `<img>` from the checkout.
      *
-     * A8.2 owns the pipeline: uploads, many images per post, responsive sizes.
-     * This is the smallest thing that lets a post have a picture, and it makes
-     * one decision A8.2 will revisit -- a directory. Which is why the column
-     * holds the *file name* and not a path: moving these somewhere else, or
-     * onto the CDN `site.static.endpoint.images` names and nothing yet uses,
-     * is then a change to one template rather than to every row.
+     * Not the first images the site serves, which an earlier version of this
+     * comment claimed. Carrier logos, supplier logos and the POI cards all
+     * come from a CloudFront distribution through `Cdn::getUrl()`, which
+     * reads `AWS_CLOUDFRONT` -- so the infrastructure for content images
+     * mostly exists and the open question is whether these belong in it.
+     *
+     * That question is A8.6's. This is the smallest thing that lets a post
+     * have a picture, and it is why the column holds the *file name* and not a
+     * path: moving these to the CDN later is a change to one class rather than
+     * to every row.
      */
     private const string IMAGE_DIR = PostImages::DIRECTORY;
 
