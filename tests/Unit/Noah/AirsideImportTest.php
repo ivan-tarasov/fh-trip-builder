@@ -213,6 +213,30 @@ final class AirsideImportTest extends TestCase
         ];
     }
 
+    /**
+     * A body cannot open its own `h1`.
+     *
+     * The page has one already -- the title, in the band -- so a second is two
+     * documents in one heading list and nothing on screen looks wrong. The
+     * `NormalizeHeadings` extension was going to handle this until it was
+     * measured: it leaves a body `#` as an `h1`, so it would have looked like
+     * a guard and been none.
+     */
+    public function testABodyThatOpensItsOwnTopLevelHeadingIsRefused(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('start the prose at `##`');
+
+        Import::parse(self::file(self::HEADER, "# A second h1\n\nProse."));
+    }
+
+    public function testAHeadingLowerDownIsStillFine(): void
+    {
+        $parsed = Import::parse(self::file(self::HEADER, "## A heading\n\nProse.\n\n### Deeper"));
+
+        self::assertStringContainsString('### Deeper', $parsed['body']);
+    }
+
     /** A file saved on Windows is not a parse error. */
     public function testACarriageReturnFileIsRead(): void
     {

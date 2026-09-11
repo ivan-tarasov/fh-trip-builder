@@ -304,6 +304,20 @@ final class Import extends AbstractCommand
             throw new RuntimeException('`hero_alt` describes nothing: there is no `hero`');
         }
 
+        // The page already has an `h1`: the post's title, in the band. A
+        // second one in the body is two documents on one page as far as a
+        // screen reader's heading list is concerned, and nothing looks wrong.
+        //
+        // The `NormalizeHeadings` extension was going to do this, until it was
+        // measured: it leaves a body `#` as an `h1`, so it would have looked
+        // like a guard and been none.
+        if (preg_match('/^# /m', $body) === 1) {
+            throw new RuntimeException(
+                'the body opens a top-level heading with `#`, and the page already has one'
+                . ' -- start the prose at `##`',
+            );
+        }
+
         self::within('title', $fields['title'], self::TITLE_LIMIT);
         self::within('summary', $fields['summary'], self::SUMMARY_LIMIT);
 

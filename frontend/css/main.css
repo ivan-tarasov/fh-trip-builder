@@ -7584,6 +7584,68 @@ body:has(.cookie-notice) .to-top { display: none; }
   margin-right: .5rem;
 }
 
+/* Bootstrap gives a blockquote nothing but margin, so an unstyled one is
+   indistinguishable from a paragraph. The same rule the README already has --
+   `.readme blockquote` -- but scoped to the shared article body, which is
+   where help and Airside both print their prose and where neither had it. */
+.article__body blockquote {
+  padding: .25rem 0 .25rem 1rem;
+  margin: 1.5rem 0;
+  border-left: 3px solid var(--brand-tint-edge);
+  color: var(--ink-secondary);
+}
+
+.article__body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* A callout: the one thing in a post that is louder than the prose around it.
+   `{.callout}` on its own line above a blockquote is how an author writes one,
+   because a body cannot contain a `<div>` -- see View\Markdown.
+
+   Heavier than the plain blockquote on both counts, rule and weight, so the
+   two are told apart at a glance rather than by reading them. */
+.article__body blockquote.callout {
+  padding: 1rem 0 1rem 1.25rem;
+  border-left-width: 4px;
+  border-left-color: var(--brand-accent);
+  color: var(--brand-ink);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* A term and its explanation, for the "what you need" lists a post wants and
+   bullets do not serve. */
+.article__body dl {
+  margin: 1.5rem 0;
+}
+
+.article__body dt {
+  color: var(--brand-ink);
+  font-weight: 700;
+}
+
+.article__body dd {
+  margin: .25rem 0 1rem;
+  color: var(--ink-secondary);
+}
+
+/* Footnotes, which is where a date-sensitive travel fact belongs. Smaller and
+   set off by a rule, because by the time a reader is here they have finished
+   the post. */
+.article__body .footnotes {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-secondary);
+  font-size: .875rem;
+}
+
+.article__body .footnotes hr {
+  display: none;
+}
+
 .airside-post__hero {
   /* Inside `.article__body`, so it takes the prose measure rather than the
      full width, and sits above the first paragraph. */
