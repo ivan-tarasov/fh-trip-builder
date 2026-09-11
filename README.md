@@ -335,6 +335,20 @@ php noah install
    php noah articles:import --dry-run
    ```
 
+2. `airside:import`: The same, for the Airside posts in `config/content/airside`.
+   ```bash
+   php noah airside:import
+   ```
+   Airside is the travel section, as against help, which is what a reader needs
+   in order to finish a booking here. Same terms as the articles above: no
+   seeder CSV, so `app:install` cannot revert a post, and the files are the
+   whole truth — a post whose file is deleted is removed from the table on the
+   next run.
+
+   It refuses the whole run on a bad file rather than importing the rest: a
+   missing `hero_alt`, an image no file backs, a date that does not exist, or a
+   file name a URL could not hold. `--dry-run` reports without writing.
+
 #### Currency Management
 1. `currency:rates`: Refresh the conversion rates every price is converted with.
    ```bash
