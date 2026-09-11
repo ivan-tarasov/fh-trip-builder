@@ -112,6 +112,7 @@ class AirsideController extends AbstractController
             // Guarded like the rest: a post without its thumbs is still the
             // post somebody came for.
             'verdict' => $this->verdict($slug),
+            'liked' => $this->liked($slug),
             // Home / Airside / the post's name. Derived from the path the
             // trail would end in the slug, which is the address rather than
             // the title.
@@ -189,6 +190,36 @@ class AirsideController extends AbstractController
             return new PostRepository($this->connection())->related($slug, 4);
         } catch (Throwable $e) {
             error_log('Airside related failed: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    /**
+     * The posts readers liked best, minus this one.
+     *
+     * Empty until somebody votes, which is deliberate and is why the block is
+     * conditional: `liked()` returns nothing from an untouched table rather
+     * than letting a tiebreaker decide what "most liked" means.
+     *
+     * Overlap with the related block is allowed. They make different claims --
+     * "near this" and "readers liked it" -- and a post that is both is a post
+     * worth offering twice. What is not allowed is the same claim twice, which
+     * is why the in-body card and the related list do not overlap.
+     *
+     * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
+     */
+    private function liked(string $slug): array
+    {
+        try {
+            $connection = $this->connection();
+            // Four, so removing this post still leaves three.
+            $ranked = array_keys(new PostVoteRepository($connection)->liked(4));
+            $wanted = array_values(array_filter($ranked, static fn(string $s): bool => $s !== $slug));
+
+            return new PostRepository($connection)->bySlugs(array_slice($wanted, 0, 3));
+        } catch (Throwable $e) {
+            error_log('Airside most liked failed: ' . $e->getMessage());
 
             return [];
         }

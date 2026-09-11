@@ -249,6 +249,52 @@ final class PostRepositoryTest extends IntegrationTestCase
         self::assertContains($slug, $this->repository()->slugs(), 'the importer still has to see its row');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Named posts, in the order they were named
+    |--------------------------------------------------------------------------
+    |
+    | The most-liked block ranks slugs in the vote table and then asks for
+    | titles. `IN (...)` returns rows in whatever order the engine likes, so the
+    | ranking only survives if it is restored here.
+    |
+    */
+
+    public function testNamedPostsComeBackInTheOrderTheyWereNamed(): void
+    {
+        $a = $this->write('order-a', ['published_at' => '2026-01-01 09:00:00']);
+        $b = $this->write('order-b', ['published_at' => '2026-05-01 09:00:00']);
+
+        // Deliberately not the order any column of this table would give: `b`
+        // is the newer, so `all()` would put it first.
+        self::assertSame([$a, $b], array_keys($this->repository()->bySlugs([$a, $b])));
+        self::assertSame([$b, $a], array_keys($this->repository()->bySlugs([$b, $a])));
+    }
+
+    public function testASlugWithNoPostIsSkippedRatherThanFaked(): void
+    {
+        $slug = $this->write('present');
+
+        self::assertSame([$slug], array_keys($this->repository()->bySlugs(['zzp-not-a-post', $slug])));
+    }
+
+    /**
+     * A post held back is not named either, or `enabled` would stop meaning
+     * anything the moment a block asked for posts by name.
+     */
+    public function testAHeldBackPostIsNotNamed(): void
+    {
+        $slug = $this->write('withheld');
+        $this->connection()->execute('UPDATE posts SET enabled = 0 WHERE slug = ?', [$slug]);
+
+        self::assertSame([], $this->repository()->bySlugs([$slug]));
+    }
+
+    public function testNamingNoPostsAsksNothing(): void
+    {
+        self::assertSame([], $this->repository()->bySlugs([]));
+    }
+
     public function testDeletingAPostTakesItsWordsWithIt(): void
     {
         $slug = $this->write('gone');

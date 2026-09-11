@@ -123,6 +123,22 @@
                 </ul>
             </aside>
         {% endif %}
+
+        {# Cards, where the related block above is rows -- the two make
+           different claims and should not look like one list split in half.
+           Nothing renders until a post has a vote: "most liked" over a table
+           nobody has voted in would be a heading above whatever the tiebreaker
+           put first. #}
+        {% if liked|default({}) is not empty %}
+            <aside class="article__aside airside-liked" aria-labelledby="airside-liked-label">
+                <h2 class="article__aside-title" id="airside-liked-label">Most liked</h2>
+                <ul class="airside-list airside-list--liked">
+                    {% for slug, post in liked %}
+                        {% include 'partials/airside-card.html.twig' with {'slug': slug, 'post': post} only %}
+                    {% endfor %}
+                </ul>
+            </aside>
+        {% endif %}
     {% endblock %}
 {% endembed %}
 {% endblock %}
