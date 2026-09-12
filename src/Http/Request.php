@@ -33,6 +33,7 @@ final readonly class Request
         private string $rawBody = '',
         /** @var array<string, string> */
         private array $headers = [],
+        private string $remoteAddress = '',
     ) {}
 
     /**
@@ -52,6 +53,7 @@ final readonly class Request
             // Empty for a form post, which PHP has already parsed into $_POST.
             rawBody: (string) file_get_contents('php://input'),
             headers: self::headersFromServer($_SERVER),
+            remoteAddress: (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
         );
     }
 
@@ -68,6 +70,32 @@ final readonly class Request
     public function isSecure(): bool
     {
         return $this->secure;
+    }
+
+    /**
+     * Who is asking, as well as it can be known.
+     *
+     * `REMOTE_ADDR` is the edge and not the visitor. Every request to this app
+     * arrives from Cloudflare, so a rate limit keyed on it would hold the whole
+     * internet to one allowance and the first script to find the subscribe form
+     * would lock everybody else out of it. `CF-Connecting-IP` is the address
+     * the edge saw, and is what the counting has to key on.
+     *
+     * Validated rather than trusted. On a request that reaches the origin
+     * directly the header is just something the client typed, so it is used
+     * only when it parses as an address -- which keeps a forged value out of a
+     * database key, though not out of the counting. Refusing traffic that did
+     * not come from the edge is the fix for that, and is not this.
+     */
+    public function clientIp(): string
+    {
+        $stated = $this->header('cf-connecting-ip');
+
+        if ($stated !== null && filter_var($stated, FILTER_VALIDATE_IP) !== false) {
+            return $stated;
+        }
+
+        return $this->remoteAddress;
     }
 
     /**

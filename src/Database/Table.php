@@ -30,6 +30,7 @@ enum Table: string
     case PostVotes = 'post_votes';
     case PostTagMap = 'post_tag_map';
     case PostTagTranslations = 'post_tag_translations';
+    case RateLimits = 'rate_limits';
     case RouteDayPrice = 'route_day_price';
     case RoutePriceBuild = 'route_price_build';
     case Search = 'search';

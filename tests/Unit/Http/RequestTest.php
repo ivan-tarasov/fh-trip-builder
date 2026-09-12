@@ -109,4 +109,62 @@ final class RequestTest extends TestCase
             $_SERVER = $server;
         }
     }
+
+    /**
+     * @param array<string, string> $headers
+     */
+    private static function from(array $headers, string $remoteAddress): Request
+    {
+        return new Request(
+            query: new Input(),
+            body: new Input(),
+            cookies: new Input(),
+            headers: $headers,
+            remoteAddress: $remoteAddress,
+        );
+    }
+
+    public function testTheClientIpIsTheRemoteAddressWithNoEdgeInFront(): void
+    {
+        self::assertSame('203.0.113.9', self::from([], '203.0.113.9')->clientIp());
+    }
+
+    /**
+     * Behind Cloudflare, REMOTE_ADDR is Cloudflare.
+     *
+     * Every request arrives from one of its addresses, so anything keyed on
+     * REMOTE_ADDR counts the whole internet as one caller -- which for a rate
+     * limit means the first script to find the form locks out everybody else.
+     */
+    public function testTheEdgeReportsWhoTheVisitorActuallyIs(): void
+    {
+        self::assertSame(
+            '203.0.113.9',
+            self::from(['cf-connecting-ip' => '203.0.113.9'], '172.68.0.1')->clientIp(),
+        );
+    }
+
+    /**
+     * The header is only something the client typed, on a request that reached
+     * the origin directly. It is used when it parses as an address and ignored
+     * when it does not, so nothing forged reaches a database key.
+     */
+    public function testAnUnparseableForwardedAddressIsIgnored(): void
+    {
+        foreach (["nonsense", "1; DROP TABLE rate_limits", "", "999.1.1.1"] as $forged) {
+            self::assertSame(
+                '172.68.0.1',
+                self::from(['cf-connecting-ip' => $forged], '172.68.0.1')->clientIp(),
+                sprintf('%s was treated as an address', var_export($forged, true)),
+            );
+        }
+    }
+
+    public function testAnIpv6VisitorSurvivesTheRoundTrip(): void
+    {
+        self::assertSame(
+            '2001:db8::8a2e:370:7334',
+            self::from(['cf-connecting-ip' => '2001:db8::8a2e:370:7334'], '172.68.0.1')->clientIp(),
+        );
+    }
 }

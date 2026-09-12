@@ -21,6 +21,36 @@
 # this line is a page or an asset, and the only rules are the ones that route
 # and cache.
 
+# HTTPS, and never anything else. A 301 so the browser remembers, above every
+# other rule so there is one canonical scheme for the whole site.
+#
+# Three guards, and each one is a way this rule goes wrong:
+#
+# %{HTTPS} off is the plain question, and on this origin it is the true one --
+# Cloudflare talks to it over TLS (the session cookie comes back `secure`, which
+# it only does when PHP sees HTTPS), so for ordinary traffic this rule never
+# fires. What it catches is somebody reaching the origin directly over port 80.
+#
+# X-Forwarded-Proto is the loop guard, and the reason to write it now rather
+# than after. If the distribution in front is ever switched to talk to the
+# origin over plain HTTP -- Cloudflare calls that Flexible -- then %{HTTPS} is
+# off for *every* request, this rule redirects to https://, the distribution
+# answers that over TLS and asks the origin again over HTTP, and the site is an
+# infinite redirect for everyone. The header says what the browser actually
+# used, so with it there is no loop to have.
+#
+# And localhost, because development is http://fh-trip-builder.localhost:8888
+# and there is no certificate there to redirect to. HTTP_HOST carries the port
+# when it is not the default, hence the optional group.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteCond %{HTTP_HOST} !(^|\.)localhost(:[0-9]+)?$ [NC]
+    RewriteCond %{HTTP_HOST} !^127\.0\.0\.1(:[0-9]+)?$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
 # Except dotfiles. Nothing here starts with a dot today; this is for the ones
 # that arrive without being decided on -- .htaccess itself, a .DS_Store copied
 # up with an image, an editor's .swp.
