@@ -215,6 +215,12 @@
      `--surface` is the ground these sit on, which is why it is not white. */
   --surface-raised:   #FFFFFF;   /* panels lifted above the page */
   --on-brand:         #FFFFFF;   /* glyph on a filled brand colour, never flips */
+
+  /* The knob inside a switch that is off. Bootstrap ships one at 25% black and
+     swaps it for 25% white under `data-bs-theme`, and both are too faint to
+     find on a track that is nearly the panel colour -- which is what made the
+     filter switches look washed out. A solid grey reads at either end. */
+  --switch-knob: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23868E96'/%3e%3c/svg%3e");
   --surface:          #EFF2F7;   /* raised panels, card footers */
   --surface-sunken:   #E8EDF3;   /* wells, quiet chips */
   --line:             #E1E6ED;   /* default rule */
@@ -291,6 +297,7 @@
   --d-brand-accent-fill-700:  #0B5A54;   /* the hover, deeper on purpose */
   --d-brand-success-fill:     #17804F;   /* 3.44 / 4.96 */
   --d-brand-danger-fill:      #C93A47;   /* 3.40 / 5.02 */
+  --d-switch-knob: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23CBD2DA'/%3e%3c/svg%3e");
   --d-brand-accent:        #2AC3B2;   /* 7.76 */
   --d-brand-accent-700:    #5EEAD4;   /* 11.53 */
   --d-brand-success:       #3DD68C;   /* 9.10 */
@@ -332,6 +339,7 @@
     --brand-accent-fill-700: var(--d-brand-accent-fill-700);
     --brand-success-fill: var(--d-brand-success-fill);
     --brand-danger-fill: var(--d-brand-danger-fill);
+    --switch-knob: var(--d-switch-knob);
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
@@ -393,6 +401,7 @@
     --brand-accent-fill-700: var(--d-brand-accent-fill-700);
     --brand-success-fill: var(--d-brand-success-fill);
     --brand-danger-fill: var(--d-brand-danger-fill);
+    --switch-knob: var(--d-switch-knob);
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
@@ -3695,6 +3704,31 @@ textarea {
   height: 1.4rem;
   margin: 0;
   cursor: pointer;
+}
+
+/* The colours of a switch, which were Bootstrap's and not this site's.
+
+   Off, the track took `--bs-body-bg` and the border `--bs-border-color`, which
+   in the dark palette are the panel and a hairline on it -- so the control was
+   the same colour as what it sat on and only the faint knob gave it away.
+
+   On, it was #0d6efd: stock Bootstrap blue, in both palettes. Compiled into the
+   stylesheet as a literal rather than read from a variable, which is the same
+   trap the nav pills had and is why a filter that was switched on has never
+   been the brand's colour. */
+.form-switch .form-check-input {
+  --bs-form-switch-bg: var(--switch-knob);
+  background-color: var(--surface-sunken);
+  /* `--ink-faint` and not a line token: this is the outline of a control and
+     wants the 3:1 a graphic needs, which is the bar that token is measured
+     against. `--line-strongest` came out at 1.91 on a dark panel -- a hairline
+     nobody would find. */
+  border-color: var(--ink-faint);
+}
+
+.form-switch .form-check-input:checked {
+  background-color: var(--brand-accent-fill);
+  border-color: var(--brand-accent-fill);
 }
 
 /* --- Time-of-day pills ---------------------------------------------------- */
