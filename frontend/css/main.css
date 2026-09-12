@@ -248,6 +248,12 @@
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
   --bs-body-color: var(--ink-body);
   --bs-primary: var(--brand-ink);
+  /* The header is `.bg-primary`, and `.bg-primary` paints from this triplet
+     rather than from the variable above it -- which is why it went on wearing
+     the light navy after the hero and the footer beside it went dark, leaving
+     a seam across the top of every page. It is the band colour and not the ink,
+     so the dark block pins it to `--brand-ink-fill` rather than letting it
+     follow `--brand-ink`, which is text and lifts. */
   --bs-primary-rgb: 16, 36, 63;
   --bs-primary-bg-subtle: var(--brand-tint);
   --bs-primary-border-subtle: var(--brand-tint-edge);
@@ -281,8 +287,15 @@
   --d-ink-faint:           #6A7484;   /* 3.61, the 3:1 ornament bar */
   --d-brand-ink:           #7FA3C4;   /* 6.45 -- the text half of the navy */
   --d-brand-ink-700:       #9CBADA;   /* 8.49 */
-  --d-brand-ink-fill:      #0A101C;   /* the expanses: html, hero, footer */
-  --d-brand-ink-fill-700:  #16203A;   /* a band lifted off the footer */
+  /* The band, and it is lighter than the page rather than darker.
+
+     First attempt had this at #0A101C, which is 1.01 against the ground -- so
+     the header, the search band and the footer all dissolved into the page and
+     the site lost its bars. In the light palette this is a dark navy on a light
+     page and reads as a bar; the dark palette has to earn the same separation
+     from the other side, by lifting off the ground instead of sinking into it. */
+  --d-brand-ink-fill:      #1C2942;   /* 1.30 against the ground, 14.53 for white */
+  --d-brand-ink-fill-700:  #27375A;   /* a block lifted off that band */
   --d-brand-ink-chip:      #4F6D9C;   /* 3.25 on a panel, 5.25 for the glyph */
   --d-brand-ink-chip-700:  #5D7FB0;
 
@@ -340,6 +353,7 @@
     --brand-success-fill: var(--d-brand-success-fill);
     --brand-danger-fill: var(--d-brand-danger-fill);
     --switch-knob: var(--d-switch-knob);
+    --bs-primary-rgb: 28, 41, 66;
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
@@ -402,6 +416,7 @@
     --brand-success-fill: var(--d-brand-success-fill);
     --brand-danger-fill: var(--d-brand-danger-fill);
     --switch-knob: var(--d-switch-knob);
+    --bs-primary-rgb: 28, 41, 66;
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
