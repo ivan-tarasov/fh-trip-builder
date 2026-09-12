@@ -417,7 +417,7 @@ final class FooterRenderTest extends TestCase
      */
     public function testEveryFocusableThingInTheFooterHasARing(): void
     {
-        $css = (string) file_get_contents(__DIR__ . '/../../../frontend/css/main.css');
+        $css = (string) file_get_contents(__DIR__ . '/../../../public/css/main.css');
 
         foreach (['a', 'button', 'input'] as $element) {
             self::assertStringContainsString(

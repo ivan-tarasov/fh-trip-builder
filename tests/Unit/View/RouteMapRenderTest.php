@@ -250,7 +250,7 @@ final class RouteMapRenderTest extends TestCase
     public function testTheLegendDotsAreThePinColours(): void
     {
         $config = $this->payload();
-        $css = (string) file_get_contents(Helper::getRootDir() . '/frontend/css/main.css');
+        $css = (string) file_get_contents(Helper::getRootDir() . '/public/css/main.css');
 
         $pairs = [
             'place__legend-item--from' => $config['markers'][0]['colour'],

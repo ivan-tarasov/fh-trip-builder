@@ -34,7 +34,7 @@ final class PlacePickerGroupingTest extends TestCase
 
     public function testTheComboboxReadsItAndMarksTheRow(): void
     {
-        $js = $this->read('frontend/js/global.js');
+        $js = $this->read('public/js/global.js');
 
         self::assertStringContainsString(
             'dataset.inCity',
@@ -53,7 +53,7 @@ final class PlacePickerGroupingTest extends TestCase
     {
         self::assertMatchesRegularExpression(
             '/\.combo__option--child \{[^}]*padding-left:/',
-            $this->read('frontend/css/main.css'),
+            $this->read('public/css/main.css'),
             'the class is added and styles nothing, so the list does not nest',
         );
     }
@@ -84,7 +84,7 @@ final class PlacePickerGroupingTest extends TestCase
     {
         self::assertStringContainsString(
             'chosenNow.value === anchored',
-            $this->read('frontend/js/global.js'),
+            $this->read('public/js/global.js'),
             'without this the block outlives the value it was built for',
         );
     }
@@ -98,7 +98,7 @@ final class PlacePickerGroupingTest extends TestCase
      */
     public function testBothBlocksRenderThroughTheSameRowBuilder(): void
     {
-        $js = $this->read('frontend/js/global.js');
+        $js = $this->read('public/js/global.js');
 
         self::assertSame(
             2,
@@ -156,7 +156,7 @@ final class PlacePickerGroupingTest extends TestCase
      */
     public function testTheListIsRankedByCityAndNotRowByRow(): void
     {
-        $js = $this->read('frontend/js/global.js');
+        $js = $this->read('public/js/global.js');
 
         self::assertStringContainsString(
             'group.band = Math.min(group.band, band)',

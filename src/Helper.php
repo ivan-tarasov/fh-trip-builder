@@ -18,6 +18,19 @@ class Helper
         return dirname(__FILE__, 2);
     }
 
+    /**
+     * The document root: the only directory the web server can reach.
+     *
+     * Everything else in the project sits above it, which is what makes
+     * `.env`, `src/`, `vendor/` and the templates unreachable rather than
+     * merely refused. Use it for anything a URL can name; `getRootDir()`
+     * for everything else.
+     */
+    public static function getPublicDir(): string
+    {
+        return self::getRootDir() . '/public';
+    }
+
     public static function getUTCTime(int|float $offset): string
     {
         $hours = floor(abs($offset));

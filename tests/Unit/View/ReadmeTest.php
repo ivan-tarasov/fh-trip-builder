@@ -143,7 +143,7 @@ final class ReadmeTest extends TestCase
 
         self::assertNotEmpty($levels, 'The rendered README should contain headings');
 
-        $css = (string) file_get_contents(__DIR__ . '/../../../frontend/css/main.css');
+        $css = (string) file_get_contents(__DIR__ . '/../../../public/css/main.css');
 
         foreach ($levels as $level) {
             self::assertMatchesRegularExpression(

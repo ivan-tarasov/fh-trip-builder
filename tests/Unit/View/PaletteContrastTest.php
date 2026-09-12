@@ -36,7 +36,7 @@ final class PaletteContrastTest extends TestCase
     private static function palette(): Palette
     {
         return self::$palette ??= Palette::fromCss(
-            (string) file_get_contents(Helper::getRootDir() . '/frontend/css/main.css'),
+            (string) file_get_contents(Helper::getRootDir() . '/public/css/main.css'),
         );
     }
 

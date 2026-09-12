@@ -12,9 +12,9 @@ return [
     */
 
     'directory' => [
-        'js' => '/frontend/js',
-        'css' => '/frontend/css',
-        'fonts' => '/frontend/fonts',
+        'js' => '/js',
+        'css' => '/css',
+        'fonts' => '/fonts',
     ],
 
     'static' => [

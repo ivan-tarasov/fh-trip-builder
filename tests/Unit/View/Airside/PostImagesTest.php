@@ -56,7 +56,7 @@ final class PostImagesTest extends TestCase
     {
         $html = Markdown::toPostHtml('![A wing](' . self::FIXTURE . ')');
 
-        self::assertStringContainsString('src="/frontend/img/airside/' . self::FIXTURE . '"', $html);
+        self::assertStringContainsString('src="/img/airside/' . self::FIXTURE . '"', $html);
         self::assertStringContainsString('alt="A wing"', $html);
     }
 
@@ -84,7 +84,7 @@ final class PostImagesTest extends TestCase
         $html = Markdown::toPostHtml('![Gone](not-a-real-file.png)', null, [self::FIXTURE => [24, 9]]);
 
         self::assertStringNotContainsString('width=', $html);
-        self::assertStringContainsString('src="/frontend/img/airside/not-a-real-file.png"', $html);
+        self::assertStringContainsString('src="/img/airside/not-a-real-file.png"', $html);
     }
 
     public function testEveryBodyImageIsLazy(): void
@@ -145,7 +145,7 @@ final class PostImagesTest extends TestCase
 
     public function testWithoutOneTheStagingCopyIsUsed(): void
     {
-        self::assertSame('/frontend/img/airside/wing.jpg', PostImages::url('wing.jpg'));
+        self::assertSame('/img/airside/wing.jpg', PostImages::url('wing.jpg'));
     }
 
     /*
@@ -167,7 +167,7 @@ final class PostImagesTest extends TestCase
     public function testAPictureIsFoundFromTheAuthorsName(): void
     {
         self::assertSame(
-            '/frontend/img/airside/authors/a-test-writer.png',
+            '/img/airside/authors/a-test-writer.png',
             PostImages::author('A Test Writer', ['authors/a-test-writer.png' => [48, 48]]),
         );
     }
@@ -190,7 +190,7 @@ final class PostImagesTest extends TestCase
         // Both present, and `jpg` wins because it is named first -- otherwise
         // which one appeared would depend on the order rows came back in.
         self::assertSame(
-            '/frontend/img/airside/authors/a-test-writer.jpg',
+            '/img/airside/authors/a-test-writer.jpg',
             PostImages::author('A Test Writer', [
                 'authors/a-test-writer.png' => [48, 48],
                 'authors/a-test-writer.jpg' => [48, 48],

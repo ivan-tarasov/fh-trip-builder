@@ -9,7 +9,7 @@ return RectorConfig::configure()
     ->withPaths([
         __DIR__ . '/src',
         __DIR__ . '/tests',
-        __DIR__ . '/index.php',
+        __DIR__ . '/public/index.php',
         __DIR__ . '/noah',
     ])
     ->withSets([

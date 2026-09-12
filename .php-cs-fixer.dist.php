@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $finder = PhpCsFixer\Finder::create()
     ->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/config'])
-    ->append([__DIR__ . '/index.php', __DIR__ . '/noah']);
+    ->append([__DIR__ . '/public/index.php', __DIR__ . '/noah']);
 
 return (new PhpCsFixer\Config())
     ->setRiskyAllowed(false)

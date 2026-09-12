@@ -123,7 +123,7 @@ final class SkipLinkTest extends TestCase
      */
     public function testTheLinkIsStyledOffScreenUntilItTakesFocus(): void
     {
-        $css = (string) file_get_contents(__DIR__ . '/../../../frontend/css/main.css');
+        $css = (string) file_get_contents(__DIR__ . '/../../../public/css/main.css');
 
         self::assertMatchesRegularExpression(
             '/\.skip-link \{[^}]*position: fixed;/',

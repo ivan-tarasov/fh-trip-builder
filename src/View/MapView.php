@@ -10,7 +10,7 @@ use TripBuilder\Polyline;
 /**
  * The map on a page, in the two forms a page needs it.
  *
- * config() is the live map: a blob of JSON that frontend/js/map.js turns into a
+ * config() is the live map: a blob of JSON that public/js/map.js turns into a
  * Mapbox GL map you can pan and zoom. image() is the same map as a flat
  * picture, which the templates put inside `<noscript>` -- a browser running
  * scripts never fetches it, so it costs no request, and it is what a crawler
@@ -99,7 +99,7 @@ final class MapView
     }
 
     /**
-     * The live map, as the JSON frontend/js/map.js reads, or '' with no token.
+     * The live map, as the JSON public/js/map.js reads, or '' with no token.
      *
      * Handed over in a data attribute rather than written into a script tag,
      * because a place name can hold an apostrophe and a script tag is the one

@@ -27,7 +27,7 @@ return [
     |
     | This comment used to say the number was "validated in the browser and
     | never sent here", which was false and is the kind of false a reader
-    | believes. It is also validated in the browser -- see frontend/js -- but
+    | believes. It is also validated in the browser -- see public/js -- but
     | that is a convenience, not the boundary it claimed to be.
     |
     */

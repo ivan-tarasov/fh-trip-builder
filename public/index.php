@@ -9,7 +9,9 @@ declare(strict_types=1);
  * @version 2.2.2
  */
 
-require_once __DIR__ . '/vendor/autoload.php';
+// One level below the project root: this directory is the document root
+// and holds nothing but pages, so everything the app needs is above it.
+require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 use TripBuilder\Config;
 use TripBuilder\Http\Request;
@@ -34,7 +36,7 @@ try {
     session_start();
 
     // Enable .env file variables
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
     $dotenv->load();
 
     // Building config
