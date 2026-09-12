@@ -4,7 +4,7 @@
 
 {% block content %}
 {# The same local path and cache-buster main.css uses. This asked the CDN for
-   it, so `frontend/css/404.css` was a file nothing could reach: editing it
+   it, so `public/css/404.css` was a file nothing could reach: editing it
    changed nothing, and the deployed copy was the only one that counted. #}
 <link href="{{ asset(config('site.directory.css') ~ '/404.css') }}" rel="stylesheet" media="all" />
 {# The landmark this page did not have. Around `.wrapper` and not around the

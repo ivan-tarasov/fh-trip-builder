@@ -65,7 +65,7 @@ final class CsrfTest extends TestCase
      */
     public function testTheBrowserSpellsBothNamesTheWayThisClassDoes(): void
     {
-        $script = (string) file_get_contents(__DIR__ . '/../../frontend/js/global.js');
+        $script = (string) file_get_contents(__DIR__ . '/../../public/js/global.js');
 
         self::assertStringContainsString(
             "body.append('" . Csrf::FIELD . "'",

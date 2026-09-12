@@ -106,7 +106,7 @@ final class BreadcrumbsRenderTest extends TestCase
      */
     public function testNeitherTrailDrawsItsSeparatorInARuleColour(): void
     {
-        $css = (string) file_get_contents(__DIR__ . '/../../../frontend/css/main.css');
+        $css = (string) file_get_contents(__DIR__ . '/../../../public/css/main.css');
 
         foreach ([
             'the light trail' => '/\.breadcrumbs__item \+ \.breadcrumbs__item::before \{(.*?)\}/s',

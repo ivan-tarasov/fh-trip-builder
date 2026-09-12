@@ -64,7 +64,7 @@ final class LegalRenderTest extends TestCase
     {
         foreach (array_keys(self::documents()) as $slug) {
             self::assertFileExists(
-                __DIR__ . '/../../../frontend/template/legal/documents/' . $slug . '.html.twig',
+                __DIR__ . '/../../../templates/legal/documents/' . $slug . '.html.twig',
                 $slug . ' is listed in config with no template',
             );
         }

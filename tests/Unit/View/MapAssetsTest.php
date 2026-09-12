@@ -119,7 +119,7 @@ final class MapAssetsTest extends TestCase
     {
         foreach (self::MAP_PAGES as $page) {
             $source = (string) file_get_contents(
-                Helper::getRootDir() . '/frontend/template/' . $page,
+                Helper::getRootDir() . '/templates/' . $page,
             );
 
             self::assertStringContainsString(
@@ -138,7 +138,7 @@ final class MapAssetsTest extends TestCase
      */
     public function testNoOtherPageDeclaresAMap(): void
     {
-        $root = Helper::getRootDir() . '/frontend/template';
+        $root = Helper::getRootDir() . '/templates';
         $found = [];
 
         /** @var iterable<SplFileInfo> $files */

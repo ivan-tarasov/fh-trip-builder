@@ -44,8 +44,12 @@ final readonly class PostImages implements ExtensionInterface
      *
      * One constant rather than two because they are one directory; if A8.2's
      * successor moves them, both move together.
+     *
+     * Relative to the document root, because it is both halves of the same
+     * thing: the URL a page asks for and, under `Helper::getPublicDir()`, the
+     * directory the importer reads.
      */
-    public const string DIRECTORY = 'frontend/img/airside';
+    public const string DIRECTORY = 'img/airside';
 
     /**
      * @param array<string, array{0: int, 1: int}> $dimensions

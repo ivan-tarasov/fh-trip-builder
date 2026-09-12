@@ -7,7 +7,7 @@ parameters:
     paths:
         - src
         - tests
-        - index.php
+        - public/index.php
         - noah
     bootstrapFiles:
         - vendor/autoload.php

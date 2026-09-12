@@ -51,7 +51,8 @@ final class LayoutData
      */
     public function asset(string $path): string
     {
-        $file = Helper::getRootDir() . '/' . ltrim($path, '/');
+        // A URL, so it resolves under the document root and not the project.
+        $file = Helper::getPublicDir() . '/' . ltrim($path, '/');
         $stamp = is_file($file) ? filemtime($file) : false;
 
         return $stamp === false ? $path : $path . '?v=' . $stamp;

@@ -104,38 +104,71 @@ DB_USERNAME=database_user
 DB_PASSWORD=database_password
 ```
 
-Copy the web server config into place as well:
+### 4. Point the Web Server at `public/`
+
+**The document root is `public/`, not the project.** It holds `index.php` and
+the four asset directories and nothing else. Everything the app needs —
+`.env`, `config/`, `src/`, `vendor/`, `templates/`, the `noah` CLI — sits one
+level above it, where a request cannot name it at all.
+
+In cPanel: Domains → the domain → Document Root → append `/public`. In a plain
+vhost: `DocumentRoot /path/to/fh-trip-builder/public`, and the matching
+`<Directory>` block.
+
+Then copy both web server configs into place:
 ```bash
 cp .htaccess.example .htaccess
+cp public/.htaccess.example public/.htaccess
 ```
-The live `.htaccess` is not tracked by git, because hosting panels such as cPanel
-own that file and rewrite it — notably the generated block that pins the PHP
-version. Keeping it untracked stops a deploy from overwriting those changes. If
-your host has already created an `.htaccess`, leave it alone and just make sure
-it contains **both** rewrite blocks from `.htaccess.example` -- the refusal
-first, then the front controller.
+Neither live `.htaccess` is tracked by git, because hosting panels such as
+cPanel own those files and rewrite them — notably the generated block that pins
+the PHP version. Keeping them untracked stops a deploy from overwriting those
+changes. If your host has already created one, leave it alone and just make
+sure it contains the blocks from the matching `.example`.
 
-The refusal is the one that matters. The document root is this repository, so
-without it every file here is a URL: `.env`, `composer.lock`, and any `.php`
-under `src/` or `tests/` executed on request. After copying, check from
-outside:
+The two files do different jobs. `public/.htaccess` routes every URL to the
+front controller and refuses dotfiles. The one at the project root refuses
+*everything*, and on a correct deployment is never read — Apache reads
+`.htaccess` from the document root downward and never above it. It is there for
+the deployment where the document root was left pointing at the project: the
+site stops, which is the outcome to want. This project served `.env`,
+`composer.lock` and executed `.php` under `src/` and `tests/` for as long as
+nobody happened to type the URL, and that condition announces itself to nobody.
+
+After deploying, check from outside — every line should read `404`, because
+none of these is in the document root:
 
 ```bash
-for p in .env noah composer.lock src/Cdn.php config/; do
-  printf '%-16s %s\n' "/$p" "$(curl -sS -o /dev/null -w '%{http_code}' "https://YOUR-HOST/$p")"
+for p in .env noah composer.lock src/Cdn.php config/common/site.php templates/partials/header.html.twig; do
+  printf '%-40s %s\n' "/$p" "$(curl -sS -o /dev/null -w '%{http_code}' "https://YOUR-HOST/$p")"
 done
 ```
 
-Every line should read `403`. `/`, `/airside` and anything under `/frontend/`
-should still answer `200`.
+`/`, `/airside`, `/css/main.css` and `/js/global.js` should answer `200`, and
+`/.well-known/` must not be refused — that is where AutoSSL and Let's Encrypt
+write the challenge files that renew your certificate.
 
-### 4. Run Installation Command
+**If your host will not let you move the document root**, replace the refusal
+in the project root's `.htaccess` with a rewrite into `public/`:
+
+```apache
+RewriteEngine On
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ public/$1 [L]
+```
+
+Every request then lands inside `public/`, so `/composer.lock` becomes
+`/public/composer.lock`, which does not exist. It reaches the same place by a
+weaker route: the project root stays servable, and correctness depends on that
+rule being right rather than on the files being somewhere else.
+
+### 5. Run Installation Command
 Execute the following command to run the installation process:
 ```bash
 php noah install
 ```
 
-### 5. Import Help Articles
+### 6. Import Help Articles
 The help articles and the categories grouping them live in
 `config/content/help` as markdown, and are loaded into the database by their
 own command:
@@ -148,13 +181,13 @@ would be reverted on the next install. Keeping articles out of the seeders means
 the install cannot overwrite them, and this command is the only thing that
 writes them.
 
-### 6. Generate Flights
+### 7. Generate Flights
 To generate flight data, use the following command:
 ```bash
 php noah flights:add
 ```
 
-### 7. Access the Project
+### 8. Access the Project
 You're all set! Open your preferred web browser and navigate to the project URL to start using the application.
 
 ## Tests

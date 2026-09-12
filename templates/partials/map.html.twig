@@ -6,7 +6,7 @@
    View\MapView's business, not this template's.
 
    Two renderings of the one map, and only one of them is ever fetched. The div
-   is what frontend/js/map.js turns into a map you can pan; the picture inside
+   is what public/js/map.js turns into a map you can pan; the picture inside
    `<noscript>` is what a crawler and a scriptless browser get instead of an
    empty box. A browser running scripts never requests the picture, so it costs
    nothing to keep -- and it is the reason these pages still have indexable,

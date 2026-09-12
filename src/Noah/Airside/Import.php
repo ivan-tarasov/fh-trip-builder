@@ -47,7 +47,7 @@ final class Import extends AbstractCommand
 
     /**
      * Where a hero image has to be, and the first images *this repository*
-     * serves: there is no `frontend/img` before this and no template renders
+     * serves: there is no `public/img` before this and no template renders
      * an `<img>` from the checkout.
      *
      * Not the first images the site serves, which an earlier version of this
@@ -366,7 +366,7 @@ final class Import extends AbstractCommand
 
             foreach ($wanted as $kind => $files) {
                 foreach ($files as $file) {
-                    if (is_file(Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $file)) {
+                    if (is_file(Helper::getPublicDir() . '/' . self::IMAGE_DIR . '/' . $file)) {
                         continue;
                     }
 
@@ -375,7 +375,7 @@ final class Import extends AbstractCommand
                         $slug,
                         $kind,
                         $file,
-                        self::IMAGE_DIR,
+                        'public/' . self::IMAGE_DIR,
                     );
                 }
             }
@@ -452,7 +452,7 @@ final class Import extends AbstractCommand
     private static function stagedAuthorPicture(string $author): ?string
     {
         foreach (PostImages::authorFiles($author) as $file) {
-            if (is_file(Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $file)) {
+            if (is_file(Helper::getPublicDir() . '/' . self::IMAGE_DIR . '/' . $file)) {
                 return $file;
             }
         }
@@ -504,7 +504,7 @@ final class Import extends AbstractCommand
      */
     private static function stagedContents(string $file): string
     {
-        $contents = @file_get_contents(Helper::getRootDir() . '/' . self::IMAGE_DIR . '/' . $file);
+        $contents = @file_get_contents(Helper::getPublicDir() . '/' . self::IMAGE_DIR . '/' . $file);
 
         if ($contents === false) {
             throw new RuntimeException(sprintf('could not read `%s`', $file));
