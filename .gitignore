@@ -34,6 +34,7 @@ config.mysql.php
 # rewrite this file (e.g. the PHP handler block), so a tracked copy fights the
 # server on every deploy. Copy .htaccess.example into place instead.
 /.htaccess
+/public/.htaccess
 
 # Airside images are staged here and uploaded, not committed. The bucket holds
 # the only copy -- see the funnel's A8.6. `.gitkeep` stays so the directory

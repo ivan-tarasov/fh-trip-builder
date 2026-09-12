@@ -1,86 +1,35 @@
-# Template for the web server's .htaccess — copy it into place on deploy:
+# Template for the project root's .htaccess — copy it into place on deploy:
 #
 #     cp .htaccess.example .htaccess
 #
-# The live .htaccess is deliberately NOT tracked (see .gitignore). Hosting
-# panels such as cPanel own that file and rewrite it — for example the
-# "# php -- BEGIN cPanel-generated handler" block that pins the PHP version.
-# A tracked copy would collide with the server on every deploy, and pulling
-# over it would silently drop that block, leaving the app on the wrong PHP.
+# A tripwire, and on a correct deployment a dead file.
 #
-# So: copy this once, then let the server keep its own copy. If you re-copy it
-# later, re-add any panel-generated blocks afterwards.
+# The document root is public/ (E7.3, #141). Apache reads .htaccess from the
+# document root downward and never above it, so if the vhost is pointed where
+# it should be, nothing in here is ever consulted. It exists for the deployment
+# where that is not true: a docroot left at the repository root, a new server
+# set up from memory, a panel that reset it.
 #
-# Only two things on this disk are pages: index.php and frontend/. Everything
-# else that a request can name -- .env, config/, cache/, src/, tests/, vendor/,
-# the noah CLI, composer.lock, this file -- is refused before the router runs.
+# In that case every request here is refused and the site is down. That is the
+# intended outcome. The alternative is the one this project actually shipped
+# for a while -- .env, composer.lock and every .php under src/ and tests/
+# addressable, the last of them executed by the engine on request (E7, #138).
+# A site that is off announces itself in a minute; a site that is serving its
+# own source does not announce itself at all.
 #
-# Written as an allow-list on purpose. The docroot is the repository root, so
-# every file anybody ever adds to the root is a URL the moment it is pushed; a
-# deny-list would have to be remembered each time, and was not -- production
-# was serving composer.lock and executing files under src/ and tests/ as PHP.
-# Two allowed paths cannot drift.
+# So if you are reading this because the site returned 403: the fix is the
+# document root, not this file. Point the vhost at .../fh-trip-builder/public
+# and copy public/.htaccess.example into place there.
 #
-# -f and -d together: a real file is refused, and so is a real directory (which
-# Apache would otherwise list or index). The root itself is let through so that
-# / still reaches the router below.
+# If the host will not let you move the document root, replace the refusal
+# below with a rewrite into public/, which reaches the same place by a weaker
+# route -- the root stays servable and correctness depends on this rule rather
+# than on the files being elsewhere:
 #
-# REDIRECT_STATUS first, and it is what makes the rest safe to ship. The front
-# controller's [L] ends with an internal redirect to index.php, and per-directory
-# rules run again on that redirect -- with REQUEST_FILENAME now a real file. On
-# the Apache tested here the second pass also carries REQUEST_URI as /index.php,
-# which the allow-list lets through; on one that did not, every page on the site
-# would answer 403. The guard says: judge the request the browser made, and
-# never Apache's own.
-#
-# The proper fix is a public/ directory as the docroot, so that none of this is
-# reachable by construction -- that is E7.3. Until then this is the wall.
+#     RewriteEngine On
+#     RewriteCond %{REQUEST_URI} !^/public/
+#     RewriteRule ^(.*)$ public/$1 [L]
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteCond %{ENV:REDIRECT_STATUS} ^$
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteCond %{REQUEST_URI} !^/$
-    RewriteCond %{REQUEST_URI} !^/index\.php$
-    RewriteCond %{REQUEST_URI} !^/frontend(/|$)
     RewriteRule ^ - [F]
-</IfModule>
-
-# Front-controller routing: send every request that doesn't map to a real file
-# or directory through index.php, so clean URLs like /search/ and
-# /api/airports/autofill reach the router (index.php reads the path from
-# REQUEST_URI). Static assets still serve directly via the -f/-d checks --
-# which, after the block above, means frontend/ and nothing else.
-# Apache only; nginx does this in its vhost with try_files ... /index.php.
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ index.php [QSA,L]
-</IfModule>
-
-# The fonts are served from this app rather than from Google (see the #FONTS
-# section of frontend/css/main.css). Two things they need from the server:
-#
-# The media type, because Apache only learned font/woff2 in 2.4.26 and an older
-# host would serve them as application/octet-stream. Browsers still accept that
-# when the stylesheet declares format("woff2"), but the correct type is what
-# lets compression and caching rules match on it.
-<IfModule mod_mime.c>
-    AddType font/woff2 .woff2
-</IfModule>
-
-# And a long cache. A font file's contents never change -- a new version is a
-# new filename -- so there is nothing to revalidate. `immutable` tells the
-# browser not to even ask on a reload.
-<IfModule mod_headers.c>
-    <FilesMatch "\.woff2$">
-        Header set Cache-Control "public, max-age=31536000, immutable"
-    </FilesMatch>
-</IfModule>
-
-# Already compressed: woff2 is Brotli-compressed internally, so running it
-# through gzip again costs CPU and adds bytes.
-<IfModule mod_deflate.c>
-    SetEnvIfNoCase Request_URI "\.woff2$" no-gzip dont-vary
 </IfModule>
