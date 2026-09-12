@@ -24,6 +24,7 @@ use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 use TripBuilder\Noah\Flights\Realign as RealignFlights;
 use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
+use TripBuilder\Noah\Schedule\Run as ScheduleRun;
 
 try {
     /*
@@ -221,6 +222,20 @@ try {
     */
 
     $application->add(new AirsidePrune());
+
+    /*
+    |--------------------------------------------------------------------------
+    | The schedule
+    |--------------------------------------------------------------------------
+    |
+    | The only thing cron calls. What runs and when is config/noah/schedule.php,
+    | in git, so a rebuilt server does not take the schedule with it (E16, #167).
+    |
+    |     0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
+    |
+    */
+
+    $application->add(new ScheduleRun());
 
     /*
     |--------------------------------------------------------------------------
