@@ -1,25 +1,34 @@
-{# Light or dark, in the corner rather than the header.
+{# Light or dark, drawn as the two things it chooses between.
 
-   A circle the size of "back to top" and wearing the same border, surface and
-   shadow, because the two are now one stack and a pill beside a circle would
-   read as two unrelated things. Which of them is on top is not fixed: this one
-   sits at the bottom while there is nothing to scroll back to, and lifts above
-   the other when it appears -- so the control nearest the thumb is always the
-   one that is always there.
+   The control depicts the themes instead of wearing the current one, which is
+   why nothing in it takes a palette token: the dark track stays dark on a light
+   page and on a dark one, and a switch that restyled itself each time would
+   stop being a picture of the choice.
 
-   The icon is what you will get, not what you have: a moon means "make it
-   dark". That is the convention almost everywhere, and it is the one that
-   survives being seen without a label.
+   Collapsed it is a disc the size of "back to top" -- a pale face carrying a
+   rayed sun or a crescent moon, with a ring of its own sky around it. The glyph
+   is what makes it legible: a graded circle is a circle, and the first version
+   of this asked the colour alone to say "sun", which it does not. Hovered or focused the sky stretches to the
+   left, the disc slides to its side, and the half it uncovers is named in
+   words: Light, or Dark.
 
-   `aria-pressed` on a plain button, rather than `role="switch"`: there is no
-   track to look at, and "Dark theme, pressed" is what this is. The markup ships
-   unpressed for everybody because the same HTML goes to every reader -- the
-   head script has already applied the real palette and global.js corrects the
-   button. #}
+   The word is the state you are in, matching the disc beside it, because that
+   is what the references for this pattern do and because "the other one" is a
+   coin toss to read without a second cue.
+
+   Leftward because the button is pinned to the right edge, so that is the only
+   direction it can grow without moving out from under the pointer.
+
+   The two spans are scenery and are hidden from a screen reader; the whole
+   meaning is the button's name and its `aria-pressed`, which is also what the
+   stylesheet reads, so there is one source for "is it dark". #}
 <button type="button" class="theme-toggle js-theme" aria-pressed="false">
-    <span class="theme-toggle__icons" aria-hidden="true">
-        <i class="fas fa-moon theme-toggle__moon"></i>
-        <i class="fas fa-sun theme-toggle__sun"></i>
+    <span class="theme-toggle__track" aria-hidden="true"></span>
+    <span class="theme-toggle__word theme-toggle__word--light" aria-hidden="true">Light</span>
+    <span class="theme-toggle__word theme-toggle__word--dark" aria-hidden="true">Dark</span>
+    <span class="theme-toggle__disc" aria-hidden="true">
+        <i class="fas fa-sun theme-toggle__glyph theme-toggle__glyph--sun"></i>
+        <i class="fas fa-moon theme-toggle__glyph theme-toggle__glyph--moon"></i>
     </span>
     <span class="visually-hidden">Dark theme</span>
 </button>

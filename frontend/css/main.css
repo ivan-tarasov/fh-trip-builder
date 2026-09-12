@@ -5789,106 +5789,184 @@ body:has(main.article) .breadcrumbs__list {
 
 .currency__trigger[aria-expanded="true"] { background-color: rgba(255, 255, 255, .16); }
 
-/* The theme toggle, in the corner with "back to top".
+/* The theme toggle: a track with the sun or the moon riding on it.
 
-   Everything dimensional here is `.to-top`'s, deliberately: same diameter, same
-   border, same radius, same surface and shadow. They are a stack now, and two
-   controls in a stack that do not share a shape read as two accidents rather
-   than one set.
+   None of the colours here is a palette token, and that is the point. This
+   draws the two themes rather than belonging to one, so the night stays navy on
+   a light page and the day stays blue on a dark one. A control that restyled
+   itself with the thing it controls would stop being a picture of the choice.
 
-   `right`/`bottom` match it too, including the narrow-screen inset -- so the
-   two stay in the same column whatever the width. */
+   It grows to the left because it is pinned to the right edge -- the only
+   direction that leaves it under the pointer that reached for it. Width is what
+   moves, and on a fixed element with nothing beside it that is a repaint of one
+   box, not a reflow. */
+:root {
+  --toggle-size: 2.75rem;
+  --toggle-open: 7.25rem;   /* room for a word beside the disc */
+  --toggle-inset: .25rem;
+  --toggle-disc: calc(var(--toggle-size) - var(--toggle-inset) * 2);
+
+  /* The two tracks, and neither is a sky any more. The night one was already
+     close to the brand navy and read as native; the day one was a light blue
+     that appears nowhere else in this palette, so collapsed it was a foreign
+     blue dot in the corner. Pale and dark say "light" and "dark" without
+     needing a metaphor to carry it. */
+  --track-light: linear-gradient(160deg, #EFF3F8 0%, #D9E1EC 100%);
+  --track-dark: linear-gradient(160deg, #16233C 0%, #0B1426 100%);
+  --disc-face: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #F4F6FA 55%, #DDE3EC 100%);
+}
+
 .theme-toggle {
   position: fixed;
   right: 1.25rem;
   bottom: 1.25rem;
   z-index: 1030;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: var(--toggle-size);
+  height: var(--toggle-size);
   padding: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  background-color: var(--surface-raised);
-  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15);
-  color: var(--bs-primary);
-  font-size: 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .28);
   cursor: pointer;
-  /* `transform` carries the lift, and it is listed before the rest so the two
-     durations can differ: moving out of the way should be quicker to start
-     than a colour settling. */
-  transition: transform var(--dur-base) var(--ease-out),
-              background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+  transition: width var(--dur-base) var(--ease-out),
+              transform var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-fast) ease;
 }
 
-/* Out of the way of "back to top", which appears below it.
-
-   A transform and not `bottom`, so the lift is composited rather than relayout
-   -- and so the two can cross without the stack reflowing. The distance is that
-   button's own height plus the gap between them, written as its parts so it
-   stays right if either changes. */
-.theme-toggle.is-raised {
-  transform: translateY(calc(-2.75rem - .625rem));
-}
-
-.theme-toggle:hover {
-  background-color: var(--brand-accent-fill);
-  color: var(--on-brand);
+/* Focus opens it as well as hover. A keyboard never hovers, and half a control
+   that only exists under a pointer is half a control. */
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  width: var(--toggle-open);
+  box-shadow: 0 .5rem 1.25rem rgba(0, 0, 0, .34);
 }
 
 .theme-toggle:focus-visible {
   outline: 2px solid var(--brand-accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
-.theme-toggle:active {
-  transform: scale(.97);
-  transition: transform var(--dur-fast) var(--ease-out);
+/* Out of the way of "back to top". A transform, so the lift composites and does
+   not fight the width beside it. */
+.theme-toggle.is-raised {
+  transform: translateY(calc(-1 * var(--toggle-size) - .625rem));
 }
 
-.theme-toggle.is-raised:active {
-  transform: translateY(calc(-2.75rem - .625rem)) scale(.97);
-}
-
-/* The two icons, stacked on one spot so the swap is a cross-fade rather than a
-   reflow. The box is sized here because both children are taken out of flow and
-   the button would otherwise have nothing to be the size of. */
-.theme-toggle__icons {
-  position: relative;
-  display: block;
-  width: 1em;
-  height: 1em;
-}
-
-.theme-toggle__moon,
-.theme-toggle__sun {
+/* The sky. Both gradients are painted, and the one that is not wanted is faded
+   out -- crossfading two layers rather than animating a gradient, which is not
+   interpolable. */
+.theme-toggle__track,
+.theme-toggle__track::after {
   position: absolute;
   inset: 0;
+  border-radius: inherit;
+  background-image: var(--track-light);
+}
+
+.theme-toggle__track::after {
+  content: "";
+  background-image: var(--track-dark);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.theme-toggle[aria-pressed="true"] .theme-toggle__track::after { opacity: 1; }
+
+/* The word for the state you are in, in the half the disc is not covering.
+
+   This replaced a set of stars and a small cloud. Both were nicer to look at
+   and neither said which way the switch was thrown, which is the one thing a
+   switch has to say. */
+.theme-toggle__word {
+  position: absolute;
+  top: 50%;
+  width: calc(var(--toggle-open) - var(--toggle-disc) - var(--toggle-inset) * 2);
+  opacity: 0;
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  transform: translateY(-50%);
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+/* Opposite the disc: by day it sits left, so the word goes right. */
+.theme-toggle__word--light {
+  right: var(--toggle-inset);
+  color: #0E2136;
+}
+
+.theme-toggle__word--dark {
+  left: var(--toggle-inset);
+  color: #E7ECF5;
+}
+
+/* Only the one that matches, and only once there is a half to put it in. */
+.theme-toggle[aria-pressed="true"] .theme-toggle__word--light,
+.theme-toggle[aria-pressed="false"] .theme-toggle__word--dark { opacity: 0 !important; }
+
+.theme-toggle[aria-pressed="false"]:hover .theme-toggle__word--light,
+.theme-toggle[aria-pressed="false"]:focus-visible .theme-toggle__word--light,
+.theme-toggle[aria-pressed="true"]:hover .theme-toggle__word--dark,
+.theme-toggle[aria-pressed="true"]:focus-visible .theme-toggle__word--dark { opacity: 1; }
+
+/* The disc is the sun or the moon, and where it sits is the state: left is day,
+   right is night. Closed, the two coincide -- it fills the circle and has
+   nowhere to be, which is why `left` is the only thing that travels. */
+.theme-toggle__disc {
+  position: absolute;
+  top: var(--toggle-inset);
+  left: var(--toggle-inset);
+  width: var(--toggle-disc);
+  height: var(--toggle-disc);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  background-image: var(--disc-face);
+  box-shadow: 0 .0625rem .25rem rgba(0, 0, 0, .35);
+  transition: left var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
-/* Light is showing, so the moon is the offer. */
-.theme-toggle__sun {
+/* The sun and the moon themselves, and the reason there is a disc to put them
+   on rather than a bare icon: a glyph alone on the sky had nothing to separate
+   it from the sky, and a graded circle alone is a circle. The disc gives the
+   shape, the glyph gives the meaning. */
+.theme-toggle__glyph {
+  position: absolute;
+  font-size: .9375rem;
+  line-height: 1;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+
+/* #E07C00 was the first pick and measured 2.75 on the disc -- under the 3:1 a
+   graphic needs, which for the one glyph carrying the meaning is not a detail.
+   This is 3.77 and still reads as sunlight rather than as rust. */
+.theme-toggle__glyph--sun { color: #C06600; }
+.theme-toggle__glyph--moon { color: #1B2A4A; }
+
+/* Day: the sun is up. The one leaving turns as it goes, so the swap reads as
+   one thing becoming another rather than two things trading places. */
+.theme-toggle__glyph--moon { opacity: 0; transform: rotate(70deg) scale(.55); }
+.theme-toggle__glyph--sun { opacity: 1; transform: none; }
+
+.theme-toggle[aria-pressed="true"] .theme-toggle__glyph--sun {
   opacity: 0;
-  transform: rotate(-90deg) scale(.6);
+  transform: rotate(-70deg) scale(.55);
 }
 
-/* Dark is showing, so the sun is. The rotation is what makes this read as one
-   icon turning into the other rather than two swapping places. */
-.theme-toggle[aria-pressed="true"] .theme-toggle__moon {
-  opacity: 0;
-  transform: rotate(90deg) scale(.6);
-}
-
-.theme-toggle[aria-pressed="true"] .theme-toggle__sun {
+.theme-toggle[aria-pressed="true"] .theme-toggle__glyph--moon {
   opacity: 1;
   transform: none;
 }
+
+.theme-toggle[aria-pressed="true"]:hover .theme-toggle__disc,
+.theme-toggle[aria-pressed="true"]:focus-visible .theme-toggle__disc {
+  left: calc(var(--toggle-open) - var(--toggle-disc) - var(--toggle-inset));
+}
+
+.theme-toggle:active .theme-toggle__disc { transform: scale(.92); }
 
 @media (max-width: 575.98px) {
   .theme-toggle {
@@ -5896,6 +5974,8 @@ body:has(main.article) .breadcrumbs__list {
     bottom: .75rem;
   }
 }
+
+
 
 
 /* Right-aligned to the trigger, because the trigger is at the right end of the
