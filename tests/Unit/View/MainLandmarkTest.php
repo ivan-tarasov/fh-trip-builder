@@ -121,6 +121,6 @@ final class MainLandmarkTest extends TestCase
 
     private function root(): string
     {
-        return dirname(__DIR__, 3) . '/frontend/template';
+        return dirname(__DIR__, 3) . '/templates';
     }
 }

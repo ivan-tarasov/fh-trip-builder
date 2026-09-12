@@ -27,7 +27,7 @@ final class PlacePickerGroupingTest extends TestCase
     {
         self::assertStringContainsString(
             'data-in-city="{{ row.city_code }}"',
-            $this->read('frontend/template/search/form.html.twig'),
+            $this->read('templates/search/form.html.twig'),
             'without this the combobox cannot tell a child row from a standalone one',
         );
     }
@@ -66,7 +66,7 @@ final class PlacePickerGroupingTest extends TestCase
 
     public function testTheTemplateNamesTheAnchorTheBlockWasBuiltFor(): void
     {
-        $form = $this->read('frontend/template/search/form.html.twig');
+        $form = $this->read('templates/search/form.html.twig');
 
         self::assertStringContainsString('data-nearby="{{ near|join(\',\') }}"', $form, 'the codes');
         self::assertStringContainsString('data-nearby-for="{{ place.value }}"', $form, 'and what they were measured from');

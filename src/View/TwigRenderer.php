@@ -22,7 +22,10 @@ use Twig\Loader\FilesystemLoader;
 use Twig\TwigFunction;
 
 /**
- * Renders Twig templates from frontend/template with HTML auto-escaping.
+ * Renders Twig templates from templates/ with HTML auto-escaping.
+ *
+ * They sit outside the docroot on purpose: a .twig file has no handler, so
+ * anywhere the web server can reach it is a URL that serves its source.
  *
  * Templates are escaped by default and support inheritance/includes/loops, so
  * view assembly lives in the templates rather than in the controllers.
@@ -35,7 +38,7 @@ final readonly class TwigRenderer
 
     public function __construct()
     {
-        $loader = new FilesystemLoader(Helper::getRootDir() . '/frontend/template');
+        $loader = new FilesystemLoader(Helper::getRootDir() . '/templates');
 
         $this->twig = new Environment($loader, [
             'cache' => Helper::getRootDir() . '/cache/twig',

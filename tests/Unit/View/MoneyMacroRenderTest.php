@@ -153,13 +153,13 @@ final class MoneyMacroRenderTest extends TestCase
     }
 
     /**
-     * Every template, keyed by its path below frontend/template.
+     * Every template, keyed by its path below templates/.
      *
      * @return array<string, string>
      */
     private function templates(): array
     {
-        $root = Helper::getRootDir() . '/frontend/template';
+        $root = Helper::getRootDir() . '/templates';
         $found = [];
 
         /** @var iterable<SplFileInfo> $files */
@@ -196,7 +196,7 @@ final class MoneyMacroRenderTest extends TestCase
      */
     private function macro(string $name, array $price): string
     {
-        $twig = new Environment(new FilesystemLoader(Helper::getRootDir() . '/frontend/template'), [
+        $twig = new Environment(new FilesystemLoader(Helper::getRootDir() . '/templates'), [
             'autoescape' => 'html',
             'strict_variables' => true,
         ]);

@@ -251,7 +251,7 @@ final class PromisesTest extends TestCase
     /** @return list<string> */
     private static function templates(): array
     {
-        return self::filesUnder(__DIR__ . '/../../../frontend/template', '.twig');
+        return self::filesUnder(__DIR__ . '/../../../templates', '.twig');
     }
 
     /**
