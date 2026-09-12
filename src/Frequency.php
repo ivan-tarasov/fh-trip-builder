@@ -67,6 +67,21 @@ enum Frequency: string
 
         return $today <= $now
             ? $today
-            : $today->modify($this === self::Daily ? '-1 day' : '-1 hour');
+            : $today->modify('-' . $this->period());
+    }
+
+    /**
+     * One whole gap between runs, as a modifier.
+     *
+     * Used to step back to the previous occurrence, and as the grace a task
+     * gets before it is called stale: one missed night is a bad night, two is
+     * something nobody is looking at.
+     */
+    public function period(): string
+    {
+        return match ($this) {
+            self::Daily => '1 day',
+            self::Hourly => '1 hour',
+        };
     }
 }

@@ -16,13 +16,25 @@ namespace TripBuilder;
 final readonly class Health
 {
     /**
-     * @return array{status: string, db: string, version: string}
+     * `status` follows the database and not the schedule, deliberately.
+     *
+     * Rates being a day old is not a reason to tell a load balancer the site is
+     * down, and a check that cannot tell those apart gets muted. So a stopped
+     * scheduler shows in its own field, where a monitor can assert on it
+     * without confusing it with the site being unreachable (E16.2, #169).
+     *
+     * @param array<string, array{age: string, stale: bool}> $schedule
+     * @return array{status: string, db: string, schedule: string, tasks: array<string, string>, version: string}
      */
-    public static function report(bool $database, string $version): array
+    public static function report(bool $database, string $version, array $schedule = []): array
     {
+        $stale = array_filter($schedule, static fn(array $task): bool => $task['stale']);
+
         return [
             'status' => $database ? 'ok' : 'error',
             'db' => $database ? 'ok' : 'down',
+            'schedule' => $schedule === [] ? 'unknown' : ($stale === [] ? 'ok' : 'stale'),
+            'tasks' => array_map(static fn(array $task): string => $task['age'], $schedule),
             'version' => $version,
         ];
     }

@@ -207,6 +207,85 @@ final class ScheduleTest extends TestCase
     }
 
     /**
+     * A command that has never succeeded is stale, whatever its attempts say.
+     */
+    public function testACommandThatHasNeverWorkedIsStale(): void
+    {
+        $health = self::schedule([self::daily()])->health(
+            new DateTimeImmutable('2026-09-12 14:00:00'),
+            ['currency:rates' => ['last_run_at' => '2026-09-12 03:00:00', 'last_success_at' => null]],
+        );
+
+        self::assertSame('never', $health['currency:rates']['age']);
+        self::assertTrue($health['currency:rates']['stale']);
+    }
+
+    /**
+     * One missed night is a bad night. Two is something nobody is watching.
+     */
+    public function testOneMissedRunIsNotYetStale(): void
+    {
+        $schedule = self::schedule([self::daily()]);
+        $now = new DateTimeImmutable('2026-09-12 14:00:00');
+
+        self::assertFalse($schedule->health($now, [
+            'currency:rates' => ['last_success_at' => '2026-09-11 03:00:02'],
+        ])['currency:rates']['stale'], 'one missed night was called stale');
+
+        self::assertTrue($schedule->health($now, [
+            'currency:rates' => ['last_success_at' => '2026-09-10 03:00:02'],
+        ])['currency:rates']['stale'], 'two missed nights were not called stale');
+    }
+
+    /**
+     * Staleness reads the success and never the attempt.
+     *
+     * A command failing every night at 03:00 has a fresh `last_run_at` and a
+     * rotting `last_success_at`. Reading the first would call that healthy,
+     * which is the failure the two columns exist to separate.
+     */
+    public function testABusyFailingCommandIsStillStale(): void
+    {
+        $health = self::schedule([self::daily()])->health(
+            new DateTimeImmutable('2026-09-12 14:00:00'),
+            ['currency:rates' => [
+                'last_run_at' => '2026-09-12 03:00:00',
+                'last_success_at' => '2026-09-01 03:00:02',
+                'last_exit' => 1,
+            ]],
+        );
+
+        self::assertTrue($health['currency:rates']['stale']);
+        self::assertSame('11d', $health['currency:rates']['age']);
+    }
+
+    public function testAgeIsReportedInTheCoarsestUsefulUnit(): void
+    {
+        $schedule = self::schedule([self::daily()]);
+        $now = new DateTimeImmutable('2026-09-12 14:00:00');
+
+        $age = static fn(string $at): string => $schedule->health(
+            $now,
+            ['currency:rates' => ['last_success_at' => $at]],
+        )['currency:rates']['age'];
+
+        self::assertSame('30m', $age('2026-09-12 13:30:00'));
+        self::assertSame('4h', $age('2026-09-12 10:00:00'));
+        self::assertSame('2d', $age('2026-09-10 14:00:00'));
+    }
+
+    public function testIsStaleAnswersForTheWholeSchedule(): void
+    {
+        $schedule = self::schedule([self::daily()]);
+        $now = new DateTimeImmutable('2026-09-12 14:00:00');
+
+        self::assertFalse($schedule->isStale($now, [
+            'currency:rates' => ['last_success_at' => '2026-09-12 03:00:02'],
+        ]));
+        self::assertTrue($schedule->isStale($now, []));
+    }
+
+    /**
      * @param list<array<string, mixed>> $tasks
      */
     private static function fixture(array $tasks): string

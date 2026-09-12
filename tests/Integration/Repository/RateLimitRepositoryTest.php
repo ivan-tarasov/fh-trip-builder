@@ -104,7 +104,7 @@ final class RateLimitRepositoryTest extends IntegrationTestCase
             [RateLimit::Vote->value, '198.51.100.9', date('Y-m-d H:00:00', strtotime('-2 days')), 5],
         );
 
-        self::assertSame(1, $limits->prune());
+        self::assertSame(1, $limits->prune(date('Y-m-d H:i:s', strtotime('-1 day'))));
         self::assertSame(
             1,
             (int) $this->connection()->fetchValue(

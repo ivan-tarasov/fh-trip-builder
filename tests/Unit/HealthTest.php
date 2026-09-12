@@ -14,7 +14,13 @@ final class HealthTest extends TestCase
     {
         self::assertSame(200, Health::statusCode(true));
         self::assertSame(
-            ['status' => 'ok', 'db' => 'ok', 'version' => 'v1.2.3-develop-abc1234'],
+            [
+                'status' => 'ok',
+                'db' => 'ok',
+                'schedule' => 'unknown',
+                'tasks' => [],
+                'version' => 'v1.2.3-develop-abc1234',
+            ],
             Health::report(true, 'v1.2.3-develop-abc1234'),
         );
     }
@@ -31,7 +37,13 @@ final class HealthTest extends TestCase
     {
         self::assertSame(503, Health::statusCode(false));
         self::assertSame(
-            ['status' => 'error', 'db' => 'down', 'version' => 'v1.2.3-develop-abc1234'],
+            [
+                'status' => 'error',
+                'db' => 'down',
+                'schedule' => 'unknown',
+                'tasks' => [],
+                'version' => 'v1.2.3-develop-abc1234',
+            ],
             Health::report(false, 'v1.2.3-develop-abc1234'),
         );
     }
@@ -43,6 +55,44 @@ final class HealthTest extends TestCase
     public function testAFailingDatabaseIsNotReportedAsAnApplicationError(): void
     {
         self::assertNotSame(500, Health::statusCode(false));
+    }
+
+    /**
+     * A stale schedule does not make the site look down.
+     *
+     * Rates being two days old is not a reason to tell a load balancer to stop
+     * sending traffic, and a check that cannot tell those apart is a check that
+     * gets muted. So it is its own field.
+     */
+    public function testAStaleScheduleIsReportedWithoutFailingTheCheck(): void
+    {
+        $report = Health::report(true, 'v1', [
+            'currency:rates' => ['age' => '2d', 'stale' => true],
+            'db:prune --force' => ['age' => '3h', 'stale' => false],
+        ]);
+
+        self::assertSame('stale', $report['schedule']);
+        self::assertSame('ok', $report['status'], 'a stale cron made the site look down');
+        self::assertSame(200, Health::statusCode(true));
+        self::assertSame(['currency:rates' => '2d', 'db:prune --force' => '3h'], $report['tasks']);
+    }
+
+    public function testAHealthyScheduleSaysSo(): void
+    {
+        $report = Health::report(true, 'v1', ['currency:rates' => ['age' => '3h', 'stale' => false]]);
+
+        self::assertSame('ok', $report['schedule']);
+    }
+
+    /**
+     * With no records to read, the answer is "unknown" and not "ok".
+     *
+     * Reporting ok would be reporting on a question that was never asked, and
+     * that is the one thing a health endpoint must not do.
+     */
+    public function testAnUnreadableScheduleIsNotReportedAsHealthy(): void
+    {
+        self::assertSame('unknown', Health::report(true, 'v1', [])['schedule']);
     }
 
     /**

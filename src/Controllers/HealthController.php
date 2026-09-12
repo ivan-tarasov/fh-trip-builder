@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use DateTimeImmutable;
 use Throwable;
 use TripBuilder\Health;
 use TripBuilder\Helper;
 use TripBuilder\Log;
+use TripBuilder\Repository\ScheduleRunRepository;
+use TripBuilder\Schedule;
 
 /**
  * One URL that says whether this is working.
@@ -37,7 +40,31 @@ final class HealthController extends AbstractController
 
         http_response_code(Health::statusCode($database));
 
-        echo json_encode(Health::report($database, $this->version()), JSON_UNESCAPED_SLASHES);
+        echo json_encode(
+            Health::report($database, $this->version(), $database ? $this->schedule() : []),
+            JSON_UNESCAPED_SLASHES,
+        );
+    }
+
+    /**
+     * How the scheduled commands are doing.
+     *
+     * Only asked when the database answered, because these records come from
+     * it -- reporting "never" for everything because the connection is down
+     * would be saying the same thing twice and one of them wrongly.
+     *
+     * @return array<string, array{age: string, stale: bool}>
+     */
+    private function schedule(): array
+    {
+        try {
+            return Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php')
+                ->health(new DateTimeImmutable(), new ScheduleRunRepository($this->connection())->all());
+        } catch (Throwable $e) {
+            Log::error('Health check could not read the schedule: ' . $e->getMessage());
+
+            return [];
+        }
     }
 
     /**

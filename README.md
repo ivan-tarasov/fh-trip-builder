@@ -257,12 +257,51 @@ it.
 
 **What you give up by having one line.** With a line per task, a broken one is
 isolated. With one, if `schedule:run` stops firing then rates go stale and
-retention stops applying, together, and nothing says so. `schedule_runs` records
-when each command last *started* and when it last *worked* — a command failing
-every night has a fresh first and a rotting second — and the health endpoint
-reports the age of the second. That makes a stopped scheduler **visible when
-you look**. Being *told* needs something outside polling that endpoint, which
-this project does not have and should not be assumed to.
+retention stops applying, together, and nothing says so.
+
+Two things watch for that. `schedule_runs` records when each command last
+*started* and when it last *worked* — a command failing every night has a fresh
+first and a rotting second — and `/health` reports the age of the second. And
+because a broken crontab does not stop page requests, an ordinary request
+checks the same thing at most once an hour and writes a line to the log when
+something has stopped:
+
+```
+[19ba8457] Scheduled command `currency:rates` last worked 4d ago. Is cron still running `schedule:run`?
+```
+
+A task gets one whole period of grace first: a daily command that missed last
+night is a bad night, one that has missed two is something nobody is watching.
+
+That makes a stopped scheduler **visible when you look**. Being *told* needs
+something outside polling `/health`, which this project does not have and
+should not be assumed to.
+
+## Health
+
+```bash
+curl -sS https://YOUR-HOST/health
+```
+
+```json
+{"status":"ok","db":"ok","schedule":"ok","tasks":{"currency:rates":"4h","db:prune --force":"4h"},"version":"v2.9.1-develop-1e47c8e"}
+```
+
+`200` when a trivial query reaches the database, `503` when it does not. No
+authentication and nothing sensitive: the version is already in the footer of
+every page, and a check that needs a credential stops working the day the
+credential rotates.
+
+**`status` follows the database and not the schedule.** Rates being two days
+old is not a reason to tell a load balancer the site is down, so a stopped
+scheduler shows in `schedule` instead — a monitor can assert on that field
+without confusing it with the site being unreachable. `schedule` reads
+`unknown` when the records could not be read at all, which is not the same as
+`ok`.
+
+It exists because most of this application degrades rather than fails: a page
+will return `200` having swallowed a database error into an empty block, which
+is right for a visitor and useless for a monitor.
 
 ## Tests
 
