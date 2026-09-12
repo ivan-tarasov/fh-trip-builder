@@ -354,6 +354,13 @@
     --brand-danger-fill: var(--d-brand-danger-fill);
     --switch-knob: var(--d-switch-knob);
     --bs-primary-rgb: 28, 41, 66;
+    /* The other triplets, for the same reason as the one above: Bootstrap's
+       utilities paint from these and not from the variables beside them, so a
+       literal here keeps its light value while everything around it moves.
+       `.text-success` was #146C43 on a dark panel at 2.65 because of it. */
+    --bs-success-rgb: 61, 214, 140;
+    --bs-danger-rgb: 241, 112, 124;
+    --bs-link-color-rgb: 42, 195, 178;
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
@@ -417,6 +424,13 @@
     --brand-danger-fill: var(--d-brand-danger-fill);
     --switch-knob: var(--d-switch-knob);
     --bs-primary-rgb: 28, 41, 66;
+    /* The other triplets, for the same reason as the one above: Bootstrap's
+       utilities paint from these and not from the variables beside them, so a
+       literal here keeps its light value while everything around it moves.
+       `.text-success` was #146C43 on a dark panel at 2.65 because of it. */
+    --bs-success-rgb: 61, 214, 140;
+    --bs-danger-rgb: 241, 112, 124;
+    --bs-link-color-rgb: 42, 195, 178;
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
