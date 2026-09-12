@@ -9,6 +9,7 @@ use TripBuilder\ArticleRating;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Http\RateLimit;
+use TripBuilder\Log;
 use TripBuilder\Money;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
@@ -127,7 +128,7 @@ class AjaxController extends AbstractController
             $cancelled = new BookingRepository($this->connection())
                 ->cancelForSession($this->get['booking_id'], session_id());
         } catch (Throwable $e) {
-            error_log('Booking cancel failed: ' . $e->getMessage());
+            Log::error('Booking cancel failed: ' . $e->getMessage());
             $cancelled = 0;
         }
 
@@ -316,7 +317,7 @@ class AjaxController extends AbstractController
         } catch (Throwable $e) {
             // The reason goes to the log, not to the page: a visitor cannot act
             // on it and a database error is not theirs to read.
-            error_log('Subscribe failed: ' . $e->getMessage());
+            Log::error('Subscribe failed: ' . $e->getMessage());
             $this->answerSubscribe($asJson, 500, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
@@ -378,7 +379,7 @@ class AjaxController extends AbstractController
         try {
             $known = new ArticleRepository($this->connection())->all();
         } catch (Throwable $e) {
-            error_log('Article vote allow-list unavailable: ' . $e->getMessage());
+            Log::error('Article vote allow-list unavailable: ' . $e->getMessage());
             $this->answerVote($asJson, 500, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
@@ -418,7 +419,7 @@ class AjaxController extends AbstractController
         } catch (Throwable $e) {
             // The reason goes to the log, not to the page, as with subscribe:
             // a visitor cannot act on it and a database error is not theirs.
-            error_log('Article vote failed: ' . $e->getMessage());
+            Log::error('Article vote failed: ' . $e->getMessage());
             $this->answerVote($asJson, 500, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
@@ -483,7 +484,7 @@ class AjaxController extends AbstractController
         try {
             $known = new PostRepository($this->connection())->all();
         } catch (Throwable $e) {
-            error_log('Post vote allow-list unavailable: ' . $e->getMessage());
+            Log::error('Post vote allow-list unavailable: ' . $e->getMessage());
             $this->answerVote($asJson, 500, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
@@ -523,7 +524,7 @@ class AjaxController extends AbstractController
         } catch (Throwable $e) {
             // The reason goes to the log, not to the page, as with subscribe:
             // a visitor cannot act on it and a database error is not theirs.
-            error_log('Post vote failed: ' . $e->getMessage());
+            Log::error('Post vote failed: ' . $e->getMessage());
             $this->answerVote($asJson, 500, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',

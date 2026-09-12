@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\Helper;
+use TripBuilder\Log;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\View\Directory;
 use TripBuilder\View\TwigRenderer;
@@ -33,7 +34,7 @@ class AirlinesController extends AbstractController
                 ),
             ]);
         } catch (Throwable $e) {
-            error_log('Airlines page failed: ' . $e->getMessage());
+            Log::error('Airlines page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading airlines. Please try again later.';
         }
     }

@@ -9,6 +9,7 @@ use Throwable;
 use TripBuilder\Database\Connection;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Http\Request;
+use TripBuilder\Log;
 use TripBuilder\Repository\RateLimitRepository;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\TwigRenderer;
@@ -56,7 +57,7 @@ class AbstractController
             return new RateLimitRepository($this->connection())
                 ->exceeded($limit, $this->request->clientIp());
         } catch (Throwable $e) {
-            error_log('Rate limit check failed: ' . $e->getMessage());
+            Log::error('Rate limit check failed: ' . $e->getMessage());
 
             return false;
         }

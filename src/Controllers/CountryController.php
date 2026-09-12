@@ -8,6 +8,7 @@ use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Log;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FlightRepository;
@@ -46,7 +47,7 @@ class CountryController extends AbstractController
                 ),
             ]);
         } catch (Throwable $e) {
-            error_log('Countries page failed: ' . $e->getMessage());
+            Log::error('Countries page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading countries. Please try again later.';
         }
     }
@@ -94,7 +95,7 @@ class CountryController extends AbstractController
                 'fares' => $this->fares($cities, $country, array_column($airports, 'code')),
             ]);
         } catch (Throwable $e) {
-            error_log('Country page failed: ' . $e->getMessage());
+            Log::error('Country page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this country. Please try again later.';
         }
     }

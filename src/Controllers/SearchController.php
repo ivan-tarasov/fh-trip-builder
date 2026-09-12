@@ -14,6 +14,7 @@ use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Http\Input;
+use TripBuilder\Log;
 use TripBuilder\Repository\AircraftRepository;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
@@ -366,7 +367,7 @@ class SearchController extends AbstractController
                 )),
             ]);
         } catch (Exception $e) {
-            error_log('Search page failed: ' . $e->getMessage());
+            Log::error('Search page failed: ' . $e->getMessage());
             echo 'Something went wrong while searching for flights. Please try again later.';
         }
     }
