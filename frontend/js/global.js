@@ -3287,4 +3287,75 @@
         mark(current().id);
     }());
 
+    /* The theme switcher.
+
+       The head script has already applied the stored choice before anything was
+       painted; this only has to make the buttons agree with it and write the
+       next one. Splitting it that way is deliberate -- the part that must run
+       before first paint is four lines inline, and the part that can wait until
+       the page is interactive lives here with everything else.
+
+       Three states and only two of them are stored. `system` removes the
+       attribute and the key, which hands the decision back to the media query
+       in main.css rather than freezing today's answer -- so a machine that
+       switches at sunset switches this with it. */
+    (function () {
+        var group = document.querySelector('.js-theme');
+
+        if (group === null) {
+            return;
+        }
+
+        var options = group.querySelectorAll('[data-theme-choice]');
+
+        var stored = function () {
+            try {
+                var choice = window.localStorage.getItem('tb-theme');
+
+                return choice === 'light' || choice === 'dark' ? choice : 'system';
+            } catch (e) {
+                // Blocked site data. The control still works for this page,
+                // it just cannot remember -- which is better than not drawing.
+                return 'system';
+            }
+        };
+
+        var show = function (choice) {
+            options.forEach(function (option) {
+                var on = option.getAttribute('data-theme-choice') === choice;
+
+                option.classList.toggle('is-on', on);
+                option.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        };
+
+        var apply = function (choice) {
+            if (choice === 'system') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', choice);
+            }
+
+            try {
+                if (choice === 'system') {
+                    window.localStorage.removeItem('tb-theme');
+                } else {
+                    window.localStorage.setItem('tb-theme', choice);
+                }
+            } catch (e) {}
+
+            show(choice);
+        };
+
+        options.forEach(function (option) {
+            option.addEventListener('click', function () {
+                apply(option.getAttribute('data-theme-choice'));
+            });
+        });
+
+        // The markup ships with `system` pressed for everybody, because it is
+        // the same HTML for every reader and the choice is per-browser.
+        show(stored());
+    }());
+
 })(jQuery);

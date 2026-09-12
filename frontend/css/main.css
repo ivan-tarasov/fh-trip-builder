@@ -5659,6 +5659,53 @@ body:has(main.article) .breadcrumbs__list {
 
 .currency__trigger[aria-expanded="true"] { background-color: rgba(255, 255, 255, .16); }
 
+/* The theme control, beside the currency one and on the same dark band.
+
+   It sits on `--brand-ink-fill` in both palettes -- the header is the navy
+   expanse either way -- so it is styled against dark and not against the page.
+   That is why nothing here reads `--ink-body` or `--surface`: those flip, and
+   this ground does not. */
+.theme {
+  display: inline-flex;
+  align-items: center;
+  gap: .125rem;
+  padding: .1875rem;
+  border-radius: .625rem;
+  background-color: rgba(255, 255, 255, .08);
+}
+
+.theme__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: .5rem;
+  background-color: transparent;
+  color: var(--ink-on-dark);
+  font-size: .9375rem;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.theme__option:hover { color: var(--on-brand); }
+
+/* The pressed one, which is the whole point of showing three buttons instead
+   of hiding them behind a trigger. */
+.theme__option.is-on {
+  background-color: rgba(255, 255, 255, .18);
+  color: var(--on-brand);
+}
+
+/* Visible focus, because these are 2rem targets with no text: a ring that only
+   showed on hover would leave the keyboard with nothing. */
+.theme__option:focus-visible {
+  outline: 2px solid var(--on-brand);
+  outline-offset: 1px;
+}
+
 /* Right-aligned to the trigger, because the trigger is at the right end of the
    header and a panel hanging off its left edge would leave the screen. */
 .currency__panel {
