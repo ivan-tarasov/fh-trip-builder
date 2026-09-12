@@ -50,14 +50,19 @@ final readonly class RateLimitRepository
      * Drop counters for hours that have passed.
      *
      * A row is never read again once its hour is over, so this is housekeeping
-     * rather than correctness. E9 (#146) is the command that will call it; a
-     * day of slack so a support question about "earlier today" still has rows
-     * to look at.
+     * rather than correctness. `db:prune` calls it (E9, #146); a day of slack
+     * so a support question about "earlier today" still has rows to look at.
+     *
+     * The cutoff is passed in rather than computed as `NOW() - INTERVAL 1 DAY`,
+     * because `window_start` is written with PHP's clock and this database's is
+     * four hours behind it. Every timestamp this family of tables writes and
+     * reads is PHP's, so the comparison is too.
      */
-    public function prune(): int
+    public function prune(string $before): int
     {
         return $this->connection->execute(
-            'DELETE FROM ' . Table::RateLimits->value . ' WHERE window_start < (NOW() - INTERVAL 1 DAY)',
+            'DELETE FROM ' . Table::RateLimits->value . ' WHERE window_start < ?',
+            [$before],
         );
     }
 

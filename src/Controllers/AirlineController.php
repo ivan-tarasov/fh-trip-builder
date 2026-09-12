@@ -8,6 +8,7 @@ use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Log;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\FlightRepository;
@@ -110,7 +111,7 @@ class AirlineController extends AbstractController
                 'window_days' => AirlineRepository::WINDOW_DAYS,
             ]);
         } catch (Throwable $e) {
-            error_log('Airline page failed: ' . $e->getMessage());
+            Log::error('Airline page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this airline. Please try again later.';
         }
     }

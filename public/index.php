@@ -16,7 +16,9 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 use TripBuilder\Config;
 use TripBuilder\Http\Request;
 use TripBuilder\Http\SecurityHeaders;
+use TripBuilder\Log;
 use TripBuilder\Routes;
+use TripBuilder\ScheduleWatch;
 use TripBuilder\Timer;
 use TripBuilder\View\TwigRenderer;
 
@@ -30,6 +32,20 @@ try {
 
     // Before anything can echo, because headers are fixed once output starts.
     SecurityHeaders::send($request);
+
+    // One id for this request: on the response so somebody reporting a broken
+    // page can quote it, and on every line it writes to the log so the two can
+    // be put side by side. Registers the one-line-per-request handler too.
+    header('X-Request-Id: ' . Log::begin());
+
+    // A shutdown function, not a line at the end of this file: the request
+    // most worth a log line is the one that died before reaching the end.
+    register_shutdown_function(Log::finish(...), $request->method(), $request->path());
+
+    // The site is the only part of this still running when cron is not, so an
+    // ordinary page request is what notices (E16.2, #169). After the response,
+    // and at most once an hour.
+    register_shutdown_function(ScheduleWatch::warnIfStale(...));
 
     // We using sessions here...
     session_set_cookie_params([
@@ -100,7 +116,7 @@ try {
 
     // This is the end...
 } catch (Throwable $e) {
-    error_log(sprintf(
+    Log::error(sprintf(
         'Unhandled %s: %s in %s:%d',
         $e::class,
         $e->getMessage(),

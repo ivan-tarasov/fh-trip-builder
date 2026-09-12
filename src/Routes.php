@@ -18,6 +18,9 @@ class Routes
         '/airlines' => 'Airlines@index',
         '/airports' => 'Airports@index',
         '/about' => 'About@index',
+        // Not a page: see EXCLUDE_HEADER_FOOTER, which also keeps it out of the
+        // sitemap and the index.
+        '/health' => 'Health@index',
         // Every city we sell to, in one place. Sixty of the 231 city pages had
         // no inbound link before this existed -- see CityRepository::all().
         '/cities' => 'City@index',
@@ -164,6 +167,10 @@ class Routes
     public const array EXCLUDE_HEADER_FOOTER = [
         'Api',
         'Ajax',
+        // Answers JSON to a monitor. Listing it here does three things at once:
+        // no layout, no sitemap entry, and no robots invitation -- because
+        // isPublic() reads this list too.
+        'Health',
     ];
 
     /**

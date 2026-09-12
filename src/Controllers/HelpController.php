@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use RuntimeException;
 use Throwable;
 use TripBuilder\ArticleRating;
+use TripBuilder\Log;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
@@ -166,7 +167,7 @@ class HelpController extends AbstractController
                 'verdict' => $this->verdict($slug),
             ]);
         } catch (Throwable $e) {
-            error_log('Help page failed: ' . $e->getMessage());
+            Log::error('Help page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this page. Please try again later.';
         }
     }
@@ -303,7 +304,7 @@ class HelpController extends AbstractController
             // count. Logged and returned empty, which both callers read as
             // "no such article" and answer 404 -- an honest answer, where a
             // stack trace would not be.
-            error_log('Help articles unavailable: ' . $e->getMessage());
+            Log::error('Help articles unavailable: ' . $e->getMessage());
 
             return [];
         }

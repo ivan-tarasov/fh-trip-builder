@@ -8,6 +8,7 @@ use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Log;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\RouteRepository;
@@ -50,7 +51,7 @@ class CityController extends AbstractController
                 ),
             ]);
         } catch (Throwable $e) {
-            error_log('Cities page failed: ' . $e->getMessage());
+            Log::error('Cities page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading cities. Please try again later.';
         }
     }
@@ -101,7 +102,7 @@ class CityController extends AbstractController
                 ),
             ]);
         } catch (Throwable $e) {
-            error_log('City page failed: ' . $e->getMessage());
+            Log::error('City page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this city. Please try again later.';
         }
     }

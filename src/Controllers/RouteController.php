@@ -9,6 +9,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\GreatCircle;
 use TripBuilder\Helper;
+use TripBuilder\Log;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\RouteRepository;
 use TripBuilder\RouteAddress;
@@ -140,7 +141,7 @@ class RouteController extends AbstractController
                 'reverse' => self::backAgain($routes, $from, $to, $destinations, $origins),
             ]);
         } catch (Throwable $e) {
-            error_log('Route page failed: ' . $e->getMessage());
+            Log::error('Route page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this route. Please try again later.';
         }
     }

@@ -101,7 +101,10 @@ final class Prune extends AbstractCommand
 
         try {
             $removed = $bookings->forgetDepartedBefore($cutoff);
-            $counters = new RateLimitRepository($connection)->prune();
+            // A day of counters, measured on the same clock that wrote them.
+            $counters = new RateLimitRepository($connection)->prune(
+                new DateTimeImmutable()->modify('-1 day')->format('Y-m-d H:i:s'),
+            );
         } catch (Throwable $e) {
             $this->io->error('Stopped partway: ' . $e->getMessage());
 

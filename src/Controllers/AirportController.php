@@ -10,6 +10,7 @@ use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Log;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
@@ -88,7 +89,7 @@ class AirportController extends AbstractController
                 ),
             ]);
         } catch (Throwable $e) {
-            error_log('Airport page failed: ' . $e->getMessage());
+            Log::error('Airport page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this airport. Please try again later.';
         }
     }

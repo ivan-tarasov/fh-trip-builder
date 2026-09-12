@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\Config;
+use TripBuilder\Log;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\TwigRenderer;
 
@@ -48,7 +49,7 @@ class LegalController extends AbstractController
                 'more' => self::addressable(array_diff_key($documents, [$slug => null])),
             ]);
         } catch (Throwable $e) {
-            error_log('Legal page failed: ' . $e->getMessage());
+            Log::error('Legal page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this page. Please try again later.';
         }
     }

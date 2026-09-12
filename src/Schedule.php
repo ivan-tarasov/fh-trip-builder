@@ -100,4 +100,78 @@ final readonly class Schedule
 
         return $due;
     }
+
+    /**
+     * How each command is doing, for the health endpoint and the warning.
+     *
+     * Reads `last_success_at` and never `last_run_at`. A command failing every
+     * night has a fresh attempt and a rotting success, and the attempt is the
+     * one that looks healthy -- which is the whole reason there are two
+     * columns (E16.2, #169).
+     *
+     * One whole period of grace before "stale". A daily task that missed last
+     * night is a bad night; one that has missed two is something nobody is
+     * watching.
+     *
+     * @param array<string, array{last_success_at?: ?string, ...}> $records
+     * @return array<string, array{age: string, stale: bool}>
+     */
+    public function health(DateTimeImmutable $now, array $records): array
+    {
+        $health = [];
+
+        foreach ($this->tasks as $task) {
+            $success = $records[$task['command']]['last_success_at'] ?? null;
+
+            if ($success === null) {
+                $health[$task['command']] = ['age' => 'never', 'stale' => true];
+
+                continue;
+            }
+
+            $at = new DateTimeImmutable($success);
+            $expectedBy = $task['every']->lastOccurrence($now, $task['at'])->modify('-' . $task['every']->period());
+
+            $health[$task['command']] = [
+                'age' => self::age($at, $now),
+                'stale' => $at < $expectedBy,
+            ];
+        }
+
+        return $health;
+    }
+
+    /**
+     * Whether anything on the schedule has stopped working.
+     *
+     * @param array<string, array{last_success_at?: ?string, ...}> $records
+     */
+    public function isStale(DateTimeImmutable $now, array $records): bool
+    {
+        foreach ($this->health($now, $records) as $task) {
+            if ($task['stale']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * How long ago, in the coarsest unit that still says something.
+     *
+     * Minutes below an hour, hours below a day, then days. A monitor comparing
+     * `4h` against `2d` does not need the seconds, and a person reading the log
+     * at three in the morning does not want them.
+     */
+    private static function age(DateTimeImmutable $at, DateTimeImmutable $now): string
+    {
+        $seconds = max(0, $now->getTimestamp() - $at->getTimestamp());
+
+        return match (true) {
+            $seconds < 3600 => intdiv($seconds, 60) . 'm',
+            $seconds < 86400 => intdiv($seconds, 3600) . 'h',
+            default => intdiv($seconds, 86400) . 'd',
+        };
+    }
 }

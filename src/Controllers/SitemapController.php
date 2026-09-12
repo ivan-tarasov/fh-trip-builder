@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\Helper;
+use TripBuilder\Log;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\ArticleRepository;
@@ -74,7 +75,7 @@ class SitemapController extends AbstractController
             // throws inside it throws uncaught and the crawler gets a 500
             // instead of a short sitemap. That is why the help articles moved
             // out of it when they became rows.
-            error_log('Sitemap places failed: ' . $e->getMessage());
+            Log::error('Sitemap places failed: ' . $e->getMessage());
             $urls = $this->staticPaths();
         }
 

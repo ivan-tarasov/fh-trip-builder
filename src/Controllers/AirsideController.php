@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\ArticleRating;
+use TripBuilder\Log;
 use TripBuilder\Repository\PostImageRepository;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostTagRepository;
@@ -43,7 +44,7 @@ class AirsideController extends AbstractController
         try {
             $posts = new PostRepository($this->connection())->all();
         } catch (Throwable $e) {
-            error_log('Airside index failed: ' . $e->getMessage());
+            Log::error('Airside index failed: ' . $e->getMessage());
             $this->notFound();
 
             return;
@@ -72,7 +73,7 @@ class AirsideController extends AbstractController
         try {
             $post = new PostRepository($this->connection())->find($slug);
         } catch (Throwable $e) {
-            error_log('Airside page failed: ' . $e->getMessage());
+            Log::error('Airside page failed: ' . $e->getMessage());
             echo 'Something went wrong while loading this page. Please try again later.';
 
             return;
@@ -144,7 +145,7 @@ class AirsideController extends AbstractController
             $name = new PostTagRepository($connection)->name($tag);
             $posts = $name === null ? [] : new PostRepository($connection)->taggedWith($tag);
         } catch (Throwable $e) {
-            error_log('Airside tag page failed: ' . $e->getMessage());
+            Log::error('Airside tag page failed: ' . $e->getMessage());
             $this->notFound();
 
             return;
@@ -175,7 +176,7 @@ class AirsideController extends AbstractController
         try {
             return new PostTagRepository($this->connection())->forPost($slug);
         } catch (Throwable $e) {
-            error_log('Airside tags failed: ' . $e->getMessage());
+            Log::error('Airside tags failed: ' . $e->getMessage());
 
             return [];
         }
@@ -195,7 +196,7 @@ class AirsideController extends AbstractController
         try {
             return new PostImageRepository($this->connection())->all();
         } catch (Throwable $e) {
-            error_log('Airside image sizes failed: ' . $e->getMessage());
+            Log::error('Airside image sizes failed: ' . $e->getMessage());
 
             return [];
         }
@@ -217,7 +218,7 @@ class AirsideController extends AbstractController
         try {
             return new PostRepository($this->connection())->related($slug, 4);
         } catch (Throwable $e) {
-            error_log('Airside related failed: ' . $e->getMessage());
+            Log::error('Airside related failed: ' . $e->getMessage());
 
             return [];
         }
@@ -247,7 +248,7 @@ class AirsideController extends AbstractController
 
             return new PostRepository($connection)->bySlugs(array_slice($wanted, 0, 3));
         } catch (Throwable $e) {
-            error_log('Airside most liked failed: ' . $e->getMessage());
+            Log::error('Airside most liked failed: ' . $e->getMessage());
 
             return [];
         }
@@ -279,7 +280,7 @@ class AirsideController extends AbstractController
                 'shown' => ArticleRating::worthShowing($tally['votes']),
             ];
         } catch (Throwable $e) {
-            error_log('Airside verdict failed: ' . $e->getMessage());
+            Log::error('Airside verdict failed: ' . $e->getMessage());
 
             return $blank;
         }
