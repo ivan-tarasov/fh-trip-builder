@@ -8,6 +8,7 @@ use Throwable;
 use TripBuilder\ArticleRating;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
+use TripBuilder\Http\RateLimit;
 use TripBuilder\Money;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
@@ -290,7 +291,7 @@ class AjaxController extends AbstractController
     {
         $asJson = str_contains((string) $this->request->header('Accept'), 'application/json');
 
-        if ($failure = $this->guardFailure()) {
+        if ($failure = $this->guardFailure(RateLimit::Subscribe)) {
             [$code, $message] = $failure;
             $this->answerSubscribe($asJson, $code, ['status' => 'error', 'message' => $message], 'bad');
 
@@ -353,7 +354,7 @@ class AjaxController extends AbstractController
     {
         $asJson = str_contains((string) $this->request->header('Accept'), 'application/json');
 
-        if ($failure = $this->guardFailure()) {
+        if ($failure = $this->guardFailure(RateLimit::Vote)) {
             [$code, $message] = $failure;
             $this->answerVote($asJson, $code, ['status' => 'error', 'message' => $message], 'bad');
 
@@ -458,7 +459,7 @@ class AjaxController extends AbstractController
     {
         $asJson = str_contains((string) $this->request->header('Accept'), 'application/json');
 
-        if ($failure = $this->guardFailure()) {
+        if ($failure = $this->guardFailure(RateLimit::Vote)) {
             [$code, $message] = $failure;
             $this->answerVote($asJson, $code, ['status' => 'error', 'message' => $message], 'bad');
 
@@ -645,9 +646,12 @@ class AjaxController extends AbstractController
      * with. The checks belong in one place; only the way they are reported
      * differs.
      *
+     * @param RateLimit|null $limit the allowance this endpoint spends from, or
+     *     null for the ones that only build a trip in the session
+     *
      * @return array{int, string}|null
      */
-    private function guardFailure(): ?array
+    private function guardFailure(?RateLimit $limit = null): ?array
     {
         if (!$this->request->isPost()) {
             return [405, 'Method not allowed'];
@@ -664,6 +668,13 @@ class AjaxController extends AbstractController
 
         if (!Csrf::isValid($token)) {
             return [403, 'Invalid or missing CSRF token'];
+        }
+
+        // After the token and not before it. A 429 that arrived first would
+        // answer a different question than it looks like -- whether the token
+        // was accepted -- and would do it without spending one.
+        if ($limit !== null && $this->isOverLimit($limit)) {
+            return [429, $limit->refusal()];
         }
 
         return null;

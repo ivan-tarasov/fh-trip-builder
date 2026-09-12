@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Exception;
+use Throwable;
 use TripBuilder\Database\Connection;
+use TripBuilder\Http\RateLimit;
 use TripBuilder\Http\Request;
+use TripBuilder\Repository\RateLimitRepository;
 use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\TwigRenderer;
 use Twig\Error\Error;
@@ -31,6 +34,32 @@ class AbstractController
     protected function connection(): Connection
     {
         return $this->connection ??= Connection::fromEnv();
+    }
+
+    /**
+     * Count this request against a limit, and say whether it is one too many.
+     *
+     * **Fails open.** A counter that cannot be read is a database that is
+     * having a bad minute, and refusing every subscribe and every checkout
+     * because of it turns a small fault into an outage. The limit exists to
+     * stop a script filling a table, not to be the thing standing between the
+     * site and its visitors -- so when it cannot answer, it says no problem and
+     * leaves a line in the log.
+     *
+     * Call it after the CSRF check and never before: an endpoint that answered
+     * 429 first would tell a script whether its token was good without
+     * spending one.
+     */
+    protected function isOverLimit(RateLimit $limit): bool
+    {
+        try {
+            return new RateLimitRepository($this->connection())
+                ->exceeded($limit, $this->request->clientIp());
+        } catch (Throwable $e) {
+            error_log('Rate limit check failed: ' . $e->getMessage());
+
+            return false;
+        }
     }
 
     /**
