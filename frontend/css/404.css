@@ -34,19 +34,25 @@
     font-family: "Comic Neue", cursive;
     font-size: 10em;
     box-sizing: border-box;
-    color: #363636;
+    /* Tokens, because this page is on the same two palettes as every other and
+       a literal here stayed near-black when the ground went dark -- unreadable,
+       on the one page whose whole job is to explain what happened. */
+    color: var(--ink-body);
 }
 .wrapper .text_group .text_lost {
     font-family: "Comic Neue", cursive;
     font-size: 2em;
     line-height: 50px;
     box-sizing: border-box;
-    color: #565656;
+    color: var(--ink-secondary);
 }
 .wrapper .window_group .window_404 {
     width: 200px;
     height: 350px;
     border-radius: 100px;
+    /* The frame around the window. Left as literals on purpose: this sits on
+       the night sky below, which is the same gradient in both palettes, so the
+       frame has the same job to do against it either way. */
     box-shadow: -3px -3px 0px 5px #d4d4d4, 5px 5px 0px 2px white;
     background: linear-gradient(310deg, #020024 0%, #09096b 0%, black 80%);
     position: relative;

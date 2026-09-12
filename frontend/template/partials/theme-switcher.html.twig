@@ -1,24 +1,18 @@
-{# Light, dark, or whatever the machine is set to.
+{# Light or dark, and nothing else.
 
-   Three buttons rather than the currency switcher's trigger-and-panel, because
-   there are three options and they fit: a panel would hide the current state
-   behind a click, and the state is the only thing worth showing.
+   Two buttons rather than three. "Match system" was a third state and it is
+   gone: it is the default rather than a choice, so it was a button that did
+   what doing nothing already did. With no stored preference this file's media
+   query follows the machine, and the control simply shows which way that came
+   out -- so a reader on a laptop that dims at sunset still gets a dark page
+   without ever pressing anything.
 
-   `System` is the default and is not the same as picking light. A reader on
-   that setting follows their machine, so a laptop that dims at sunset dims this
-   with it -- which is the reason the feature was asked for.
-
-   No server involvement and no cookie. The choice is per-browser and affects
-   nothing anybody else sees, so it lives in localStorage and the markup ships
-   the same for everyone. That also means this renders with `System` pressed on
-   every page and the script corrects it, which is why the buttons carry
-   `aria-pressed` rather than `aria-current`: nothing here is a destination. #}
+   `aria-pressed` and not `aria-current`: these are controls, not destinations.
+   The markup ships with light pressed for everybody, because the same HTML
+   goes to every reader and the choice is per-browser; the head script has
+   already applied the real one and global.js corrects the buttons. #}
 <div class="theme js-theme" role="group" aria-label="Colour theme">
-    <button type="button" class="theme__option is-on" data-theme-choice="system" aria-pressed="true">
-        <i class="fas fa-circle-half-stroke" aria-hidden="true"></i>
-        <span class="visually-hidden">Match system</span>
-    </button>
-    <button type="button" class="theme__option" data-theme-choice="light" aria-pressed="false">
+    <button type="button" class="theme__option is-on" data-theme-choice="light" aria-pressed="true">
         <i class="fas fa-sun" aria-hidden="true"></i>
         <span class="visually-hidden">Light</span>
     </button>

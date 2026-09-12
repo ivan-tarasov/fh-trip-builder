@@ -276,8 +276,21 @@
   --d-brand-ink:           #7FA3C4;   /* 6.45 -- the text half of the navy */
   --d-brand-ink-700:       #9CBADA;   /* 8.49 */
   --d-brand-ink-fill:      #0A101C;   /* the expanses: html, hero, footer */
+  --d-brand-ink-fill-700:  #16203A;   /* a band lifted off the footer */
   --d-brand-ink-chip:      #4F6D9C;   /* 3.25 on a panel, 5.25 for the glyph */
   --d-brand-ink-chip-700:  #5D7FB0;
+
+  /* The fills, pinned. In `:root` each of these is `var(--brand-accent)` and
+     friends, so redefining the text token above dragged the fills with it --
+     which is how every accent button turned into pale teal carrying white at
+     2.20. They are saturated mid-tones on purpose: dark enough for a white
+     glyph, and they were already the right darkness, so most keep their light
+     value. Success and danger lift a step to clear 3:1 as blocks on a panel
+     without dropping their label below 4.5. */
+  --d-brand-accent-fill:      #0F766E;   /* 3.12 on a panel, 5.47 for white */
+  --d-brand-accent-fill-700:  #0B5A54;   /* the hover, deeper on purpose */
+  --d-brand-success-fill:     #17804F;   /* 3.44 / 4.96 */
+  --d-brand-danger-fill:      #C93A47;   /* 3.40 / 5.02 */
   --d-brand-accent:        #2AC3B2;   /* 7.76 */
   --d-brand-accent-700:    #5EEAD4;   /* 11.53 */
   --d-brand-success:       #3DD68C;   /* 9.10 */
@@ -314,6 +327,11 @@
     --brand-ink: var(--d-brand-ink);
     --brand-ink-700: var(--d-brand-ink-700);
     --brand-ink-fill: var(--d-brand-ink-fill);
+    --brand-ink-fill-700: var(--d-brand-ink-fill-700);
+    --brand-accent-fill: var(--d-brand-accent-fill);
+    --brand-accent-fill-700: var(--d-brand-accent-fill-700);
+    --brand-success-fill: var(--d-brand-success-fill);
+    --brand-danger-fill: var(--d-brand-danger-fill);
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
@@ -326,6 +344,33 @@
     --success-tint-edge: var(--d-success-tint-edge);
     --danger-tint: var(--d-danger-tint);
     --danger-tint-edge: var(--d-danger-tint-edge);
+
+    /* Bootstrap's own palette, which is a second set of names for the same
+       surfaces and was still light after everything above went dark. It paints
+       `.list-group-item`, `.card`, `.table`, `.form-control` and the dropdowns
+       -- which is why the top-searches list, the saved flights, the results and
+       the filter rail all stayed white while the page around them changed.
+
+       Set here and not only by `data-bs-theme` on the element, because that
+       attribute is written by JavaScript: a reader whose machine is set to dark
+       and who has JavaScript off would otherwise get this file's dark palette
+       with Bootstrap's light one inside it. The attribute is still set as well,
+       for the components that read variables this list does not name. */
+    --bs-body-bg: var(--d-surface-raised);
+    --bs-body-bg-rgb: 20, 28, 43;
+    --bs-secondary-bg: var(--d-surface-sunken);
+    --bs-secondary-bg-rgb: 7, 12, 20;
+    --bs-tertiary-bg: var(--d-surface-sunken);
+    --bs-tertiary-bg-rgb: 7, 12, 20;
+    --bs-secondary-color: var(--d-ink-muted);
+    --bs-tertiary-color: var(--d-ink-faint);
+    --bs-emphasis-color: var(--d-ink-body);
+    --bs-emphasis-color-rgb: 228, 232, 239;
+    --bs-heading-color: var(--d-ink-body);
+    --bs-border-color: var(--d-line);
+    --bs-border-color-translucent: rgba(255, 255, 255, .12);
+    --bs-light: var(--d-surface-sunken);
+    --bs-light-rgb: 7, 12, 20;
   }
 }
 
@@ -343,6 +388,11 @@
     --brand-ink: var(--d-brand-ink);
     --brand-ink-700: var(--d-brand-ink-700);
     --brand-ink-fill: var(--d-brand-ink-fill);
+    --brand-ink-fill-700: var(--d-brand-ink-fill-700);
+    --brand-accent-fill: var(--d-brand-accent-fill);
+    --brand-accent-fill-700: var(--d-brand-accent-fill-700);
+    --brand-success-fill: var(--d-brand-success-fill);
+    --brand-danger-fill: var(--d-brand-danger-fill);
     --brand-ink-chip: var(--d-brand-ink-chip);
     --brand-ink-chip-700: var(--d-brand-ink-chip-700);
     --brand-accent: var(--d-brand-accent);
@@ -355,6 +405,33 @@
     --success-tint-edge: var(--d-success-tint-edge);
     --danger-tint: var(--d-danger-tint);
     --danger-tint-edge: var(--d-danger-tint-edge);
+
+    /* Bootstrap's own palette, which is a second set of names for the same
+       surfaces and was still light after everything above went dark. It paints
+       `.list-group-item`, `.card`, `.table`, `.form-control` and the dropdowns
+       -- which is why the top-searches list, the saved flights, the results and
+       the filter rail all stayed white while the page around them changed.
+
+       Set here and not only by `data-bs-theme` on the element, because that
+       attribute is written by JavaScript: a reader whose machine is set to dark
+       and who has JavaScript off would otherwise get this file's dark palette
+       with Bootstrap's light one inside it. The attribute is still set as well,
+       for the components that read variables this list does not name. */
+    --bs-body-bg: var(--d-surface-raised);
+    --bs-body-bg-rgb: 20, 28, 43;
+    --bs-secondary-bg: var(--d-surface-sunken);
+    --bs-secondary-bg-rgb: 7, 12, 20;
+    --bs-tertiary-bg: var(--d-surface-sunken);
+    --bs-tertiary-bg-rgb: 7, 12, 20;
+    --bs-secondary-color: var(--d-ink-muted);
+    --bs-tertiary-color: var(--d-ink-faint);
+    --bs-emphasis-color: var(--d-ink-body);
+    --bs-emphasis-color-rgb: 228, 232, 239;
+    --bs-heading-color: var(--d-ink-body);
+    --bs-border-color: var(--d-line);
+    --bs-border-color-translucent: rgba(255, 255, 255, .12);
+    --bs-light: var(--d-surface-sunken);
+    --bs-light-rgb: 7, 12, 20;
 }
 
 /* Bootstrap declares --bs-card-border-radius on .card itself, so setting it in
@@ -5537,7 +5614,11 @@ body:has(main.article) .breadcrumbs__list {
    so anything not written here is not what it looks like it is. */
 .footer__subscribe {
   padding: 1.25rem;
-  background-color: var(--brand-ink-700);
+  /* A fill and not the text token it used to name. `--brand-ink-700` is the
+     emphasis *ink* now, which the dark palette lifts to a pale blue -- so this
+     panel came out pale blue with pale text on it. It wants the band one step
+     up from the footer, which is what `--brand-ink-fill-700` is. */
+  background-color: var(--brand-ink-fill-700);
   border-radius: .75rem;
 }
 
