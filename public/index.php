@@ -15,6 +15,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 
 use TripBuilder\Config;
 use TripBuilder\Http\Request;
+use TripBuilder\Http\SecurityHeaders;
 use TripBuilder\Routes;
 use TripBuilder\Timer;
 use TripBuilder\View\TwigRenderer;
@@ -26,6 +27,9 @@ try {
     // this object, so what a class reads from the request is visible in its
     // signature. Captured before the session so both can see the same scheme.
     $request = Request::capture();
+
+    // Before anything can echo, because headers are fixed once output starts.
+    SecurityHeaders::send($request);
 
     // We using sessions here...
     session_set_cookie_params([
