@@ -3287,4 +3287,86 @@
         mark(current().id);
     }());
 
+    /* The theme switcher.
+
+       The head script has already applied the stored choice before anything was
+       painted; this only has to make the buttons agree with it and write the
+       next one. Splitting it that way is deliberate -- the part that must run
+       before first paint is short and inline, and the part that can wait until
+       the page is interactive lives here with everything else.
+
+       Two states, and the absence of a stored one is not a third. Nothing
+       stored means the media query in main.css decides, and the buttons show
+       which way that came out rather than offering "system" as a thing to
+       press. Pressing either writes it down, which is what stops the machine
+       overriding a reader who has said what they want. */
+    (function () {
+        var group = document.querySelector('.js-theme');
+
+        if (group === null) {
+            return;
+        }
+
+        var options = group.querySelectorAll('[data-theme-choice]');
+        var media = window.matchMedia('(prefers-color-scheme: dark)');
+
+        var stored = function () {
+            try {
+                var choice = window.localStorage.getItem('tb-theme');
+
+                return choice === 'light' || choice === 'dark' ? choice : null;
+            } catch (e) {
+                // Blocked site data. The control still works for this page, it
+                // just cannot remember -- better than not drawing it.
+                return null;
+            }
+        };
+
+        // What the reader is actually looking at, which is the stored choice
+        // where there is one and the machine's answer where there is not.
+        var effective = function () {
+            return stored() || (media.matches ? 'dark' : 'light');
+        };
+
+        var show = function (choice) {
+            options.forEach(function (option) {
+                var on = option.getAttribute('data-theme-choice') === choice;
+
+                option.classList.toggle('is-on', on);
+                option.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        };
+
+        var apply = function (choice) {
+            var root = document.documentElement;
+
+            root.setAttribute('data-theme', choice);
+            // Bootstrap's own palette, which paints the components this file
+            // does not -- kept in step so the two never disagree.
+            root.setAttribute('data-bs-theme', choice);
+
+            try {
+                window.localStorage.setItem('tb-theme', choice);
+            } catch (e) {}
+
+            show(choice);
+        };
+
+        options.forEach(function (option) {
+            option.addEventListener('click', function () {
+                apply(option.getAttribute('data-theme-choice'));
+            });
+        });
+
+        // Follow the machine while nothing has been chosen, so the buttons do
+        // not go on claiming light after the laptop has gone dark.
+        media.addEventListener('change', function () {
+            if (stored() === null) {
+                show(effective());
+            }
+        });
+
+        show(effective());
+    }());
+
 })(jQuery);

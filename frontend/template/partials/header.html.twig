@@ -3,6 +3,63 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+    {# The stored theme, applied before anything is painted.
+
+       Inline and first in the head on purpose. A stylesheet cannot read
+       localStorage, and a script at the foot of the page runs after the first
+       paint -- so a reader who chose dark would see the light palette flash and
+       then be corrected, on every navigation. This is the one thing that has to
+       be inline.
+
+       Two attributes, because there are two palettes to keep in step. This
+       file's own lives on `data-theme`; Bootstrap's lives on `data-bs-theme`
+       and covers the components whose variables main.css does not name.
+
+       With nothing stored, `data-theme` is deliberately left off so the media
+       query decides and a machine that dims at sunset dims this with it. But
+       Bootstrap has no media query of its own, so `data-bs-theme` is resolved
+       here and kept in step below.
+
+       try/catch because localStorage throws rather than returning null in a
+       browser set to block site data, and a theme preference is not worth a
+       broken page. #}
+    <script>
+        (function () {
+            var choice = null;
+
+            try {
+                choice = window.localStorage.getItem('tb-theme');
+            } catch (e) {}
+
+            if (choice !== 'light' && choice !== 'dark') {
+                choice = null;
+            }
+
+            if (choice !== null) {
+                document.documentElement.setAttribute('data-theme', choice);
+            }
+
+            var dark = window.matchMedia('(prefers-color-scheme: dark)');
+
+            document.documentElement.setAttribute(
+                'data-bs-theme',
+                (choice !== null ? choice === 'dark' : dark.matches) ? 'dark' : 'light'
+            );
+
+            // Only while there is no stored choice: an explicit one outranks
+            // the machine, and should not be undone when the machine changes.
+            dark.addEventListener('change', function (event) {
+                try {
+                    if (window.localStorage.getItem('tb-theme') !== null) {
+                        return;
+                    }
+                } catch (e) {}
+
+                document.documentElement.setAttribute('data-bs-theme', event.matches ? 'dark' : 'light');
+            });
+        })();
+    </script>
     {# The page's own, or the site's if it has none.
 
        Not truncated here. A search engine cuts a description around 160
@@ -148,6 +205,12 @@
                         {# Last in the row, where the placeholder was. A control
                            rather than a link, so it sits outside the loop above
                            -- see the note in site.php on why it left that map. #}
+                        {# One item each. Sharing a single `li` stacked them,
+                           because the row is the list and not the item -- and
+                           they are two controls rather than one anyway. #}
+                        <li class="nav-item me-2">
+                            {% include 'partials/theme-switcher.html.twig' %}
+                        </li>
                         <li class="nav-item">
                             {% include 'partials/currency-switcher.html.twig' %}
                         </li>

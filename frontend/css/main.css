@@ -96,6 +96,43 @@
 :root {
   --brand-ink:        #10243F;
   --brand-ink-700:    #1B3A63;
+
+  /* The same navy, named twice, because in a dark palette it cannot be one
+     colour. Measured: for `--brand-ink` to clear AA as text on a dark panel it
+     has to lift to about #5B7FA8, and white on #5B7FA8 is 4.16 -- under the
+     bar. No navy clears both, because the two roles pull opposite ways. In the
+     light palette they never had to: text and fill both wanted "dark", which
+     is why one token served until now.
+
+     `--brand-ink` is the text and the outline. `--brand-ink-fill` is the band
+     behind white glyphs -- the hero bar, the footer, a filled chip -- and in a
+     dark palette it stays deep while the text lightens away from it. */
+  --brand-ink-fill:     var(--brand-ink);
+  --brand-ink-fill-700: var(--brand-ink-700);
+
+  /* And one more division inside the fill, which only a dark palette forces.
+     `--brand-ink-fill` is an expanse -- `html` itself, the hero, the search
+     band, the footer -- and wants to be the darkest thing on the page. The
+     chips wearing the same navy today (a primary badge, the current sort tab,
+     the current directory letter, the ink button) sit *on* a panel and have
+     to be seen against it. Measured: a navy dark enough to be the page is 1.09
+     against the panel, which is no edge at all. The chip lifts to #4F6D9C in
+     the dark block -- 3.25 on the panel, 5.25 for the white glyph on it. */
+  --brand-ink-chip:     var(--brand-ink);
+  --brand-ink-chip-700: var(--brand-ink-700);
+
+  /* The same split, for every other colour that is worn both ways. Measured
+     against a #141C2B panel: teal #14988C reads at 4.79 and carries white at
+     3.56; green #1E9E5E reads at 4.96 and carries 3.44; red #D1434F reads at
+     3.76 and carries 4.54. None clears AA both ways, so none can stay one
+     token once there is a dark palette to serve.
+
+     In this palette every `-fill` is its text twin, so nothing below changes
+     until the dark block redefines them apart. */
+  --brand-accent-fill:      var(--brand-accent);
+  --brand-accent-fill-700:  var(--brand-accent-700);
+  --brand-success-fill:     var(--brand-success);
+  --brand-danger-fill:      var(--brand-danger);
   --brand-accent:     #0F766E;
   --brand-accent-700: #0B5A54;
   --brand-tint:       #E6F2F1;
@@ -166,6 +203,24 @@
      colder, which is most of what makes an airline search feel like one
      rather than like a generic dashboard. Every one of these was a literal
      repeated a dozen times before. */
+  /* White, and the two jobs it was doing under one spelling.
+
+     83 of this file's 145 untokenised colours were `#fff`, and they split
+     cleanly by property: `background-color` meant a panel lifted above the
+     page, and `color` meant a glyph sitting on a filled brand colour. Only
+     the first is a surface, and only the first may move when the palette
+     does -- a dark theme that flipped both would print white text on white
+     buttons.
+
+     `--surface` is the ground these sit on, which is why it is not white. */
+  --surface-raised:   #FFFFFF;   /* panels lifted above the page */
+  --on-brand:         #FFFFFF;   /* glyph on a filled brand colour, never flips */
+
+  /* The knob inside a switch that is off. Bootstrap ships one at 25% black and
+     swaps it for 25% white under `data-bs-theme`, and both are too faint to
+     find on a track that is nearly the panel colour -- which is what made the
+     filter switches look washed out. A solid grey reads at either end. */
+  --switch-knob: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23868E96'/%3e%3c/svg%3e");
   --surface:          #EFF2F7;   /* raised panels, card footers */
   --surface-sunken:   #E8EDF3;   /* wells, quiet chips */
   --line:             #E1E6ED;   /* default rule */
@@ -193,6 +248,12 @@
   /* Bootstrap's own tokens, remapped. Structural blue becomes ink. */
   --bs-body-color: var(--ink-body);
   --bs-primary: var(--brand-ink);
+  /* The header is `.bg-primary`, and `.bg-primary` paints from this triplet
+     rather than from the variable above it -- which is why it went on wearing
+     the light navy after the hero and the footer beside it went dark, leaving
+     a seam across the top of every page. It is the band colour and not the ink,
+     so the dark block pins it to `--brand-ink-fill` rather than letting it
+     follow `--brand-ink`, which is text and lifts. */
   --bs-primary-rgb: 16, 36, 63;
   --bs-primary-bg-subtle: var(--brand-tint);
   --bs-primary-border-subtle: var(--brand-tint-edge);
@@ -210,6 +271,191 @@
   --bs-success-rgb: 20, 108, 67;
   --bs-danger: var(--brand-danger);
   --bs-danger-rgb: 176, 42, 55;
+
+  /* The dark palette, defined here and assigned twice below. Spelled once
+     so a value is changed in one place; the two assignment blocks cannot be
+     one rule, because a media query and an attribute selector do not combine. */
+  --d-surface-raised:      #141C2B;   /* panels lift toward the light, not away */
+  --d-surface:             #0B111C;   /* the ground they sit on */
+  --d-surface-sunken:      #070C14;   /* and the well below it */
+  --d-line:                #232C3D;
+  --d-line-strong:         #2F3A4E;
+  --d-line-strongest:      #3D4A61;
+  --d-ink-body:            #E4E8EF;   /* 13.88 on a panel -- not pure white, which haloes */
+  --d-ink-secondary:       #B4BDCB;   /* 9.00 */
+  --d-ink-muted:           #8D97A7;   /* 5.78 */
+  --d-ink-faint:           #6A7484;   /* 3.61, the 3:1 ornament bar */
+  --d-brand-ink:           #7FA3C4;   /* 6.45 -- the text half of the navy */
+  --d-brand-ink-700:       #9CBADA;   /* 8.49 */
+  /* The band, and it is lighter than the page rather than darker.
+
+     First attempt had this at #0A101C, which is 1.01 against the ground -- so
+     the header, the search band and the footer all dissolved into the page and
+     the site lost its bars. In the light palette this is a dark navy on a light
+     page and reads as a bar; the dark palette has to earn the same separation
+     from the other side, by lifting off the ground instead of sinking into it. */
+  --d-brand-ink-fill:      #1C2942;   /* 1.30 against the ground, 14.53 for white */
+  --d-brand-ink-fill-700:  #27375A;   /* a block lifted off that band */
+  --d-brand-ink-chip:      #4F6D9C;   /* 3.25 on a panel, 5.25 for the glyph */
+  --d-brand-ink-chip-700:  #5D7FB0;
+
+  /* The fills, pinned. In `:root` each of these is `var(--brand-accent)` and
+     friends, so redefining the text token above dragged the fills with it --
+     which is how every accent button turned into pale teal carrying white at
+     2.20. They are saturated mid-tones on purpose: dark enough for a white
+     glyph, and they were already the right darkness, so most keep their light
+     value. Success and danger lift a step to clear 3:1 as blocks on a panel
+     without dropping their label below 4.5. */
+  --d-brand-accent-fill:      #0F766E;   /* 3.12 on a panel, 5.47 for white */
+  --d-brand-accent-fill-700:  #0B5A54;   /* the hover, deeper on purpose */
+  --d-brand-success-fill:     #17804F;   /* 3.44 / 4.96 */
+  --d-brand-danger-fill:      #C93A47;   /* 3.40 / 5.02 */
+  --d-switch-knob: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23CBD2DA'/%3e%3c/svg%3e");
+  --d-brand-accent:        #2AC3B2;   /* 7.76 */
+  --d-brand-accent-700:    #5EEAD4;   /* 11.53 */
+  --d-brand-success:       #3DD68C;   /* 9.10 */
+  --d-brand-danger:        #F1707C;   /* 5.97 */
+  --d-brand-tint:          #0E2A28;   /* the pale teal surface, inverted */
+  --d-brand-tint-edge:     #1B4340;
+  --d-success-tint:        #0E2A1B;
+  --d-success-tint-edge:   #1C4A31;
+  --d-danger-tint:         #2A1216;
+  --d-danger-tint-edge:    #4A2027;
+}
+
+/* Dark, two ways in.
+
+   The media query is the one that works with no JavaScript, and it yields to
+   an explicit choice: `:not([data-theme="light"])` means a reader who asked
+   for light keeps it on a machine set to dark. The attribute rule is what the
+   switcher writes, and it comes second so it wins in both directions.
+
+   Only tokens are redefined. Nothing below this point in the file knows there
+   are two palettes, which is what the four preparation commits bought. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-raised: var(--d-surface-raised);
+    --surface: var(--d-surface);
+    --surface-sunken: var(--d-surface-sunken);
+    --line: var(--d-line);
+    --line-strong: var(--d-line-strong);
+    --line-strongest: var(--d-line-strongest);
+    --ink-body: var(--d-ink-body);
+    --ink-secondary: var(--d-ink-secondary);
+    --ink-muted: var(--d-ink-muted);
+    --ink-faint: var(--d-ink-faint);
+    --brand-ink: var(--d-brand-ink);
+    --brand-ink-700: var(--d-brand-ink-700);
+    --brand-ink-fill: var(--d-brand-ink-fill);
+    --brand-ink-fill-700: var(--d-brand-ink-fill-700);
+    --brand-accent-fill: var(--d-brand-accent-fill);
+    --brand-accent-fill-700: var(--d-brand-accent-fill-700);
+    --brand-success-fill: var(--d-brand-success-fill);
+    --brand-danger-fill: var(--d-brand-danger-fill);
+    --switch-knob: var(--d-switch-knob);
+    --bs-primary-rgb: 28, 41, 66;
+    --brand-ink-chip: var(--d-brand-ink-chip);
+    --brand-ink-chip-700: var(--d-brand-ink-chip-700);
+    --brand-accent: var(--d-brand-accent);
+    --brand-accent-700: var(--d-brand-accent-700);
+    --brand-success: var(--d-brand-success);
+    --brand-danger: var(--d-brand-danger);
+    --brand-tint: var(--d-brand-tint);
+    --brand-tint-edge: var(--d-brand-tint-edge);
+    --success-tint: var(--d-success-tint);
+    --success-tint-edge: var(--d-success-tint-edge);
+    --danger-tint: var(--d-danger-tint);
+    --danger-tint-edge: var(--d-danger-tint-edge);
+
+    /* Bootstrap's own palette, which is a second set of names for the same
+       surfaces and was still light after everything above went dark. It paints
+       `.list-group-item`, `.card`, `.table`, `.form-control` and the dropdowns
+       -- which is why the top-searches list, the saved flights, the results and
+       the filter rail all stayed white while the page around them changed.
+
+       Set here and not only by `data-bs-theme` on the element, because that
+       attribute is written by JavaScript: a reader whose machine is set to dark
+       and who has JavaScript off would otherwise get this file's dark palette
+       with Bootstrap's light one inside it. The attribute is still set as well,
+       for the components that read variables this list does not name. */
+    --bs-body-bg: var(--d-surface-raised);
+    --bs-body-bg-rgb: 20, 28, 43;
+    --bs-secondary-bg: var(--d-surface-sunken);
+    --bs-secondary-bg-rgb: 7, 12, 20;
+    --bs-tertiary-bg: var(--d-surface-sunken);
+    --bs-tertiary-bg-rgb: 7, 12, 20;
+    --bs-secondary-color: var(--d-ink-muted);
+    --bs-tertiary-color: var(--d-ink-faint);
+    --bs-emphasis-color: var(--d-ink-body);
+    --bs-emphasis-color-rgb: 228, 232, 239;
+    --bs-heading-color: var(--d-ink-body);
+    --bs-border-color: var(--d-line);
+    --bs-border-color-translucent: rgba(255, 255, 255, .12);
+    --bs-light: var(--d-surface-sunken);
+    --bs-light-rgb: 7, 12, 20;
+  }
+}
+
+:root[data-theme="dark"] {
+    --surface-raised: var(--d-surface-raised);
+    --surface: var(--d-surface);
+    --surface-sunken: var(--d-surface-sunken);
+    --line: var(--d-line);
+    --line-strong: var(--d-line-strong);
+    --line-strongest: var(--d-line-strongest);
+    --ink-body: var(--d-ink-body);
+    --ink-secondary: var(--d-ink-secondary);
+    --ink-muted: var(--d-ink-muted);
+    --ink-faint: var(--d-ink-faint);
+    --brand-ink: var(--d-brand-ink);
+    --brand-ink-700: var(--d-brand-ink-700);
+    --brand-ink-fill: var(--d-brand-ink-fill);
+    --brand-ink-fill-700: var(--d-brand-ink-fill-700);
+    --brand-accent-fill: var(--d-brand-accent-fill);
+    --brand-accent-fill-700: var(--d-brand-accent-fill-700);
+    --brand-success-fill: var(--d-brand-success-fill);
+    --brand-danger-fill: var(--d-brand-danger-fill);
+    --switch-knob: var(--d-switch-knob);
+    --bs-primary-rgb: 28, 41, 66;
+    --brand-ink-chip: var(--d-brand-ink-chip);
+    --brand-ink-chip-700: var(--d-brand-ink-chip-700);
+    --brand-accent: var(--d-brand-accent);
+    --brand-accent-700: var(--d-brand-accent-700);
+    --brand-success: var(--d-brand-success);
+    --brand-danger: var(--d-brand-danger);
+    --brand-tint: var(--d-brand-tint);
+    --brand-tint-edge: var(--d-brand-tint-edge);
+    --success-tint: var(--d-success-tint);
+    --success-tint-edge: var(--d-success-tint-edge);
+    --danger-tint: var(--d-danger-tint);
+    --danger-tint-edge: var(--d-danger-tint-edge);
+
+    /* Bootstrap's own palette, which is a second set of names for the same
+       surfaces and was still light after everything above went dark. It paints
+       `.list-group-item`, `.card`, `.table`, `.form-control` and the dropdowns
+       -- which is why the top-searches list, the saved flights, the results and
+       the filter rail all stayed white while the page around them changed.
+
+       Set here and not only by `data-bs-theme` on the element, because that
+       attribute is written by JavaScript: a reader whose machine is set to dark
+       and who has JavaScript off would otherwise get this file's dark palette
+       with Bootstrap's light one inside it. The attribute is still set as well,
+       for the components that read variables this list does not name. */
+    --bs-body-bg: var(--d-surface-raised);
+    --bs-body-bg-rgb: 20, 28, 43;
+    --bs-secondary-bg: var(--d-surface-sunken);
+    --bs-secondary-bg-rgb: 7, 12, 20;
+    --bs-tertiary-bg: var(--d-surface-sunken);
+    --bs-tertiary-bg-rgb: 7, 12, 20;
+    --bs-secondary-color: var(--d-ink-muted);
+    --bs-tertiary-color: var(--d-ink-faint);
+    --bs-emphasis-color: var(--d-ink-body);
+    --bs-emphasis-color-rgb: 228, 232, 239;
+    --bs-heading-color: var(--d-ink-body);
+    --bs-border-color: var(--d-line);
+    --bs-border-color-translucent: rgba(255, 255, 255, .12);
+    --bs-light: var(--d-surface-sunken);
+    --bs-light-rgb: 7, 12, 20;
 }
 
 /* Bootstrap declares --bs-card-border-radius on .card itself, so setting it in
@@ -224,32 +470,32 @@
    the --bs-danger remap in :root never reaches a button. Needed because the
    cancel dialog dresses SweetAlert's buttons in this app's own. */
 .btn-danger {
-  --bs-btn-bg: var(--brand-danger);
-  --bs-btn-border-color: var(--brand-danger);
-  --bs-btn-hover-bg: var(--brand-danger-700);
-  --bs-btn-hover-border-color: var(--brand-danger-700);
-  --bs-btn-active-bg: var(--brand-danger-700);
-  --bs-btn-active-border-color: var(--brand-danger-700);
+  --bs-btn-bg: var(--brand-danger-fill);
+  --bs-btn-border-color: var(--brand-danger-fill);
+  --bs-btn-hover-bg: var(--brand-danger-fill);
+  --bs-btn-hover-border-color: var(--brand-danger-fill);
+  --bs-btn-active-bg: var(--brand-danger-fill);
+  --bs-btn-active-border-color: var(--brand-danger-fill);
 }
 
 .btn-primary {
-  --bs-btn-bg: var(--brand-accent);
-  --bs-btn-border-color: var(--brand-accent);
-  --bs-btn-hover-bg: var(--brand-accent-700);
-  --bs-btn-hover-border-color: var(--brand-accent-700);
-  --bs-btn-active-bg: var(--brand-accent-700);
-  --bs-btn-active-border-color: var(--brand-accent-700);
-  --bs-btn-disabled-bg: var(--brand-accent);
-  --bs-btn-disabled-border-color: var(--brand-accent);
+  --bs-btn-bg: var(--brand-accent-fill);
+  --bs-btn-border-color: var(--brand-accent-fill);
+  --bs-btn-hover-bg: var(--brand-accent-fill-700);
+  --bs-btn-hover-border-color: var(--brand-accent-fill-700);
+  --bs-btn-active-bg: var(--brand-accent-fill-700);
+  --bs-btn-active-border-color: var(--brand-accent-fill-700);
+  --bs-btn-disabled-bg: var(--brand-accent-fill);
+  --bs-btn-disabled-border-color: var(--brand-accent-fill);
 }
 
 .btn-outline-primary {
   --bs-btn-color: var(--brand-accent);
   --bs-btn-border-color: var(--brand-accent);
-  --bs-btn-hover-bg: var(--brand-accent);
-  --bs-btn-hover-border-color: var(--brand-accent);
-  --bs-btn-active-bg: var(--brand-accent);
-  --bs-btn-active-border-color: var(--brand-accent);
+  --bs-btn-hover-bg: var(--brand-accent-fill);
+  --bs-btn-hover-border-color: var(--brand-accent-fill);
+  --bs-btn-active-bg: var(--brand-accent-fill);
+  --bs-btn-active-border-color: var(--brand-accent-fill);
 }
 
 /* Two families of action, so the colour carries meaning instead of just
@@ -258,43 +504,45 @@
    filters, change sort. Before this, every one of them was the same fill, and
    the results page had fifteen of them competing. */
 .btn-ink {
-  --bs-btn-color: #fff;
-  --bs-btn-bg: var(--brand-ink);
-  --bs-btn-border-color: var(--brand-ink);
-  --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: var(--brand-ink-700);
-  --bs-btn-hover-border-color: var(--brand-ink-700);
-  --bs-btn-active-color: #fff;
-  --bs-btn-active-bg: var(--brand-ink-700);
-  --bs-btn-active-border-color: var(--brand-ink-700);
+  --bs-btn-color: var(--on-brand);
+  --bs-btn-bg: var(--brand-ink-chip);
+  --bs-btn-border-color: var(--brand-ink-chip);
+  --bs-btn-hover-color: var(--on-brand);
+  --bs-btn-hover-bg: var(--brand-ink-chip-700);
+  --bs-btn-hover-border-color: var(--brand-ink-chip-700);
+  --bs-btn-active-color: var(--on-brand);
+  --bs-btn-active-bg: var(--brand-ink-chip-700);
+  --bs-btn-active-border-color: var(--brand-ink-chip-700);
   --bs-btn-focus-shadow-rgb: 16, 36, 63;
 }
 
 .btn-outline-success {
   --bs-btn-color: var(--brand-success);
   --bs-btn-border-color: var(--brand-success);
-  --bs-btn-hover-bg: var(--brand-success);
-  --bs-btn-hover-border-color: var(--brand-success);
-  --bs-btn-active-bg: var(--brand-success);
-  --bs-btn-active-border-color: var(--brand-success);
+  --bs-btn-hover-bg: var(--brand-success-fill);
+  --bs-btn-hover-border-color: var(--brand-success-fill);
+  --bs-btn-active-bg: var(--brand-success-fill);
+  --bs-btn-active-border-color: var(--brand-success-fill);
 }
 
+/* The one place both names are needed at once: at rest this is ink on nothing,
+   and hovered it is a fill with a white glyph on it. */
 .btn-outline-ink {
   --bs-btn-color: var(--brand-ink);
   --bs-btn-border-color: var(--brand-ink);
-  --bs-btn-hover-color: #fff;
-  --bs-btn-hover-bg: var(--brand-ink);
-  --bs-btn-hover-border-color: var(--brand-ink);
-  --bs-btn-active-color: #fff;
-  --bs-btn-active-bg: var(--brand-ink);
-  --bs-btn-active-border-color: var(--brand-ink);
+  --bs-btn-hover-color: var(--on-brand);
+  --bs-btn-hover-bg: var(--brand-ink-chip);
+  --bs-btn-hover-border-color: var(--brand-ink-chip);
+  --bs-btn-active-color: var(--on-brand);
+  --bs-btn-active-bg: var(--brand-ink-chip);
+  --bs-btn-active-border-color: var(--brand-ink-chip);
   --bs-btn-focus-shadow-rgb: 16, 36, 63;
 }
 
 /* Same trap as the buttons: the pill's active background is a literal, so the
    trip-type tabs above the search form kept their Bootstrap blue. */
 .nav-pills {
-  --bs-nav-pills-link-active-bg: var(--brand-accent);
+  --bs-nav-pills-link-active-bg: var(--brand-accent-fill);
 }
 
 /* ion.rangeSlider arrives from a CDN with its own blue (#006cfa) baked into
@@ -304,7 +552,7 @@
 .irs--round .irs-from,
 .irs--round .irs-to,
 .irs--round .irs-single {
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
 }
 
 .irs--round .irs-handle {
@@ -555,7 +803,7 @@ a {
   z-index: 1070;
   padding: .625rem 1rem;
   border-radius: .5rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   color: var(--brand-ink);
   font-size: .875rem;
   font-weight: 600;
@@ -609,7 +857,7 @@ body {
    used to be navy against Bootstrap's #212529 -- a seam between two dark greys
    rather than a flash of white, which was the best that could be said for it.
    The footer is this colour now, so there is no seam at either end. */
-html { background-color: var(--brand-ink); }
+html { background-color: var(--brand-ink-fill); }
 
 body {
   /* Tall enough to push the footer down on a short page, and no taller.
@@ -842,7 +1090,7 @@ a:active {
   z-index: 30;
   padding: .5rem;
   font-family: inherit;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border: 1px solid var(--line);
   border-radius: 1rem;
   box-shadow: 0 1rem 2.5rem rgba(21, 26, 33, .16);
@@ -1048,8 +1296,8 @@ a:active {
 /* The ends, which are the only round corners. */
 .datepicker__grid td.is-start,
 .datepicker__grid td.is-end {
-  color: #fff;
-  background-color: var(--brand-accent);
+  color: var(--on-brand);
+  background-color: var(--brand-accent-fill);
 }
 
 /* The leg not being edited, and the days the trip covers between the two.
@@ -1090,8 +1338,8 @@ a:active {
   padding: .5rem 1rem;
   font-size: .9375rem;
   font-weight: 600;
-  color: #fff;
-  background-color: var(--brand-accent);
+  color: var(--on-brand);
+  background-color: var(--brand-accent-fill);
   border: none;
   border-radius: .625rem;
   transition: background-color var(--dur-fast) ease, transform var(--dur-fast) ease;
@@ -1107,7 +1355,7 @@ a:active {
 
 .datepicker__apply-price:empty { display: none; }
 
-.datepicker__apply:hover:not(:disabled) { background-color: var(--brand-accent-700); }
+.datepicker__apply:hover:not(:disabled) { background-color: var(--brand-accent-fill-700); }
 .datepicker__apply:active:not(:disabled) { transform: scale(.98); }
 .datepicker__apply:disabled { opacity: .55; }
 
@@ -1222,7 +1470,7 @@ button {
    above it and the search bar pinned into it, all three are the same surface
    now, and a gradient meeting a flat colour at two seams looked like three
    panels rather than one. */
-.hero { background-color: var(--brand-ink); }
+.hero { background-color: var(--brand-ink-fill); }
 
 .hero__inner {
   padding-top: 5.5rem;
@@ -1326,12 +1574,12 @@ button {
      gap between them reads as the bar having come loose. The rest of the gap it
      has at rest is the hero's bottom padding, which scrolls away. */
   padding: .5rem 0 .75rem;
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
 }
 
 /* The band's remaining depth, below the bar, out of which the cards are pulled.
    Padding on the bar would make the sticky strip this tall. */
-.hero__tail { height: 10.25rem; background-color: var(--brand-ink); }
+.hero__tail { height: 10.25rem; background-color: var(--brand-ink-fill); }
 
 /* Nothing here resizes the form. It was compacted to the results page's
    metrics when pinned, which made the fields jump the moment they stuck -- the
@@ -1352,7 +1600,7 @@ button {
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -.02em;
-  color: #fff;
+  color: var(--on-brand);
   text-wrap: balance;
 }
 
@@ -1383,7 +1631,7 @@ button {
   padding: .75rem 1.25rem;
   font-size: .875rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-brand);
   text-decoration: none;
   white-space: nowrap;
   background-color: transparent;
@@ -1409,7 +1657,7 @@ button {
 .hero__mode i { font-size: 1.125rem; }
 
 a.hero__mode:hover {
-  color: #fff;
+  color: var(--on-brand);
   background-color: rgba(255, 255, 255, .18);
 }
 
@@ -1417,7 +1665,7 @@ a.hero__mode:active { transform: scale(.97); }
 
 .hero__mode.is-current {
   color: var(--brand-ink);
-  background-color: #fff;
+  background-color: var(--surface-raised);
 }
 
 /* Six sections do not fit a phone. Scrolled rather than wrapped -- wrapping
@@ -1487,7 +1735,7 @@ a.hero__mode:active { transform: scale(.97); }
   min-width: 9rem;
   min-height: 4rem;
   padding: .5rem 1.125rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   /* The hairline between fields, drawn here because the bar behind them is
      transparent and has no colour to show through a gap. */
   border-left: 1px solid var(--line);
@@ -1601,14 +1849,14 @@ a.hero__mode:active { transform: scale(.97); }
   padding: 0 2.25rem;
   font-size: 1.0625rem;
   font-weight: 600;
-  color: #fff;
-  background-color: var(--brand-accent);
+  color: var(--on-brand);
+  background-color: var(--brand-accent-fill);
   border: none;
   border-radius: .75rem;
   transition: background-color var(--dur-fast) ease;
 }
 
-.searchbar__submit:hover { background-color: var(--brand-accent-700); }
+.searchbar__submit:hover { background-color: var(--brand-accent-fill-700); }
 
 /* Stacked, the row's parts stop being a row. Each field is a card of its own,
    so the divider between them, the radii that opened and closed the white
@@ -1676,7 +1924,7 @@ a.hero__mode:active { transform: scale(.97); }
   top: 0;
   z-index: 1020;
   padding: 1rem 0 1.25rem;
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
 }
 
 @media (max-width: 991.98px) {
@@ -1736,7 +1984,7 @@ a.hero__mode:active { transform: scale(.97); }
   z-index: 20;
   width: 21rem;
   padding: .5rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border: 1px solid var(--line);
   border-radius: var(--bs-border-radius-lg);
   box-shadow: 0 .5rem 1.5rem rgba(21, 26, 33, .12);
@@ -1812,7 +2060,7 @@ a.hero__mode:active { transform: scale(.97); }
   font-size: 1rem;
   line-height: 1;
   color: var(--brand-accent);
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
@@ -1941,7 +2189,7 @@ input[type=number]::-webkit-outer-spin-button {
 }
 
 .list-group-item-check:checked+.list-group-item {
-  color: #fff;
+  color: var(--on-brand);
   background-color: var(--bs-blue);
 }
 
@@ -1988,7 +2236,7 @@ input[type=number]::-webkit-outer-spin-button {
   font-weight: 700;
   text-align: center;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--on-brand);
   margin-bottom: 24px;
 }
 
@@ -2056,7 +2304,7 @@ input[type=number]::-webkit-outer-spin-button {
    everything else. */
 .airline-panel {
   padding: 1.25rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: .75rem;
 }
 
@@ -2350,7 +2598,7 @@ textarea {
   border-radius: 999px;
   padding: .25rem .85rem;
   color: var(--ink-secondary);
-  background-color: #fff;
+  background-color: var(--surface-raised);
   font-weight: 500;
   transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
@@ -2398,8 +2646,8 @@ textarea {
   line-height: 1;
 }
 
-.step-track__item.is-current .step-track__marker { background-color: var(--brand-accent); border-color: var(--brand-accent); color: #fff; }
-.step-track__item.is-done .step-track__marker { background-color: var(--brand-success); border-color: var(--brand-success); color: #fff; }
+.step-track__item.is-current .step-track__marker { background-color: var(--brand-accent-fill); border-color: var(--brand-accent); color: var(--on-brand); }
+.step-track__item.is-done .step-track__marker { background-color: var(--brand-success-fill); border-color: var(--brand-success); color: var(--on-brand); }
 
 /* The connector between two steps. It shrinks: at 40px fixed, three labels and
    two rules came to more than a 375px screen and pushed "Review & book" off the
@@ -2436,8 +2684,8 @@ textarea {
 .trip-package { border: 2px solid var(--brand-accent); }
 
 .trip-package__banner {
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
   padding: .5rem 1rem;
   border-radius: calc(var(--bs-border-radius) - 2px) calc(var(--bs-border-radius) - 2px) 0 0;
 }
@@ -2521,11 +2769,11 @@ textarea {
    stays latched, leaving a segment of somebody's flight highlighted for no
    reason they can undo. */
 @media (hover: hover) and (pointer: fine) {
-  .route__leg:hover::before { background-color: var(--brand-accent); }
+  .route__leg:hover::before { background-color: var(--brand-accent-fill); }
 
   .route__stop:hover::before {
     transform: scaleY(1);
-    background-color: var(--brand-accent);
+    background-color: var(--brand-accent-fill);
   }
 }
 
@@ -2611,13 +2859,13 @@ textarea {
    No new tokens. The tinted pair is the treatment .search-cabin already uses
    for the same job a few lines up. */
 .badge--success {
-  background-color: var(--brand-success);
-  color: #fff;
+  background-color: var(--brand-success-fill);
+  color: var(--on-brand);
 }
 
 .badge--primary {
-  background-color: var(--brand-ink);
-  color: #fff;
+  background-color: var(--brand-ink-chip);
+  color: var(--on-brand);
 }
 
 .badge--purple {
@@ -2632,7 +2880,7 @@ textarea {
   color: var(--brand-accent-700);
 }
 
-.badge--current { background-color: var(--brand-accent-700); }
+.badge--current { background-color: var(--brand-accent-fill-700); }
 
 .flight-card--badged { border-top-left-radius: .5rem; }
 
@@ -2749,7 +2997,7 @@ textarea {
   border-radius: var(--bs-border-radius-lg);
   padding: 1rem 1.125rem;
   margin-bottom: .75rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
 }
 
 .leg {
@@ -2786,13 +3034,13 @@ textarea {
   height: .5rem;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border: 2px solid var(--brand-accent);
 }
 
 .leg__rail::before { top: 0; }
 /* Hollow on arrival, filled on departure -- the same read as a route bar. */
-.leg__rail::after  { top: 100%; background-color: var(--brand-accent); }
+.leg__rail::after  { top: 100%; background-color: var(--brand-accent-fill); }
 
 .leg__stop { display: flex; flex-direction: column; min-width: 0; }
 .leg__stop:first-of-type { grid-area: depart; }
@@ -2943,7 +3191,7 @@ textarea {
   width: 40px;
   height: 40px;
   object-fit: contain;
-  background-color: #fff;
+  background-color: var(--surface-raised);
 }
 
 .airline-logos--multi .airline-logo {
@@ -2968,8 +3216,8 @@ textarea {
   justify-content: space-between;
   gap: .75rem;
   padding: .5rem 1rem;
-  background-color: var(--brand-success);
-  color: #fff;
+  background-color: var(--brand-success-fill);
+  color: var(--on-brand);
   border-radius: calc(var(--bs-border-radius) - 1px) calc(var(--bs-border-radius) - 1px) 0 0;
 }
 
@@ -3079,7 +3327,7 @@ textarea {
      day the page took that same colour, leaving two of the three tabs floating
      with no surface at all while the chosen one looked like the only control
      there. A control on a grey page is a white one. */
-  background-color: #fff;
+  background-color: var(--surface-raised);
   overflow: hidden;
 }
 
@@ -3107,9 +3355,9 @@ textarea {
    forward -- and leaving the accent free for the Select buttons is what stops
    the two reading as the same kind of thing. */
 .sort-bar__tab.is-current {
-  background-color: var(--brand-ink);
-  border-right-color: var(--brand-ink);
-  color: #fff;
+  background-color: var(--brand-ink-chip);
+  border-right-color: var(--brand-ink-fill);
+  color: var(--on-brand);
 }
 
 .sort-bar__label {
@@ -3128,7 +3376,7 @@ textarea {
   color: var(--ink-body);
 }
 
-.sort-bar__tab.is-current .sort-bar__price { color: #fff; }
+.sort-bar__tab.is-current .sort-bar__price { color: var(--on-brand); }
 .sort-bar__price--none { color: var(--line-strongest); }
 
 .sort-bar__meta {
@@ -3336,7 +3584,7 @@ textarea {
   flex: 0 0 auto;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   padding: .1rem .55rem;
   font-size: .75rem;
   color: var(--bs-primary);
@@ -3473,6 +3721,31 @@ textarea {
   cursor: pointer;
 }
 
+/* The colours of a switch, which were Bootstrap's and not this site's.
+
+   Off, the track took `--bs-body-bg` and the border `--bs-border-color`, which
+   in the dark palette are the panel and a hairline on it -- so the control was
+   the same colour as what it sat on and only the faint knob gave it away.
+
+   On, it was #0d6efd: stock Bootstrap blue, in both palettes. Compiled into the
+   stylesheet as a literal rather than read from a variable, which is the same
+   trap the nav pills had and is why a filter that was switched on has never
+   been the brand's colour. */
+.form-switch .form-check-input {
+  --bs-form-switch-bg: var(--switch-knob);
+  background-color: var(--surface-sunken);
+  /* `--ink-faint` and not a line token: this is the outline of a control and
+     wants the 3:1 a graphic needs, which is the bar that token is measured
+     against. `--line-strongest` came out at 1.91 on a dark panel -- a hairline
+     nobody would find. */
+  border-color: var(--ink-faint);
+}
+
+.form-switch .form-check-input:checked {
+  background-color: var(--brand-accent-fill);
+  border-color: var(--brand-accent-fill);
+}
+
 /* --- Time-of-day pills ---------------------------------------------------- */
 .filter-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
 
@@ -3509,11 +3782,11 @@ textarea {
    defined in two places that can drift. The sidebar already needs JS for its
    sliders, so one mechanism it is. */
 .filter-pill.is-on {
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
 }
 
-.filter-pill.is-on .filter-pill__icon { color: #fff; }
+.filter-pill.is-on .filter-pill__icon { color: var(--on-brand); }
 
 /* --- Sliders -------------------------------------------------------------- */
 .filter-slider {
@@ -3559,8 +3832,8 @@ textarea {
 /* Set, so it reads as a filter you have applied rather than a reading of the
    range on offer. */
 .filter-slider__value.is-on {
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
   padding-right: .2rem;
 }
 
@@ -3576,7 +3849,7 @@ textarea {
   padding: 0;
   font-size: .625rem;
   line-height: 1;
-  color: #fff;
+  color: var(--on-brand);
 }
 .filter-slider__clear:hover { background-color: rgba(255, 255, 255, .55); }
 .filter-slider__clear[hidden] { display: none; }
@@ -3645,7 +3918,7 @@ body:has(.hero) header#top {
   z-index: 3;
   margin: 0 -1rem -1rem;
   padding: 1rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-top: 1px solid var(--line);
   border-radius: 0 0 var(--bs-card-border-radius) var(--bs-card-border-radius);
   box-shadow: 0 -.5rem 1rem -.5rem rgba(0, 0, 0, .1);
@@ -3698,15 +3971,15 @@ body:has(.hero) header#top {
   border: 1px solid var(--bs-primary);
   border-radius: 999px;
   padding: .6rem 1.75rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   color: var(--bs-primary);
   font-weight: 600;
   text-decoration: none;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 .show-more__button:hover {
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
 }
 /* Mid-request the label already says so; dimming it stops a second click
    reading as a dead button. */
@@ -3755,7 +4028,7 @@ body:has(.hero) header#top {
   height: 2.75rem;
   border: 1px solid var(--line-strong);
   border-radius: 50%;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15);
   color: var(--bs-primary);
   font-size: 1rem;
@@ -3771,8 +4044,8 @@ body:has(.hero) header#top {
   transform: none;
 }
 .to-top:hover {
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
 }
 
 /* Not the footer's ring: this button is fixed over the page, which is white to
@@ -3837,7 +4110,7 @@ body:has(.hero) header#top {
 .pane {
   border: 1px solid var(--line);
   border-radius: 1rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   padding: 1.25rem 1.5rem 1.5rem;
   margin-bottom: 1.25rem;
 }
@@ -3857,8 +4130,8 @@ body:has(.hero) header#top {
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 50%;
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
   font-size: .8125rem;
 }
 .pane__hint { margin: 0 0 1rem; color: var(--ink-secondary); font-size: .875rem; }
@@ -3885,7 +4158,7 @@ body:has(.hero) header#top {
   padding: .5rem .75rem;
   font-size: .9375rem;
   color: var(--ink-body);
-  background-color: #fff;
+  background-color: var(--surface-raised);
   transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
 }
 .field__input:focus {
@@ -3942,7 +4215,7 @@ body:has(.hero) header#top {
      card rather than the visitor's. Nothing here carries text or state. */
   background: linear-gradient(135deg, #1f2c47 0%, #2b3a5c 55%, #33415f 100%);
   box-shadow: 0 .5rem 1.5rem rgba(31, 44, 71, .35);
-  color: #fff;
+  color: var(--on-brand);
 }
 .pay-card__face--back { transform: rotateY(180deg); }
 
@@ -4036,17 +4309,17 @@ body:has(.hero) header#top {
   width: 100%;
   border: 0;
   border-radius: .625rem;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   padding: .8125rem 1rem;
   margin-top: 1.25rem;
-  color: #fff;
+  color: var(--on-brand);
   font-size: 1.0625rem;
   font-weight: 600;
   text-align: center;
   text-decoration: none;
   transition: filter var(--dur-fast) ease;
 }
-.checkout__pay:hover { filter: brightness(.92); color: #fff; }
+.checkout__pay:hover { filter: brightness(.92); color: var(--on-brand); }
 .checkout__pay--link { max-width: 18rem; }
 .checkout__test { margin: .75rem 0 0; color: var(--ink-secondary); font-size: .8125rem; }
 .checkout__test code { color: var(--ink-secondary); }
@@ -4055,7 +4328,7 @@ body:has(.hero) header#top {
 .order {
   border: 1px solid var(--line);
   border-radius: 1rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.25rem;
 }
@@ -4092,7 +4365,7 @@ body:has(.hero) header#top {
 .rules {
   border: 1px solid var(--line);
   border-radius: 1rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   padding: 1.25rem 1.5rem;
 }
 .rules__heading { margin: 0 0 1rem; font-size: 1.0625rem; font-weight: 600; }
@@ -4221,7 +4494,7 @@ body:has(.hero) header#top {
 .review__half {
   border: 1px solid var(--line);
   border-radius: 1rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   padding: 1.125rem 1.375rem 1.25rem;
   margin-bottom: 1.25rem;
 }
@@ -4334,7 +4607,7 @@ body:has(.hero) header#top {
   list-style: none;
   border: 1px solid var(--line-strong);
   border-radius: .5rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   box-shadow: 0 .5rem 1.5rem -.5rem rgba(16, 36, 63, .25);
 }
 
@@ -4546,7 +4819,7 @@ body:has(.hero) header#top {
   padding: .35rem .85rem;
   border: 1px solid var(--brand-accent);
   border-radius: 999px;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   color: var(--brand-accent-700);
   font-size: .875rem;
   font-weight: 600;
@@ -4557,8 +4830,8 @@ body:has(.hero) header#top {
 
 .checkout__autofill-button:hover,
 .checkout__autofill-button:focus-visible {
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
 }
 
 .checkout__autofill-button:active { transform: scale(.97); }
@@ -4935,7 +5208,7 @@ body:has(.hero) header#top {
   padding: 1.25rem;
   border: 1px solid var(--line);
   border-radius: .75rem;
-  background-color: #FFFFFF;
+  background-color: var(--surface-raised);
 }
 
 /* Two directions in one block, told apart by a rule rather than by a second
@@ -5147,7 +5420,7 @@ body:has(main.article) .breadcrumbs__list {
 
 @media (hover: hover) and (pointer: fine) {
   .breadcrumbs--on-dark .breadcrumbs__link:hover {
-    color: #fff;
+    color: var(--on-brand);
   }
 }
 
@@ -5179,7 +5452,7 @@ body:has(main.article) .breadcrumbs__list {
    and are very slightly better here -- 7.52 and 11.98 against 7.43 and 11.85 --
    because navy carries less luminance than grey at the same darkness. */
 .footer {
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
 }
 
 .footer__inner {
@@ -5327,9 +5600,9 @@ body:has(main.article) .breadcrumbs__list {
   flex: 0 0 auto;
   width: 2.75rem;
   height: 2.75rem;
-  color: #fff;
+  color: var(--on-brand);
   font-size: 1.25rem;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border-radius: .875rem;
 }
 
@@ -5390,7 +5663,11 @@ body:has(main.article) .breadcrumbs__list {
    so anything not written here is not what it looks like it is. */
 .footer__subscribe {
   padding: 1.25rem;
-  background-color: var(--brand-ink-700);
+  /* A fill and not the text token it used to name. `--brand-ink-700` is the
+     emphasis *ink* now, which the dark palette lifts to a pale blue -- so this
+     panel came out pale blue with pale text on it. It wants the band one step
+     up from the footer, which is what `--brand-ink-fill-700` is. */
+  background-color: var(--brand-ink-fill-700);
   border-radius: .75rem;
 }
 
@@ -5412,7 +5689,7 @@ body:has(main.article) .breadcrumbs__list {
   padding: 0 .75rem;
   color: var(--brand-ink);
   font-size: .875rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border: 1px solid transparent;
   border-radius: .5rem;
 }
@@ -5443,16 +5720,16 @@ body:has(main.article) .breadcrumbs__list {
   flex: 0 0 auto;
   height: 2.5rem;
   padding: 0 1rem;
-  color: #fff;
+  color: var(--on-brand);
   font-size: .875rem;
   font-weight: 600;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border-radius: .5rem;
   transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .footer__subscribe-submit:hover { background-color: var(--brand-accent-700); }
+  .footer__subscribe-submit:hover { background-color: var(--brand-accent-fill-700); }
 }
 
 .footer__subscribe-submit:active { transform: scale(.97); }
@@ -5512,6 +5789,53 @@ body:has(main.article) .breadcrumbs__list {
 
 .currency__trigger[aria-expanded="true"] { background-color: rgba(255, 255, 255, .16); }
 
+/* The theme control, beside the currency one and on the same dark band.
+
+   It sits on `--brand-ink-fill` in both palettes -- the header is the navy
+   expanse either way -- so it is styled against dark and not against the page.
+   That is why nothing here reads `--ink-body` or `--surface`: those flip, and
+   this ground does not. */
+.theme {
+  display: inline-flex;
+  align-items: center;
+  gap: .125rem;
+  padding: .1875rem;
+  border-radius: .625rem;
+  background-color: rgba(255, 255, 255, .08);
+}
+
+.theme__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: .5rem;
+  background-color: transparent;
+  color: var(--ink-on-dark);
+  font-size: .9375rem;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.theme__option:hover { color: var(--on-brand); }
+
+/* The pressed one, which is the whole point of showing three buttons instead
+   of hiding them behind a trigger. */
+.theme__option.is-on {
+  background-color: rgba(255, 255, 255, .18);
+  color: var(--on-brand);
+}
+
+/* Visible focus, because these are 2rem targets with no text: a ring that only
+   showed on hover would leave the keyboard with nothing. */
+.theme__option:focus-visible {
+  outline: 2px solid var(--on-brand);
+  outline-offset: 1px;
+}
+
 /* Right-aligned to the trigger, because the trigger is at the right end of the
    header and a panel hanging off its left edge would leave the screen. */
 .currency__panel {
@@ -5523,7 +5847,7 @@ body:has(main.article) .breadcrumbs__list {
   padding: .75rem;
   border: 1px solid var(--line);
   border-radius: .75rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   box-shadow: 0 12px 32px rgba(16, 36, 63, .18);
   color: var(--ink-body);
 }
@@ -5621,7 +5945,7 @@ body:has(main.article) .breadcrumbs__list {
   z-index: 1040;
   padding: .8125rem 0;
   border-top: 1px solid var(--line);
-  background-color: #fff;
+  background-color: var(--surface-raised);
   /* Upward and barely there. The border does the separating; this only stops a
      white bar dissolving into a white page. */
   box-shadow: 0 -2px 12px rgba(16, 36, 63, .06);
@@ -5691,7 +6015,7 @@ body:has(main.article) .breadcrumbs__list {
   padding: .5rem 1.125rem;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   color: var(--ink-secondary);
   font-size: .9375rem;
   font-weight: 600;
@@ -5702,16 +6026,16 @@ body:has(main.article) .breadcrumbs__list {
 
 .cookie-notice__button--yes {
   border-color: var(--brand-accent);
-  background-color: var(--brand-accent);
-  color: #fff;
+  background-color: var(--brand-accent-fill);
+  color: var(--on-brand);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .cookie-notice__button:hover { border-color: var(--brand-accent); color: var(--brand-accent); }
   .cookie-notice__button--yes:hover {
     border-color: var(--brand-accent-700);
-    background-color: var(--brand-accent-700);
-    color: #fff;
+    background-color: var(--brand-accent-fill-700);
+    color: var(--on-brand);
   }
 }
 
@@ -5727,7 +6051,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   padding: .5rem 1.125rem;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   color: var(--ink-body);
   font-size: .9375rem;
   font-weight: 600;
@@ -5841,7 +6165,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   position: sticky;
   top: 1.5rem;
   padding: 1.25rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: 1rem;
 }
 
@@ -5884,7 +6208,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   flex: 0 0 auto;
   width: 2rem;
   height: 2rem;
-  color: #fff;
+  color: var(--on-brand);
   font-size: .8125rem;
   border-radius: 50%;
 }
@@ -5913,7 +6237,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .place__block {
   padding: 1.75rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: 1rem;
   /* A grid item is min-width:auto, which means "at least as wide as what is
      inside me" -- and inside one of these is a strip of eight fare cards that
@@ -6104,7 +6428,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   line-height: 1.25;
   white-space: nowrap;
   text-overflow: ellipsis;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: .3125rem;
   box-shadow: 0 1px 3px rgb(16 36 63 / 28%);
   pointer-events: none !important;
@@ -6542,7 +6866,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   /* The same column every other content page gives its blocks, so a help
      article and a city page hold their text in the same width. */
   max-width: var(--content-column);
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: 1rem;
 }
 
@@ -6579,7 +6903,7 @@ body:has(.cookie-notice) .to-top { display: none; }
      title and the sheet's top edge is this *less* that. Change one and the
      other has to move or the gap does. */
   padding-bottom: 12.5rem;
-  background-color: var(--brand-ink);
+  background-color: var(--brand-ink-fill);
   text-align: center;
 }
 
@@ -6592,7 +6916,7 @@ body:has(.cookie-notice) .to-top { display: none; }
      instead of spanning the full container. */
   max-width: 26ch;
   margin: .5rem auto 0;
-  color: #fff;
+  color: var(--on-brand);
   font-size: clamp(2rem, 4vw, 2.75rem);
   line-height: 1.15;
   /* Two balanced lines rather than a long one and an orphan, where it wraps.
@@ -6815,7 +7139,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   padding: .5rem 1.125rem;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   color: var(--ink-secondary);
   font-size: 1.0625rem;
   cursor: pointer;
@@ -6874,7 +7198,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 .article__aside {
   max-width: var(--content-column);
   padding: 1.5rem 2.25rem 1.75rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: 1rem;
 }
 
@@ -6913,7 +7237,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   flex: 0 0 auto;
   width: 2.25rem;
   height: 2.25rem;
-  color: #fff;
+  color: var(--on-brand);
   font-size: .9375rem;
   background-color: var(--cat-blue);
   border-radius: 50%;
@@ -6977,10 +7301,10 @@ body:has(.cookie-notice) .to-top { display: none; }
   display: inline-block;
   margin: .875rem 0 0;
   padding: .4375rem 1.125rem;
-  color: #fff;
+  color: var(--on-brand);
   font-size: 1.0625rem;
   font-weight: 700;
-  background-color: var(--brand-accent);
+  background-color: var(--brand-accent-fill);
   border-radius: 999px;
 }
 
@@ -7073,7 +7397,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .help-group {
   padding: 1.75rem 2rem 1.25rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: 1rem;
   /* Room above a card followed to from the rail, so its heading does not land
      hard against the top of the viewport. */
@@ -7108,7 +7432,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   flex: 0 0 auto;
   width: var(--help-group-icon);
   height: var(--help-group-icon);
-  color: #fff;
+  color: var(--on-brand);
   font-size: 1rem;
   border-radius: 50%;
   /* The fallback matters: `accent` is a string in a row, so a value the
@@ -7231,8 +7555,8 @@ body:has(.cookie-notice) .to-top { display: none; }
   }
 
   .help-rail__link[aria-current="true"] {
-    color: #fff;
-    background-color: var(--brand-accent);
+    color: var(--on-brand);
+    background-color: var(--brand-accent-fill);
   }
 }
 
@@ -7290,7 +7614,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 
 .directory {
   padding: 2rem 2.25rem;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-radius: 1rem;
 }
 
@@ -7337,7 +7661,7 @@ body:has(.cookie-notice) .to-top { display: none; }
 .directory__search-input::placeholder { color: var(--ink-muted); }
 
 .directory__search-input:focus-visible {
-  background-color: #fff;
+  background-color: var(--surface-raised);
   border-color: var(--brand-accent);
   outline: 2px solid var(--brand-tint-edge);
   outline-offset: 1px;
@@ -7374,8 +7698,8 @@ body:has(.cookie-notice) .to-top { display: none; }
 }
 
 .directory__letter.is-current {
-  color: #fff;
-  background-color: var(--brand-ink);
+  color: var(--on-brand);
+  background-color: var(--brand-ink-chip);
 }
 
 /* ---------- The groups ---------- */
@@ -7862,7 +8186,7 @@ body:has(.cookie-notice) .to-top { display: none; }
   font-weight: 600;
   line-height: 1.3;
   text-decoration: none;
-  background-color: #fff;
+  background-color: var(--surface-raised);
   /* The border is what says "control", so it has to clear 3:1 against the
      sheet. Every `--line-*` token here fails that -- 1.25, 1.41 and 1.64 to
      one -- which is correct for what they are for, a hairline between blocks,

@@ -1,0 +1,23 @@
+{# Light or dark, and nothing else.
+
+   Two buttons rather than three. "Match system" was a third state and it is
+   gone: it is the default rather than a choice, so it was a button that did
+   what doing nothing already did. With no stored preference this file's media
+   query follows the machine, and the control simply shows which way that came
+   out -- so a reader on a laptop that dims at sunset still gets a dark page
+   without ever pressing anything.
+
+   `aria-pressed` and not `aria-current`: these are controls, not destinations.
+   The markup ships with light pressed for everybody, because the same HTML
+   goes to every reader and the choice is per-browser; the head script has
+   already applied the real one and global.js corrects the buttons. #}
+<div class="theme js-theme" role="group" aria-label="Colour theme">
+    <button type="button" class="theme__option is-on" data-theme-choice="light" aria-pressed="true">
+        <i class="fas fa-sun" aria-hidden="true"></i>
+        <span class="visually-hidden">Light</span>
+    </button>
+    <button type="button" class="theme__option" data-theme-choice="dark" aria-pressed="false">
+        <i class="fas fa-moon" aria-hidden="true"></i>
+        <span class="visually-hidden">Dark</span>
+    </button>
+</div>
