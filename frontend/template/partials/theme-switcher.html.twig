@@ -1,23 +1,34 @@
-{# Light or dark, and nothing else.
+{# Light or dark, drawn as the two things it chooses between.
 
-   Two buttons rather than three. "Match system" was a third state and it is
-   gone: it is the default rather than a choice, so it was a button that did
-   what doing nothing already did. With no stored preference this file's media
-   query follows the machine, and the control simply shows which way that came
-   out -- so a reader on a laptop that dims at sunset still gets a dark page
-   without ever pressing anything.
+   The control depicts the themes instead of wearing the current one, which is
+   why nothing in it takes a palette token: the dark track stays dark on a light
+   page and on a dark one, and a switch that restyled itself each time would
+   stop being a picture of the choice.
 
-   `aria-pressed` and not `aria-current`: these are controls, not destinations.
-   The markup ships with light pressed for everybody, because the same HTML
-   goes to every reader and the choice is per-browser; the head script has
-   already applied the real one and global.js corrects the buttons. #}
-<div class="theme js-theme" role="group" aria-label="Colour theme">
-    <button type="button" class="theme__option is-on" data-theme-choice="light" aria-pressed="true">
-        <i class="fas fa-sun" aria-hidden="true"></i>
-        <span class="visually-hidden">Light</span>
-    </button>
-    <button type="button" class="theme__option" data-theme-choice="dark" aria-pressed="false">
-        <i class="fas fa-moon" aria-hidden="true"></i>
-        <span class="visually-hidden">Dark</span>
-    </button>
-</div>
+   Collapsed it is a disc the size of "back to top" -- a pale face carrying a
+   rayed sun or a crescent moon, with a ring of its own sky around it. The glyph
+   is what makes it legible: a graded circle is a circle, and the first version
+   of this asked the colour alone to say "sun", which it does not. Hovered or focused the sky stretches to the
+   left, the disc slides to its side, and the half it uncovers is named in
+   words: Light, or Dark.
+
+   The word is the state you are in, matching the disc beside it, because that
+   is what the references for this pattern do and because "the other one" is a
+   coin toss to read without a second cue.
+
+   Leftward because the button is pinned to the right edge, so that is the only
+   direction it can grow without moving out from under the pointer.
+
+   The two spans are scenery and are hidden from a screen reader; the whole
+   meaning is the button's name and its `aria-pressed`, which is also what the
+   stylesheet reads, so there is one source for "is it dark". #}
+<button type="button" class="theme-toggle js-theme" aria-pressed="false">
+    <span class="theme-toggle__track" aria-hidden="true"></span>
+    <span class="theme-toggle__word theme-toggle__word--light" aria-hidden="true">Light</span>
+    <span class="theme-toggle__word theme-toggle__word--dark" aria-hidden="true">Dark</span>
+    <span class="theme-toggle__disc" aria-hidden="true">
+        <i class="fas fa-sun theme-toggle__glyph theme-toggle__glyph--sun"></i>
+        <i class="fas fa-moon theme-toggle__glyph theme-toggle__glyph--moon"></i>
+    </span>
+    <span class="visually-hidden">Dark theme</span>
+</button>

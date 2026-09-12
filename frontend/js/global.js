@@ -2205,6 +2205,12 @@
             return;
         }
 
+        // The theme toggle shares this corner and lifts out of the way when the
+        // button above appears. Driven from here rather than from its own
+        // scroll listener, so the two move on the same frame and cannot
+        // disagree about whether there is anything to move for.
+        const toggle = document.querySelector('.js-theme');
+
         // Roughly a screen and a half: far enough that the header is well out
         // of reach, near enough that it is there when it is wanted.
         const THRESHOLD = 800;
@@ -2217,6 +2223,10 @@
 
         const paint = function () {
             const past = window.scrollY > THRESHOLD;
+
+            if (toggle !== null) {
+                toggle.classList.toggle('is-raised', past);
+            }
 
             // `hidden` keeps it out of the tab order and off a screen reader
             // when there is nowhere to go back to; the class does the fading.
@@ -3287,27 +3297,27 @@
         mark(current().id);
     }());
 
-    /* The theme switcher.
+    /* The theme toggle.
 
        The head script has already applied the stored choice before anything was
-       painted; this only has to make the buttons agree with it and write the
-       next one. Splitting it that way is deliberate -- the part that must run
-       before first paint is short and inline, and the part that can wait until
-       the page is interactive lives here with everything else.
+       painted; this only has to make the button agree with it and write the
+       next one.
 
-       Two states, and the absence of a stored one is not a third. Nothing
-       stored means the media query in main.css decides, and the buttons show
-       which way that came out rather than offering "system" as a thing to
-       press. Pressing either writes it down, which is what stops the machine
-       overriding a reader who has said what they want. */
+       One button and two states. There is no "system" to press: with nothing
+       stored the media query in main.css decides, and the button simply shows
+       which way that came out. Pressing it writes the answer down, which is
+       what stops the machine overriding a reader who has said what they want.
+
+       `aria-pressed` is the whole of the visual state as well -- the stylesheet
+       reads it to decide which icon is showing, so there is one source for
+       "is it dark" rather than a class kept in step with an attribute. */
     (function () {
-        var group = document.querySelector('.js-theme');
+        var button = document.querySelector('.js-theme');
 
-        if (group === null) {
+        if (button === null) {
             return;
         }
 
-        var options = group.querySelectorAll('[data-theme-choice]');
         var media = window.matchMedia('(prefers-color-scheme: dark)');
 
         var stored = function () {
@@ -3316,50 +3326,39 @@
 
                 return choice === 'light' || choice === 'dark' ? choice : null;
             } catch (e) {
-                // Blocked site data. The control still works for this page, it
+                // Blocked site data. The toggle still works for this page, it
                 // just cannot remember -- better than not drawing it.
                 return null;
             }
         };
 
-        // What the reader is actually looking at, which is the stored choice
-        // where there is one and the machine's answer where there is not.
+        // What the reader is actually looking at: the stored choice where there
+        // is one, and the machine's answer where there is not.
         var effective = function () {
             return stored() || (media.matches ? 'dark' : 'light');
         };
 
-        var show = function (choice) {
-            options.forEach(function (option) {
-                var on = option.getAttribute('data-theme-choice') === choice;
-
-                option.classList.toggle('is-on', on);
-                option.setAttribute('aria-pressed', on ? 'true' : 'false');
-            });
+        var show = function (mode) {
+            button.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
         };
 
-        var apply = function (choice) {
+        button.addEventListener('click', function () {
+            var next = effective() === 'dark' ? 'light' : 'dark';
             var root = document.documentElement;
 
-            root.setAttribute('data-theme', choice);
-            // Bootstrap's own palette, which paints the components this file
-            // does not -- kept in step so the two never disagree.
-            root.setAttribute('data-bs-theme', choice);
+            root.setAttribute('data-theme', next);
+            // Bootstrap's own palette, kept in step so the two never disagree.
+            root.setAttribute('data-bs-theme', next);
 
             try {
-                window.localStorage.setItem('tb-theme', choice);
+                window.localStorage.setItem('tb-theme', next);
             } catch (e) {}
 
-            show(choice);
-        };
-
-        options.forEach(function (option) {
-            option.addEventListener('click', function () {
-                apply(option.getAttribute('data-theme-choice'));
-            });
+            show(next);
         });
 
-        // Follow the machine while nothing has been chosen, so the buttons do
-        // not go on claiming light after the laptop has gone dark.
+        // Follow the machine while nothing has been chosen, so the button does
+        // not go on offering dark after the laptop has already gone dark.
         media.addEventListener('change', function () {
             if (stored() === null) {
                 show(effective());

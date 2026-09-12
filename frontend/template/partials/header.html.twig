@@ -205,12 +205,9 @@
                         {# Last in the row, where the placeholder was. A control
                            rather than a link, so it sits outside the loop above
                            -- see the note in site.php on why it left that map. #}
-                        {# One item each. Sharing a single `li` stacked them,
-                           because the row is the list and not the item -- and
-                           they are two controls rather than one anyway. #}
-                        <li class="nav-item me-2">
-                            {% include 'partials/theme-switcher.html.twig' %}
-                        </li>
+                        {# The theme switcher used to sit here. It lives in the
+                           bottom-right corner now, stacked with "back to top" --
+                           see partials/theme-switcher.html.twig. #}
                         <li class="nav-item">
                             {% include 'partials/currency-switcher.html.twig' %}
                         </li>
