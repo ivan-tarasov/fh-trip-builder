@@ -190,6 +190,47 @@ php noah flights:add
 ### 8. Access the Project
 You're all set! Open your preferred web browser and navigate to the project URL to start using the application.
 
+## Data Retention
+
+**A booking is kept for 90 days after its flight departs. Then it is deleted,
+along with everyone travelling on it.**
+
+`bookings` and `booking_passengers` hold a contact email, a phone number,
+passenger names, dates of birth and genders. This site is priced in CAD and
+addressed to Canadians, so that is personal information under PIPEDA, which
+asks that it be kept only as long as it is needed for the purpose it was
+collected for.
+
+Ninety days rather than a year, because nothing here needs a year. Every read
+of a booking is scoped by `session_id` and there is no admin panel: once a
+visitor's session has gone, no query in this application can reach the row
+again. The only purpose the data still serves after departure is a visitor
+coming back to a trip they took, and ninety days is generous for that.
+
+The window is `BookingRepository::KEEP_DAYS_AFTER_DEPARTURE`, and a test fails
+if it changes without this paragraph changing with it.
+
+Of the card, only the brand and the last four digits are ever stored. The
+number, expiry and CVV are read from the posted form, checked, and never
+written anywhere.
+
+Applying it:
+
+```bash
+php noah db:prune            # lists what it would remove, and removes nothing
+php noah db:prune --force    # removes it
+```
+
+It lists by default because this is the one command here whose purpose is
+destroying data that has no other copy. It also drops rate-limit counters for
+hours that have already finished, which is housekeeping rather than privacy.
+
+Put it on the same daily cron as `currency:rates`:
+
+```
+15 3 * * * cd /path/to/fh-trip-builder && php noah db:prune --force
+```
+
 ## Tests
 
 ```bash

@@ -18,6 +18,7 @@ use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Db\Migrate as DatabaseMigrate;
+use TripBuilder\Noah\Db\Prune as DatabasePrune;
 use TripBuilder\Noah\Flights\Cabins as CabinsFlights;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
@@ -67,6 +68,24 @@ try {
     */
 
     $application->add(new DatabaseMigrate());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Prune DB
+    |--------------------------------------------------------------------------
+    |
+    | The retention policy, applied. Bookings whose flight left more than
+    | BookingRepository::KEEP_DAYS_AFTER_DEPARTURE days ago, the passengers on
+    | them, and rate-limit counters for hours that have finished.
+    |
+    | Lists by default and deletes only with `--force`. Unlike every other
+    | command here, what it removes has no other copy and no way back.
+    |
+    | Belongs on the same cron as currency:rates.
+    |
+    */
+
+    $application->add(new DatabasePrune());
 
     /*
     |--------------------------------------------------------------------------

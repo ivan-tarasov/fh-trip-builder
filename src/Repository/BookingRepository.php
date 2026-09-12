@@ -11,6 +11,22 @@ use TripBuilder\Database\Table;
 
 final readonly class BookingRepository
 {
+    /**
+     * How long a booking is kept after the flight has gone.
+     *
+     * The retention policy, in one place and written into the README beside
+     * the install steps -- a policy nobody can find is not one (E9, #146).
+     *
+     * Ninety days rather than a year, because nothing here needs a year.
+     * `bookings` and `booking_passengers` hold an email, a phone number, names
+     * and dates of birth, and every read of them is scoped by `session_id`:
+     * once a visitor's session is gone there is no query in this application
+     * that can reach the row again, and no admin panel to add one. So the only
+     * purpose the data still serves after departure is a visitor coming back
+     * to a trip they took, and ninety days is generous for that.
+     */
+    public const int KEEP_DAYS_AFTER_DEPARTURE = 90;
+
     public function __construct(private Connection $connection) {}
 
     /**
@@ -131,5 +147,53 @@ final readonly class BookingRepository
                 BookingStatus::Cancelled->value,
             ],
         );
+    }
+
+    /**
+     * Bookings whose flight left before the cutoff, oldest first.
+     *
+     * Read before deleting so the sweep can say what it is about to remove.
+     * Only what identifies the booking comes back -- there is no reason for a
+     * command that exists to destroy personal information to print any.
+     *
+     * @return list<array{id: int, reference: string, departure_time: string}>
+     */
+    public function departedBefore(string $cutoff): array
+    {
+        /** @var list<array{id: int, reference: string, departure_time: string}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT id, reference, departure_time FROM ' . Table::Bookings->value
+            . ' WHERE departure_time < ? ORDER BY departure_time ASC',
+            [$cutoff],
+        );
+
+        return $rows;
+    }
+
+    /**
+     * Remove those bookings and everyone travelling on them.
+     *
+     * Passengers first. There is no foreign key between the two tables, so
+     * deleting the parent first would leave the children pointing at a booking
+     * that is gone -- which is the shape of a bug that keeps the personal
+     * information and loses the thing that explains it.
+     *
+     * @return array{bookings: int, passengers: int}
+     */
+    public function forgetDepartedBefore(string $cutoff): array
+    {
+        $expired = 'SELECT id FROM ' . Table::Bookings->value . ' WHERE departure_time < ?';
+
+        $passengers = $this->connection->execute(
+            'DELETE FROM ' . Table::BookingPassengers->value . ' WHERE booking_id IN (' . $expired . ')',
+            [$cutoff],
+        );
+
+        $bookings = $this->connection->execute(
+            'DELETE FROM ' . Table::Bookings->value . ' WHERE departure_time < ?',
+            [$cutoff],
+        );
+
+        return ['bookings' => $bookings, 'passengers' => $passengers];
     }
 }
