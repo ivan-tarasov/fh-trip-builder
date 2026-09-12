@@ -5789,52 +5789,114 @@ body:has(main.article) .breadcrumbs__list {
 
 .currency__trigger[aria-expanded="true"] { background-color: rgba(255, 255, 255, .16); }
 
-/* The theme control, beside the currency one and on the same dark band.
+/* The theme toggle, in the corner with "back to top".
 
-   It sits on `--brand-ink-fill` in both palettes -- the header is the navy
-   expanse either way -- so it is styled against dark and not against the page.
-   That is why nothing here reads `--ink-body` or `--surface`: those flip, and
-   this ground does not. */
-.theme {
-  display: inline-flex;
-  align-items: center;
-  gap: .125rem;
-  padding: .1875rem;
-  border-radius: .625rem;
-  background-color: rgba(255, 255, 255, .08);
-}
+   Everything dimensional here is `.to-top`'s, deliberately: same diameter, same
+   border, same radius, same surface and shadow. They are a stack now, and two
+   controls in a stack that do not share a shape read as two accidents rather
+   than one set.
 
-.theme__option {
-  display: inline-flex;
+   `right`/`bottom` match it too, including the narrow-screen inset -- so the
+   two stay in the same column whatever the width. */
+.theme-toggle {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1030;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
-  border: 0;
-  border-radius: .5rem;
-  background-color: transparent;
-  color: var(--ink-on-dark);
-  font-size: .9375rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background-color: var(--surface-raised);
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .15);
+  color: var(--bs-primary);
+  font-size: 1rem;
   cursor: pointer;
-  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+  /* `transform` carries the lift, and it is listed before the rest so the two
+     durations can differ: moving out of the way should be quicker to start
+     than a colour settling. */
+  transition: transform var(--dur-base) var(--ease-out),
+              background-color var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
-.theme__option:hover { color: var(--on-brand); }
+/* Out of the way of "back to top", which appears below it.
 
-/* The pressed one, which is the whole point of showing three buttons instead
-   of hiding them behind a trigger. */
-.theme__option.is-on {
-  background-color: rgba(255, 255, 255, .18);
+   A transform and not `bottom`, so the lift is composited rather than relayout
+   -- and so the two can cross without the stack reflowing. The distance is that
+   button's own height plus the gap between them, written as its parts so it
+   stays right if either changes. */
+.theme-toggle.is-raised {
+  transform: translateY(calc(-2.75rem - .625rem));
+}
+
+.theme-toggle:hover {
+  background-color: var(--brand-accent-fill);
   color: var(--on-brand);
 }
 
-/* Visible focus, because these are 2rem targets with no text: a ring that only
-   showed on hover would leave the keyboard with nothing. */
-.theme__option:focus-visible {
-  outline: 2px solid var(--on-brand);
-  outline-offset: 1px;
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
 }
+
+.theme-toggle:active {
+  transform: scale(.97);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.theme-toggle.is-raised:active {
+  transform: translateY(calc(-2.75rem - .625rem)) scale(.97);
+}
+
+/* The two icons, stacked on one spot so the swap is a cross-fade rather than a
+   reflow. The box is sized here because both children are taken out of flow and
+   the button would otherwise have nothing to be the size of. */
+.theme-toggle__icons {
+  position: relative;
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.theme-toggle__moon,
+.theme-toggle__sun {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+
+/* Light is showing, so the moon is the offer. */
+.theme-toggle__sun {
+  opacity: 0;
+  transform: rotate(-90deg) scale(.6);
+}
+
+/* Dark is showing, so the sun is. The rotation is what makes this read as one
+   icon turning into the other rather than two swapping places. */
+.theme-toggle[aria-pressed="true"] .theme-toggle__moon {
+  opacity: 0;
+  transform: rotate(90deg) scale(.6);
+}
+
+.theme-toggle[aria-pressed="true"] .theme-toggle__sun {
+  opacity: 1;
+  transform: none;
+}
+
+@media (max-width: 575.98px) {
+  .theme-toggle {
+    right: .75rem;
+    bottom: .75rem;
+  }
+}
+
 
 /* Right-aligned to the trigger, because the trigger is at the right end of the
    header and a panel hanging off its left edge would leave the screen. */
@@ -6043,7 +6105,11 @@ body:has(main.article) .breadcrumbs__list {
    on how the text wraps, so any offset here would be a number that is right at
    one width and wrong at the next. The button comes back the moment the
    question is answered, which is one click away. */
-body:has(.cookie-notice) .to-top { display: none; }
+/* Both of them, not just one. The notice sits across the bottom of the window
+   and these two share that corner, so a toggle left behind would be the one
+   thing parked on top of the bar asking to be read. */
+body:has(.cookie-notice) .to-top,
+body:has(.cookie-notice) .theme-toggle { display: none; }
 
 /* The way back to the question, on the cookies page. A button and not a link,
    because it changes something rather than going somewhere. */

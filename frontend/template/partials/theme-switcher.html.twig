@@ -1,23 +1,25 @@
-{# Light or dark, and nothing else.
+{# Light or dark, in the corner rather than the header.
 
-   Two buttons rather than three. "Match system" was a third state and it is
-   gone: it is the default rather than a choice, so it was a button that did
-   what doing nothing already did. With no stored preference this file's media
-   query follows the machine, and the control simply shows which way that came
-   out -- so a reader on a laptop that dims at sunset still gets a dark page
-   without ever pressing anything.
+   A circle the size of "back to top" and wearing the same border, surface and
+   shadow, because the two are now one stack and a pill beside a circle would
+   read as two unrelated things. Which of them is on top is not fixed: this one
+   sits at the bottom while there is nothing to scroll back to, and lifts above
+   the other when it appears -- so the control nearest the thumb is always the
+   one that is always there.
 
-   `aria-pressed` and not `aria-current`: these are controls, not destinations.
-   The markup ships with light pressed for everybody, because the same HTML
-   goes to every reader and the choice is per-browser; the head script has
-   already applied the real one and global.js corrects the buttons. #}
-<div class="theme js-theme" role="group" aria-label="Colour theme">
-    <button type="button" class="theme__option is-on" data-theme-choice="light" aria-pressed="true">
-        <i class="fas fa-sun" aria-hidden="true"></i>
-        <span class="visually-hidden">Light</span>
-    </button>
-    <button type="button" class="theme__option" data-theme-choice="dark" aria-pressed="false">
-        <i class="fas fa-moon" aria-hidden="true"></i>
-        <span class="visually-hidden">Dark</span>
-    </button>
-</div>
+   The icon is what you will get, not what you have: a moon means "make it
+   dark". That is the convention almost everywhere, and it is the one that
+   survives being seen without a label.
+
+   `aria-pressed` on a plain button, rather than `role="switch"`: there is no
+   track to look at, and "Dark theme, pressed" is what this is. The markup ships
+   unpressed for everybody because the same HTML goes to every reader -- the
+   head script has already applied the real palette and global.js corrects the
+   button. #}
+<button type="button" class="theme-toggle js-theme" aria-pressed="false">
+    <span class="theme-toggle__icons" aria-hidden="true">
+        <i class="fas fa-moon theme-toggle__moon"></i>
+        <i class="fas fa-sun theme-toggle__sun"></i>
+    </span>
+    <span class="visually-hidden">Dark theme</span>
+</button>
