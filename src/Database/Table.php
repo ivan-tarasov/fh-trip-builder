@@ -33,6 +33,7 @@ enum Table: string
     case RateLimits = 'rate_limits';
     case RouteDayPrice = 'route_day_price';
     case RoutePriceBuild = 'route_price_build';
+    case ScheduleRuns = 'schedule_runs';
     case Search = 'search';
     case Subscribers = 'subscribers';
 }

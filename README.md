@@ -225,11 +225,44 @@ It lists by default because this is the one command here whose purpose is
 destroying data that has no other copy. It also drops rate-limit counters for
 hours that have already finished, which is housekeeping rather than privacy.
 
-Put it on the same daily cron as `currency:rates`:
+Do not put it on its own cron line. The server runs one scheduled command and
+the schedule lives in this repository — see below.
+
+## Scheduled Work
+
+**The server has one cron line. What runs and when is `config/noah/schedule.php`.**
 
 ```
-15 3 * * * cd /path/to/fh-trip-builder && php noah db:prune --force
+0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
 ```
+
+```php
+use TripBuilder\Frequency;
+
+return [
+    ['command' => 'currency:rates',   'every' => Frequency::Daily, 'at' => '03:00'],
+    ['command' => 'db:prune --force', 'every' => Frequency::Daily, 'at' => '03:15'],
+];
+```
+
+Before this the crontab was the only record of what this application runs
+unattended, so a rebuilt server or a reset hosting panel took the schedule with
+it and nothing here said what had been lost. Adding a task is now a pull
+request.
+
+A task is due when nothing has run since the moment it was last supposed to, so
+a tick missed by a deploy or a reboot catches up on the next one instead of
+skipping the day. `schedule:run --pretend` says what is due and runs none of
+it.
+
+**What you give up by having one line.** With a line per task, a broken one is
+isolated. With one, if `schedule:run` stops firing then rates go stale and
+retention stops applying, together, and nothing says so. `schedule_runs` records
+when each command last *started* and when it last *worked* — a command failing
+every night has a fresh first and a rotting second — and the health endpoint
+reports the age of the second. That makes a stopped scheduler **visible when
+you look**. Being *told* needs something outside polling that endpoint, which
+this project does not have and should not be assumed to.
 
 ## Tests
 
