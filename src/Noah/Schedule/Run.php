@@ -13,6 +13,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
+use TripBuilder\Frequency;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\ScheduleRunRepository;
@@ -70,6 +71,12 @@ final class Run extends AbstractCommand
             return Command::FAILURE;
         }
 
+        if ($input->getOption('pretend')) {
+            $this->report($schedule, $runs->all(), $due, $now);
+
+            return Command::SUCCESS;
+        }
+
         if ($due === []) {
             $this->io->text(sprintf('Nothing due at %s.', $now->format('Y-m-d H:i')));
 
@@ -77,16 +84,48 @@ final class Run extends AbstractCommand
         }
 
         foreach ($due as $task) {
-            if ($input->getOption('pretend')) {
-                $this->formatOutput($task['command'], 'would run', 'comment');
-
-                continue;
-            }
-
             $this->runOne($task['command'], $runs, $output);
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * The whole schedule and how it is doing, without running any of it.
+     *
+     * This is what somebody checks after a deploy and when something feels
+     * stale, so it shows every task rather than only the due ones, and it
+     * shows the last success rather than the last attempt -- a command failing
+     * every night at 03:00 looks busy by the attempt and is dead by the
+     * success, and the second is the answer to the question being asked.
+     *
+     * @param array<string, array{last_run_at: string, last_success_at: ?string, last_exit: int}> $records
+     * @param list<array{command: string, every: Frequency, at: string}> $due
+     */
+    private function report(Schedule $schedule, array $records, array $due, DateTimeImmutable $now): void
+    {
+        $dueCommands = array_column($due, 'command');
+        $rows = [];
+
+        foreach ($schedule->tasks() as $task) {
+            $record = $records[$task['command']] ?? null;
+
+            $rows[] = [
+                $task['command'],
+                $task['every']->describe($task['at']),
+                $record['last_success_at'] ?? 'never',
+                $record === null ? '-' : ($record['last_exit'] === 0 ? 'ok' : 'exit ' . $record['last_exit']),
+                in_array($task['command'], $dueCommands, true) ? 'due now' : '',
+            ];
+        }
+
+        $this->io->table(['command', 'when', 'last worked', 'last exit', ''], $rows);
+        $this->io->text(sprintf(
+            '%d of %d due at %s. Nothing was run.',
+            count($due),
+            count($schedule->tasks()),
+            $now->format('Y-m-d H:i'),
+        ));
     }
 
     /**
