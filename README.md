@@ -112,7 +112,22 @@ The live `.htaccess` is not tracked by git, because hosting panels such as cPane
 own that file and rewrite it — notably the generated block that pins the PHP
 version. Keeping it untracked stops a deploy from overwriting those changes. If
 your host has already created an `.htaccess`, leave it alone and just make sure
-it contains the rewrite rules from `.htaccess.example`.
+it contains **both** rewrite blocks from `.htaccess.example` -- the refusal
+first, then the front controller.
+
+The refusal is the one that matters. The document root is this repository, so
+without it every file here is a URL: `.env`, `composer.lock`, and any `.php`
+under `src/` or `tests/` executed on request. After copying, check from
+outside:
+
+```bash
+for p in .env noah composer.lock src/Cdn.php config/; do
+  printf '%-16s %s\n' "/$p" "$(curl -sS -o /dev/null -w '%{http_code}' "https://YOUR-HOST/$p")"
+done
+```
+
+Every line should read `403`. `/`, `/airside` and anything under `/frontend/`
+should still answer `200`.
 
 ### 4. Run Installation Command
 Execute the following command to run the installation process:

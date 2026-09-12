@@ -11,10 +11,46 @@
 # So: copy this once, then let the server keep its own copy. If you re-copy it
 # later, re-add any panel-generated blocks afterwards.
 #
+# Only two things on this disk are pages: index.php and frontend/. Everything
+# else that a request can name -- .env, config/, cache/, src/, tests/, vendor/,
+# the noah CLI, composer.lock, this file -- is refused before the router runs.
+#
+# Written as an allow-list on purpose. The docroot is the repository root, so
+# every file anybody ever adds to the root is a URL the moment it is pushed; a
+# deny-list would have to be remembered each time, and was not -- production
+# was serving composer.lock and executing files under src/ and tests/ as PHP.
+# Two allowed paths cannot drift.
+#
+# -f and -d together: a real file is refused, and so is a real directory (which
+# Apache would otherwise list or index). The root itself is let through so that
+# / still reaches the router below.
+#
+# REDIRECT_STATUS first, and it is what makes the rest safe to ship. The front
+# controller's [L] ends with an internal redirect to index.php, and per-directory
+# rules run again on that redirect -- with REQUEST_FILENAME now a real file. On
+# the Apache tested here the second pass also carries REQUEST_URI as /index.php,
+# which the allow-list lets through; on one that did not, every page on the site
+# would answer 403. The guard says: judge the request the browser made, and
+# never Apache's own.
+#
+# The proper fix is a public/ directory as the docroot, so that none of this is
+# reachable by construction -- that is E7.3. Until then this is the wall.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteCond %{REQUEST_URI} !^/$
+    RewriteCond %{REQUEST_URI} !^/index\.php$
+    RewriteCond %{REQUEST_URI} !^/frontend(/|$)
+    RewriteRule ^ - [F]
+</IfModule>
+
 # Front-controller routing: send every request that doesn't map to a real file
 # or directory through index.php, so clean URLs like /search/ and
 # /api/airports/autofill reach the router (index.php reads the path from
-# REQUEST_URI). Static assets still serve directly via the -f/-d checks.
+# REQUEST_URI). Static assets still serve directly via the -f/-d checks --
+# which, after the block above, means frontend/ and nothing else.
 # Apache only; nginx does this in its vhost with try_files ... /index.php.
 <IfModule mod_rewrite.c>
     RewriteEngine On
