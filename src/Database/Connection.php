@@ -31,10 +31,12 @@ final class Connection
         // Measured 2026-09-12, on the laptop and again in production: PHP on
         // UTC, MySQL on `SYSTEM` and therefore on the server's Eastern clock,
         // four hours apart. This codebase writes timestamps with both -- 37
-        // `NOW()` sites and `date()` everywhere else -- and the pair that
-        // decides what a visitor sees is `flights.departure_time >= NOW()`,
-        // where the column is written by PHP and the comparison was made by
-        // MySQL.
+        // `NOW()` sites and `date()` everywhere else -- so two clocks were
+        // writing into the same tables, four hours apart, and nothing errored.
+        //
+        // The flight comparisons that made this urgent are fixed separately and
+        // differently: `departure_time` is local at the airport, so no server
+        // clock could have made `>= NOW()` right. See E20 (#180).
         //
         // Here and not in `fromEnv()`, which is where it was first written.
         // The integration harness builds its own PDO and wraps it directly, so

@@ -1027,7 +1027,7 @@ final readonly class FlightRepository
             . '  AND f.arrival_airport IN (' . $to . ')'
             // Today's flights that have already left are not fares anybody can
             // buy, and a landing page showing one is worse than showing none.
-            . '  AND f.departure_time >= NOW()'
+            . '  AND f.departure_utc >= NOW()'
             . '  AND (f.cabins & ?)'
             . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
             [...$fromAirports, ...$toAirports, $cabin->bit()],
@@ -1096,7 +1096,7 @@ final readonly class FlightRepository
             . '  AND f.arrival_airport IN (' . $to . ')'
             . '  AND d.city_code <> o.city_code'
             . ($airline === null ? '' : '  AND f.airline = ?')
-            . '  AND f.departure_time >= NOW()'
+            . '  AND f.departure_utc >= NOW()'
             . '  AND (f.cabins & ?)'
             . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
             [

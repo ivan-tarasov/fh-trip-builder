@@ -263,7 +263,7 @@ final readonly class RouteRepository
             . '  ) AND f.arrival_airport IN ('
             . '   SELECT b.code FROM ' . Table::Airports->value . ' b'
             . '   WHERE b.city_code = p.to_code AND' . self::sellable('b')
-            . '  ) AND f.departure_time >= NOW()'
+            . '  ) AND f.departure_utc >= NOW()'
             . ' )'
             . ' GROUP BY p.from_code, p.to_code, p.searches'
             // Named after the count, because the count runs out. Most of these
@@ -476,7 +476,7 @@ final readonly class RouteRepository
      * "from one of these airports to one of those, and bookable".
      *
      * Spelled once so the four queries cannot disagree about what counts --
-     * most of all about `departure_time >= NOW()`, which is what keeps a fare
+     * most of all about `departure_utc >= NOW()`, which is what keeps a fare
      * nobody can buy off a page whose only job is to sell one.
      *
      * The cabin test comes from CabinClass::sqlOffers(), which returns nothing
@@ -492,7 +492,7 @@ final readonly class RouteRepository
 
         return ' WHERE f.departure_airport IN (' . self::placeholders($from) . ')'
             . '  AND f.arrival_airport IN (' . self::placeholders($to) . ')'
-            . '  AND f.departure_time >= NOW()'
+            . '  AND f.departure_utc >= NOW()'
             . ($offers === null ? '' : ' AND ' . $offers);
     }
 

@@ -15,11 +15,15 @@ use TripBuilder\Database\Connection;
  * the server's own Eastern clock, four hours apart on the laptop and four hours
  * apart in production (E17, #171).
  *
- * That matters because this codebase writes timestamps with both. `NOW()` at 37
- * sites, `date()` at the rest, and the pair that decides what a visitor sees is
- * `flights.departure_time >= NOW()` -- which is how "upcoming" is decided, on a
- * clock offset from the one that wrote the row. Four hours is a whole
- * short-haul flight.
+ * That matters because this codebase writes timestamps with both: `NOW()` at 37
+ * sites and `date()` at the rest. Four hours between them is four hours of
+ * every comparison being wrong.
+ *
+ * It also turned out to be the smaller of two frame problems. `departure_time`
+ * is local at the airport, and comparing it to `NOW()` was out by up to
+ * thirteen hours whatever the server's clock said -- that is E20 (#180), fixed
+ * by `flights.departure_utc`. Agreeing about the time was a prerequisite for
+ * that rather than a substitute.
  *
  * The failure is silent, which is the only reason this class exists. Nothing
  * errors, no query returns nothing, no page breaks: every timestamp keeps being
