@@ -184,83 +184,113 @@ class Generate extends AbstractCommand
         $progressBar->setMessage(sprintf(self::PROGRESS_MSG_FORMAT, 'Starting'));
         $progressBar->start();
 
-        // Do the magic
-        $flights = [];
+        // Do the magic.
+        //
+        // A batch at a time, not a run at a time (E19, #178). This collected
+        // every generated flight and inserted the lot at the end, which is
+        // 1.06 MB per thousand: 34 MB at ten thousand, and past PHP's default
+        // 128 MB somewhere between ninety and a hundred thousand -- measured,
+        // and the failure is a fatal in the middle of the loop that reports
+        // nothing and writes nothing. `flights:add 200000` is what CI runs and
+        // what E24.3 (#193) would quadruple.
+        $batch = [];
+        $connection = $this->connection();
 
-        while ($this->count[self::COUNT_TOTAL] < $flightsToAdd) {
-            $this->count[self::COUNT_TOTAL]++;
+        // One transaction for the whole run, as before. The batching below
+        // bounds PHP's memory, not the database's -- and moving the commit
+        // inside the loop would be a different change: a half-finished run
+        // would leave its rows behind instead of none.
+        $connection->beginTransaction();
 
-            // One draw picks the route and the carrier together, weighted by how
-            // much traffic that pairing should carry.
-            $pick = Helper::pickWeighted($cumulative, $totalWeight);
-            $airportCount = count($airports);
-            $departAirport = $airports[intdiv($routes[$pick], $airportCount)];
-            $arriveAirport = $airports[$routes[$pick] % $airportCount];
-            $airline = $carriers[$pick];
+        try {
+            while ($this->count[self::COUNT_TOTAL] < $flightsToAdd) {
+                $this->count[self::COUNT_TOTAL]++;
 
-            // Already measured while building the distribution.
-            $distance = $distances[$pick];
+                // One draw picks the route and the carrier together, weighted by how
+                // much traffic that pairing should carry.
+                $pick = Helper::pickWeighted($cumulative, $totalWeight);
+                $airportCount = count($airports);
+                $departAirport = $airports[intdiv($routes[$pick], $airportCount)];
+                $arriveAirport = $airports[$routes[$pick] % $airportCount];
+                $airline = $carriers[$pick];
 
-            // The type is settled first: it sets how fast the leg is flown and
-            // which cabins are on sale, so both follow from it rather than
-            // being drawn independently.
-            $leg = $legs->assign($distance);
+                // Already measured while building the distribution.
+                $distance = $distances[$pick];
 
-            // Render departure date and time (UNIX timestamps for random day)
-            $departureDateTime = date(
-                'Y-m-d H:i:s',
-                (int) strtotime(
-                    sprintf('+ %d days', Helper::random(self::DATE_ADD_DAYS)),
-                    rand(
-                        (int) strtotime(date('Y-m-d') . ' 00:00:01'),
-                        (int) strtotime(date('Y-m-d') . ' 23:59:59'),
+                // The type is settled first: it sets how fast the leg is flown and
+                // which cabins are on sale, so both follow from it rather than
+                // being drawn independently.
+                $leg = $legs->assign($distance);
+
+                // Render departure date and time (UNIX timestamps for random day)
+                $departureDateTime = date(
+                    'Y-m-d H:i:s',
+                    (int) strtotime(
+                        sprintf('+ %d days', Helper::random(self::DATE_ADD_DAYS)),
+                        rand(
+                            (int) strtotime(date('Y-m-d') . ' 00:00:01'),
+                            (int) strtotime(date('Y-m-d') . ' 23:59:59'),
+                        ),
                     ),
-                ),
-            );
+                );
 
-            // Both the fare and its tax live in FarePricing, so generated rows and
-            // repriced ones cannot disagree.
-            $priceBase = FarePricing::base($distance);
-            $priceTax = FarePricing::tax($priceBase);
+                // Both the fare and its tax live in FarePricing, so generated rows and
+                // repriced ones cannot disagree.
+                $priceBase = FarePricing::base($distance);
+                $priceTax = FarePricing::tax($priceBase);
 
-            $flights[] = new Flight(
-                airline: $airline,
-                number: rand(1, self::NUMBERS_POOL),
-                aircraft: $leg->aircraft,
-                fareBrand: $brandCodes[Helper::pickWeighted($brandCumulative, $brandTotal)],
-                departureAirport: $departAirport['code'],
-                departureTime: $departureDateTime,
-                departureUtc: LegBuilder::departureUtc(
-                    $departureDateTime,
-                    (string) $departAirport['timezone_name'],
-                ),
-                arrivalAirport: $arriveAirport['code'],
-                arrivalTime: LegBuilder::arrivalTime(
-                    $departureDateTime,
-                    (string) $departAirport['timezone_name'],
-                    (string) $arriveAirport['timezone_name'],
-                    $leg->duration,
-                ),
-                distance: $distance,
-                duration: $leg->duration,
-                cabins: $leg->cabins,
-                priceBase: $priceBase,
-                priceTax: $priceTax,
-                rating: rand(1, 4) + rand(0, 100) / 100,
-            );
+                $batch[] = new Flight(
+                    airline: $airline,
+                    number: rand(1, self::NUMBERS_POOL),
+                    aircraft: $leg->aircraft,
+                    fareBrand: $brandCodes[Helper::pickWeighted($brandCumulative, $brandTotal)],
+                    departureAirport: $departAirport['code'],
+                    departureTime: $departureDateTime,
+                    departureUtc: LegBuilder::departureUtc(
+                        $departureDateTime,
+                        (string) $departAirport['timezone_name'],
+                    ),
+                    arrivalAirport: $arriveAirport['code'],
+                    arrivalTime: LegBuilder::arrivalTime(
+                        $departureDateTime,
+                        (string) $departAirport['timezone_name'],
+                        (string) $arriveAirport['timezone_name'],
+                        $leg->duration,
+                    ),
+                    distance: $distance,
+                    duration: $leg->duration,
+                    cabins: $leg->cabins,
+                    priceBase: $priceBase,
+                    priceTax: $priceTax,
+                    rating: rand(1, 4) + rand(0, 100) / 100,
+                );
 
-            // Show random messages every X loop
-            if ($this->count[self::COUNT_TOTAL] % self::PROGRESS_MSG_BREAK == 0) {
-                $progressBar->setMessage(sprintf(self::PROGRESS_MSG_FORMAT, $this->getRandomProgressMessage()));
+                // Show random messages every X loop
+                if ($this->count[self::COUNT_TOTAL] % self::PROGRESS_MSG_BREAK == 0) {
+                    $progressBar->setMessage(sprintf(self::PROGRESS_MSG_FORMAT, $this->getRandomProgressMessage()));
+                }
+
+                $progressBar->advance();
+
+                // Flushed here rather than collected: the whole point.
+                if (count($batch) >= self::INSERT_BATCH_SIZE) {
+                    $this->insertFlights($batch);
+                    $batch = [];
+                }
             }
 
-            $progressBar->advance();
+            // Whatever the last batch did not fill.
+            $this->insertFlights($batch);
+
+            $connection->commit();
+        } catch (Throwable $e) {
+            $connection->rollBack();
+
+            throw $e;
         }
 
         $progressBar->setMessage(sprintf(self::PROGRESS_MSG_FORMAT, 'Landing'));
         $progressBar->finish();
-
-        $this->insertFlights($flights);
 
         $this->io->newLine(2);
 
@@ -284,7 +314,11 @@ class Generate extends AbstractCommand
     }
 
     /**
-     * Batch-insert generated flights inside a single transaction.
+     * Insert one batch of generated flights.
+     *
+     * The caller owns the transaction, because the caller is what knows when
+     * the run is over -- this is called once per `INSERT_BATCH_SIZE` flights
+     * while the generator streams (E19, #178).
      *
      * @param list<Flight> $flights
      */
@@ -298,29 +332,18 @@ class Generate extends AbstractCommand
         $rowPlaceholder = '(' . implode(', ', array_fill(0, count($columns), '?')) . ')';
         $connection = $this->connection();
 
-        $connection->beginTransaction();
+        $sql = 'INSERT INTO ' . Table::Flights->value . ' (' . implode(', ', $columns) . ') VALUES '
+            . implode(', ', array_fill(0, count($flights), $rowPlaceholder));
 
-        try {
-            foreach (array_chunk($flights, self::INSERT_BATCH_SIZE) as $chunk) {
-                $sql = 'INSERT INTO ' . Table::Flights->value . ' (' . implode(', ', $columns) . ') VALUES '
-                    . implode(', ', array_fill(0, count($chunk), $rowPlaceholder));
+        $params = [];
 
-                $params = [];
-                foreach ($chunk as $flight) {
-                    foreach ($flight->toValues() as $value) {
-                        $params[] = $value;
-                    }
-                }
-
-                $connection->execute($sql, $params);
+        foreach ($flights as $flight) {
+            foreach ($flight->toValues() as $value) {
+                $params[] = $value;
             }
-
-            $connection->commit();
-        } catch (Throwable $e) {
-            $connection->rollBack();
-
-            throw $e;
         }
+
+        $connection->execute($sql, $params);
     }
 
     /**
