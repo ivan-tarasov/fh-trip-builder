@@ -27,6 +27,18 @@
             <span class="route__summary">
                 <span class="route__transit">
                     {{ direction.duration }} in transit &middot; {{ direction.stops_label|lower }}
+                    {# Nothing at all where the aircraft type has no published
+                       fuel burn: an estimate that cannot be made is not a zero. #}
+                    {% if direction.co2 %}
+                        &middot;
+                        <span class="route__co2{{ direction.co2.low ? ' route__co2--low' : '' }}"
+                              data-toggle="tooltip" data-placement="top" title="{{ direction.co2.tooltip }}">
+                            {% if direction.co2.low %}<i class="fas fa-leaf"></i> {% endif %}{{ direction.co2.label }}
+                            {# The green and the leaf are both sight-only, and a
+                               tooltip is not read out. #}
+                            {% if direction.co2.low %}<span class="visually-hidden">, lower than typical for this route</span>{% endif %}
+                        </span>
+                    {% endif %}
                 </span>
                 {# How long each wait actually is. It was only ever a tooltip on
                    a 2px bar, which meant the difference between a 50-minute

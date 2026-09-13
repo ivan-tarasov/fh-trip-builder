@@ -173,6 +173,14 @@ final readonly class SearchFilterPanel
                     'available' => (bool) ($available[FlightFilters::DIM_NO_NIGHT] ?? false),
                     'price' => $this->optionPrice(FlightFilters::DIM_NO_NIGHT, '1'),
                 ],
+                FlightFilters::DIM_LOWER_CO2 => [
+                    'label' => 'Lower CO₂ than typical',
+                    'hint' => 'Keeps the flights whose estimated carbon per seat is at or below'
+                        . ' the middle of everything found for this route.',
+                    'on' => isset($this->chosen[FlightFilters::DIM_LOWER_CO2]),
+                    'available' => (bool) ($available[FlightFilters::DIM_LOWER_CO2] ?? false),
+                    'price' => $this->optionPrice(FlightFilters::DIM_LOWER_CO2, '1'),
+                ],
             ],
             'ranges' => [
                 FlightFilters::DIM_LAYOVER_RANGE => self::rangeOption(
@@ -240,6 +248,7 @@ final readonly class SearchFilterPanel
                 FlightFilters::DIM_NO_VISA,
                 FlightFilters::DIM_NO_GULF,
                 FlightFilters::DIM_NO_NIGHT,
+                FlightFilters::DIM_LOWER_CO2,
             ],
             'price' => [FlightFilters::DIM_PRICE],
             'duration' => [FlightFilters::DIM_DURATION],

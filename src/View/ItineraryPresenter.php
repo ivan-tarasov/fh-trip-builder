@@ -127,6 +127,7 @@ class ItineraryPresenter
             'direction' => [
                 'stops_label' => $this->stopsLabel((int) $itinerary->stops),
                 'duration' => $this->minutesToStringTime((int) $itinerary->total_duration),
+                'co2' => $this->emissions($itinerary),
                 'carriers' => array_values($carriers),
                 'depart_time' => date('H:i', strtotime($first->depart->date_time)),
                 'depart_code' => $first->depart->airport_code,
@@ -405,6 +406,37 @@ class ItineraryPresenter
                 'text' => 'Lowest price among the flights with no connection'],
             default => ['label' => ucfirst($slug), 'tone' => 'secondary', 'icon' => 'star', 'text' => ''],
         };
+    }
+
+    /**
+     * The carbon figure for the card, or null when there is none to show.
+     *
+     * Null where a leg's aircraft type has no published fuel burn. A booked or
+     * saved itinerary has no figure either, because it is rebuilt from what was
+     * stored rather than from a search -- so this reads both as absent and the
+     * card prints nothing rather than a zero.
+     *
+     * `low` is set for the itineraries at or below the median of everything the
+     * route offered, which is all "lower than typical" can honestly mean here.
+     *
+     * @return array{label: string, low: bool, tooltip: string}|null
+     */
+    private function emissions(stdClass $itinerary): ?array
+    {
+        $kilograms = $itinerary->co2_kg ?? null;
+
+        if ($kilograms === null) {
+            return null;
+        }
+
+        $low = (bool) ($itinerary->co2_typical ?? false);
+
+        return [
+            'label' => sprintf('%s kg CO₂', number_format((float) $kilograms)),
+            'low' => $low,
+            'tooltip' => 'Estimated carbon for one seat, from the aircraft and the distance flown.'
+                . ($low ? ' Lower than typical for this route.' : ''),
+        ];
     }
 
     /**

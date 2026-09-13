@@ -19,6 +19,7 @@ enum SortMethod: string
     case Rating = 'rating';
     case LayoverShort = 'layover_short';
     case Recommended = 'recommended';
+    case Emissions = 'emissions';
 
     /**
      * Resolve a requested sort string, falling back to the app's default for
@@ -59,19 +60,25 @@ enum SortMethod: string
             // ranksAcrossResults). Price only decides which candidates survive
             // the cap, and the cheapest are the right ones to keep.
             self::Recommended => '(price_base + price_tax) ASC',
+            // Same, for the same reason: the CO2 figure is worked out in PHP
+            // from the type and the distance, so there is no column to order on
+            // and price decides which candidates reach the cap.
+            self::Emissions => '(price_base + price_tax) ASC',
         };
     }
 
     /**
-     * Whether this sort can only be decided once every result is known.
+     * Whether this sort has to be resolved in PHP rather than in the ORDER BY.
      *
-     * "Best" scores each itinerary against the cheapest and quickest of the
-     * set, so there is no ORDER BY that expresses it — the repository ranks it
-     * after filtering instead.
+     * Two reasons, one each. "Best" scores each itinerary against the cheapest
+     * and quickest of the set, so it cannot be decided until every result is
+     * known. Emissions are not in the candidate row at all -- they are worked
+     * out from the type and the distance after the statement returns. Either
+     * way the repository does the ordering once filtering is done.
      */
     public function ranksAcrossResults(): bool
     {
-        return $this === self::Recommended;
+        return $this === self::Recommended || $this === self::Emissions;
     }
 
 }
