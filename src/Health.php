@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace TripBuilder;
 
+use TripBuilder\Http\HttpStatus;
+
 /**
  * What the health endpoint says, decided away from the request.
  *
@@ -50,8 +52,8 @@ final readonly class Health
      * `503` and not `500`: the application is answering, the thing behind it is
      * not, and that is a difference a load balancer acts on.
      */
-    public static function statusCode(bool $database): int
+    public static function statusCode(bool $database): HttpStatus
     {
-        return $database ? 200 : 503;
+        return $database ? HttpStatus::Ok : HttpStatus::ServiceUnavailable;
     }
 }

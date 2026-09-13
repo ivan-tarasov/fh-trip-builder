@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use RuntimeException;
 use Throwable;
 use TripBuilder\ArticleRating;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Log;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
@@ -120,7 +121,7 @@ class HelpController extends AbstractController
         // built from the path that was asked for, so /help/Baggage left alone
         // would be a second URL declaring itself the original.
         if ($slug !== $canonical) {
-            $this->bounce('/help/' . $canonical, 301);
+            $this->bounce('/help/' . $canonical, HttpStatus::MovedPermanently);
 
             return;
         }

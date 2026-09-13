@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\ArticleRating;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Log;
 use TripBuilder\Repository\PostImageRepository;
 use TripBuilder\Repository\PostRepository;
@@ -65,7 +66,7 @@ class AirsideController extends AbstractController
         // /airside/Picking-A-Seat left alone would be a second URL declaring
         // itself the original.
         if ($slug !== $canonical) {
-            $this->bounce('/airside/' . $canonical, 301);
+            $this->bounce('/airside/' . $canonical, HttpStatus::MovedPermanently);
 
             return;
         }

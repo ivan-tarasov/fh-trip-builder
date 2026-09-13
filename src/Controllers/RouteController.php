@@ -9,6 +9,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\GreatCircle;
 use TripBuilder\Helper;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Log;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\RouteRepository;
@@ -97,7 +98,7 @@ class RouteController extends AbstractController
             $canonical = RouteAddress::path((string) $from['name'], (string) $to['name']);
 
             if ($this->request->path() !== $canonical) {
-                $this->bounce($canonical, 301);
+                $this->bounce($canonical, HttpStatus::MovedPermanently);
 
                 return;
             }

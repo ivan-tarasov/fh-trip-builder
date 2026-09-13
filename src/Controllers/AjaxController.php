@@ -8,6 +8,7 @@ use Throwable;
 use TripBuilder\ArticleRating;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Log;
 use TripBuilder\Money;
@@ -188,7 +189,7 @@ class AjaxController extends AbstractController
         $to = strtoupper($this->request->body->str('to'));
 
         if (!self::isCode($from) || !self::isCode($to) || $from === $to) {
-            http_response_code(400);
+            http_response_code(HttpStatus::BadRequest->value);
             echo json_encode(['status' => 'error', 'message' => 'Wrong format']);
 
             return;
@@ -304,7 +305,7 @@ class AjaxController extends AbstractController
         // Checked here and not only in the browser: the form is one way to
         // reach this, not the only one.
         if ($email === '' || mb_strlen($email) > self::EMAIL_MAX || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->answerSubscribe($asJson, 422, [
+            $this->answerSubscribe($asJson, HttpStatus::UnprocessableEntity, [
                 'status' => 'error',
                 'message' => 'That does not look like an email address.',
             ], 'bad');
@@ -318,7 +319,7 @@ class AjaxController extends AbstractController
             // The reason goes to the log, not to the page: a visitor cannot act
             // on it and a database error is not theirs to read.
             Log::error('Subscribe failed: ' . $e->getMessage());
-            $this->answerSubscribe($asJson, 500, [
+            $this->answerSubscribe($asJson, HttpStatus::InternalServerError, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
             ], 'bad');
@@ -326,7 +327,7 @@ class AjaxController extends AbstractController
             return;
         }
 
-        $this->answerSubscribe($asJson, 200, [
+        $this->answerSubscribe($asJson, HttpStatus::Ok, [
             'status' => 'ok',
             'added' => $added,
             // "We will write when a fare drops" was the strongest promise in
@@ -380,7 +381,7 @@ class AjaxController extends AbstractController
             $known = new ArticleRepository($this->connection())->all();
         } catch (Throwable $e) {
             Log::error('Article vote allow-list unavailable: ' . $e->getMessage());
-            $this->answerVote($asJson, 500, [
+            $this->answerVote($asJson, HttpStatus::InternalServerError, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
             ], 'bad');
@@ -389,7 +390,7 @@ class AjaxController extends AbstractController
         }
 
         if (!array_key_exists($slug, $known)) {
-            $this->answerVote($asJson, 422, [
+            $this->answerVote($asJson, HttpStatus::UnprocessableEntity, [
                 'status' => 'error',
                 'message' => 'That is not an article we have.',
             ], 'bad');
@@ -403,7 +404,7 @@ class AjaxController extends AbstractController
         $helpful = $this->request->body->intWithin('helpful', -1, 0, 1);
 
         if ($helpful < 0) {
-            $this->answerVote($asJson, 422, [
+            $this->answerVote($asJson, HttpStatus::UnprocessableEntity, [
                 'status' => 'error',
                 'message' => 'Say whether it helped or it did not.',
             ], 'bad');
@@ -420,7 +421,7 @@ class AjaxController extends AbstractController
             // The reason goes to the log, not to the page, as with subscribe:
             // a visitor cannot act on it and a database error is not theirs.
             Log::error('Article vote failed: ' . $e->getMessage());
-            $this->answerVote($asJson, 500, [
+            $this->answerVote($asJson, HttpStatus::InternalServerError, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
             ], 'bad');
@@ -428,7 +429,7 @@ class AjaxController extends AbstractController
             return;
         }
 
-        $this->answerVote($asJson, 200, [
+        $this->answerVote($asJson, HttpStatus::Ok, [
             'status' => 'ok',
             'helpful' => $helpful === 1,
             'votes' => $tally['votes'],
@@ -485,7 +486,7 @@ class AjaxController extends AbstractController
             $known = new PostRepository($this->connection())->all();
         } catch (Throwable $e) {
             Log::error('Post vote allow-list unavailable: ' . $e->getMessage());
-            $this->answerVote($asJson, 500, [
+            $this->answerVote($asJson, HttpStatus::InternalServerError, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
             ], 'bad');
@@ -494,7 +495,7 @@ class AjaxController extends AbstractController
         }
 
         if (!array_key_exists($slug, $known)) {
-            $this->answerVote($asJson, 422, [
+            $this->answerVote($asJson, HttpStatus::UnprocessableEntity, [
                 'status' => 'error',
                 'message' => 'That is not an article we have.',
             ], 'bad');
@@ -508,7 +509,7 @@ class AjaxController extends AbstractController
         $helpful = $this->request->body->intWithin('helpful', -1, 0, 1);
 
         if ($helpful < 0) {
-            $this->answerVote($asJson, 422, [
+            $this->answerVote($asJson, HttpStatus::UnprocessableEntity, [
                 'status' => 'error',
                 'message' => 'Say whether it helped or it did not.',
             ], 'bad');
@@ -525,7 +526,7 @@ class AjaxController extends AbstractController
             // The reason goes to the log, not to the page, as with subscribe:
             // a visitor cannot act on it and a database error is not theirs.
             Log::error('Post vote failed: ' . $e->getMessage());
-            $this->answerVote($asJson, 500, [
+            $this->answerVote($asJson, HttpStatus::InternalServerError, [
                 'status' => 'error',
                 'message' => 'That did not work. Try again in a moment.',
             ], 'bad');
@@ -533,7 +534,7 @@ class AjaxController extends AbstractController
             return;
         }
 
-        $this->answerVote($asJson, 200, [
+        $this->answerVote($asJson, HttpStatus::Ok, [
             'status' => 'ok',
             'helpful' => $helpful === 1,
             'votes' => $tally['votes'],
@@ -557,11 +558,11 @@ class AjaxController extends AbstractController
      *
      * @param array<string, mixed> $payload
      */
-    private function answerVote(bool $asJson, int $code, array $payload, string $tone): void
+    private function answerVote(bool $asJson, HttpStatus $code, array $payload, string $tone): void
     {
         if ($asJson) {
             header('Content-type: application/json; charset=utf-8');
-            http_response_code($code);
+            http_response_code($code->value);
             echo json_encode($payload);
 
             return;
@@ -574,7 +575,7 @@ class AjaxController extends AbstractController
 
         // Back to the article, at the block that was just used, and a 303 so
         // the back button does not offer to send the vote again.
-        $this->bounce($this->returnTo() . '#article-verdict', 303);
+        $this->bounce($this->returnTo() . '#article-verdict', HttpStatus::SeeOther);
     }
 
     /**
@@ -582,11 +583,11 @@ class AjaxController extends AbstractController
      *
      * @param array<string, mixed> $payload
      */
-    private function answerSubscribe(bool $asJson, int $code, array $payload, string $tone): void
+    private function answerSubscribe(bool $asJson, HttpStatus $code, array $payload, string $tone): void
     {
         if ($asJson) {
             header('Content-type: application/json; charset=utf-8');
-            http_response_code($code);
+            http_response_code($code->value);
             echo json_encode($payload);
 
             return;
@@ -602,7 +603,7 @@ class AjaxController extends AbstractController
 
         // Redirect rather than render: a POST left in history is a POST the
         // browser offers to send again on every back button.
-        $this->bounce($this->returnTo() . '#fare-alerts', 303);
+        $this->bounce($this->returnTo() . '#fare-alerts', HttpStatus::SeeOther);
     }
 
     /**
@@ -650,12 +651,12 @@ class AjaxController extends AbstractController
      * @param RateLimit|null $limit the allowance this endpoint spends from, or
      *     null for the ones that only build a trip in the session
      *
-     * @return array{int, string}|null
+     * @return array{HttpStatus, string}|null
      */
     private function guardFailure(?RateLimit $limit = null): ?array
     {
         if (!$this->request->isPost()) {
-            return [405, 'Method not allowed'];
+            return [HttpStatus::MethodNotAllowed, 'Method not allowed'];
         }
 
         // Csrf::FIELD and Csrf::HEADER, not the strings they happen to hold.
@@ -668,14 +669,14 @@ class AjaxController extends AbstractController
             ?? $this->request->header(Csrf::HEADER);
 
         if (!Csrf::isValid($token)) {
-            return [403, 'Invalid or missing CSRF token'];
+            return [HttpStatus::Forbidden, 'Invalid or missing CSRF token'];
         }
 
         // After the token and not before it. A 429 that arrived first would
         // answer a different question than it looks like -- whether the token
         // was accepted -- and would do it without spending one.
         if ($limit !== null && $this->isOverLimit($limit)) {
-            return [429, $limit->refusal()];
+            return [HttpStatus::TooManyRequests, $limit->refusal()];
         }
 
         return null;
@@ -692,7 +693,7 @@ class AjaxController extends AbstractController
 
         [$code, $message] = $failure;
 
-        http_response_code($code);
+        http_response_code($code->value);
         echo json_encode(['status' => 'error', 'message' => $message]);
 
         return false;
