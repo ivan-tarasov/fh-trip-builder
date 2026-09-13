@@ -6,19 +6,42 @@ namespace TripBuilder\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Env;
+use TripBuilder\EnvKey;
 
 /**
  * Which source wins, which is the only thing this class decides.
  */
 final class EnvTest extends TestCase
 {
-    /** Nothing reads this; it only has to be a name no real environment holds. */
-    private const string KEY = 'TRIPBUILDER_ENV_TEST';
+    /**
+     * A real case, because `Env::get()` no longer accepts an invented name
+     * (E10.4, #196). This one, because nothing else in the suite reads it --
+     * the API's token check is the only caller and no test goes through it.
+     */
+    private const EnvKey KEY = EnvKey::ApiAcceptedTokens;
+
+    private string|false $exported = false;
+    private ?string $loaded = null;
+
+    protected function setUp(): void
+    {
+        $this->exported = getenv(self::KEY->value);
+        $this->loaded = isset($_ENV[self::KEY->value]) ? (string) $_ENV[self::KEY->value] : null;
+
+        putenv(self::KEY->value);
+        unset($_ENV[self::KEY->value]);
+    }
 
     protected function tearDown(): void
     {
-        putenv(self::KEY);
-        unset($_ENV[self::KEY]);
+        // No `=` removes the variable, which is the only way back to unset.
+        putenv($this->exported === false ? self::KEY->value : self::KEY->value . '=' . $this->exported);
+
+        if ($this->loaded === null) {
+            unset($_ENV[self::KEY->value]);
+        } else {
+            $_ENV[self::KEY->value] = $this->loaded;
+        }
     }
 
     public function testAKeyNobodySetReadsAsAnEmptyString(): void
@@ -28,7 +51,7 @@ final class EnvTest extends TestCase
 
     public function testItFallsBackToWhatDotenvLoaded(): void
     {
-        $_ENV[self::KEY] = 'from-dotenv';
+        $_ENV[self::KEY->value] = 'from-dotenv';
 
         self::assertSame('from-dotenv', Env::get(self::KEY));
     }
@@ -42,8 +65,8 @@ final class EnvTest extends TestCase
      */
     public function testTheRealEnvironmentBeatsWhatDotenvLoaded(): void
     {
-        $_ENV[self::KEY] = 'from-dotenv';
-        putenv(self::KEY . '=from-the-process');
+        $_ENV[self::KEY->value] = 'from-dotenv';
+        putenv(self::KEY->value . '=from-the-process');
 
         self::assertSame('from-the-process', Env::get(self::KEY));
     }
@@ -54,8 +77,8 @@ final class EnvTest extends TestCase
      */
     public function testAnExportedEmptyStringWinsToo(): void
     {
-        $_ENV[self::KEY] = 'from-dotenv';
-        putenv(self::KEY . '=');
+        $_ENV[self::KEY->value] = 'from-dotenv';
+        putenv(self::KEY->value . '=');
 
         self::assertSame('', Env::get(self::KEY));
     }

@@ -40,18 +40,19 @@ jobs:
           --health-timeout=5s
           --health-retries=10
 
+    # Deliberately exported rather than left to `.env`: this is the shape a
+    # real host uses, and reading `$_ENV` alone cannot see it (E10.1, #148).
+    # Every name here is one EnvKey reads — EnvSampleTest keeps that list
+    # honest, and `APP_NAME`, `DB_CONNECTION`, `API_URL` and `API_TOKEN` were
+    # all set here for nothing until it did (E10.4, #196).
     env:
-      DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_DATABASE: tb-install
       DB_USERNAME: root
       DB_PASSWORD: root
       APP_ENV: common
-      APP_NAME: TripBuilder
       AWS_CLOUDFRONT: example.cloudfront.net
-      API_URL: http://localhost/api
-      API_TOKEN: ci-token
       API_ACCEPTED_TOKENS: ci-token
 
     steps:
@@ -91,17 +92,13 @@ jobs:
       - name: Create .env
         run: |
           cat > .env <<'EOF'
-          APP_NAME=TripBuilder
           APP_ENV=common
-          DB_CONNECTION=mysql
           DB_HOST=127.0.0.1
           DB_PORT=3306
           DB_DATABASE=tb-install
           DB_USERNAME=root
           DB_PASSWORD=root
           AWS_CLOUDFRONT=example.cloudfront.net
-          API_URL=http://localhost/api
-          API_TOKEN=ci-token
           API_ACCEPTED_TOKENS=ci-token
           EOF
 

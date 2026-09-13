@@ -6,6 +6,7 @@ namespace TripBuilder\View;
 
 use TripBuilder\Config;
 use TripBuilder\Env;
+use TripBuilder\EnvKey;
 use TripBuilder\Polyline;
 
 /**
@@ -233,7 +234,7 @@ final class MapView
     /** The token, from the environment and nowhere else. */
     private static function token(): string
     {
-        return Env::get('MAPBOX_TOKEN');
+        return Env::get(EnvKey::MapboxToken);
     }
 
     private static function setting(string $key, mixed $default): mixed

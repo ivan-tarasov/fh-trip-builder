@@ -27,7 +27,7 @@ class Config
         // Clear config data array to prevent mixing data with multiple time using
         self::$configData = [];
 
-        $environment ??= Env::get('APP_ENV');
+        $environment ??= Env::get(EnvKey::AppEnv);
 
         // Refused rather than defaulted. An empty name makes the path
         // `config/`, which exists and holds no `.php` files, so the config

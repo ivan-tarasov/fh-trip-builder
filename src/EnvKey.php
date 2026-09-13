@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace TripBuilder;
+
+/**
+ * Every setting this application reads from the environment, and nothing else.
+ *
+ * The point is `cases()` rather than the spelling. While the names were plain
+ * strings nothing could answer "what does this need to run", so nobody
+ * reconciled the thirteen names in the code against the fifteen in
+ * `.env.sample` or the eighteen in a working `.env`. `APP_NAME` and
+ * `DB_CONNECTION` sat in the sample, in the CI workflow and in the README's
+ * install steps, read by nothing, for as long as anybody had been copying that
+ * file. EnvSampleTest now makes the two lists answer to each other.
+ *
+ * An enum and not constants, which is the opposite of the call made for
+ * `Schedule::COMMAND` and `Cron::MINUTE` (E22, #184). Those are keys a person
+ * types into a PHP config file, so a plain string has to stay legal there.
+ * These are written in `.env` and never in PHP -- nothing needs to spell one
+ * as a literal, so the type can close.
+ *
+ * Backed by the name itself, so a case and the line in `.env` are the same
+ * text and neither can be renamed without the other.
+ */
+enum EnvKey: string
+{
+    /** Which directory under `config/` is loaded. Config refuses to start without it. */
+    case AppEnv = 'APP_ENV';
+
+    case DbHost = 'DB_HOST';
+    case DbPort = 'DB_PORT';
+    case DbDatabase = 'DB_DATABASE';
+    case DbUsername = 'DB_USERNAME';
+    case DbPassword = 'DB_PASSWORD';
+
+    case AwsAccessKeyId = 'AWS_ACCESS_KEY_ID';
+    case AwsSecretAccessKey = 'AWS_SECRET_ACCESS_KEY';
+    case AwsRegion = 'AWS_REGION';
+    case AwsBucket = 'AWS_BUCKET';
+
+    /** The distribution images are served from. Empty is a valid answer: it means serve them locally. */
+    case AwsCloudfront = 'AWS_CLOUDFRONT';
+
+    case MapboxToken = 'MAPBOX_TOKEN';
+    case ApiAcceptedTokens = 'API_ACCEPTED_TOKENS';
+}

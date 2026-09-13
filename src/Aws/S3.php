@@ -6,6 +6,7 @@ namespace TripBuilder\Aws;
 
 use RuntimeException;
 use TripBuilder\Env;
+use TripBuilder\EnvKey;
 
 /**
  * The two S3 calls this project makes: put an object, ask whether one is there.
@@ -26,6 +27,14 @@ final readonly class S3 implements ObjectStore
         private Signature $signature,
     ) {}
 
+    /** @var list<EnvKey> what an unsigned PUT needs, and what it is refused without. */
+    private const array REQUIRED = [
+        EnvKey::AwsAccessKeyId,
+        EnvKey::AwsSecretAccessKey,
+        EnvKey::AwsBucket,
+        EnvKey::AwsRegion,
+    ];
+
     /**
      * Built from the environment, which is where a write credential belongs.
      *
@@ -36,18 +45,20 @@ final readonly class S3 implements ObjectStore
      */
     public static function fromEnvironment(): self
     {
-        $required = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_BUCKET', 'AWS_REGION'];
         $missing = array_values(array_filter(
-            $required,
-            static fn(string $key): bool => Env::get($key) === '',
+            self::REQUIRED,
+            static fn(EnvKey $key): bool => Env::get($key) === '',
         ));
 
         if ($missing !== []) {
-            throw new RuntimeException('Not set in the environment: ' . implode(', ', $missing) . '.');
+            throw new RuntimeException(sprintf(
+                'Not set in the environment: %s.',
+                implode(', ', array_map(static fn(EnvKey $key): string => $key->value, $missing)),
+            ));
         }
 
-        $bucket = Env::get('AWS_BUCKET');
-        $region = Env::get('AWS_REGION');
+        $bucket = Env::get(EnvKey::AwsBucket);
+        $region = Env::get(EnvKey::AwsRegion);
 
         // A dot in the name makes the virtual-hosted endpoint one label deeper
         // than the `*.s3.<region>.amazonaws.com` certificate covers, so every
@@ -61,8 +72,8 @@ final readonly class S3 implements ObjectStore
         }
 
         return new self($bucket, $region, new Signature(
-            Env::get('AWS_ACCESS_KEY_ID'),
-            Env::get('AWS_SECRET_ACCESS_KEY'),
+            Env::get(EnvKey::AwsAccessKeyId),
+            Env::get(EnvKey::AwsSecretAccessKey),
             $region,
             's3',
         ));
