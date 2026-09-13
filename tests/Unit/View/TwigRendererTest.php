@@ -11,13 +11,26 @@ use TripBuilder\View\TwigRenderer;
 final class TwigRendererTest extends TestCase
 {
     private TwigRenderer $renderer;
+    private string|false $cdn = false;
 
+    /**
+     * putenv() and not `$_ENV`: Env::get() reads the real environment first, so
+     * a build that exports AWS_CLOUDFRONT -- CI does -- would otherwise beat
+     * whatever a test put in `$_ENV` and the assertions below would be about
+     * the runner's host.
+     */
     protected function setUp(): void
     {
-        $_ENV['AWS_CLOUDFRONT'] = 'cdn.example.test';
+        $this->cdn = getenv('AWS_CLOUDFRONT');
+        putenv('AWS_CLOUDFRONT=cdn.example.test');
         new Config('common');
 
         $this->renderer = new TwigRenderer();
+    }
+
+    protected function tearDown(): void
+    {
+        putenv($this->cdn === false ? 'AWS_CLOUDFRONT' : 'AWS_CLOUDFRONT=' . $this->cdn);
     }
 
     public function testRendersFragment(): void

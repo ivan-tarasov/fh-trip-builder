@@ -12,8 +12,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
-use TripBuilder\Database\Connection;
 use TripBuilder\Database\Dump;
+use TripBuilder\Env;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
@@ -33,7 +33,7 @@ use TripBuilder\Noah\AbstractCommand;
  * deleted eight real bookings out of a development database that had none
  * (E18, #176).
  *
- * Credentials come from `.env`, read through `Connection::env()` so this and
+ * Credentials come from the environment, read through `Env::get()` so this and
  * the application cannot disagree about which database they mean.
  */
 final class Backup extends AbstractCommand
@@ -64,7 +64,7 @@ final class Backup extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $database = Connection::env('DB_DATABASE');
+        $database = Env::get('DB_DATABASE');
 
         if ($database === '') {
             $this->io->error('DB_DATABASE is empty, so there is nothing to back up.');
@@ -72,7 +72,7 @@ final class Backup extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $dump = new Dump($binary, $database);
+        $dump = new Dump($binary, $database, Dump::supportsColumnStatistics($binary));
         $path = $this->destination($dump->fileName(new DateTimeImmutable()->format('Y-m-d-His')));
 
         try {
@@ -102,10 +102,10 @@ final class Backup extends AbstractCommand
     private function writeDump(Dump $dump, string $path): int
     {
         $defaults = Dump::writeDefaults(Dump::defaults(
-            Connection::env('DB_HOST'),
-            Connection::env('DB_PORT') ?: '3306',
-            Connection::env('DB_USERNAME'),
-            Connection::env('DB_PASSWORD'),
+            Env::get('DB_HOST'),
+            Env::get('DB_PORT') ?: '3306',
+            Env::get('DB_USERNAME'),
+            Env::get('DB_PASSWORD'),
         ));
 
         try {

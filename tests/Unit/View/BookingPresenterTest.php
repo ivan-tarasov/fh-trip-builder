@@ -13,10 +13,14 @@ use TripBuilder\View\BookingPresenter;
 
 final class BookingPresenterTest extends TestCase
 {
+    private string|false $cdn = false;
+
     protected function setUp(): void
     {
-        // carrierLogo() and the layover notices read config.
-        $_ENV['AWS_CLOUDFRONT'] = 'cdn.example.test';
+        // carrierLogo() and the layover notices read config. putenv() and not
+        // `$_ENV`, because Env::get() reads the real environment first.
+        $this->cdn = getenv('AWS_CLOUDFRONT');
+        putenv('AWS_CLOUDFRONT=cdn.example.test');
         new Config('common');
         unset($_COOKIE[Currency::COOKIE]);
         Money::forget();
@@ -24,6 +28,7 @@ final class BookingPresenterTest extends TestCase
 
     protected function tearDown(): void
     {
+        putenv($this->cdn === false ? 'AWS_CLOUDFRONT' : 'AWS_CLOUDFRONT=' . $this->cdn);
         unset($_COOKIE[Currency::COOKIE]);
         Money::forget();
     }
