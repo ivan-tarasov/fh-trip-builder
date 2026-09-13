@@ -17,6 +17,7 @@ final class HealthTest extends TestCase
             [
                 'status' => 'ok',
                 'db' => 'ok',
+                'clock' => 'unknown',
                 'schedule' => 'unknown',
                 'tasks' => [],
                 'version' => 'v1.2.3-develop-abc1234',
@@ -40,6 +41,7 @@ final class HealthTest extends TestCase
             [
                 'status' => 'error',
                 'db' => 'down',
+                'clock' => 'unknown',
                 'schedule' => 'unknown',
                 'tasks' => [],
                 'version' => 'v1.2.3-develop-abc1234',
@@ -93,6 +95,26 @@ final class HealthTest extends TestCase
     public function testAnUnreadableScheduleIsNotReportedAsHealthy(): void
     {
         self::assertSame('unknown', Health::report(true, 'v1', [])['schedule']);
+    }
+
+    /**
+     * A database on a different clock does not make the site look down.
+     *
+     * Same reasoning as a stale schedule: it is a thing that is true and wrong
+     * at once, and a check that cannot tell it from unreachable gets muted.
+     */
+    public function testAClockDisagreementIsReportedWithoutFailingTheCheck(): void
+    {
+        $report = Health::report(true, 'v1', [], -14400);
+
+        self::assertSame('4h behind', $report['clock']);
+        self::assertSame('ok', $report['status'], 'a timezone difference made the site look down');
+        self::assertSame(200, Health::statusCode(true));
+    }
+
+    public function testAgreeingClocksSayOk(): void
+    {
+        self::assertSame('ok', Health::report(true, 'v1', [], 0)['clock']);
     }
 
     /**

@@ -23,16 +23,23 @@ final readonly class Health
      * scheduler shows in its own field, where a monitor can assert on it
      * without confusing it with the site being unreachable (E16.2, #169).
      *
+     * `clock` for the same reason `schedule` is here: it is a thing that can be
+     * true and wrong at once. PHP and the database disagreeing about the time
+     * breaks nothing and errors nowhere -- every row keeps being written, four
+     * hours from the one beside it -- so the only way it gets noticed is if
+     * something says it out loud (E17, #171).
+     *
      * @param array<string, array{age: string, stale: bool}> $schedule
-     * @return array{status: string, db: string, schedule: string, tasks: array<string, string>, version: string}
+     * @return array{status: string, db: string, clock: string, schedule: string, tasks: array<string, string>, version: string}
      */
-    public static function report(bool $database, string $version, array $schedule = []): array
+    public static function report(bool $database, string $version, array $schedule = [], ?int $drift = null): array
     {
         $stale = array_filter($schedule, static fn(array $task): bool => $task['stale']);
 
         return [
             'status' => $database ? 'ok' : 'error',
             'db' => $database ? 'ok' : 'down',
+            'clock' => Clock::describe($drift),
             'schedule' => $schedule === [] ? 'unknown' : ($stale === [] ? 'ok' : 'stale'),
             'tasks' => array_map(static fn(array $task): string => $task['age'], $schedule),
             'version' => $version,
