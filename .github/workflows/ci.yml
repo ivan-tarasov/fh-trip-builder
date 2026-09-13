@@ -131,6 +131,14 @@ jobs:
       # whole integration suite passes by doing nothing. The count is a density
       # trade-off, not a fixture: a specific route on a specific day only has
       # itineraries once the network is dense enough to connect through.
+      #
+      # **200,000 on purpose, and deliberately not the README's 900,000.**
+      # That number was measured for a site somebody looks at: at 200,000 --
+      # 2,222 a day -- roughly a third of mid-ranked routes answer nothing, and
+      # three of these tests skip themselves because of it. Matching the README
+      # would run those three and cost about forty seconds of every build.
+      # Asked and decided on 2026-09-13: the three skips are the cheaper side of
+      # that trade. Raise it when a test that matters is one of the three.
       - name: Generate flights for the integration tests
         run: php noah flights:add 200000 --no-ansi --no-interaction
 
