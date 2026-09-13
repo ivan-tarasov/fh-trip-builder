@@ -199,9 +199,11 @@ final class RouteRepositoryTest extends IntegrationTestCase
 
     public function testTheLimitIsHonoured(): void
     {
-        $routes = $this->repository()->departing($this->busiest('from_code'), 3);
+        $limit = 3;
 
-        self::assertCount(3, $routes);
+        $routes = $this->repository()->departing($this->wellConnected($limit), $limit);
+
+        self::assertCount($limit, $routes);
     }
 
     public function testAnUnknownCityHasNoRoutes(): void
@@ -290,8 +292,41 @@ final class RouteRepositoryTest extends IntegrationTestCase
     }
 
     /**
-     * The city at one end of the most-searched pair, which is the busiest in
-     * that direction and so the one long enough to be cut by a limit.
+     * A city with more searched destinations than the limit under test.
+     *
+     * Not `busiest()`, and the difference is what makes this test stable.
+     * `departing()` reads the search log rather than the flight table, so "how
+     * many destinations does this city have" is a question about what visitors
+     * looked for. The origin of the single most-searched *pair* need not have
+     * searched more than one destination — Guangzhou had exactly one after an
+     * afternoon of measuring routes, and this test failed with "actual size 1
+     * matches expected size 3" on a suite that had passed an hour earlier.
+     *
+     * A limit test needs a list long enough to be cut, so it asks for one.
+     */
+    private function wellConnected(int $limit): string
+    {
+        $destinations = [];
+
+        foreach ($this->repository()->searched() as $route) {
+            $destinations[(string) $route['from_code']][(string) $route['to_code']] = true;
+        }
+
+        foreach ($destinations as $city => $reached) {
+            if (count($reached) > $limit) {
+                return (string) $city;
+            }
+        }
+
+        self::markTestSkipped(sprintf(
+            'No city has been searched to more than %d destinations, so no list is long enough to cut.',
+            $limit,
+        ));
+    }
+
+    /**
+     * The city at one end of the most-searched pair, which is enough for the
+     * tests that only need a city with routes.
      */
     private function busiest(string $end): string
     {

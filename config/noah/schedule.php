@@ -91,6 +91,44 @@ return [
         Schedule::COMMAND => 'db:prune --force',
     ],
     [
+        // One day's worth of flights, into whichever days are thinnest
+        // (E24.1, #191). The window is ninety days from whenever the generator
+        // last ran and does not move on its own, so without this line the site
+        // runs out of flights three months after the last manual run: search
+        // returns nothing and every route page 404s.
+        //
+        // 10,000 is a day, and it was measured rather than inherited. On the
+        // twenty-five busiest routes almost any density looks fine; on
+        // mid-ranked ones -- rank 3,000 of 49,000, which is what an ordinary
+        // visitor searches -- the figure that matters is how often a search
+        // finds nothing at all:
+        //
+        //     4,500/day   16 of 25 routes answer   170ms   405,000 rows
+        //     8,000/day   22 of 25               221ms   718,000
+        //    10,000/day   24 of 25               268ms   896,000
+        //
+        // At 4,500 more than a third of ordinary routes come back empty. The
+        // cost of the last step is about 110 MB and 47ms.
+        //
+        // This number is also the size control. With the sweep running, the
+        // table settles at `nightly x window days` and stops growing -- it had
+        // no upper bound at all before these two lines existed.
+        //
+        // `--level` and not `--day=90`, which would also work and would say
+        // what it does more plainly. Levelling is what survives a missed night:
+        // two thin days instead of one, found without anybody knowing the run
+        // was missed. `--day` is still there for filling one by hand.
+        //
+        // Before the sweep at :30, so a day is filled before the previous one
+        // is swept.
+        Cron::MINUTE => 20,
+        Cron::HOUR => 3,
+        Cron::DAY => Cron::EVERY,
+        Cron::MONTH => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
+        Schedule::COMMAND => 'flights:add 10000 --level',
+    ],
+    [
         // Flights that have departed (E24.2, #192). Nothing removed them until
         // this line existed, so the table only ever grew.
         //
