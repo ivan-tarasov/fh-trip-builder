@@ -32,7 +32,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 Dotenv\Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
 
-foreach (['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_SOCKET'] as $key) {
+foreach (['DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_SOCKET'] as $key) {
     // `false` and not `''`: an empty DB_SOCKET is a deliberate answer -- it is
     // how somebody says "connect over TCP, not the socket `.env` names" -- and
     // filling it back in from `.env` would undo that.

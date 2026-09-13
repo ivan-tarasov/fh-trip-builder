@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use PDO;
 use PDOStatement;
 use TripBuilder\Env;
+use TripBuilder\EnvKey;
 
 /**
  * Thin typed wrapper around a single PDO connection.
@@ -88,12 +89,12 @@ final class Connection
 
         $pdo = new PDO(
             self::dsn([
-                'DB_HOST' => Env::get('DB_HOST'),
-                'DB_DATABASE' => Env::get('DB_DATABASE'),
-                'DB_PORT' => Env::get('DB_PORT'),
+                'DB_HOST' => Env::get(EnvKey::DbHost),
+                'DB_DATABASE' => Env::get(EnvKey::DbDatabase),
+                'DB_PORT' => Env::get(EnvKey::DbPort),
             ]),
-            Env::get('DB_USERNAME'),
-            Env::get('DB_PASSWORD'),
+            Env::get(EnvKey::DbUsername),
+            Env::get(EnvKey::DbPassword),
             [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

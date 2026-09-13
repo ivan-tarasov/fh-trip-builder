@@ -6,6 +6,7 @@ namespace TripBuilder\Api;
 
 use TripBuilder\Database\Connection;
 use TripBuilder\Env;
+use TripBuilder\EnvKey;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\Request;
 
@@ -55,7 +56,7 @@ abstract class AbstractApi
         }
 
         return array_any(
-            explode(',', Env::get('API_ACCEPTED_TOKENS')),
+            explode(',', Env::get(EnvKey::ApiAcceptedTokens)),
             static fn(string $authorized): bool => $authorized !== '' && hash_equals($authorized, $token),
         );
     }

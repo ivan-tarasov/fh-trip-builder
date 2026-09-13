@@ -17,14 +17,14 @@ class Cdn
      */
     public static function isConfigured(): bool
     {
-        return Env::get('AWS_CLOUDFRONT') !== '';
+        return Env::get(EnvKey::AwsCloudfront) !== '';
     }
 
     public static function getUrl(?string $url = null): string
     {
         return sprintf(
             '//%s%s',
-            Env::get('AWS_CLOUDFRONT'),
+            Env::get(EnvKey::AwsCloudfront),
             !empty($url)
                 ? '/' . ltrim($url, '/')
                 : '',

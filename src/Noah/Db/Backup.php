@@ -14,6 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 use TripBuilder\Database\Dump;
 use TripBuilder\Env;
+use TripBuilder\EnvKey;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
@@ -64,7 +65,7 @@ final class Backup extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $database = Env::get('DB_DATABASE');
+        $database = Env::get(EnvKey::DbDatabase);
 
         if ($database === '') {
             $this->io->error('DB_DATABASE is empty, so there is nothing to back up.');
@@ -102,10 +103,10 @@ final class Backup extends AbstractCommand
     private function writeDump(Dump $dump, string $path): int
     {
         $defaults = Dump::writeDefaults(Dump::defaults(
-            Env::get('DB_HOST'),
-            Env::get('DB_PORT') ?: '3306',
-            Env::get('DB_USERNAME'),
-            Env::get('DB_PASSWORD'),
+            Env::get(EnvKey::DbHost),
+            Env::get(EnvKey::DbPort) ?: '3306',
+            Env::get(EnvKey::DbUsername),
+            Env::get(EnvKey::DbPassword),
         ));
 
         try {

@@ -32,14 +32,14 @@ final class Env
      * an exported empty string wins over whatever `.env` says -- which is how
      * somebody turns a setting off for a single run.
      */
-    public static function get(string $key): string
+    public static function get(EnvKey $key): string
     {
-        $value = getenv($key);
+        $value = getenv($key->value);
 
         if ($value !== false) {
             return $value;
         }
 
-        return isset($_ENV[$key]) ? (string) $_ENV[$key] : '';
+        return isset($_ENV[$key->value]) ? (string) $_ENV[$key->value] : '';
     }
 }
