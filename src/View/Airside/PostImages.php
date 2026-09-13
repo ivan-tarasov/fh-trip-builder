@@ -203,7 +203,7 @@ final readonly class PostImages implements ExtensionInterface
      */
     public static function isFigure(Paragraph $paragraph): bool
     {
-        $children = $paragraph->children();
+        $children = [...$paragraph->children()];
 
         return count($children) === 1 && $children[0] instanceof Image;
     }

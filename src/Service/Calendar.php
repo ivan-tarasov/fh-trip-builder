@@ -6,6 +6,7 @@ namespace TripBuilder\Service;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use stdClass;
 use Throwable;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
@@ -41,7 +42,7 @@ final readonly class Calendar
         }
 
         $return = StoredItinerary::fromJson($row['flight_return'] ?? null);
-        $segments = [...$outbound->segments, ...($return->segments ?? [])];
+        $segments = array_values([...$outbound->segments, ...($return->segments ?? [])]);
         $reference = trim((string) ($row['reference'] ?? ''));
         $zones = $this->timezones($segments);
 
@@ -89,7 +90,7 @@ final readonly class Calendar
      * @param array<string, string> $zones
      * @return list<string>
      */
-    private function event(object $segment, array $zones, int $bookingId, int $index, string $reference): array
+    private function event(stdClass $segment, array $zones, int $bookingId, int $index, string $reference): array
     {
         $from = (string) ($segment->depart->airport_code ?? '');
         $to = (string) ($segment->arrive->airport_code ?? '');
@@ -128,7 +129,7 @@ final readonly class Calendar
     private function stamp(string $field, string $dateTime, ?string $zone): string
     {
         if ($zone === null) {
-            return $field . ':' . date('Ymd\THis', strtotime($dateTime));
+            return $field . ':' . date('Ymd\THis', (int) strtotime($dateTime));
         }
 
         try {
@@ -136,14 +137,14 @@ final readonly class Calendar
                 ->setTimezone(new DateTimeZone('UTC'))
                 ->format('Ymd\THis\Z');
         } catch (Throwable) {
-            return $field . ':' . date('Ymd\THis', strtotime($dateTime));
+            return $field . ':' . date('Ymd\THis', (int) strtotime($dateTime));
         }
     }
 
     /**
      * IANA zone per airport code, for the codes this booking touches.
      *
-     * @param list<object> $segments
+     * @param list<stdClass> $segments
      * @return array<string, string>
      */
     private function timezones(array $segments): array

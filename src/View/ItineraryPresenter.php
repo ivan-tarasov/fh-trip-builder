@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use DateTime;
+use stdClass;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
@@ -57,7 +58,7 @@ class ItineraryPresenter
     /**
      * @return array{direction: array<string, mixed>, ids: list<int>}
      */
-    public function direction(object $itinerary): array
+    public function direction(stdClass $itinerary): array
     {
         $segments = $itinerary->segments;
         $first = $segments[0];
@@ -152,7 +153,7 @@ class ItineraryPresenter
      *
      * @return list<array<string, mixed>>
      */
-    private function routeParts(object $itinerary): array
+    private function routeParts(stdClass $itinerary): array
     {
         $segments = $itinerary->segments;
         $parts = [];
@@ -198,11 +199,11 @@ class ItineraryPresenter
     /**
      * The gaps between segments, each with the one note worth putting on it.
      *
-     * @param list<object> $segments in flight order, so layover i sits between
+     * @param list<stdClass> $segments in flight order, so layover i sits between
      *                               segment i and segment i + 1
      * @return list<array{airport_code: string, airport_city: string, wait: string, notes: list<array{text: string, tone: string}>}>
      */
-    private function layovers(object $itinerary, array $segments): array
+    private function layovers(stdClass $itinerary, array $segments): array
     {
         $layovers = [];
 
@@ -280,15 +281,19 @@ class ItineraryPresenter
      * A 29-hour journey is not a warning; a 45-minute connection in a foreign
      * airport is. The colour now says which is which.
      *
-     * @param list<object> $segments
-     * @param list<object> $layovers
+     * @param list<stdClass> $segments
+     * @param list<stdClass> $layovers
      * @return list<array<string, string>>
      */
     private function buildNotices(array $segments, array $layovers, int $totalDuration): array
     {
+        if ($segments === []) {
+            return [];
+        }
+
         $notices = [];
         $originCountry = $segments[0]->depart->airport_country;
-        $destinationCountry = $segments[array_key_last($segments)]->arrive->airport_country;
+        $destinationCountry = $segments[count($segments) - 1]->arrive->airport_country;
 
         foreach ($layovers as $i => $layover) {
             $wait = (int) $layover->wait_minutes;
@@ -335,7 +340,7 @@ class ItineraryPresenter
             }
         }
 
-        $carriers = array_unique(array_map(static fn(object $s): string => $s->carrier, $segments));
+        $carriers = array_unique(array_map(static fn(stdClass $s): string => $s->carrier, $segments));
 
         if (count($carriers) > 1) {
             $notices['airlines'] = [
@@ -363,8 +368,8 @@ class ItineraryPresenter
      */
     private function spansNight(string $from, string $to): bool
     {
-        $start = strtotime($from);
-        $end = strtotime($to);
+        $start = (int) strtotime($from);
+        $end = (int) strtotime($to);
         // Shared with the "no night layovers" filter, so the notice and the
         // filter cannot drift apart.
         $fromHour = (int) Config::get('search.filters.night_from_hour', 23);

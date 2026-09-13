@@ -121,6 +121,8 @@ final class RouteMapRenderTest extends TestCase
         self::assertMatchesRegularExpression('/data-map="[^"]+"/', $html, 'the map should be configured');
         preg_match('/data-map="([^"]+)"/', $html, $found);
 
+        self::assertArrayHasKey(1, $found, 'the map should carry its configuration');
+
         /** @var array<string, mixed> $config */
         $config = json_decode(
             html_entity_decode($found[1], ENT_QUOTES | ENT_HTML5),

@@ -33,6 +33,21 @@ class AbstractController
 
     public function __construct(protected readonly Request $request) {}
 
+    /**
+     * This browser's session, as a string.
+     *
+     * `session_id()` answers `false` when the session could not be read, and
+     * four controllers were handing that straight to `BookingRepository` —
+     * where PDO binds it as `''` and the lookup silently becomes "every
+     * booking with no session against it" rather than an error.
+     */
+    protected function sessionId(): string
+    {
+        $id = session_id();
+
+        return $id === false ? '' : $id;
+    }
+
     protected function connection(): Connection
     {
         return $this->connection ??= Connection::fromEnv();

@@ -169,7 +169,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
         // (which inflates any trip crossing timezones).
         $ranked = $this->repository()->searchDirection('YUL', 'YYZ', self::DEPART_DATE, SortMethod::Price, 0, 10, CabinClass::Economy);
         $cheapest = $ranked['rows'][0];
-        $ids = array_map(static fn(array $leg): int => (int) $leg['id'], $cheapest['legs']);
+        $ids = array_values(array_map(static fn(array $leg): int => (int) $leg['id'], $cheapest['legs']));
 
         $rebuilt = $this->repository()->itineraryByIds($ids, CabinClass::Economy);
 
@@ -303,6 +303,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
         );
 
         // Sorted by price, so the first row of page one is that cheapest total.
+        self::assertNotEmpty($pageTotals, 'a page with no totals compares nothing');
         self::assertEqualsWithDelta(min($pageTotals), $result['cheapest'], 0.01);
 
         // And nothing on the page can be cheaper than it.

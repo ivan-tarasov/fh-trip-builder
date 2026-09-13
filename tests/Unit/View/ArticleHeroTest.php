@@ -172,6 +172,9 @@ final class ArticleHeroTest extends TestCase
         self::assertNotEmpty($labels, 'the band should still carry a trail');
 
         preg_match('#<h1 class="article__title">(.*?)</h1>#s', $html, $h1);
+
+        self::assertArrayHasKey(1, $h1, 'the article should carry a title');
+
         $heading = trim(strip_tags($h1[1]));
 
         self::assertNotContains($heading, $labels, $heading . ' is stated by the heading already');

@@ -338,12 +338,12 @@ class SearchController extends AbstractController
                 'change_url' => $this->stepUrl(
                     null,
                     keepReturn: true,
-                    current: array_map(intval(...), (array) $this->data->selected_ids),
+                    current: array_values(array_map(intval(...), (array) $this->data->selected_ids)),
                 ),
                 'change_return_url' => $this->stepUrl(
-                    array_map(intval(...), (array) $this->data->selected_ids),
+                    array_values(array_map(intval(...), (array) $this->data->selected_ids)),
                     keepReturn: false,
-                    current: array_map(intval(...), (array) $this->data->selected_return_ids),
+                    current: array_values(array_map(intval(...), (array) $this->data->selected_return_ids)),
                 ),
                 // Flights / no-result
                 'total_flights' => $total_flights,
@@ -634,7 +634,7 @@ class SearchController extends AbstractController
                 continue;
             }
 
-            $rules = $brands->rulesFor($flights->fareBrandsByIds($ids));
+            $rules = $brands->rulesFor($flights->fareBrandsByIds(array_values($ids)));
 
             if ($rules === null) {
                 continue;
@@ -1007,9 +1007,14 @@ class SearchController extends AbstractController
             $value = $this->request->query->raw($key);
 
             // A checkbox group arrives as an array, a shared link as a string.
-            $carried[$key] = (is_string($value) && $value !== '') || (is_array($value) && $value !== [])
-                ? $value
-                : null;
+            // The array is flattened to strings and re-keyed: these go straight
+            // into a query string, and a nested value would be printed as the
+            // word "Array".
+            $carried[$key] = match (true) {
+                is_string($value) && $value !== '' => $value,
+                is_array($value) && $value !== [] => array_values(array_map(strval(...), $value)),
+                default => null,
+            };
         }
 
         return $carried;

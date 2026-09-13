@@ -132,7 +132,9 @@ final class Connection
      */
     public function fetchAll(string $sql, array $params = []): array
     {
-        return $this->run($sql, $params)->fetchAll();
+        // array_values, because PDO::FETCH_ASSOC numbers its rows from zero
+        // but says so to nobody, and the return type here is a list.
+        return array_values($this->run($sql, $params)->fetchAll());
     }
 
     /**

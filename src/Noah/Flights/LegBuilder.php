@@ -121,10 +121,16 @@ final class LegBuilder
      */
     public function maxLegKm(): int
     {
-        return min(
-            self::MAX_NONSTOP_KM,
-            (int) max(array_map(self::usableRange(...), $this->fleet)),
-        );
+        $ranges = array_map(self::usableRange(...), $this->fleet);
+
+        // No aircraft is no distance. max() is fatal on an empty array, and a
+        // caller filtering routes by a fleet that holds nothing should get
+        // nothing rather than a crash inside a generator run.
+        if ($ranges === []) {
+            return 0;
+        }
+
+        return min(self::MAX_NONSTOP_KM, (int) max($ranges));
     }
 
     /**

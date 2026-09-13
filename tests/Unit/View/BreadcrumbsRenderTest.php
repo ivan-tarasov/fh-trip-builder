@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Unit\View;
 
 use DOMDocument;
+use DOMElement;
 use DOMXPath;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
@@ -43,17 +44,55 @@ final class BreadcrumbsRenderTest extends TestCase
         return new DOMXPath($doc);
     }
 
+    /**
+     * The matching elements, as a plain list.
+     *
+     * `query()` answers false for an expression libxml will not parse, which
+     * is a broken test rather than a failed assertion — and reading `->length`
+     * off false is a fatal that names neither. A list rather than the node
+     * list, because every caller here counts or maps over it.
+     *
+     * @return list<DOMElement>
+     */
+    private function nodes(DOMXPath $xp, string $expression): array
+    {
+        $found = $xp->query($expression);
+
+        self::assertNotFalse($found, $expression . ' is not valid XPath');
+
+        $elements = [];
+
+        foreach ($found as $node) {
+            // A namespace node is the one thing an XPath query can return that
+            // is not an element, and nothing here asks for one.
+            self::assertInstanceOf(DOMElement::class, $node, $expression . ' matched a non-element');
+            $elements[] = $node;
+        }
+
+        return $elements;
+    }
+
+    /** The first match, which the caller is saying it expects to be there. */
+    private function node(DOMXPath $xp, string $expression): DOMElement
+    {
+        $nodes = $this->nodes($xp, $expression);
+
+        self::assertNotSame([], $nodes, 'nothing matches ' . $expression);
+
+        return $nodes[0];
+    }
+
     public function testTheTrailReachesThePageAsANavigationLandmark(): void
     {
         $xp = $this->render('/my/bookings/100001', 'K7PQ2M');
 
-        self::assertSame(1, $xp->query('//nav[@aria-label="Breadcrumb"]')->length);
-        self::assertSame(1, $xp->query('//nav//ol')->length, 'an ordered list, because a trail has an order');
+        self::assertSame(1, count($this->nodes($xp, '//nav[@aria-label="Breadcrumb"]')));
+        self::assertSame(1, count($this->nodes($xp, '//nav//ol')), 'an ordered list, because a trail has an order');
         self::assertSame(
             ['Home', 'My bookings', 'K7PQ2M'],
             array_map(
-                static fn(object $li): string => trim($li->textContent),
-                iterator_to_array($xp->query('//nav//li')),
+                static fn(DOMElement $li): string => trim($li->textContent),
+                $this->nodes($xp, '//nav//li'),
             ),
         );
     }
@@ -67,12 +106,12 @@ final class BreadcrumbsRenderTest extends TestCase
         self::assertSame(
             ['/', '/my/bookings'],
             array_map(
-                static fn(object $a): string => $a->getAttribute('href'),
-                iterator_to_array($xp->query('//nav//a')),
+                static fn(DOMElement $a): string => $a->getAttribute('href'),
+                $this->nodes($xp, '//nav//a'),
             ),
         );
-        self::assertSame(1, $xp->query('//nav//li[@aria-current="page"]')->length);
-        self::assertSame('K7PQ2M', trim($xp->query('//nav//li[@aria-current="page"]')->item(0)->textContent));
+        self::assertSame(1, count($this->nodes($xp, '//nav//li[@aria-current="page"]')));
+        self::assertSame('K7PQ2M', trim($this->node($xp, '//nav//li[@aria-current="page"]')->textContent));
     }
 
     public function testAPageWithNoTrailRendersNothingAtAll(): void
@@ -82,8 +121,8 @@ final class BreadcrumbsRenderTest extends TestCase
         foreach (['/', '/checkout', '/search'] as $path) {
             $xp = $this->render($path);
 
-            self::assertSame(0, $xp->query('//nav')->length, $path);
-            self::assertSame(0, $xp->query('//script')->length, $path);
+            self::assertSame(0, count($this->nodes($xp, '//nav')), $path);
+            self::assertSame(0, count($this->nodes($xp, '//script')), $path);
         }
     }
 
@@ -131,18 +170,18 @@ final class BreadcrumbsRenderTest extends TestCase
     public function testTheStructuredDataIsRenderedBesideTheCrumbs(): void
     {
         $xp = $this->render('/airlines');
-        $script = $xp->query('//script[@type="application/ld+json"]');
+        $script = $this->nodes($xp, '//script[@type="application/ld+json"]');
 
-        self::assertSame(1, $script->length);
+        self::assertSame(1, count($script));
 
-        $data = json_decode((string) $script->item(0)->textContent, true);
+        $data = json_decode((string) $script[0]->textContent, true);
 
         self::assertSame('BreadcrumbList', $data['@type']);
         // The same names, in the same order, as the crumbs above it.
         self::assertSame(
             array_map(
-                static fn(object $li): string => trim($li->textContent),
-                iterator_to_array($xp->query('//nav//li')),
+                static fn(DOMElement $li): string => trim($li->textContent),
+                $this->nodes($xp, '//nav//li'),
             ),
             array_column($data['itemListElement'], 'name'),
         );

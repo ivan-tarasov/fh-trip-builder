@@ -127,7 +127,7 @@ class AjaxController extends AbstractController
 
         try {
             $cancelled = new BookingRepository($this->connection())
-                ->cancelForSession($this->get['booking_id'], session_id());
+                ->cancelForSession($this->get['booking_id'], $this->sessionId());
         } catch (Throwable $e) {
             Log::error('Booking cancel failed: ' . $e->getMessage());
             $cancelled = 0;

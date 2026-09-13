@@ -30,7 +30,7 @@ final class ImageResizerTest extends TestCase
     /** Three vertical bands, so a centre crop is provable: red, green, blue. */
     private static function banded(int $width = 300, int $height = 100): string
     {
-        $image = imagecreatetruecolor($width, $height);
+        $image = imagecreatetruecolor(max(1, $width), max(1, $height));
         $third = (int) ($width / 3);
 
         imagefilledrectangle($image, 0, 0, $third - 1, $height, (int) imagecolorallocate($image, 255, 0, 0));
@@ -81,7 +81,7 @@ final class ImageResizerTest extends TestCase
         self::assertNotFalse($square);
 
         // The middle band is green. A crop anchored top-left would be red.
-        $colour = imagecolorsforindex($square, imagecolorat($square, 30, 30));
+        $colour = imagecolorsforindex($square, (int) imagecolorat($square, 30, 30));
 
         self::assertGreaterThan(200, $colour['green']);
         self::assertLessThan(60, $colour['red']);
@@ -111,7 +111,7 @@ final class ImageResizerTest extends TestCase
         // 127 is fully transparent. Without imagesavealpha on the canvas this
         // comes back 0 -- opaque black -- and the picture looks fine until it
         // is put on anything but a white page.
-        self::assertSame(127, imagecolorsforindex($out, imagecolorat($out, 50, 50))['alpha']);
+        self::assertSame(127, imagecolorsforindex($out, (int) imagecolorat($out, 50, 50))['alpha']);
     }
 
     public function testItRefusesSomethingThatIsNotAnImage(): void

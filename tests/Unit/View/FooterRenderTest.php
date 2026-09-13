@@ -499,6 +499,7 @@ final class FooterRenderTest extends TestCase
 
         preg_match('/<form[^>]*class="footer__subscribe[^"]*"[^>]*aria-labelledby="([^"]+)"/s', $html, $named);
 
+        self::assertArrayHasKey(1, $named, 'the subscribe form should name its own heading');
         self::assertStringContainsString(
             'id="' . $named[1] . '"',
             $html,
@@ -662,6 +663,8 @@ final class FooterRenderTest extends TestCase
 
         // Repository is deliberately not one of them.
         preg_match('#<nav class="footer__column"[^>]*>(.*?)</nav>#s', $html, $landmark);
+
+        self::assertArrayHasKey(1, $landmark, 'the footer should carry a navigation landmark');
         self::assertStringNotContainsString('Repository', $landmark[1]);
     }
 

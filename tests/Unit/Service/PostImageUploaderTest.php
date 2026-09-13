@@ -29,7 +29,7 @@ final class PostImageUploaderTest extends TestCase
 
     private static function picture(int $width = 2000, int $height = 1200): string
     {
-        $image = imagecreatetruecolor($width, $height);
+        $image = imagecreatetruecolor(max(1, $width), max(1, $height));
         imagefilledrectangle($image, 0, 0, $width, $height, (int) imagecolorallocate($image, 20, 90, 160));
 
         ob_start();

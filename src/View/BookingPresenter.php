@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use DateTimeImmutable;
+use stdClass;
 use Throwable;
 use TripBuilder\Api\Flights\FareRules;
 use TripBuilder\BookingStatus;
@@ -159,7 +160,7 @@ final readonly class BookingPresenter
      *
      * @return array<string, string>
      */
-    private function rebook(object $outbound, ?object $storedReturn): array
+    private function rebook(stdClass $outbound, ?stdClass $storedReturn): array
     {
         $segments = $outbound->segments;
         $last = $segments[count($segments) - 1];
@@ -232,7 +233,7 @@ final readonly class BookingPresenter
     /**
      * The last arrival of a direction, which is when the trip is actually over.
      */
-    private function endsAt(object $itinerary): ?DateTimeImmutable
+    private function endsAt(stdClass $itinerary): ?DateTimeImmutable
     {
         $segments = $itinerary->segments;
 
@@ -257,7 +258,7 @@ final readonly class BookingPresenter
     /**
      * Whether this direction is behind us -- its last arrival has passed.
      */
-    private function hasFlown(object $itinerary): bool
+    private function hasFlown(stdClass $itinerary): bool
     {
         $endsAt = $this->endsAt($itinerary);
 

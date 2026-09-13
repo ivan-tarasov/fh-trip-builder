@@ -47,6 +47,11 @@ final class StoredItinerary
             }
         }
 
+        // Every one passed isRenderable() above, which is what makes them
+        // stdClass; array_values, because the shape below is a list.
+        /** @var list<stdClass> $segments */
+        $segments = array_values($segments);
+
         $layovers = self::layovers($segments);
         $duration = array_sum(array_map(static fn(stdClass $s): int => (int) $s->duration, $segments));
 

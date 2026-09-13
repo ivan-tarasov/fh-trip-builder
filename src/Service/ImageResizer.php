@@ -112,7 +112,9 @@ final readonly class ImageResizer
      */
     private static function blank(int $width, int $height, string $format): GdImage
     {
-        $image = imagecreatetruecolor($width, $height);
+        // At least a pixel each way: GD refuses a zero-sized canvas, and a
+        // request for one is a caller's rounding rather than its intent.
+        $image = imagecreatetruecolor(max(1, $width), max(1, $height));
 
         if (in_array($format, ['png', 'gif', 'webp'], true)) {
             imagealphablending($image, false);

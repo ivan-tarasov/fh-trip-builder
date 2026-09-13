@@ -77,13 +77,13 @@ class Helper
             }
         }
 
-        $git_commitDate = new DateTime(trim(exec('git log -n1 --pretty=%ci HEAD')));
+        $git_commitDate = new DateTime(trim((string) exec('git log -n1 --pretty=%ci HEAD')));
         $git_commitDate->setTimezone(new DateTimeZone('UTC'));
 
         $info = [
-            'branch' => trim(exec('git rev-parse --abbrev-ref HEAD')),
-            'tag' => trim(exec('git describe --tags --abbrev=0')),
-            'commit_hash' => trim(exec('git log --pretty="%h" -n1 HEAD')),
+            'branch' => trim((string) exec('git rev-parse --abbrev-ref HEAD')),
+            'tag' => trim((string) exec('git describe --tags --abbrev=0')),
+            'commit_hash' => trim((string) exec('git log --pretty="%h" -n1 HEAD')),
             'commit_date' => $git_commitDate->format('Y-m-d H:i:s'),
         ];
 
