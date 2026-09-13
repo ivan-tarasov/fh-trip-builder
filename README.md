@@ -242,7 +242,7 @@ the schedule lives in this repository — see below.
 **The server has one cron line. What runs and when is `config/noah/schedule.php`.**
 
 ```
-0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
+* * * * * cd /path/to/fh-trip-builder && php noah schedule:run >> ~/logs/schedule.log 2>&1
 ```
 
 ```php

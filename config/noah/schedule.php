@@ -12,10 +12,13 @@ return [
     | What runs without anybody asking, and when. The server holds one cron
     | line and this file holds the rest:
     |
-    |     0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
+    |     * * * * * cd /path/to/fh-trip-builder && php noah schedule:run >> ~/logs/schedule.log 2>&1
     |
-    | Spelled out rather than as a step, because the step form contains the two
-    | characters that end a block comment and took this file's parse with it.
+    | Every minute, so `at` means what it says. A coarser tick would round a
+    | task's time up to the next one -- `:20` on an hourly task firing at `:30`,
+    | ten minutes late, every hour, with this file still claiming `:20`. An idle
+    | tick measured 0.09s, so a minute's cadence costs about two minutes of CPU
+    | a day.
     |
     | Before this the crontab was the only record, so a rebuilt server or a
     | reset panel took the schedule with it and nothing here said what had been

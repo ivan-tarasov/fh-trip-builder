@@ -13,12 +13,15 @@ use RuntimeException;
  * The schedule is `config/noah/schedule.php`, in git. The server holds one
  * cron line and no knowledge of what it is for (E16, #167).
  *
- * Deliberately not a cron-expression parser, and the reason is the outer cron
- * rather than the effort. That line runs every fifteen minutes, so fifteen
- * minutes is the finest thing this can express no matter how it is spelled --
- * a `*​/5` here would be a lie. Full expressions become worth having the day a
- * task needs "every Monday" or "weekdays only", and that is the day to reach
- * for `dragonmantank/cron-expression` rather than hand-roll one: day-of-week
+ * Deliberately not a cron-expression parser, and the reason is now only that
+ * nothing has asked for one. It used to be a stronger reason: the outer cron
+ * fired every fifteen minutes, so fifteen minutes was the finest thing this
+ * could express however it was spelled. That line runs every minute now, so
+ * the ceiling is gone and the argument rests on absence of a caller.
+ *
+ * `Daily` and `Hourly` are what the real tasks need. The day one needs "every
+ * Monday" or "weekdays only" is the day to reach for
+ * `dragonmantank/cron-expression` rather than hand-roll one: day-of-week
  * against day-of-month is an OR, not an AND, and that is the kind of detail
  * that is wrong for a year in something nobody watches run.
  */

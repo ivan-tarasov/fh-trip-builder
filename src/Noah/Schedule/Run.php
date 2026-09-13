@@ -29,7 +29,7 @@ use TripBuilder\Schedule;
 /**
  * The one line on the server.
  *
- *     0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
+ *     * * * * * cd /path/to/fh-trip-builder && php noah schedule:run >> ~/logs/schedule.log 2>&1
  *
  * Everything else lives in `config/noah/schedule.php`, which is in git, which
  * is the point: before this the crontab was the only record of what this
