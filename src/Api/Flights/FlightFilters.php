@@ -125,6 +125,19 @@ final readonly class FlightFilters
     public const string RETURN_PREFIX = 'return_';
 
     /**
+     * The prefix a step's filters are written under.
+     *
+     * Here rather than in the two places that ask, because `RETURN_PREFIX` is
+     * this class's word and "step 2 is the return leg" is the rule that gives
+     * it meaning. The controller and the sidebar both need the answer and it
+     * has to be the same one.
+     */
+    public static function prefixFor(?int $step): string
+    {
+        return $step === 2 ? self::RETURN_PREFIX : '';
+    }
+
+    /**
      * Read filters out of a query string.
      *
      * Everything here is visitor-supplied, so each value is checked against the
