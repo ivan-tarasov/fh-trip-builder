@@ -35,5 +35,6 @@ enum Table: string
     case RoutePriceBuild = 'route_price_build';
     case ScheduleRuns = 'schedule_runs';
     case Search = 'search';
+    case SearchCandidates = 'search_candidates';
     case Subscribers = 'subscribers';
 }

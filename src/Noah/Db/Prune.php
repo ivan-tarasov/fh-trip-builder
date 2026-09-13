@@ -14,6 +14,7 @@ use Throwable;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\RateLimitRepository;
+use TripBuilder\Repository\SearchCandidateRepository;
 
 #[AsCommand(
     name: 'db:prune',
@@ -25,8 +26,8 @@ use TripBuilder\Repository\RateLimitRepository;
 /**
  * What the application is not allowed to keep.
  *
- * Two sweeps, because they are one cron line and one decision -- how long
- * something is kept -- applied to two tables:
+ * Three sweeps, because they are one cron line and one decision -- how long
+ * something is kept -- applied to three tables:
  *
  * **Bookings** past `BookingRepository::KEEP_DAYS_AFTER_DEPARTURE`, and the
  * passengers travelling on them. These hold an email, a phone number, names,
@@ -38,6 +39,10 @@ use TripBuilder\Repository\RateLimitRepository;
  * **Rate-limit counters** for hours that have passed. Housekeeping rather than
  * privacy -- a counter is an IP and a number -- but it is the same sweep and
  * the same cron, which is where E8.3 (#145) said it would live.
+ *
+ * **Search candidates** older than `SearchCandidateRepository::KEEP_MINUTES`.
+ * Nothing reads one after that, so they are only taking up room; the reading
+ * side already ignores them (E31, #219).
  *
  * Named `db:prune` and not `bookings:prune` as #146 suggested, because the
  * rate-limit counters are not bookings and a command named for one table that
@@ -75,6 +80,8 @@ final class Prune extends AbstractCommand
             $connection = $this->connection();
             $bookings = new BookingRepository($connection);
             $expired = $bookings->departedBefore($cutoff);
+            $candidates = new SearchCandidateRepository($connection);
+            $stale = $candidates->countStale();
         } catch (Throwable $e) {
             $this->io->error($e->getMessage());
 
@@ -92,8 +99,10 @@ final class Prune extends AbstractCommand
         if (!$force) {
             $this->io->note(sprintf(
                 '%d booking(s) would be forgotten, with their passengers, and finished rate-limit '
-                . 'counters with them. Nothing was. Run again with --force.',
+                . 'counters and %d stale search candidate(s) with them. Nothing was. Run again '
+                . 'with --force.',
                 count($expired),
+                $stale,
             ));
 
             return Command::SUCCESS;
@@ -105,6 +114,7 @@ final class Prune extends AbstractCommand
             $counters = new RateLimitRepository($connection)->prune(
                 new DateTimeImmutable()->modify('-1 day')->format('Y-m-d H:i:s'),
             );
+            $stale = $candidates->forgetStale();
         } catch (Throwable $e) {
             $this->io->error('Stopped partway: ' . $e->getMessage());
 
@@ -112,10 +122,12 @@ final class Prune extends AbstractCommand
         }
 
         $this->io->success(sprintf(
-            '%d booking(s) and %d passenger(s) forgotten, %d rate-limit counter(s) dropped.',
+            '%d booking(s) and %d passenger(s) forgotten, %d rate-limit counter(s) and %d search '
+            . 'candidate(s) dropped.',
             $removed['bookings'],
             $removed['passengers'],
             $counters,
+            $stale,
         ));
 
         return Command::SUCCESS;
