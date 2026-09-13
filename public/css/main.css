@@ -5525,7 +5525,19 @@ body:has(main.article) .breadcrumbs__list {
 
 .footer__columns {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  /* The columns make their own tracks rather than filling six reserved ones.
+     Every column here is counted from a table, so any of them can be empty on a
+     database nobody has filled yet -- a new deployment, a restored backup, a
+     db:clear -- and links.html.twig drops the ones that are. A fixed
+     `repeat(6, 1fr)` kept the slot anyway, which is an empty sixth of the band
+     and is what showed on the deployed site (A9.2, #175).
+
+     Not `repeat(var(--n), 1fr)`: the narrow breakpoints below want min(n, 3),
+     and repeat() does not take a math function as its count. Not `auto-fit`,
+     which would change the layout at every width instead of only the one that
+     is wrong. With all six present this is identical to what it replaced. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 2rem 1.5rem;
   padding-bottom: 2.5rem;
   margin-bottom: 2.5rem;
@@ -6267,7 +6279,9 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
 /* ---------- Narrowing ---------- */
 
 @media (max-width: 1279.98px) {
-  .footer__columns { grid-template-columns: repeat(3, 1fr); }
+  /* Back to rows here. A short last row reads as an ordinary wrap rather than
+     as the hole a single squeezed row would leave. */
+  .footer__columns { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 1279.98px) {
