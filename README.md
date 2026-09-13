@@ -420,9 +420,8 @@ commands — it breaks somebody's server rather than somebody's build.
 
 It read `v0.3.4` from August 2025 until September 2026, during which eleven
 commands were added and the CLI went from four to fifteen while calling itself
-the same thing. `.github/workflows/noah-version.yml` now fails a pull request
-that touches `src/Noah/` or `noah` without changing the version, because the
-version of this rule that lived in somebody's head is the one that lapsed.
+the same thing. Nothing enforces this — if you are editing anything under
+`src/Noah/` or the `noah` script, the version is part of the edit.
 
 ### Getting Started
 To get started with Noah, you need to navigate to the root directory of your Trip Builder Project in your terminal.

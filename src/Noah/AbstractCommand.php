@@ -27,8 +27,10 @@ abstract class AbstractCommand extends Command
      *
      * It said `v0.3.4` from 2025-08-25 until 2026-09-12, during which eleven
      * commands were added and the CLI went from four to fifteen. The bumps
-     * before that were all real, so the habit existed and lapsed. `.github/
-     * workflows/noah-version.yml` is what stops it lapsing again (E22, #184).
+     * before that were all real, so the habit existed and lapsed -- which is
+     * the reason this docblock is here rather than a line in a changelog
+     * (E22, #184). Nothing enforces it; if you are editing this directory, the
+     * version is part of the edit.
      *
      * `v1.0.0` and not `v0.14.0`, which is what eleven feature additions would
      * count to. The number should say what is true: this is the tool a
