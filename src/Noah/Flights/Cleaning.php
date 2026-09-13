@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace TripBuilder\Noah\Flights;
 
+use DateTimeImmutable;
 use Exception;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
-use TripBuilder\Database\Table;
 use TripBuilder\Noah\AbstractCommand;
+use TripBuilder\Repository\FlightRepository;
 
 #[AsCommand(
     name: 'flights:cleaning',
@@ -29,24 +30,26 @@ class Cleaning extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        // Compared against the column, not DATE(column): wrapping it made the
-        // departure_time index unusable, so this walked all 716k rows to find
-        // the day's worth it wanted. Midnight is the same boundary either way.
-        $before = date('Y-m-d');
+        // `departure_utc`, and an instant to compare it against.
+        //
+        // This read `departure_time < date('Y-m-d')` -- a wall-clock reading at
+        // the departure airport against a UTC date, which is the frame mistake
+        // E20 (#180) fixed in ten places that *read* and missed in the one that
+        // deletes. Measured against a cutoff thirty days out: of 67,503 rows
+        // the old predicate removed, 144 had not departed yet and 280 that had
+        // were left behind. The worst was a Honolulu departure at -10.00,
+        // deleted 9 hours 23 minutes before it left -- and with it, anybody's
+        // ability to find the flight they were about to board.
+        //
+        // Now rather than midnight: "has it gone" is a question about this
+        // moment, and a flight that left an hour ago is as gone as one that
+        // left yesterday.
+        $before = new DateTimeImmutable()->format('Y-m-d H:i:s');
         $deleted = 0;
 
         try {
-            // Bounded per statement, the same way Realign deletes over-cap legs:
-            // one open-ended DELETE holds row locks for its whole duration, and
-            // every concurrent search queues behind it.
-            do {
-                $removed = $this->connection()->execute(
-                    'DELETE FROM ' . Table::Flights->value
-                    . ' WHERE departure_time < ? LIMIT ' . self::BATCH_SIZE,
-                    [$before],
-                );
-                $deleted += $removed;
-            } while ($removed > 0);
+            $deleted = new FlightRepository($this->connection())
+                ->forgetDepartedBefore($before, self::BATCH_SIZE);
         } catch (Throwable $e) {
             $this->io->error(sprintf(
                 'Deleting old flights failed after %s rows: %s',

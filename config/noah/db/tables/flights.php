@@ -45,6 +45,14 @@ return [
         // indexes all lead with an airport or an airline, so a date-only sweep
         // could not seek on any of them.
         ['name' => 'departure_time', 'columns' => ['departure_time']],
+        // And the same thing again on the column the sweep actually asks, now
+        // that it asks the right one (E24.2, #192). `departure_airport_utc`
+        // cannot serve it for the reason given above it: a range on the second
+        // column of a composite index is not seekable without the first. The
+        // sweep's DELETE was `type: ALL` over every row in the table until
+        // this existed -- measured at 208,651 on a laptop, and production
+        // holds 547,000.
+        ['name' => 'departure_utc', 'columns' => ['departure_utc']],
         // Every index above leads with a departure, so "what lands here" could
         // seek on nothing: an airport's arrivals board was type=ALL over
         // 683,760 rows. This is the mirror of departure_airport_time and turns
