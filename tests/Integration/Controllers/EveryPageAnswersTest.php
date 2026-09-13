@@ -46,21 +46,19 @@ final class EveryPageAnswersTest extends IntegrationTestCase
      * emits its own payload. A JSON monitor endpoint has no `<title>`, and
      * asking it for one would be asking the wrong question.
      */
-    private const array PAYLOAD = ['Health', 'Sitemap', 'Ajax'];
+    private const array PAYLOAD = ['Health', 'Sitemap', 'Ajax', 'Api'];
 
     /**
      * Not asked, and why.
      *
-     * `ApiController` is the one real gap. Its guards answer through
-     * `ApiResponder`, whose every method ends in `die()` — so an endpoint that
-     * refuses a request ends the PHP process, which in a test run means ending
-     * the run. Making it testable means giving the API a way to refuse that is
-     * not `die()`, which is a change to how the API answers and belongs in its
-     * own issue (#198).
+     * `ApiController` was here until E10.5 (#198): its guards answered through
+     * `ApiResponder`, whose every method ended in `die()`, so an endpoint that
+     * refused a request ended the PHP process — which in a test run means
+     * ending the run rather than the case. It refuses by throwing now, and is
+     * asked below like everything else.
      */
     private const array UNASKED = [
         'AbstractController' => 'a base class, not a route target',
-        'ApiController' => 'ApiResponder::sendResponse() calls die() — see #198',
     ];
 
     protected function setUp(): void
@@ -222,6 +220,11 @@ final class EveryPageAnswersTest extends IntegrationTestCase
             // rather than dying or drawing a page is the part worth pinning.
             'Health' => ['GET', '/health', HttpStatus::Ok],
             'Sitemap' => ['GET', '/sitemap.xml', HttpStatus::Ok],
+
+            // Asked without a bearer token on purpose. Refusing is the job,
+            // and refusing *as JSON with a 401* rather than killing the
+            // process is the whole of E10.5 (#198).
+            'Api' => ['GET', '/api/airports', HttpStatus::Unauthorized],
             'Ajax' => ['POST', '/ajax/day-prices', HttpStatus::Forbidden],
         ];
     }
