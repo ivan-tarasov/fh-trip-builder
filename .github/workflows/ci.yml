@@ -186,11 +186,24 @@ jobs:
       # That guard is the reason it cannot join the sweep above: CI sets
       # AWS_CLOUDFRONT but no credentials, so a real run would reach S3 and get
       # nothing useful.
+      #
+      # The reason is checked and not just the exit code. Without credentials
+      # this command exits non-zero either way -- once for no distribution and
+      # once for no keys -- so a step that only read the status would pass
+      # whatever `Cdn` answered, which is exactly how the bug this step was
+      # written alongside stayed invisible.
       - name: airside:prune refuses when there is no distribution
         env:
           AWS_CLOUDFRONT: ''
         run: |
-          if php noah airside:prune --no-ansi; then
+          if php noah airside:prune --no-ansi > "$RUNNER_TEMP/prune.log" 2>&1; then
+            cat "$RUNNER_TEMP/prune.log"
             echo "::error::airside:prune should refuse with no distribution configured."
+            exit 1
+          fi
+
+          if ! grep -q 'No distribution is configured' "$RUNNER_TEMP/prune.log"; then
+            cat "$RUNNER_TEMP/prune.log"
+            echo "::error::airside:prune refused, but not because the distribution is missing."
             exit 1
           fi

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use TripBuilder\Config;
+use TripBuilder\Env;
 use TripBuilder\Polyline;
 
 /**
@@ -229,23 +230,10 @@ final class MapView
         );
     }
 
-    /**
-     * The token, from the environment and nowhere else.
-     *
-     * getenv() first and $_ENV second, the same order Connection::fromEnv()
-     * reads its credentials in and for the same reason: in CI these arrive as
-     * real environment variables, which phpdotenv's immutable loader does not
-     * copy into $_ENV.
-     */
+    /** The token, from the environment and nowhere else. */
     private static function token(): string
     {
-        $token = getenv('MAPBOX_TOKEN');
-
-        if (is_string($token) && $token !== '') {
-            return $token;
-        }
-
-        return (string) ($_ENV['MAPBOX_TOKEN'] ?? '');
+        return Env::get('MAPBOX_TOKEN');
     }
 
     private static function setting(string $key, mixed $default): mixed

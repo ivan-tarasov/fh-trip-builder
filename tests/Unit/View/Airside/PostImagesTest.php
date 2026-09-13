@@ -22,7 +22,7 @@ final class PostImagesTest extends TestCase
 {
     private const string FIXTURE = 'zzp-test-fixture.png';
 
-    private ?string $cdn = null;
+    private string|false $cdn = false;
 
     /**
      * The distribution is switched off for most of these, and that is the
@@ -33,17 +33,14 @@ final class PostImagesTest extends TestCase
      */
     protected function setUp(): void
     {
-        $this->cdn = $_ENV['AWS_CLOUDFRONT'] ?? null;
-        $_ENV['AWS_CLOUDFRONT'] = '';
+        $this->cdn = getenv('AWS_CLOUDFRONT');
+        putenv('AWS_CLOUDFRONT=');
     }
 
     protected function tearDown(): void
     {
-        if ($this->cdn === null) {
-            unset($_ENV['AWS_CLOUDFRONT']);
-        } else {
-            $_ENV['AWS_CLOUDFRONT'] = $this->cdn;
-        }
+        // No `=` removes the variable, which is the only way back to unset.
+        putenv($this->cdn === false ? 'AWS_CLOUDFRONT' : 'AWS_CLOUDFRONT=' . $this->cdn);
     }
 
     /*
@@ -138,7 +135,7 @@ final class PostImagesTest extends TestCase
      */
     public function testWithADistributionTheFileComesFromIt(): void
     {
-        $_ENV['AWS_CLOUDFRONT'] = 'cdn.example.net';
+        putenv('AWS_CLOUDFRONT=cdn.example.net');
 
         self::assertSame('//cdn.example.net/images/airside/wing.jpg', PostImages::url('wing.jpg'));
     }

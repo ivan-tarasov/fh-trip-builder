@@ -16,21 +16,24 @@ use TripBuilder\View\Airside\PostImageSet;
  */
 final class PostImageSetTest extends TestCase
 {
-    private ?string $cdn = null;
+    private string|false $cdn = false;
 
+    /**
+     * putenv() and not `$_ENV`: Env::get() reads the real environment first, so
+     * a build that exports AWS_CLOUDFRONT -- CI does -- would otherwise beat
+     * whatever a test put in `$_ENV` and the assertions below would be about
+     * the runner's host.
+     */
     protected function setUp(): void
     {
-        $this->cdn = $_ENV['AWS_CLOUDFRONT'] ?? null;
-        $_ENV['AWS_CLOUDFRONT'] = 'cdn.example.net';
+        $this->cdn = getenv('AWS_CLOUDFRONT');
+        putenv('AWS_CLOUDFRONT=cdn.example.net');
     }
 
     protected function tearDown(): void
     {
-        if ($this->cdn === null) {
-            unset($_ENV['AWS_CLOUDFRONT']);
-        } else {
-            $_ENV['AWS_CLOUDFRONT'] = $this->cdn;
-        }
+        // No `=` removes the variable, which is the only way back to unset.
+        putenv($this->cdn === false ? 'AWS_CLOUDFRONT' : 'AWS_CLOUDFRONT=' . $this->cdn);
     }
 
     public function testACanonicalNameCarriesTheStemTheHashAndTheExtension(): void
