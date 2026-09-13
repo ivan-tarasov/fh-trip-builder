@@ -192,8 +192,21 @@ missing column should not also re-import the content.
 ### 7. Generate Flights
 To generate flight data, use the following command:
 ```bash
-php noah flights:add
+php noah flights:add 200000
 ```
+
+**Say a number, and say this one.** Without an argument the command asks, and
+offers 10,000. That is enough for a site you can click around and not enough
+for the integration suite: those tests search a real route on a real date, and
+a sparse network means the route they picked has nothing on it, so roughly
+fifteen of them skip themselves and nothing says the count was why. 200,000 is
+what CI generates, across the 43,000 routes this network has.
+
+It no longer needs a raised memory limit. The generator used to hold every
+flight until the end — about 1 MB per thousand — and `flights:add 200000` was
+a fatal at PHP's default 128 MB somewhere past ninety thousand, having written
+nothing and reported nothing (E19, #178). It writes as it goes now and stays
+around 25 MB whatever the count.
 
 ### 8. Access the Project
 You're all set! Open your preferred web browser and navigate to the project URL to start using the application.
