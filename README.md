@@ -192,18 +192,29 @@ missing column should not also re-import the content.
 ### 7. Generate Flights
 To generate flight data, use the following command:
 ```bash
-php noah flights:add 200000
+php noah flights:add 900000
 ```
 
-**Say a number, and say this one.** Without an argument the command asks, and
-offers 10,000. That is enough for a site you can click around and not enough
-for the integration suite: those tests search a real route on a real date, and
-a sparse network means the route they picked has nothing on it, so roughly
-fifteen of them skip themselves and nothing says the count was why. 200,000 is
-what CI generates, across the 43,000 routes this network has.
+**Say a number, and say this one.** Without an argument the command asks and
+offers 10,000. That is enough for a site you can click around and nowhere near
+enough to search: the network has 49,000 routes across ninety days, and a
+search that finds nothing is the one thing this application exists to do.
 
-Once there is a network, it is kept up rather than regenerated. `flights:add
-2222 --level` runs nightly and puts a day's worth into whichever days are
+900,000 is ninety days at 10,000 a day, which is what the nightly run
+maintains. The number was measured on mid-ranked routes — rank 3,000 of 49,000,
+which is what an ordinary visitor searches — by asking how often a search comes
+back empty:
+
+| flights/day | routes that answer | search | total rows | disk |
+| --- | --- | --- | --- | --- |
+| 4,500 | 16 of 25 | 170 ms | 405,000 | 247 MB |
+| 8,000 | 22 of 25 | 221 ms | 718,000 | 437 MB |
+| 10,000 | 24 of 25 | 268 ms | 896,000 | 546 MB |
+
+It takes about a minute and leaves the table around 550 MB.
+
+Once there is a network it is kept up rather than regenerated. `flights:add
+10000 --level` runs nightly and puts a day's worth into whichever days are
 thinnest — normally the one that has just entered the ninety-day window, and
 after a missed night, both of them. `--day=90` or `--day=2026-12-12` fills one
 named day by hand.
