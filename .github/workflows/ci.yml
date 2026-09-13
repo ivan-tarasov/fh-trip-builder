@@ -108,6 +108,19 @@ jobs:
       - name: Provision database schema + seed data
         run: php noah app:install --no-ansi
 
+      # Every migration, for real, on a database built from nothing.
+      #
+      # Until E10.1 (#148) this never happened: seven migrations existed and CI
+      # had run none of them. 0007 rewrote 547,000 production rows having failed
+      # twice locally -- once on an invalid zero date, once on a NOT NULL column
+      # added to a populated table -- and neither failure was a shape any build
+      # could have caught, because no build ran it.
+      #
+      # Before the tests rather than after, so the suite runs against a migrated
+      # schema, which is what production has.
+      - name: Apply every migration
+        run: php noah db:migrate --no-ansi
+
       # The help articles have no seeder CSV on purpose, so app:install does
       # not create them -- see src/Noah/Articles/Import.php for why, and the
       # README's install steps, which say the same thing to a person. That
@@ -126,3 +139,58 @@ jobs:
 
       - name: Tests (unit + integration)
         run: composer test
+
+      # Every command boots, connects, and survives the data CI has (E10.1,
+      # #148). Three of fifteen were ever run here; the rest could stop working
+      # for a release and nothing would say so until somebody typed one on a
+      # server.
+      #
+      # After the tests, so a command that breaks fails its own step rather than
+      # leaving the suite to fail confusingly on data it changed.
+      #
+      # Read-only where a flag offers it, and genuinely destructive nowhere:
+      # `airside:prune` and `db:prune` list unless given --force, and
+      # `flights:cleaning` deletes flights that have already departed, of which
+      # a freshly generated database has none.
+      - name: Every noah command runs
+        run: |
+          set -euo pipefail
+
+          php noah db:migrate --dry-run --no-ansi
+          php noah currency:rates --dry-run --no-ansi
+          php noah articles:import --dry-run --no-ansi
+          php noah airside:import --dry-run --no-ansi
+          php noah flights:cabins --dry-run --no-ansi
+          php noah flights:realign --dry-run --no-ansi
+          php noah flights:reprice --dry-run --no-ansi
+          php noah flights:cleaning --no-ansi
+          php noah db:prune --no-ansi
+          php noah schedule:run --pretend --no-ansi
+
+          # Writes a real dump, which is the only way to find out whether
+          # mysqldump is reachable and the credentials file is accepted. The
+          # password reaches it through --defaults-extra-file and must not
+          # appear in the arguments; DumpTest asserts the shape, this asserts
+          # that the shape works.
+          php noah db:backup --no-ansi
+          test -s "$(ls -1 backups/*.sql.gz | head -1)"
+
+          # Boots and refuses, rather than boots and clears. The argument skips
+          # the table prompt; --no-interaction answers no to both confirmations.
+          php noah db:clear rate_limits --no-interaction --no-ansi
+
+      # Separately, because it must *fail*.
+      #
+      # With no distribution configured there is no bucket to sweep, and the
+      # command says so and exits non-zero rather than sweeping something else.
+      # That guard is the reason it cannot join the sweep above: CI sets
+      # AWS_CLOUDFRONT but no credentials, so a real run would reach S3 and get
+      # nothing useful.
+      - name: airside:prune refuses when there is no distribution
+        env:
+          AWS_CLOUDFRONT: ''
+        run: |
+          if php noah airside:prune --no-ansi; then
+            echo "::error::airside:prune should refuse with no distribution configured."
+            exit 1
+          fi
