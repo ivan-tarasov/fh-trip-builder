@@ -7,7 +7,7 @@ namespace TripBuilder\Api\Flights;
 use Exception;
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\ApiResponder;
-use TripBuilder\Api\HttpStatus;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Party;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;

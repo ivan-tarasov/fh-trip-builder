@@ -6,7 +6,7 @@ namespace TripBuilder\Api\Airports;
 
 use Exception;
 use TripBuilder\Api\AbstractApi;
-use TripBuilder\Api\HttpStatus;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Repository\AirportRepository;
 
 class Response extends AbstractApi

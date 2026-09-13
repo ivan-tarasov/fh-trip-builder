@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Api;
 
 use TripBuilder\Database\Connection;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\Request;
 
 abstract class AbstractApi
