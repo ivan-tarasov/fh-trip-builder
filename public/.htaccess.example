@@ -65,6 +65,28 @@
     RewriteRule (^|/)\. - [F]
 </IfModule>
 
+# Bearer tokens, which do not arrive on their own.
+#
+# Apache hands `Authorization` to the CGI/FPM process only when told to, so on
+# this deployment `$_SERVER` held no AUTH key at all and `getallheaders()`
+# answered `Accept`, `User-Agent`, `Host` and nothing else -- on a request that
+# carried a token. Every authenticated call to /api/* answered 401, for every
+# client, for as long as the endpoints have existed (E28, #207).
+#
+# A rewrite and not `CGIPassAuth On`, which says the same thing in one line and
+# is the better answer where it exists: it is an Apache 2.4.13+ core directive,
+# so on anything older the whole file is a 500 and the site is down. This needs
+# only mod_rewrite, which every other rule here already needs.
+#
+# The value lands in `REDIRECT_HTTP_AUTHORIZATION` once the front-controller
+# rewrite below has run, because an internal redirect prefixes what mod_rewrite
+# set -- Request::headersFromServer() reads both spellings.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
 # Front-controller routing: send every request that doesn't map to a real file
 # or directory through index.php, so clean URLs like /search/ and
 # /api/airports/autofill reach the router (index.php reads the path from

@@ -177,23 +177,51 @@ final readonly class Request
     private static function headersFromServer(array $server): array
     {
         $headers = [];
+        $redirected = [];
 
         foreach ($server as $key => $value) {
             if (!is_string($key) || !is_scalar($value)) {
                 continue;
             }
 
-            if (str_starts_with($key, 'HTTP_')) {
-                $headers[self::normaliseHeader(substr($key, 5))] = (string) $value;
+            // An internal redirect -- which the front-controller rewrite is --
+            // copies everything under a REDIRECT_ prefix. It is the same
+            // header, and for `Authorization` it is the only spelling that
+            // survives the rewrite that puts it there (E28, #207).
+            //
+            // Stripped in a loop, not once: two rewrites means two prefixes,
+            // and this deployment already produces both
+            // REDIRECT_HTTP_AUTHORIZATION and
+            // REDIRECT_REDIRECT_HTTP_AUTHORIZATION. A third rule anywhere would
+            // add a third.
+            $name = $key;
+
+            while (str_starts_with($name, 'REDIRECT_')) {
+                $name = substr($name, 9);
+            }
+
+            $prefixed = $name !== $key;
+
+            $header = match (true) {
+                str_starts_with($name, 'HTTP_') => self::normaliseHeader(substr($name, 5)),
+                $name === 'CONTENT_TYPE', $name === 'CONTENT_LENGTH' => self::normaliseHeader($name),
+                default => null,
+            };
+
+            if ($header === null) {
                 continue;
             }
 
-            if ($key === 'CONTENT_TYPE' || $key === 'CONTENT_LENGTH') {
-                $headers[self::normaliseHeader($key)] = (string) $value;
+            if ($prefixed) {
+                $redirected[$header] = (string) $value;
+            } else {
+                $headers[$header] = (string) $value;
             }
         }
 
-        return $headers;
+        // The unprefixed spelling wins where both are present, whatever order
+        // they came in.
+        return $headers + $redirected;
     }
 
     private static function normaliseHeader(string $name): string
