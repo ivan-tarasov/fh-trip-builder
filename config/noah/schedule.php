@@ -91,6 +91,31 @@ return [
         Schedule::COMMAND => 'db:prune --force',
     ],
     [
+        // One day's worth of flights, into whichever days are thinnest
+        // (E24.1, #191). The window is ninety days from whenever the generator
+        // last ran and does not move on its own, so without this line the site
+        // runs out of flights three months after the last manual run: search
+        // returns nothing and every route page 404s.
+        //
+        // 2,222 is a day's share of the 200,000 the README's install generates
+        // across the ninety-day window, so a night's run leaves the new day as
+        // dense as its neighbours.
+        //
+        // `--level` and not `--day=90`, which would also work and would say
+        // what it does more plainly. Levelling is what survives a missed night:
+        // two thin days instead of one, found without anybody knowing the run
+        // was missed. `--day` is still there for filling one by hand.
+        //
+        // Before the sweep at :30, so a day is filled before the previous one
+        // is swept.
+        Cron::MINUTE => 20,
+        Cron::HOUR => 3,
+        Cron::DAY => Cron::EVERY,
+        Cron::MONTH => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
+        Schedule::COMMAND => 'flights:add 2222 --level',
+    ],
+    [
         // Flights that have departed (E24.2, #192). Nothing removed them until
         // this line existed, so the table only ever grew.
         //

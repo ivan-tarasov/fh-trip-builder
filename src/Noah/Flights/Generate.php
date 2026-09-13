@@ -12,6 +12,7 @@ use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\ProgressIndicator;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 use TripBuilder\Database\Table;
@@ -71,6 +72,88 @@ class Generate extends AbstractCommand
     protected function configure(): void
     {
         $this->addArgument('flights', InputArgument::OPTIONAL, 'Flights to add');
+        $this->addOption(
+            'day',
+            null,
+            InputOption::VALUE_REQUIRED,
+            'Put them all on one day: a date (2026-12-12) or days from today (90).',
+        );
+        $this->addOption(
+            'level',
+            null,
+            InputOption::VALUE_NONE,
+            'Put them on the thinnest days in the window, thinnest first.',
+        );
+    }
+
+    /**
+     * Which days this run fills, and how many each gets -- or null to scatter
+     * them across the window, which is what an empty database wants.
+     *
+     * @return array<string, int>|null
+     * @throws Exception
+     */
+    private function plan(InputInterface $input, int $flightsToAdd): ?array
+    {
+        $day = $input->getOption('day');
+        $level = $input->getOption('level') === true;
+
+        if ($day !== null && $level) {
+            throw new RuntimeException('`--day` names one day and `--level` finds them; pick one.');
+        }
+
+        if ($day !== null) {
+            return [self::readDay((string) $day) => $flightsToAdd];
+        }
+
+        if (!$level) {
+            return null;
+        }
+
+        $window = DayPlan::window(date('Y-m-d'), self::DATE_ADD_DAYS);
+
+        // Counted by local departure date, because that is the axis a visitor
+        // searches on: "flights on the 20th" means the 20th where the plane
+        // leaves from. `departure_utc` answers a different question and would
+        // put a Honolulu evening on the following day.
+        $have = [];
+
+        foreach ($this->connection()->fetchAll(
+            'SELECT DATE(departure_time) AS day, COUNT(*) AS flights FROM ' . Table::Flights->value
+            . ' WHERE departure_time >= ? AND departure_time < ? + INTERVAL 1 DAY GROUP BY day',
+            [$window[0], $window[count($window) - 1]],
+        ) as $row) {
+            $have[(string) $row['day']] = (int) $row['flights'];
+        }
+
+        return DayPlan::level($window, $have, $flightsToAdd);
+    }
+
+    /**
+     * `--day` as a date, from either spelling.
+     *
+     * A number is days from today, which is what a crontab line wants to say;
+     * a date is a date, which is what a person filling one in wants to say.
+     *
+     * @throws Exception
+     */
+    private static function readDay(string $day): string
+    {
+        $date = ctype_digit($day)
+            ? date('Y-m-d', (int) strtotime(sprintf('+ %d days', (int) $day)))
+            : $day;
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1 || strtotime($date) === false) {
+            throw new RuntimeException(sprintf('`%s` is not a date or a number of days.', $day));
+        }
+
+        // Today's flights have mostly left, and the sweep removes the rest
+        // tonight. Generating into the past is generating nothing.
+        if ($date <= date('Y-m-d')) {
+            throw new RuntimeException(sprintf('`%s` is not in the future.', $date));
+        }
+
+        return $date;
     }
 
     /**
@@ -193,6 +276,26 @@ class Generate extends AbstractCommand
         // and the failure is a fatal in the middle of the loop that reports
         // nothing and writes nothing. `flights:add 200000` is what CI runs and
         // what E24.3 (#193) would quadruple.
+        // Which days this run fills. Null scatters across the window, which is
+        // what `flights:add N` has always done and what an empty database
+        // wants; `--day` and `--level` name days instead (E24.1, #191).
+        $plan = $this->plan($input, $flightsToAdd);
+
+        if ($plan !== null) {
+            $this->formatOutput(
+                'Filling',
+                count($plan) === 1
+                    ? array_key_first($plan)
+                    : sprintf('%d days, thinnest first', count($plan)),
+                'comment',
+            );
+        }
+
+        // Walked rather than expanded: a day per flight would be a list as long
+        // as the run, which is the thing E19 (#178) just took out.
+        $planDays = $plan === null ? [] : array_keys($plan);
+        $planIndex = 0;
+
         $batch = [];
         $connection = $this->connection();
 
@@ -222,15 +325,29 @@ class Generate extends AbstractCommand
                 // being drawn independently.
                 $leg = $legs->assign($distance);
 
-                // Render departure date and time (UNIX timestamps for random day)
+                // The day comes from the plan when there is one, and from the
+                // window at random when there is not. The time of day is always
+                // random: a day of departures all at the same minute is not a
+                // day anybody would search.
+                if ($plan === null) {
+                    $day = date('Y-m-d', (int) strtotime(sprintf(
+                        '+ %d days',
+                        Helper::random(self::DATE_ADD_DAYS),
+                    )));
+                } else {
+                    while ($plan[$planDays[$planIndex]] < 1) {
+                        $planIndex++;
+                    }
+
+                    $day = $planDays[$planIndex];
+                    $plan[$day]--;
+                }
+
                 $departureDateTime = date(
                     'Y-m-d H:i:s',
-                    (int) strtotime(
-                        sprintf('+ %d days', Helper::random(self::DATE_ADD_DAYS)),
-                        rand(
-                            (int) strtotime(date('Y-m-d') . ' 00:00:01'),
-                            (int) strtotime(date('Y-m-d') . ' 23:59:59'),
-                        ),
+                    rand(
+                        (int) strtotime($day . ' 00:00:01'),
+                        (int) strtotime($day . ' 23:59:59'),
                     ),
                 );
 

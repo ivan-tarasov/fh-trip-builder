@@ -202,6 +202,12 @@ a sparse network means the route they picked has nothing on it, so roughly
 fifteen of them skip themselves and nothing says the count was why. 200,000 is
 what CI generates, across the 43,000 routes this network has.
 
+Once there is a network, it is kept up rather than regenerated. `flights:add
+2222 --level` runs nightly and puts a day's worth into whichever days are
+thinnest — normally the one that has just entered the ninety-day window, and
+after a missed night, both of them. `--day=90` or `--day=2026-12-12` fills one
+named day by hand.
+
 It no longer needs a raised memory limit. The generator used to hold every
 flight until the end — about 1 MB per thousand — and `flights:add 200000` was
 a fatal at PHP's default 128 MB somewhere past ninety thousand, having written
