@@ -109,10 +109,26 @@ final readonly class FlightRepository
         // One ranked pass over the candidates (lightweight rows), capped so a very
         // connective route can't sort an unbounded set. The page and total both
         // come from this single result; only the page's legs are then hydrated.
-        $candidates = $this->connection->fetchAll(
-            $candidateSql . ' ORDER BY ' . $sort->candidateOrderBy() . ' LIMIT ' . (self::COUNT_CAP + 1),
-            $params,
-        );
+        //
+        // Remembered, because this statement *is* the cost of a search: 76 to
+        // 200ms measured, against about 4ms for the whole of the rest of this
+        // method. Every "show more" used to run it again and slice a different
+        // window, so paging multiplied the work rather than dividing it -- five
+        // slices were five searches (E31, #219).
+        //
+        // Filters, the party and the sort's later passes are applied to these
+        // rows afterwards, so a filter change reads the cache too rather than
+        // only a second page.
+        $sql = $candidateSql . ' ORDER BY ' . $sort->candidateOrderBy() . ' LIMIT ' . (self::COUNT_CAP + 1);
+        $cache = new SearchCandidateRepository($this->connection);
+        $key = $cache->keyFor($sql, $params);
+
+        $candidates = $cache->get($key);
+
+        if ($candidates === null) {
+            $candidates = $this->connection->fetchAll($sql, $params);
+            $cache->put($key, $candidates);
+        }
 
         if ($candidates === []) {
             return $empty;
