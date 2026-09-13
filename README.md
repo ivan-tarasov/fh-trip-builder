@@ -404,6 +404,26 @@ current tag, so a deployed server needs `git fetch --tags` for it to appear.
 
 Noah is the command line interface (CLI) tool included with the Trip Builder Project. It resides at the root of the application as the `noah` script and offers a variety of useful commands to assist you in building and managing application.
 
+### Its Version
+
+Noah prints a version at the top of every command, and that is the only way to
+tell which Noah is on a server. **Move it when Noah moves:**
+
+| change | bump |
+|---|---|
+| a new command | minor |
+| a fix to an existing one | patch |
+| a command removed or renamed | **major** |
+
+A rename is a major because the crontab and the deployment runbook name
+commands — it breaks somebody's server rather than somebody's build.
+
+It read `v0.3.4` from August 2025 until September 2026, during which eleven
+commands were added and the CLI went from four to fifteen while calling itself
+the same thing. `.github/workflows/noah-version.yml` now fails a pull request
+that touches `src/Noah/` or `noah` without changing the version, because the
+version of this rule that lived in somebody's head is the one that lapsed.
+
 ### Getting Started
 To get started with Noah, you need to navigate to the root directory of your Trip Builder Project in your terminal.
 

@@ -16,7 +16,26 @@ use TripBuilder\Helper;
 
 abstract class AbstractCommand extends Command
 {
-    private const string NOAH_VERSION = 'v0.3.4';
+    /**
+     * Printed at the top of every command, and the only way to tell which Noah
+     * is on a server.
+     *
+     * **Move it when Noah moves.** A new command is a minor, a fix to one is a
+     * patch, and removing or renaming one is a major -- the crontab and E14
+     * (#159) name commands, so a rename is a breaking change to somebody's
+     * server rather than to a library.
+     *
+     * It said `v0.3.4` from 2025-08-25 until 2026-09-12, during which eleven
+     * commands were added and the CLI went from four to fifteen. The bumps
+     * before that were all real, so the habit existed and lapsed. `.github/
+     * workflows/noah-version.yml` is what stops it lapsing again (E22, #184).
+     *
+     * `v1.0.0` and not `v0.14.0`, which is what eleven feature additions would
+     * count to. The number should say what is true: this is the tool a
+     * production deploy is built on -- cron calls `schedule:run`, `db:clear`
+     * refuses to run without `db:backup`, and the runbook is made of it.
+     */
+    private const string NOAH_VERSION = 'v1.0.0';
 
     /**
      * Color presets

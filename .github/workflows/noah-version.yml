@@ -1,0 +1,71 @@
+name: Noah version
+
+# Noah's version is printed at the top of every command and is the only way to
+# tell which Noah is on a server. It read `v0.3.4` from 2025-08-25 until
+# 2026-09-12, during which eleven commands were added -- the CLI went from four
+# to fifteen while calling itself the same thing (E22, #184).
+#
+# The rule existed before that as a habit, and the habit is what failed. A note
+# in the README would be the same rule again, so this is a check instead.
+#
+# Only fires when Noah actually changed. A pull request that does not touch
+# `src/Noah/` or `noah` passes without looking at the version at all.
+#
+# Failing this check only *blocks* a merge once it is added as a required
+# status check in the branch protection rules for develop.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  noah-version:
+    name: Noah version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The whole history, because this compares against the base branch.
+          fetch-depth: 0
+
+      - name: Require a version bump when Noah changes
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+
+          readonly FILE='src/Noah/AbstractCommand.php'
+
+          changed=$(git diff --name-only "origin/${BASE}...HEAD")
+
+          if ! printf '%s\n' "$changed" | grep -qE '^(src/Noah/|noah$)'; then
+            echo "Noah was not touched. Nothing to check."
+            exit 0
+          fi
+
+          echo "Noah changed in this pull request:"
+          printf '%s\n' "$changed" | grep -E '^(src/Noah/|noah$)' | sed 's/^/  /'
+
+          version() {
+            grep -oE "NOAH_VERSION = 'v[0-9]+\.[0-9]+\.[0-9]+'" "$1" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+"
+          }
+
+          git show "origin/${BASE}:${FILE}" > /tmp/noah-base.php
+          base=$(version /tmp/noah-base.php)
+          head=$(version "${FILE}")
+
+          echo "base: ${base}"
+          echo "head: ${head}"
+
+          if [ "${base}" = "${head}" ]; then
+            echo "::error file=${FILE}::Noah changed but NOAH_VERSION is still ${head}. A new command is a minor, a fix to one is a patch, and removing or renaming one is a major -- the crontab and the deploy runbook name commands."
+            exit 1
+          fi
+
+          echo "NOAH_VERSION moved ${base} -> ${head}."
