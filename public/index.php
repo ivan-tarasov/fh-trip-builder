@@ -13,6 +13,20 @@ declare(strict_types=1);
 // and holds nothing but pages, so everything the app needs is above it.
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
+// UTC, stated here rather than inherited (E17, #171).
+//
+// Two things depended on `date.timezone` in a php.ini this repository does not
+// hold. The database is put on PHP's offset when a Connection is built, so a
+// server whose PHP moved to a zone that observes DST would give a long-running
+// command -- `flights:add` runs for minutes -- the offset it started with and
+// an hour of silent drift after a transition. And a host upgrade changing that
+// setting would shift every timestamp the application writes, with nothing
+// anywhere to say it had.
+//
+// UTC has no transitions, so the offset is +00:00 forever and the question
+// stops existing.
+date_default_timezone_set('UTC');
+
 use TripBuilder\Config;
 use TripBuilder\Http\Request;
 use TripBuilder\Http\SecurityHeaders;
