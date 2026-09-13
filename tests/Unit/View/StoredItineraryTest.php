@@ -71,6 +71,8 @@ final class StoredItineraryTest extends TestCase
             self::segment('YYZ', 'LHR', '2026-09-08 10:00', '2026-09-08 21:00', 420),
         ]));
 
+        self::assertInstanceOf(stdClass::class, $itinerary, 'these segments should read back');
+
         $layover = $itinerary->layovers[0];
 
         // Arrays would survive this class and fail at render: the presenter
@@ -88,6 +90,7 @@ final class StoredItineraryTest extends TestCase
             self::segment('YUL', 'LHR', '2026-09-08 07:00', '2026-09-08 19:00', 420),
         ]));
 
+        self::assertInstanceOf(stdClass::class, $itinerary, 'a direct flight should read back');
         self::assertSame(0, $itinerary->stops);
         self::assertSame([], $itinerary->layovers);
         self::assertSame(420, $itinerary->total_duration);

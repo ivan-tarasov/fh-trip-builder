@@ -17,9 +17,14 @@ final class FlightFinderItineraryTest extends IntegrationTestCase
 {
     private const DEPART_DATE = '2026-09-15';
 
-    private ?int $legOne = null;
-    private ?int $legTwo = null;
-    private ?int $unrelated = null;
+    // Typed but not defaulted: these are the fixture's own leg ids, written by
+    // setUp() before any test runs. `?int = null` said they might be absent,
+    // which sent every read of one into a repository as `int|null` (E10.6,
+    // #204) -- and a test that somehow ran without setUp should fail loudly on
+    // an uninitialised property rather than quietly search for leg `null`.
+    private int $legOne;
+    private int $legTwo;
+    private int $unrelated;
 
     protected function setUp(): void
     {

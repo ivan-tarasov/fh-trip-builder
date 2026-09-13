@@ -90,6 +90,31 @@ final class BookingPresenterTest extends TestCase
     }
 
     /**
+     * A booking the presenter could render.
+     *
+     * `booking()` answers null for a row it cannot make sense of -- no stored
+     * itinerary, or one whose segments do not survive being read back. Every
+     * test below is about what the card says, so a null is the row being wrong
+     * rather than the assertion failing, and it should say so once here.
+     *
+     * @param array<string, mixed> $row
+     * @param list<array<string, mixed>> $passengers
+     * @return array<string, mixed>
+     */
+    private static function card(
+        array $row,
+        array $passengers = [],
+        ?int $travellerCount = null,
+        string $now = '2026-09-04 12:00:00',
+    ): array {
+        $booking = self::presenter($now)->booking($row, $passengers, $travellerCount);
+
+        self::assertIsArray($booking, 'the presenter could not render this booking');
+
+        return $booking;
+    }
+
+    /**
      * A booking reads in the currency it was made in, whatever the visitor has
      * chosen since.
      *
@@ -107,7 +132,7 @@ final class BookingPresenterTest extends TestCase
         $_COOKIE[Currency::COOKIE] = 'EUR';
         Money::forget();
 
-        $booking = self::presenter()->booking(self::row([
+        $booking = self::card(self::row([
             'currency' => 'JPY',
             'currency_rate' => 111.32,
         ]));
@@ -128,8 +153,8 @@ final class BookingPresenterTest extends TestCase
      */
     public function testTwoBookingsAtDifferentRatesReportDifferentTotals(): void
     {
-        $march = self::presenter()->booking(self::row(['currency' => 'JPY', 'currency_rate' => 95.0]));
-        $today = self::presenter()->booking(self::row(['currency' => 'JPY', 'currency_rate' => 111.32]));
+        $march = self::card(self::row(['currency' => 'JPY', 'currency_rate' => 95.0]));
+        $today = self::card(self::row(['currency' => 'JPY', 'currency_rate' => 111.32]));
 
         self::assertSame('95,000', $march['price_total']['whole']);
         self::assertSame('111,320', $today['price_total']['whole']);
@@ -150,7 +175,7 @@ final class BookingPresenterTest extends TestCase
         $row = self::row();
         unset($row['currency'], $row['currency_rate']);
 
-        $booking = self::presenter()->booking($row);
+        $booking = self::card($row);
 
         self::assertSame('CAD', $booking['price_total']['code']);
         self::assertSame('1,000', $booking['price_total']['whole']);
@@ -165,7 +190,7 @@ final class BookingPresenterTest extends TestCase
      */
     public function testACurrencyNoLongerOfferedFallsBackRatherThanFailing(): void
     {
-        $booking = self::presenter()->booking(self::row([
+        $booking = self::card(self::row([
             'currency' => 'RUB',
             'currency_rate' => 62.45,
         ]));
@@ -179,7 +204,7 @@ final class BookingPresenterTest extends TestCase
      */
     public function testTheReceiptAddsUpInTheBookingsCurrency(): void
     {
-        $booking = self::presenter()->booking(self::row([
+        $booking = self::card(self::row([
             'currency' => 'JPY',
             'currency_rate' => 111.32,
         ]));
@@ -196,7 +221,7 @@ final class BookingPresenterTest extends TestCase
     {
         // The segments deliberately total 550; the columns say 1000. The
         // columns are what a card was charged.
-        $booking = self::presenter()->booking(self::row());
+        $booking = self::card(self::row());
 
         self::assertSame('1,000', $booking['price_total']['whole']);
         self::assertSame('00', $booking['price_total']['cents']);
@@ -204,7 +229,7 @@ final class BookingPresenterTest extends TestCase
 
     public function testALegacyRowReportsNoPriceAndNoReference(): void
     {
-        $booking = self::presenter()->booking(self::row([
+        $booking = self::card(self::row([
             'reference' => '',
             'price_base' => 0.00,
             'price_tax' => 0.00,
@@ -220,7 +245,7 @@ final class BookingPresenterTest extends TestCase
     {
         // Outbound 8 Sep, return lands 15 Sep. On the 10th the traveller still
         // has a flight to catch, so this must not be filed under Past.
-        $booking = self::presenter('2026-09-10 12:00:00')->booking(self::row());
+        $booking = self::card(self::row(), now: '2026-09-10 12:00:00');
 
         self::assertFalse($booking['is_past']);
         self::assertNull($booking['departs_in']);
@@ -228,8 +253,8 @@ final class BookingPresenterTest extends TestCase
 
     public function testTheTripIsPastOnlyAfterTheLastArrival(): void
     {
-        $before = self::presenter('2026-09-15 11:00:00')->booking(self::row());
-        $after = self::presenter('2026-09-15 12:00:00')->booking(self::row());
+        $before = self::card(self::row(), now: '2026-09-15 11:00:00');
+        $after = self::card(self::row(), now: '2026-09-15 12:00:00');
 
         self::assertFalse($before['is_past']);
         self::assertTrue($after['is_past']);
@@ -237,14 +262,14 @@ final class BookingPresenterTest extends TestCase
 
     public function testANullDepartureTimeFallsBackToTheFirstSegment(): void
     {
-        $booking = self::presenter()->booking(self::row(['departure_time' => null]));
+        $booking = self::card(self::row(['departure_time' => null]));
 
         self::assertSame('2026-09-08 07:00', $booking['starts_at']->format('Y-m-d H:i'));
     }
 
     public function testRebookCarriesTheCabinAndTripTypeThatWereBought(): void
     {
-        $booking = self::presenter()->booking(self::row());
+        $booking = self::card(self::row());
 
         // Offering a business round trip back as an economy one-way is a worse
         // answer than not offering it.
@@ -256,7 +281,7 @@ final class BookingPresenterTest extends TestCase
 
     public function testAOneWayBookingRebooksAsOneWay(): void
     {
-        $booking = self::presenter()->booking(self::row(['flight_return' => null]));
+        $booking = self::card(self::row(['flight_return' => null]));
 
         self::assertNull($booking['return']);
         self::assertSame('oneway', $booking['rebook']['triptype']);
@@ -264,7 +289,7 @@ final class BookingPresenterTest extends TestCase
 
     public function testCancelledIsReportedWithoutHidingTheBooking(): void
     {
-        $booking = self::presenter()->booking(self::row(['status' => 'cancelled']));
+        $booking = self::card(self::row(['status' => 'cancelled']));
 
         self::assertTrue($booking['is_cancelled']);
         self::assertSame('Cancelled', $booking['status_label']);
@@ -278,7 +303,7 @@ final class BookingPresenterTest extends TestCase
 
     public function testTheDirectionsAreTheShapeTheSearchCardsRender(): void
     {
-        $booking = self::presenter()->booking(self::row());
+        $booking = self::card(self::row());
 
         // The whole reason a booking can reuse search/cards/itinerary.html.twig.
         foreach (['depart_time', 'depart_city', 'arrive_time', 'duration', 'stops_label', 'route', 'segments'] as $key) {
@@ -292,7 +317,7 @@ final class BookingPresenterTest extends TestCase
     {
         // The bookings list reads its rows without joining, so a count is all it
         // has. A party of three still must not read as a trip for one.
-        $booking = self::presenter()->booking(self::row(), travellerCount: 3);
+        $booking = self::card(self::row(), travellerCount: 3);
 
         self::assertSame('Ada Lovelace + 2', $booking['passenger_summary']);
     }
@@ -301,14 +326,14 @@ final class BookingPresenterTest extends TestCase
     {
         self::assertSame(
             'Ada Lovelace',
-            self::presenter()->booking(self::row(), travellerCount: 1)['passenger_summary'],
+            self::card(self::row(), travellerCount: 1)['passenger_summary'],
         );
 
         // Written before travellers were rows of their own, so there is nothing
         // to count and nothing to add.
         self::assertSame(
             'Ada Lovelace',
-            self::presenter()->booking(self::row())['passenger_summary'],
+            self::card(self::row())['passenger_summary'],
         );
     }
 
@@ -316,7 +341,7 @@ final class BookingPresenterTest extends TestCase
     {
         // Handed the travellers themselves, it counts those rather than relying
         // on a number the caller also has to remember to pass.
-        $booking = self::presenter()->booking(self::row(), [
+        $booking = self::card(self::row(), [
             ['first_name' => 'Ada', 'last_name' => 'Lovelace', 'type' => 'A', 'dob' => '1990-01-01'],
             ['first_name' => 'Mary', 'last_name' => 'Somerville', 'type' => 'A', 'dob' => '1992-02-02'],
         ]);

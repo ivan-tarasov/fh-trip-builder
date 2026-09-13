@@ -44,6 +44,25 @@ final class PostRepositoryTest extends IntegrationTestCase
     }
 
     /**
+     * A post the test has just written, read back.
+     *
+     * `find()` answers null for a slug that is not there or is held back, and
+     * every use below has just written the row it is asking for — so a null is
+     * the write having failed, and should say so rather than surfacing as an
+     * offset read on nothing.
+     *
+     * @return array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, body: string, published_at: string, updated_at: string}
+     */
+    private function stored(string $slug): array
+    {
+        $post = $this->repository()->find($slug);
+
+        self::assertNotNull($post, $slug . ' should have been written');
+
+        return $post;
+    }
+
+    /**
      * `array_key_exists` and not `??`, because two of these are nullable and
      * an override of null is the case worth testing -- `??` would fall through
      * to the default and quietly test nothing.
@@ -119,7 +138,7 @@ final class PostRepositoryTest extends IntegrationTestCase
             'fr',
         );
 
-        self::assertSame('A post', $this->repository()->find($slug)['title'] ?? null);
+        self::assertSame('A post', $this->stored($slug)['title'] ?? null);
         self::assertSame('Un article', $this->repository()->find($slug, 'fr')['title'] ?? null);
     }
 
@@ -143,7 +162,7 @@ final class PostRepositoryTest extends IntegrationTestCase
     {
         $slug = $this->write('fresh', ['published_at' => '2020-06-05 12:00:00']);
 
-        self::assertSame('2020-06-05 12:00:00', $this->repository()->find($slug)['updated_at']);
+        self::assertSame('2020-06-05 12:00:00', $this->stored($slug)['updated_at']);
     }
 
     /**
@@ -152,7 +171,7 @@ final class PostRepositoryTest extends IntegrationTestCase
     public function testStoringTheSameWordsLeavesTheDateAlone(): void
     {
         $slug = $this->write('same');
-        $first = $this->repository()->find($slug)['updated_at'];
+        $first = $this->stored($slug)['updated_at'];
 
         $changed = $this->repository()->store(
             $slug,
@@ -166,7 +185,7 @@ final class PostRepositoryTest extends IntegrationTestCase
         );
 
         self::assertFalse($changed, 'nothing differed, so nothing was rewritten');
-        self::assertSame($first, $this->repository()->find($slug)['updated_at']);
+        self::assertSame($first, $this->stored($slug)['updated_at']);
     }
 
     public function testChangingTheProseMovesTheDate(): void
@@ -192,7 +211,7 @@ final class PostRepositoryTest extends IntegrationTestCase
         );
 
         self::assertTrue($changed);
-        self::assertNotSame('2020-01-01 00:00:00', $this->repository()->find($slug)['updated_at']);
+        self::assertNotSame('2020-01-01 00:00:00', $this->stored($slug)['updated_at']);
     }
 
     /**
@@ -204,7 +223,7 @@ final class PostRepositoryTest extends IntegrationTestCase
 
         $this->write('dated', ['published_at' => '2020-06-05 12:00:00', 'body' => 'Rewritten.']);
 
-        self::assertSame('2020-06-05 12:00:00', $this->repository()->find($slug)['published_at']);
+        self::assertSame('2020-06-05 12:00:00', $this->stored($slug)['published_at']);
     }
 
     public function testTheSectionReadsNewestFirst(): void

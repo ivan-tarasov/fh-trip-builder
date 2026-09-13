@@ -106,6 +106,7 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
         $booking = new BookingPresenter(now: new DateTimeImmutable('2026-09-04 12:00:00'))
             ->booking(self::legacyRow());
 
+        self::assertIsArray($booking, 'the presenter could not render this booking');
         self::assertSame('CAD', $booking['price_total']['code']);
         self::assertSame('1,000', $booking['price_total']['whole']);
     }

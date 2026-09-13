@@ -37,11 +37,17 @@ final class CountryRepositoryTest extends IntegrationTestCase
         // And that figure is a maximum: no country may report more than its
         // busiest airport does.
         foreach ($countries as $country) {
-            $busiest = (int) $this->connection()->fetchOne(
+            $max = $this->connection()->fetchOne(
                 'SELECT MAX(search_count) AS n FROM airports'
                 . ' WHERE country_code = ? AND enabled = 1 AND is_major = 1',
                 [$country['code']],
-            )['n'];
+            );
+
+            // An aggregate always answers a row, even over nothing at all --
+            // but only the query says so, and this is the query.
+            self::assertNotNull($max);
+
+            $busiest = (int) $max['n'];
 
             self::assertSame($busiest, (int) $country['hits'], $country['name'] . ' is not its busiest airport');
         }

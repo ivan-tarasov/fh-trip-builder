@@ -66,9 +66,12 @@ final class BookingRepositoryTest extends IntegrationTestCase
 
             // Wrong session must not cancel.
             self::assertSame(0, $repo->cancelForSession($id, 'someone-else'));
+            $found = $repo->findForSession($id, $session);
+
+            self::assertNotNull($found, 'the booking this session just made should be findable');
             self::assertSame(
                 BookingStatus::Confirmed->value,
-                $repo->findForSession($id, $session)['status'],
+                $found['status'],
             );
 
             self::assertSame(1, $repo->cancelForSession($id, $session));

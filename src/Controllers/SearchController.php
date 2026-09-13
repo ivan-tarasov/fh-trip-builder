@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Exception;
+use RuntimeException;
 use stdClass;
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Api\Flights\FlightSearchQuery;
@@ -165,7 +166,7 @@ class SearchController extends AbstractController
             // Never on a fragment request: the JS injects the answer as cards,
             // and fetch follows redirects, so it would splice a whole page --
             // header, footer and all -- into the results list.
-            if ($this->request->path() !== $this->searchUrl->path() && !$this->request->isFragment()) {
+            if ($this->request->path() !== $this->searchUrl()->path() && !$this->request->isFragment()) {
                 $this->bounce($this->link($this->get), HttpStatus::MovedPermanently);
 
                 return;
@@ -184,15 +185,15 @@ class SearchController extends AbstractController
                 to: $this->get[self::GET_TO],
                 departDate: $this->get[self::GET_DEPART],
                 returnDate: $this->get[self::GET_RETURN] ?? '',
-                party: $this->searchUrl->party(),
-                departSpan: $this->searchUrl->departSpan,
-                returnSpan: $this->searchUrl->returnSpan,
+                party: $this->searchUrl()->party(),
+                departSpan: $this->searchUrl()->departSpan,
+                returnSpan: $this->searchUrl()->returnSpan,
                 cabin: CabinClass::fromRequest($this->get[self::GET_CLASS] ?? null),
-                filters: FlightFilters::fromQuery($this->get, party: $this->searchUrl->party()),
+                filters: FlightFilters::fromQuery($this->get, party: $this->searchUrl()->party()),
                 returnFilters: FlightFilters::fromQuery(
                     $this->get,
                     FlightFilters::RETURN_PREFIX,
-                    $this->searchUrl->party(),
+                    $this->searchUrl()->party(),
                 ),
             );
 
@@ -216,7 +217,7 @@ class SearchController extends AbstractController
             // Recording search stat
             $this->searchStat();
 
-            $total_flights = $this->data->total_flights;
+            $total_flights = $this->data()->total_flights;
 
             // "Load more" asks for cards, not a page: same query, same filters,
             // same sort — only the window differs. Rendering the one partial
@@ -226,8 +227,8 @@ class SearchController extends AbstractController
             if ($this->isFragment()) {
                 echo new TwigRenderer()->render('search/cards/list.html.twig', [
                     'flights' => $total_flights != 0 ? $this->buildFlights() : [],
-                    'step' => $this->data->step,
-                    'price_mode' => $this->data->price_mode,
+                    'step' => $this->data()->step,
+                    'price_mode' => $this->data()->price_mode,
                     'show_more' => $total_flights != 0 ? $this->buildShowMore() : null,
                     // The cards link to checkout, and that link carries the
                     // cabin — so an appended card needs it as much as a
@@ -243,8 +244,8 @@ class SearchController extends AbstractController
             echo new TwigRenderer()->renderPage('search/view.html.twig', [
                 // So the form above the results shows the party that was
                 // searched for rather than resetting to one adult.
-                'party' => $this->searchUrl->party(),
-                'party_label' => $this->searchUrl->party()->label(),
+                'party' => $this->searchUrl()->party(),
+                'party_label' => $this->searchUrl()->party()->label(),
                 // Carried onto the checkout links so the party survives the hop
                 // -- the legs say what is being bought, not for how many.
                 'checkout_pax' => $this->checkoutPax(),
@@ -261,12 +262,12 @@ class SearchController extends AbstractController
                 // makes this the page the block is worth drawing on.
                 'nearby' => $this->nearbyPlaces($places),
                 'recent' => RecentSearches::rows($this->request->cookies, $places),
-                'depart_city' => $this->data->depart,
-                'arrive_city' => $this->data->arrive,
+                'depart_city' => $this->data()->depart,
+                'arrive_city' => $this->data()->arrive,
                 'depart_date' => $this->get[self::GET_DEPART],
                 'return_date' => $this->get[self::GET_RETURN],
-                'depart_flex' => $this->searchUrl->departSpan,
-                'return_flex' => $this->searchUrl->returnSpan,
+                'depart_flex' => $this->searchUrl()->departSpan,
+                'return_flex' => $this->searchUrl()->returnSpan,
                 // Filter forms submit with GET, so they post to the search's
                 // own path and carry only the rest -- sort and filters -- as
                 // hidden fields. The search itself is in that path now.
@@ -280,7 +281,7 @@ class SearchController extends AbstractController
                 // What the sidebar needs to draw itself: the filters currently
                 // applied, and which options are worth offering at all.
                 'filters' => $this->filterQuery(),
-                'available' => (array) $this->data->available,
+                'available' => (array) $this->data()->available,
                 // Hidden fields a GET form needs so submitting one control does
                 // not drop the rest of the search.
                 // The filter form supplies filter values from its own controls,
@@ -292,44 +293,44 @@ class SearchController extends AbstractController
                 ]),
                 // Which half of a round trip is being chosen (null for one way),
                 // and the outbound already picked, if any.
-                'step' => $this->data->step,
+                'step' => $this->data()->step,
                 'step_title' => $this->stepTitle(),
                 'step_route' => $this->stepRoute(),
-                'step_date' => $this->data->step === 2
+                'step_date' => $this->data()->step === 2
                     ? $this->get[self::GET_RETURN]
                     : $this->get[self::GET_DEPART],
                 // The last day the search covers. A flexible search draws its
                 // cards from up to three days, and the header named only the
                 // first of them -- so a page of results dated the 17th sat
                 // under a line that said the 15th.
-                'step_date_until' => $this->data->step === 2
-                    ? $this->searchUrl->returnUntil()
-                    : $this->searchUrl->departUntil(),
-                'price_mode' => $this->data->price_mode,
-                'selected' => $this->data->selected === null
+                'step_date_until' => $this->data()->step === 2
+                    ? $this->searchUrl()->returnUntil()
+                    : $this->searchUrl()->departUntil(),
+                'price_mode' => $this->data()->price_mode,
+                'selected' => $this->data()->selected === null
                     ? null
-                    : $this->presenter()->direction($this->data->selected)['direction'],
-                'selected_price' => $this->data->selected_price === null
+                    : $this->presenter()->direction($this->data()->selected)['direction'],
+                'selected_price' => $this->data()->selected_price === null
                     ? null
-                    : $this->presenter()->priceParts((float) $this->data->selected_price),
-                'selected_return' => $this->data->selected_return === null
+                    : $this->presenter()->priceParts((float) $this->data()->selected_price),
+                'selected_return' => $this->data()->selected_return === null
                     ? null
-                    : $this->presenter()->direction($this->data->selected_return)['direction'],
-                'selected_return_price' => $this->data->selected_return_price === null
+                    : $this->presenter()->direction($this->data()->selected_return)['direction'],
+                'selected_return_price' => $this->data()->selected_return_price === null
                     ? null
-                    : $this->presenter()->priceParts((float) $this->data->selected_return_price),
-                'package_price' => $this->data->package_price === null
+                    : $this->presenter()->priceParts((float) $this->data()->selected_return_price),
+                'package_price' => $this->data()->package_price === null
                     ? null
-                    : $this->presenter()->priceParts((float) $this->data->package_price),
+                    : $this->presenter()->priceParts((float) $this->data()->package_price),
                 // What the ticket allows, folded to the strictest leg of each
                 // direction. Baggage is the commonest reason a trip gets
                 // abandoned at payment, so it belongs on the page where the
                 // flights can still be swapped rather than only on the one
                 // where a form has to be filled in first.
-                'included' => $this->data->step === 3 ? $this->includedRules() : null,
+                'included' => $this->data()->step === 3 ? $this->includedRules() : null,
                 'package_ids' => [
-                    'outbound' => implode(',', array_map(intval(...), (array) $this->data->selected_ids)),
-                    'return' => implode(',', array_map(intval(...), (array) $this->data->selected_return_ids)),
+                    'outbound' => implode(',', array_map(intval(...), (array) $this->data()->selected_ids)),
+                    'return' => implode(',', array_map(intval(...), (array) $this->data()->selected_return_ids)),
                 ],
                 'depart_date_label' => $this->get[self::GET_DEPART],
                 'return_date_label' => $this->get[self::GET_RETURN],
@@ -338,12 +339,12 @@ class SearchController extends AbstractController
                 'change_url' => $this->stepUrl(
                     null,
                     keepReturn: true,
-                    current: array_values(array_map(intval(...), (array) $this->data->selected_ids)),
+                    current: array_values(array_map(intval(...), (array) $this->data()->selected_ids)),
                 ),
                 'change_return_url' => $this->stepUrl(
-                    array_values(array_map(intval(...), (array) $this->data->selected_ids)),
+                    array_values(array_map(intval(...), (array) $this->data()->selected_ids)),
                     keepReturn: false,
-                    current: array_values(array_map(intval(...), (array) $this->data->selected_return_ids)),
+                    current: array_values(array_map(intval(...), (array) $this->data()->selected_return_ids)),
                 ),
                 // Flights / no-result
                 'total_flights' => $total_flights,
@@ -444,28 +445,28 @@ class SearchController extends AbstractController
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
-            $this->searchUrl->departSpan,
-            $this->searchUrl->returnSpan,
+            $this->searchUrl()->departSpan,
+            $this->searchUrl()->returnSpan,
         );
 
         // Offered back in the origin and destination fields next time. Kept in
         // this browser rather than in the `search` table, which counts how
         // popular a route is and has no column for who ran it.
-        RecentSearches::remember($this->request->cookies, $this->searchUrl, $this->request->isSecure());
+        RecentSearches::remember($this->request->cookies, $this->searchUrl(), $this->request->isSecure());
 
         // Insert or update search
         new SearchRepository($this->connection())->record(
             $hash,
             $this->get[self::GET_FROM],
-            trim(preg_replace('/\([^)]+\)/', '', $this->data->depart)),
+            trim(preg_replace('/\([^)]+\)/', '', $this->data()->depart)),
             $this->get[self::GET_TO],
-            trim(preg_replace('/\([^)]+\)/', '', $this->data->arrive)),
+            trim(preg_replace('/\([^)]+\)/', '', $this->data()->arrive)),
             $this->get[self::GET_DEPART],
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
-            $this->searchUrl->departSpan,
-            $this->searchUrl->returnSpan,
+            $this->searchUrl()->departSpan,
+            $this->searchUrl()->returnSpan,
         );
     }
 
@@ -494,13 +495,13 @@ class SearchController extends AbstractController
     {
         $flights = [];
 
-        $step = $this->data->step;
-        $cheapest = $this->data->cheapest_total;
+        $step = $this->data()->step;
+        $cheapest = $this->data()->cheapest_total;
         // Naming one option "cheapest" only says something when there is more
         // than one to be cheaper than.
-        $compare = $cheapest !== null && $this->data->total_flights > 1;
+        $compare = $cheapest !== null && $this->data()->total_flights > 1;
 
-        foreach ($this->data->flights as $flight) {
+        foreach ($this->data()->flights as $flight) {
             $built = $this->presenter()->direction($flight->itinerary);
             $total = (float) $flight->price_base + (float) $flight->price_tax;
             $difference = $compare ? $total - (float) $cheapest : null;
@@ -543,7 +544,7 @@ class SearchController extends AbstractController
      */
     private function stepTitle(): string
     {
-        return match ($this->data->step) {
+        return match ($this->data()->step) {
             1 => 'Choose your departing flight',
             2 => 'Choose your returning flight',
             3 => 'Your round trip',
@@ -556,10 +557,10 @@ class SearchController extends AbstractController
      */
     private function stepRoute(): string
     {
-        return match ($this->data->step) {
-            2 => sprintf('%s → %s', $this->data->arrive, $this->data->depart),
-            3 => sprintf('%s ⇄ %s', $this->data->depart, $this->data->arrive),
-            default => sprintf('%s → %s', $this->data->depart, $this->data->arrive),
+        return match ($this->data()->step) {
+            2 => sprintf('%s → %s', $this->data()->arrive, $this->data()->depart),
+            3 => sprintf('%s ⇄ %s', $this->data()->depart, $this->data()->arrive),
+            default => sprintf('%s → %s', $this->data()->depart, $this->data()->arrive),
         };
     }
 
@@ -628,8 +629,8 @@ class SearchController extends AbstractController
         $brands = new FareBrandRepository($this->connection());
 
         $halves = [
-            'Departing' => array_map(intval(...), (array) $this->data->selected_ids),
-            'Returning' => array_map(intval(...), (array) $this->data->selected_return_ids),
+            'Departing' => array_map(intval(...), (array) $this->data()->selected_ids),
+            'Returning' => array_map(intval(...), (array) $this->data()->selected_return_ids),
         ];
 
         $out = [];
@@ -663,9 +664,9 @@ class SearchController extends AbstractController
     private function buildShowMore(): ?array
     {
         $shown = (int) $this->get[self::GET_SHOWN];
-        $total = (int) $this->data->total_flights;
+        $total = (int) $this->data()->total_flights;
 
-        if (!$this->data->has_more) {
+        if (!$this->data()->has_more) {
             return null;
         }
 
@@ -735,7 +736,7 @@ class SearchController extends AbstractController
      */
     private function checkoutPax(): string
     {
-        $party = $this->searchUrl->party();
+        $party = $this->searchUrl()->party();
         $query = array_filter([
             'adults' => $party->adults > 1 ? $party->adults : null,
             'children' => $party->children ?: null,
@@ -824,12 +825,12 @@ class SearchController extends AbstractController
     private function identity(): array
     {
         return [
-            self::GET_FROM => $this->searchUrl->from,
-            self::GET_TO => $this->searchUrl->to,
-            self::GET_DEPART => $this->searchUrl->depart,
-            self::GET_RETURN => $this->searchUrl->return,
-            self::GET_TRIPTYPE => $this->searchUrl->tripType()->value,
-            self::GET_CLASS => $this->searchUrl->cabin->value,
+            self::GET_FROM => $this->searchUrl()->from,
+            self::GET_TO => $this->searchUrl()->to,
+            self::GET_DEPART => $this->searchUrl()->depart,
+            self::GET_RETURN => $this->searchUrl()->return,
+            self::GET_TRIPTYPE => $this->searchUrl()->tripType()->value,
+            self::GET_CLASS => $this->searchUrl()->cabin->value,
         ];
     }
 
@@ -895,7 +896,7 @@ class SearchController extends AbstractController
      */
     private function sortTabs(): array
     {
-        $highlights = (array) json_decode((string) json_encode($this->data->highlights ?? []), true);
+        $highlights = (array) json_decode((string) json_encode($this->data()->highlights ?? []), true);
         $current = $this->sort();
         $triptype = $this->get[self::GET_TRIPTYPE];
 
@@ -973,7 +974,7 @@ class SearchController extends AbstractController
     private function filterPanel(): SearchFilterPanel
     {
         return $this->filterPanel ??= new SearchFilterPanel(
-            $this->data,
+            $this->data(),
             $this->get,
             $this->connection(),
             $this->presenter(),
@@ -1041,6 +1042,30 @@ class SearchController extends AbstractController
     private function presenter(): ItineraryPresenter
     {
         return $this->presenter ??= new ItineraryPresenter();
+    }
+
+    /**
+     * The search response, which exists from the moment the search has run.
+     *
+     * The property is nullable because it is not set until `index()` has run
+     * the search, and every method that reads it is reachable only from there
+     * -- after that point. PHP has no way to say "set by the time you get
+     * here", so this is the one place that says it, and level 8 stops asking
+     * forty-three times (E10.6, #204).
+     *
+     * A throw rather than a fallback: there is no sensible empty search
+     * response, and a method reading this before the search has run is a
+     * mistake in the calling order rather than an empty page.
+     */
+    private function data(): stdClass
+    {
+        return $this->data ?? throw new RuntimeException('The search has not run yet.');
+    }
+
+    /** The search this page is of, for the same reason as data(). */
+    private function searchUrl(): SearchUrl
+    {
+        return $this->searchUrl ?? throw new RuntimeException('The search URL has not been resolved yet.');
     }
 
     private function setGet(array $get): void

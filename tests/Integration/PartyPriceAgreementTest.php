@@ -49,9 +49,14 @@ final class PartyPriceAgreementTest extends IntegrationTestCase
     /** @var list<int> */
     private array $fixtures = [];
 
-    private ?int $outboundOne = null;
-    private ?int $outboundTwo = null;
-    private ?int $returnLeg = null;
+    // Typed but not defaulted: these are the fixture's own leg ids, written by
+    // setUp() before any test runs. `?int = null` said they might be absent,
+    // which sent every read of one into a repository as `int|null` (E10.6,
+    // #204) -- and a test that somehow ran without setUp should fail loudly on
+    // an uninitialised property rather than quietly search for leg `null`.
+    private int $outboundOne;
+    private int $outboundTwo;
+    private int $returnLeg;
 
     protected function setUp(): void
     {
