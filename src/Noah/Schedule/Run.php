@@ -13,7 +13,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
-use TripBuilder\Frequency;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\ScheduleRunRepository;
@@ -29,7 +28,7 @@ use TripBuilder\Schedule;
 /**
  * The one line on the server.
  *
- *     0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
+ *     * * * * * cd /path/to/fh-trip-builder && php noah schedule:run >> ~/logs/schedule.log 2>&1
  *
  * Everything else lives in `config/noah/schedule.php`, which is in git, which
  * is the point: before this the crontab was the only record of what this
@@ -100,7 +99,7 @@ final class Run extends AbstractCommand
      * success, and the second is the answer to the question being asked.
      *
      * @param array<string, array{last_run_at: string, last_success_at: ?string, last_exit: int}> $records
-     * @param list<array{command: string, every: Frequency, at: string}> $due
+     * @param list<array{command: string, cron: \TripBuilder\Cron}> $due
      */
     private function report(Schedule $schedule, array $records, array $due, DateTimeImmutable $now): void
     {
@@ -112,14 +111,14 @@ final class Run extends AbstractCommand
 
             $rows[] = [
                 $task['command'],
-                $task['every']->describe($task['at']),
+                $task['cron']->expression(),
                 $record['last_success_at'] ?? 'never',
                 $record === null ? '-' : ($record['last_exit'] === 0 ? 'ok' : 'exit ' . $record['last_exit']),
                 in_array($task['command'], $dueCommands, true) ? 'due now' : '',
             ];
         }
 
-        $this->io->table(['command', 'when', 'last worked', 'last exit', ''], $rows);
+        $this->io->table(['command', 'cron', 'last worked', 'last exit', ''], $rows);
         $this->io->text(sprintf(
             '%d of %d due at %s. Nothing was run.',
             count($due),

@@ -10,59 +10,81 @@ use RuntimeException;
 /**
  * What runs without anybody asking, and whether it is due.
  *
- * The schedule is `config/noah/schedule.php`, in git. The server holds one
- * cron line and no knowledge of what it is for (E16, #167).
+ * The schedule is `config/noah/schedule.php`, in git, written in crontab
+ * notation. The server holds one line and no knowledge of what it is for
+ * (E16, #167).
  *
- * Deliberately not a cron-expression parser, and the reason is the outer cron
- * rather than the effort. That line runs every fifteen minutes, so fifteen
- * minutes is the finest thing this can express no matter how it is spelled --
- * a `*​/5` here would be a lie. Full expressions become worth having the day a
- * task needs "every Monday" or "weekdays only", and that is the day to reach
- * for `dragonmantank/cron-expression` rather than hand-roll one: day-of-week
- * against day-of-month is an OR, not an AND, and that is the kind of detail
- * that is wrong for a year in something nobody watches run.
+ * Crontab and not a vocabulary of its own. It is the notation everybody
+ * already reads, cPanel's editor is these five fields in this order, and a
+ * second spelling for the same idea is a second thing to learn. It became
+ * worth having when the outer cron moved to every minute: before that the tick
+ * was a fifteen-minute floor, so a `*​/5` here could not have been true.
  */
 final readonly class Schedule
 {
     /**
-     * @param list<array{command: string, every: Frequency, at: string}> $tasks
+     * What to run, as a key in the config.
+     *
+     * A constant like `Cron::MINUTE` and its siblings, and for the same reason:
+     * a mistyped `Schedule::COMMNAD` is a fatal error on the line that wrote
+     * it, while a mistyped `'commnad'` is a missing key reported from
+     * somewhere else. Both are caught; only one names the line.
+     *
+     * On `Schedule` and not on `Cron`, because the other five describe *when*
+     * and this one describes *what*.
+     */
+    public const string COMMAND = 'command';
+
+    /**
+     * How far back `due()` will look for a missed occurrence when a command has
+     * never run.
+     *
+     * A day. Long enough that a task scheduled for 03:00 is picked up by a
+     * server first started at noon, short enough that a monthly task is not
+     * fired on sight the moment it is added -- which would be a surprise, and
+     * the surprise would be a command running on a database nobody expected it
+     * to touch yet.
+     */
+    private const int UNSEEN_LOOKBACK_MINUTES = 1440;
+
+    /**
+     * @param list<array{command: string, cron: Cron}> $tasks
      */
     public function __construct(private array $tasks) {}
 
     public static function fromConfig(string $file): self
     {
-        /** @var mixed $tasks */
-        $tasks = require $file;
+        /** @var mixed $rows */
+        $rows = require $file;
 
-        if (!is_array($tasks)) {
+        if (!is_array($rows)) {
             throw new RuntimeException($file . ' must return an array of tasks.');
         }
 
-        foreach ($tasks as $task) {
-            if (!is_array($task) || !isset($task['command'], $task['every'], $task['at'])) {
-                throw new RuntimeException('Every scheduled task needs a `command`, an `every` and an `at`.');
+        $tasks = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row) || !isset($row[self::COMMAND])) {
+                throw new RuntimeException('Every scheduled task needs a `' . self::COMMAND . '`.');
             }
 
-            if (!$task['every'] instanceof Frequency) {
-                throw new RuntimeException(sprintf('`%s` has no Frequency.', $task['command']));
-            }
+            $command = (string) $row[self::COMMAND];
 
-            if (preg_match($task['every']->pattern(), (string) $task['at']) !== 1) {
-                throw new RuntimeException(sprintf(
-                    '`%s` is %s and its `at` is `%s`, which is not the shape that takes.',
-                    $task['command'],
-                    $task['every']->value,
-                    $task['at'],
-                ));
-            }
+            $tasks[] = [
+                'command' => $command,
+                // The five named fields, not a single string. cPanel's editor
+                // is five labelled boxes in this order and so is this, which
+                // means the two can be read against each other without anybody
+                // counting positions.
+                'cron' => Cron::fromFields($row, $command),
+            ];
         }
 
-        /** @var list<array{command: string, every: Frequency, at: string}> $tasks */
-        return new self(array_values($tasks));
+        return new self($tasks);
     }
 
     /**
-     * @return list<array{command: string, every: Frequency, at: string}>
+     * @return list<array{command: string, cron: Cron}>
      */
     public function tasks(): array
     {
@@ -72,19 +94,24 @@ final readonly class Schedule
     /**
      * The tasks that should run now.
      *
-     * Due when nothing has run since the moment it was last supposed to. A
-     * tick missed because the server was down or mid-deploy therefore catches
-     * up on the next one instead of skipping the day, and a command with no
-     * record at all is due at once.
+     * Not "does this minute match", which is what a crontab line means and what
+     * a missed tick would silently skip. This asks whether the expression named
+     * any minute since the command last started -- so a tick lost to a deploy,
+     * a reboot or a slow run is caught up on the next one rather than costing a
+     * day.
      *
-     * Measured against `last_run_at` and not `last_success_at`, because this
-     * decides whether to *start* something. A command that failed at 03:00
-     * must not be started again at 03:15 and every quarter hour after that; it
-     * is due again tomorrow, and in between its rotting `last_success_at` is
-     * what says something is wrong (E16.2, #169).
+     * The search is bounded by that gap, which on an ordinary tick is one
+     * minute. A command with no record at all gets a day, for the reason
+     * `UNSEEN_LOOKBACK_MINUTES` gives.
+     *
+     * Measured against `last_run_at` and never `last_success_at`, because this
+     * decides whether to *start* something: a command that failed at 03:00 must
+     * not be started again at 03:01 and every minute after. It is due again at
+     * its next occurrence, and in between its rotting `last_success_at` is what
+     * says something is wrong (E16.2, #169).
      *
      * @param array<string, array{last_run_at: string, ...}> $records
-     * @return list<array{command: string, every: Frequency, at: string}>
+     * @return list<array{command: string, cron: Cron}>
      */
     public function due(DateTimeImmutable $now, array $records): array
     {
@@ -93,7 +120,17 @@ final readonly class Schedule
         foreach ($this->tasks as $task) {
             $last = $records[$task['command']]['last_run_at'] ?? null;
 
-            if ($last === null || new DateTimeImmutable($last) < $task['every']->lastOccurrence($now, $task['at'])) {
+            $window = $last === null
+                ? self::UNSEEN_LOOKBACK_MINUTES
+                : self::minutesBetween(new DateTimeImmutable($last), $now);
+
+            $occurrence = $task['cron']->previous($now, $window);
+
+            if ($occurrence === null) {
+                continue;
+            }
+
+            if ($last === null || new DateTimeImmutable($last) < $occurrence) {
                 $due[] = $task;
             }
         }
@@ -106,12 +143,14 @@ final readonly class Schedule
      *
      * Reads `last_success_at` and never `last_run_at`. A command failing every
      * night has a fresh attempt and a rotting success, and the attempt is the
-     * one that looks healthy -- which is the whole reason there are two
-     * columns (E16.2, #169).
+     * one that looks healthy -- which is the whole reason there are two columns
+     * (E16.2, #169).
      *
-     * One whole period of grace before "stale". A daily task that missed last
-     * night is a bad night; one that has missed two is something nobody is
-     * watching.
+     * One whole gap of grace before "stale": the interval between this
+     * expression's last two occurrences. A daily task that missed last night is
+     * a bad night; one that has missed two is something nobody is watching. The
+     * gap is measured rather than declared, so it is right for `0 3 * * *` and
+     * for `*​/15 * * * *` without either being told.
      *
      * @param array<string, array{last_success_at?: ?string, ...}> $records
      * @return array<string, array{age: string, stale: bool}>
@@ -130,11 +169,10 @@ final readonly class Schedule
             }
 
             $at = new DateTimeImmutable($success);
-            $expectedBy = $task['every']->lastOccurrence($now, $task['at'])->modify('-' . $task['every']->period());
 
             $health[$task['command']] = [
                 'age' => self::age($at, $now),
-                'stale' => $at < $expectedBy,
+                'stale' => $at < self::graceBoundary($task['cron'], $now),
             ];
         }
 
@@ -155,6 +193,30 @@ final readonly class Schedule
         }
 
         return false;
+    }
+
+    /**
+     * The moment before which a success counts as too long ago.
+     *
+     * Two occurrences back, so one whole gap is forgiven. Falls back to the
+     * first occurrence when a second cannot be found inside the search window,
+     * which is what happens for an expression that fires less often than the
+     * window is long.
+     */
+    private static function graceBoundary(Cron $cron, DateTimeImmutable $now): DateTimeImmutable
+    {
+        $last = $cron->previous($now, self::UNSEEN_LOOKBACK_MINUTES);
+
+        if ($last === null) {
+            return $now->modify('-' . self::UNSEEN_LOOKBACK_MINUTES . ' minutes');
+        }
+
+        return $cron->previous($last->modify('-1 minute'), self::UNSEEN_LOOKBACK_MINUTES) ?? $last;
+    }
+
+    private static function minutesBetween(DateTimeImmutable $from, DateTimeImmutable $to): int
+    {
+        return max(0, intdiv($to->getTimestamp() - $from->getTimestamp(), 60));
     }
 
     /**

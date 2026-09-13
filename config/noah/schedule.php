@@ -1,6 +1,7 @@
 <?php
 
-use TripBuilder\Frequency;
+use TripBuilder\Cron;
+use TripBuilder\Schedule;
 
 return [
 
@@ -12,17 +13,44 @@ return [
     | What runs without anybody asking, and when. The server holds one cron
     | line and this file holds the rest:
     |
-    |     0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
+    |     * * * * * cd /path/to/fh-trip-builder && php noah schedule:run >> ~/logs/schedule.log 2>&1
     |
-    | Spelled out rather than as a step, because the step form contains the two
-    | characters that end a block comment and took this file's parse with it.
+    | Every minute, so `at` means what it says. A coarser tick would round a
+    | task's time up to the next one -- `:20` on an hourly task firing at `:30`,
+    | ten minutes late, every hour, with this file still claiming `:20`. An idle
+    | tick measured 0.09s, so a minute's cadence costs about two minutes of CPU
+    | a day.
     |
     | Before this the crontab was the only record, so a rebuilt server or a
     | reset panel took the schedule with it and nothing here said what had been
     | lost (E16, #167). Adding a command is now a pull request.
     |
-    | `every` is a Frequency and `at` is the time it wants: `03:00` for a daily
-    | task, `:20` for an hourly one. **In UTC**, which the entry points pin and
+    | Five named fields -- minute, hour, day, month, weekday -- the same five in
+    | the same order as cPanel's editor, so the two can be read against each
+    | other without counting positions. Each takes `*`, a number, `a-b`, a
+    | comma-separated list, or any of those with `/step`.
+    |
+    | Written in crontab order, when before what, so an entry reads down the page
+    | the way a crontab line reads across it.
+    |
+    | `Schedule::COMMAND` and not `Cron::COMMAND`: the five fields describe when
+    | and this one describes what, and they come from the two classes that own
+    | those questions.
+    |
+    | `Cron::MINUTE` and friends rather than `'minute'`: a mistyped constant is
+    | a fatal error on the line that wrote it. All five are required and none
+    | defaults to `*`, because a schedule where forgetting the day field turns a
+    | monthly task into a daily one is a schedule that reads correctly while
+    | doing something else.
+    |
+    | Crontab and not a vocabulary of this project's own, because it is the
+    | notation everybody already reads and a second spelling of the same idea is
+    | a second thing to learn. Names (`MON`), the `@daily` aliases and the
+    | `? L W #` extensions are not implemented, and a schedule using one is
+    | refused when it loads rather than quietly read as something else.
+    |
+    | A missed occurrence is caught up on the next tick rather than skipped --
+    | so this is a crontab's notation with a crontab's weakness removed. **In UTC**, which the entry points pin and
     | which is not the server's own clock -- 03:00 here is 23:00 the evening
     | before in Eastern (E17, #171). The crontab line fires on the server's wall
     | clock; what it fires is judged on this one, and the fifteen-minute tick
@@ -39,9 +67,12 @@ return [
     [
         // Exchange rates for the currency switcher. Published once a day, so
         // reading them more often than that is asking the same question again.
-        'command' => 'currency:rates',
-        'every' => Frequency::Daily,
-        'at' => '03:00',
+        Cron::MINUTE => 0,
+        Cron::HOUR => 3,
+        Cron::DAY => Cron::EVERY,
+        Cron::MONTH => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
+        Schedule::COMMAND => 'currency:rates',
     ],
     [
         // The retention policy (E9, #146): bookings whose flight left more than
@@ -52,8 +83,11 @@ return [
         // cron log nobody reads and delete nothing. The deploy runbook has the
         // operator run it dry once and read that list before this line is ever
         // enabled -- that is the only time the first sweep is visible.
-        'command' => 'db:prune --force',
-        'every' => Frequency::Daily,
-        'at' => '03:15',
+        Cron::MINUTE => 15,
+        Cron::HOUR => 3,
+        Cron::DAY => Cron::EVERY,
+        Cron::MONTH => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
+        Schedule::COMMAND => 'db:prune --force',
     ],
 ];

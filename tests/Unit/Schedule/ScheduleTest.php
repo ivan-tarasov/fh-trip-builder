@@ -10,7 +10,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
 use SplFileInfo;
-use TripBuilder\Frequency;
+use TripBuilder\Cron;
 use TripBuilder\Helper;
 use TripBuilder\Schedule;
 
@@ -26,19 +26,22 @@ final class ScheduleTest extends TestCase
     private const string CONFIG = '/config/noah/schedule.php';
 
     /**
-     * @param list<array{command: string, every: Frequency, at: string}> $tasks
+     * @param list<array{command: string, at: string}> $tasks
      */
     private static function schedule(array $tasks): Schedule
     {
-        return new Schedule($tasks);
+        return new Schedule(array_map(
+            static fn(array $t): array => ['command' => $t['command'], 'cron' => Cron::parse($t['at'])],
+            $tasks,
+        ));
     }
 
     /**
-     * @return array{command: string, every: Frequency, at: string}
+     * @return array{command: string, at: string}
      */
-    private static function daily(string $at = '03:00'): array
+    private static function daily(string $at = '0 3 * * *'): array
     {
-        return ['command' => 'currency:rates', 'every' => Frequency::Daily, 'at' => $at];
+        return ['command' => 'currency:rates', 'at' => $at];
     }
 
     public function testACommandThatHasNeverRunIsDue(): void
@@ -112,7 +115,7 @@ final class ScheduleTest extends TestCase
 
     public function testAnHourlyTaskIsDueOncePerHour(): void
     {
-        $task = ['command' => 'alerts:check', 'every' => Frequency::Hourly, 'at' => ':20'];
+        $task = ['command' => 'alerts:check', 'at' => '20 * * * *'];
 
         self::assertCount(1, self::schedule([$task])->due(
             new DateTimeImmutable('2026-09-12 14:25:00'),
@@ -127,7 +130,7 @@ final class ScheduleTest extends TestCase
 
     public function testAnHourlyTaskBeforeItsMinuteMeasuresAgainstThePreviousHour(): void
     {
-        $task = ['command' => 'alerts:check', 'every' => Frequency::Hourly, 'at' => ':20'];
+        $task = ['command' => 'alerts:check', 'at' => '20 * * * *'];
 
         self::assertSame([], self::schedule([$task])->due(
             new DateTimeImmutable('2026-09-12 14:05:00'),
@@ -135,21 +138,51 @@ final class ScheduleTest extends TestCase
         ));
     }
 
-    public function testATimeThatIsNotTheRightShapeIsRefusedOnLoad(): void
+    public function testAnExpressionThisDoesNotUnderstandIsRefusedOnLoad(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessageMatches('/not the shape/');
+        $this->expectExceptionMessageMatches('/not something this understands/');
 
-        Schedule::fromConfig(self::fixture([
-            ['command' => 'currency:rates', 'every' => Frequency::Hourly, 'at' => '03:00'],
-        ]));
+        Schedule::fromConfig(self::fixture([self::fields('currency:rates', weekday: 'MON')]));
     }
 
-    public function testATaskMissingItsFrequencyIsRefusedOnLoad(): void
+    /**
+     * A field left out is refused rather than assumed to be `*`.
+     *
+     * The assumption is the dangerous one: forgetting the day field would turn
+     * a monthly task into a daily one, and nothing about the line would look
+     * wrong.
+     */
+    public function testAMissingFieldIsRefusedRatherThanDefaulted(): void
     {
         $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/is missing day/');
 
-        Schedule::fromConfig(self::fixture([['command' => 'currency:rates', 'at' => '03:00']]));
+        $fields = self::fields('currency:rates');
+        unset($fields[Cron::DAY]);
+
+        Schedule::fromConfig(self::fixture([$fields]));
+    }
+
+    /**
+     * @return array<string, string|int>
+     */
+    private static function fields(
+        string $command,
+        string|int $minute = 0,
+        string|int $hour = 3,
+        string|int $day = Cron::EVERY,
+        string|int $month = Cron::EVERY,
+        string|int $weekday = Cron::EVERY,
+    ): array {
+        return [
+            Cron::MINUTE => $minute,
+            Cron::HOUR => $hour,
+            Cron::DAY => $day,
+            Cron::MONTH => $month,
+            Cron::WEEKDAY => $weekday,
+            Schedule::COMMAND => $command,
+        ];
     }
 
     /**
@@ -286,21 +319,49 @@ final class ScheduleTest extends TestCase
     }
 
     /**
+     * A stepped expression fires on the boundary, and only once per boundary.
+     */
+    public function testAStepIsDueOnceEachBoundary(): void
+    {
+        $schedule = self::schedule([['command' => 'alerts:check', 'at' => '*/15 * * * *']]);
+        $now = new DateTimeImmutable('2026-09-12 14:31:00');
+
+        self::assertCount(1, $schedule->due($now, [
+            'alerts:check' => ['last_run_at' => '2026-09-12 14:15:03'],
+        ]), 'the 14:30 boundary was missed');
+
+        self::assertSame([], $schedule->due($now, [
+            'alerts:check' => ['last_run_at' => '2026-09-12 14:30:02'],
+        ]), 'it ran twice inside one boundary');
+    }
+
+    /**
+     * A slow run does not push the next one later.
+     *
+     * The occurrence is a property of the expression, not of when the last run
+     * happened to finish, so a task that overruns does not walk away from the
+     * clock it is written against.
+     */
+    public function testASlowRunDoesNotDriftTheSchedule(): void
+    {
+        self::assertCount(1, self::schedule([['command' => 'alerts:check', 'at' => '*/15 * * * *']])->due(
+            new DateTimeImmutable('2026-09-12 14:30:05'),
+            ['alerts:check' => ['last_run_at' => '2026-09-12 14:15:59']],
+        ));
+    }
+
+    /**
      * @param list<array<string, mixed>> $tasks
      */
     private static function fixture(array $tasks): string
     {
         $path = sys_get_temp_dir() . '/schedule-' . uniqid() . '.php';
-        $body = "<?php\n\nuse TripBuilder\\Frequency;\n\nreturn [\n";
+        $body = "<?php\n\nuse TripBuilder\\Cron;\nuse TripBuilder\\Schedule;\n\nreturn [\n";
 
         foreach ($tasks as $task) {
-            $body .= "    [";
+            $body .= '    [';
             foreach ($task as $key => $value) {
-                $body .= sprintf(
-                    "'%s' => %s, ",
-                    $key,
-                    $value instanceof Frequency ? 'Frequency::' . $value->name : var_export($value, true),
-                );
+                $body .= sprintf("'%s' => %s, ", $key, var_export($value, true));
             }
             $body .= "],\n";
         }
