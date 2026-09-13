@@ -15,6 +15,10 @@
 /vendor/
 
 # Cache root (Twig templates + dev-tooling caches); keep the directory only
+# Database dumps from db:backup. Deliberately not cache/, which a deploy empties.
+/backups/*
+!/backups/.gitkeep
+
 /cache/*
 !/cache/.gitkeep
 

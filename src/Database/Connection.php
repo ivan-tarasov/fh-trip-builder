@@ -75,8 +75,13 @@ final class Connection
     /**
      * Read a config value: real environment variable first, then $_ENV.
      * getenv() distinguishes "unset" (false) from a legitimately empty value.
+     *
+     * Public so `db:backup` reads `DB_*` exactly the way the connection does.
+     * Two spellings of "where the credentials come from" would eventually
+     * disagree, and the symptom would be a backup that authenticates against a
+     * different database than the application is using.
      */
-    private static function env(string $key): string
+    public static function env(string $key): string
     {
         $value = getenv($key);
 

@@ -15,6 +15,7 @@ use TripBuilder\Noah\Airside\Import as AirsideImport;
 use TripBuilder\Noah\Airside\Prune as AirsidePrune;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
+use TripBuilder\Noah\Db\Backup as DatabaseBackup;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
 use TripBuilder\Noah\Db\Install as DatabaseInstall;
 use TripBuilder\Noah\Db\Migrate as DatabaseMigrate;
@@ -57,6 +58,19 @@ try {
     */
 
     $application->add(new DatabaseClear());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Back up the DB
+    |--------------------------------------------------------------------------
+    |
+    | A gzipped mysqldump of everything, into backups/. db:clear runs it before
+    | it deletes anything, so the destructive command is reversible by default
+    | (E18, #176).
+    |
+    */
+
+    $application->add(new DatabaseBackup());
 
     /*
     |--------------------------------------------------------------------------
