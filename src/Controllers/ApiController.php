@@ -7,18 +7,35 @@ namespace TripBuilder\Controllers;
 use Exception;
 use TripBuilder\Api\Airlines;
 use TripBuilder\Api\Airports;
+use TripBuilder\Api\ApiRefusal;
+use TripBuilder\Api\ApiResponder;
 use TripBuilder\Api\Flights;
 
 class ApiController extends AbstractController
 {
     /**
+     * Run one endpoint, and turn a refusal into the response.
+     *
+     * Caught here and not in `Kernel`, which knows nothing about JSON and is
+     * better for it: the catch belongs where the payload is written.
+     */
+    private function answer(callable $endpoint): void
+    {
+        try {
+            $endpoint();
+        } catch (ApiRefusal $refusal) {
+            ApiResponder::send($refusal);
+        }
+    }
+
+    /**
      * @throws Exception
      */
     public function airports(): void
     {
-        $airports = new Airports\Response($this->request);
-
-        $airports->get();
+        $this->answer(function (): void {
+            new Airports\Response($this->request)->get();
+        });
     }
 
     /**
@@ -26,9 +43,9 @@ class ApiController extends AbstractController
      */
     public function airlines(): void
     {
-        $airlines = new Airlines\Response($this->request);
-
-        $airlines->get();
+        $this->answer(function (): void {
+            new Airlines\Response($this->request)->get();
+        });
     }
 
     /**
@@ -36,9 +53,9 @@ class ApiController extends AbstractController
      */
     public function flights(): void
     {
-        $flights = new Flights\Response($this->request);
-
-        $flights->get();
+        $this->answer(function (): void {
+            new Flights\Response($this->request)->get();
+        });
     }
 
     /**
@@ -46,9 +63,9 @@ class ApiController extends AbstractController
      */
     public function flightsOne(): void
     {
-        $flights = new Flights\Response($this->request);
-
-        $flights->getOne();
+        $this->answer(function (): void {
+            new Flights\Response($this->request)->getOne();
+        });
     }
 
 }

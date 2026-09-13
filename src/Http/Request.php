@@ -52,7 +52,7 @@ final readonly class Request
             // take their JSON body from the same object as everything else.
             // Empty for a form post, which PHP has already parsed into $_POST.
             rawBody: (string) file_get_contents('php://input'),
-            headers: self::headersFromServer($_SERVER),
+            headers: self::captureHeaders(),
             remoteAddress: (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
         );
     }
@@ -139,6 +139,32 @@ final readonly class Request
     public function header(string $name): ?string
     {
         return $this->headers[self::normaliseHeader($name)] ?? null;
+    }
+
+    /**
+     * Every header this request arrived with.
+     *
+     * `$_SERVER` first, and `getallheaders()` only for what is missing from
+     * it. `Authorization` is the reason both are read: Apache does not put it
+     * in `$_SERVER` when a request arrives through a front-controller rewrite
+     * unless it is told to, and `getallheaders()` reads the SAPI's own table,
+     * which still has it. Added to rather than swapped for, because
+     * `getallheaders()` does not exist on CLI at all -- so a server keeps
+     * exactly what it had, and a test gets an object it can build.
+     *
+     * @return array<string, string>
+     */
+    private static function captureHeaders(): array
+    {
+        $headers = self::headersFromServer($_SERVER);
+
+        if (function_exists('getallheaders')) {
+            foreach (getallheaders() as $name => $value) {
+                $headers[self::normaliseHeader((string) $name)] ??= (string) $value;
+            }
+        }
+
+        return $headers;
     }
 
     /**

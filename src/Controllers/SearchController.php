@@ -414,7 +414,12 @@ class SearchController extends AbstractController
                 'search_url' => $searchUrl->path(),
             ]);
 
-            die();
+            // `true` and not `die()`: the sibling branch above already returns
+            // it and index() already returns on it, so the exit was only ever
+            // skipping the shutdown functions (E10.5, #198). The template
+            // renders a whole document, so the layout is not added on the way
+            // out.
+            return true;
         }
 
         return false;

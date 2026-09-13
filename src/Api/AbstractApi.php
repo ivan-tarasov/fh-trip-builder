@@ -113,14 +113,20 @@ abstract class AbstractApi
         return $this->request->method();
     }
 
+    /**
+     * The bearer token, from the request object rather than `getallheaders()`.
+     *
+     * That function is the Apache SAPI's, and it *does not exist on CLI* -- so
+     * any test that constructed an endpoint died of an undefined function
+     * before it reached a guard, which is the second reason the API could not
+     * be tested (E10.5, #198). `Request` already normalises header names, so
+     * the case-folding this used to do by hand is gone with it.
+     */
     private function getAuthToken(): string
     {
-        // Header names are case-insensitive, so normalize before the lookup
-        $headers = array_change_key_case(getallheaders());
+        $header = $this->request->header(self::HEADER_AUTH_KEY) ?? '';
 
-        return preg_match('/Bearer\s+(\S+)\b/i', $headers[strtolower(self::HEADER_AUTH_KEY)] ?? '', $matches)
-            ? $matches[1]
-            : '';
+        return preg_match('/Bearer\s+(\S+)\b/i', $header, $matches) === 1 ? $matches[1] : '';
     }
 
     private function setRequestData(): void
