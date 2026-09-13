@@ -29,13 +29,12 @@ date_default_timezone_set('UTC');
 
 use TripBuilder\Config;
 use TripBuilder\Http\HttpStatus;
+use TripBuilder\Http\Kernel;
 use TripBuilder\Http\Request;
 use TripBuilder\Http\SecurityHeaders;
 use TripBuilder\Log;
-use TripBuilder\Routes;
 use TripBuilder\ScheduleWatch;
 use TripBuilder\Timer;
-use TripBuilder\View\TwigRenderer;
 
 try {
     Timer::start();
@@ -77,57 +76,9 @@ try {
     // Building config
     new Config();
 
-    // Get the current URL and put it to Routes class
-    $url = $request->path();
-    Routes::setCurrentPage($url);
-
-    // Find the corresponding controller and action
-    $route = Routes::resolve($url);
-    [$controllerName, $actionName] = explode('@', $route ?? 'NotFound@index');
-
-    // Unknown route: set the status now, before any layout output locks the headers
-    if ($route === null) {
-        http_response_code(HttpStatus::NotFound->value);
-    }
-
-    // Load and execute the controller action
-    $controllerClassName = sprintf(
-        '%s\%sController',
-        Routes::ROUTES_CONTROLLERS_PATH,
-        ucfirst($controllerName),
-    );
-
-    $controller = new $controllerClassName($request);
-
-    // A fragment request asks for a piece of a page — the search list's "load
-    // more" is one — so its output is appended to a document that already
-    // exists and must not be wrapped in a second header and footer.
-    $isFragment = $request->isFragment();
-
-    $needsLayout = !$isFragment
-        && !in_array($controllerName, Routes::EXCLUDE_HEADER_FOOTER)
-        && !Routes::emitsOwnPayload($url);
-
-    // API/Ajax endpoints emit their own payload with no header/footer.
-    if (!$needsLayout) {
-        $controller->$actionName();
-    } else {
-        // Capture the page body. Page controllers render the full document
-        // themselves (their templates extend layout.html.twig); a controller
-        // that emits only a body fragment instead (e.g. the search
-        // redirect-guard) gets wrapped in the base layout here.
-        ob_start();
-        $controller->$actionName();
-        $output = ob_get_clean();
-
-        if (!str_starts_with(ltrim($output), '<!DOCTYPE')) {
-            $output = new TwigRenderer()->renderPage('layout.html.twig', [
-                'page_content' => $output,
-            ]);
-        }
-
-        echo $output;
-    }
+    // Routing, rendering and the layout rule, which the integration suite drives
+    // through this same class rather than through a copy of it (E10.2, #149).
+    echo new Kernel($request)->handle();
 
     // This is the end...
 } catch (Throwable $e) {
