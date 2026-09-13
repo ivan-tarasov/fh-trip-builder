@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use Exception;
 use TripBuilder\Helper;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\View\Readme;
 use TripBuilder\View\TwigRenderer;
 
@@ -29,7 +30,7 @@ class AboutController extends AbstractController
             // The README is part of the repository, so this means a broken
             // deploy rather than missing content. Say so instead of rendering
             // an empty page that looks finished.
-            http_response_code(500);
+            http_response_code(HttpStatus::InternalServerError->value);
 
             echo new TwigRenderer()->renderPage('about/unavailable.html.twig', [
                 'repo_url' => Helper::getGitRepo(),

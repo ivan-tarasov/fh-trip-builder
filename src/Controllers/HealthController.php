@@ -39,7 +39,7 @@ final class HealthController extends AbstractController
 
         $database = $this->databaseAnswers();
 
-        http_response_code(Health::statusCode($database));
+        http_response_code(Health::statusCode($database)->value);
 
         echo json_encode(
             Health::report(

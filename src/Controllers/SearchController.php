@@ -13,6 +13,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\Input;
 use TripBuilder\Log;
 use TripBuilder\Repository\AircraftRepository;
@@ -176,7 +177,7 @@ class SearchController extends AbstractController
             // and fetch follows redirects, so it would splice a whole page --
             // header, footer and all -- into the results list.
             if ($this->request->path() !== $this->searchUrl->path() && !$this->request->isFragment()) {
-                $this->bounce($this->link($this->get), 301);
+                $this->bounce($this->link($this->get), HttpStatus::MovedPermanently);
 
                 return;
             }

@@ -2,10 +2,19 @@
 
 declare(strict_types=1);
 
-namespace TripBuilder\Api;
+namespace TripBuilder\Http;
 
 /**
  * HTTP status codes with their standard reason phrases.
+ *
+ * In `Http` and not `Api`, where it lived until E15 (#162). A status code is an
+ * HTTP concept, so putting it under `Api` meant every controller that wanted to
+ * name one depended on the API's namespace -- and moving the API out to its own
+ * service later would have broken `CheckoutController` for a reason that has
+ * nothing to do with the API.
+ *
+ * The codebase already half-agreed: the enum sat in `src/Api/` while its test
+ * sat in `tests/Unit/` rather than `tests/Unit/Api/`.
  *
  * @link https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
  */

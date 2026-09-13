@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace TripBuilder\Api;
 
+use TripBuilder\Http\HttpStatus;
+
 class ApiResponder
 {
     private static function sendResponse(HttpStatus $status, ?string $message = null): never

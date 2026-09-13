@@ -28,6 +28,7 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 date_default_timezone_set('UTC');
 
 use TripBuilder\Config;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\Request;
 use TripBuilder\Http\SecurityHeaders;
 use TripBuilder\Log;
@@ -86,7 +87,7 @@ try {
 
     // Unknown route: set the status now, before any layout output locks the headers
     if ($route === null) {
-        http_response_code(404);
+        http_response_code(HttpStatus::NotFound->value);
     }
 
     // Load and execute the controller action
@@ -139,7 +140,7 @@ try {
     ));
 
     if (!headers_sent()) {
-        http_response_code(500);
+        http_response_code(HttpStatus::InternalServerError->value);
     }
 
     echo 'Something went wrong on our side. Please try again later.';

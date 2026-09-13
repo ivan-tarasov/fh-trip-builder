@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace TripBuilder\Tests\Unit;
+namespace TripBuilder\Tests\Unit\Http;
 
 use PHPUnit\Framework\TestCase;
-use TripBuilder\Api\HttpStatus;
+use TripBuilder\Http\HttpStatus;
 
 final class HttpStatusTest extends TestCase
 {

@@ -12,6 +12,7 @@ use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\Input;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Money;
@@ -133,7 +134,7 @@ class CheckoutController extends AbstractController
             // going to be accepted. A limit checked earlier would answer
             // whether the token was good, which is not what it is for.
             if ($errors === [] && $this->isOverLimit(RateLimit::Checkout)) {
-                http_response_code(429);
+                http_response_code(HttpStatus::TooManyRequests->value);
                 $errors['form'] = RateLimit::Checkout->refusal();
             }
 

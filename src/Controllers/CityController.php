@@ -8,6 +8,7 @@ use Throwable;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Helper;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Log;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
@@ -85,7 +86,7 @@ class CityController extends AbstractController
             $canonical = Helper::placeSlug((string) $city['name'], (string) $city['code']);
 
             if ($slug !== $canonical) {
-                $this->bounce('/city/' . $canonical, 301);
+                $this->bounce('/city/' . $canonical, HttpStatus::MovedPermanently);
 
                 return;
             }

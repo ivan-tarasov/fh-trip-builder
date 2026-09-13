@@ -6,13 +6,14 @@ namespace TripBuilder\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Health;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Routes;
 
 final class HealthTest extends TestCase
 {
     public function testAWorkingDatabaseIsTwoHundredAndSaysSo(): void
     {
-        self::assertSame(200, Health::statusCode(true));
+        self::assertSame(HttpStatus::Ok, Health::statusCode(true));
         self::assertSame(
             [
                 'status' => 'ok',
@@ -36,7 +37,7 @@ final class HealthTest extends TestCase
      */
     public function testABrokenDatabaseIsFiveOhThreeAndSaysSo(): void
     {
-        self::assertSame(503, Health::statusCode(false));
+        self::assertSame(HttpStatus::ServiceUnavailable, Health::statusCode(false));
         self::assertSame(
             [
                 'status' => 'error',
@@ -56,7 +57,7 @@ final class HealthTest extends TestCase
      */
     public function testAFailingDatabaseIsNotReportedAsAnApplicationError(): void
     {
-        self::assertNotSame(500, Health::statusCode(false));
+        self::assertNotSame(HttpStatus::InternalServerError, Health::statusCode(false));
     }
 
     /**
@@ -75,7 +76,7 @@ final class HealthTest extends TestCase
 
         self::assertSame('stale', $report['schedule']);
         self::assertSame('ok', $report['status'], 'a stale cron made the site look down');
-        self::assertSame(200, Health::statusCode(true));
+        self::assertSame(HttpStatus::Ok, Health::statusCode(true));
         self::assertSame(['currency:rates' => '2d', 'db:prune --force' => '3h'], $report['tasks']);
     }
 
@@ -109,7 +110,7 @@ final class HealthTest extends TestCase
 
         self::assertSame('4h behind', $report['clock']);
         self::assertSame('ok', $report['status'], 'a timezone difference made the site look down');
-        self::assertSame(200, Health::statusCode(true));
+        self::assertSame(HttpStatus::Ok, Health::statusCode(true));
     }
 
     public function testAgreeingClocksSayOk(): void

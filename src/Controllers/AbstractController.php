@@ -7,6 +7,7 @@ namespace TripBuilder\Controllers;
 use Exception;
 use Throwable;
 use TripBuilder\Database\Connection;
+use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Http\Request;
 use TripBuilder\Log;
@@ -66,13 +67,19 @@ class AbstractController
     /**
      * Send the visitor elsewhere.
      *
+     * The status is an `HttpStatus` and not an `int`, and this is the method
+     * that made E15 (#162) worth doing: seven callers override the default to
+     * `301`, and a wrong `301` sits in every visitor's browser and cannot be
+     * called back. `MovedPermanently` and `Found` say which was meant; `301`
+     * and `302` are one keystroke apart and say nothing.
+     *
      * Falls back to a script when the response has already started, which is
      * what happens on a page that redirects after rendering has begun.
      */
-    protected function bounce(string $url, int $status = 302): void
+    protected function bounce(string $url, HttpStatus $status = HttpStatus::Found): void
     {
         if (!headers_sent()) {
-            header('Location: ' . $url, true, $status);
+            header('Location: ' . $url, true, $status->value);
 
             return;
         }
@@ -97,7 +104,7 @@ class AbstractController
         // Page controllers run inside an output buffer, so nothing has reached
         // the wire yet and the status is still ours to set.
         if (!headers_sent()) {
-            http_response_code(404);
+            http_response_code(HttpStatus::NotFound->value);
         }
 
         // A fragment is spliced into a page that already exists. Sending a
