@@ -1583,4 +1583,40 @@ final readonly class FlightRepository
             'flight.rating AS rating',
         ];
     }
+
+    /**
+     * Remove flights that had departed by `$beforeUtc`, in bounded batches.
+     *
+     * **`departure_utc`, and the parameter is an instant.** `departure_time` is
+     * a wall-clock reading at the departure airport, and comparing it against a
+     * UTC moment is out by the airport's offset -- up to eleven hours in this
+     * data, always in the direction of deleting a flight before it has left
+     * (E24.2, #192).
+     *
+     * The cutoff is the caller's rather than `NOW()` so that this can be tested
+     * at all. A method whose contract is "delete everything before X" cannot be
+     * checked against a database holding real rows unless X is something no
+     * real row is before -- which is what `db:prune`'s sweep learned the
+     * expensive way (E18, #176).
+     *
+     * Bounded per statement, the same way Realign deletes over-cap legs: one
+     * open-ended DELETE holds row locks for its whole duration and every
+     * concurrent search queues behind it.
+     */
+    public function forgetDepartedBefore(string $beforeUtc, int $batchSize = 5000): int
+    {
+        $deleted = 0;
+
+        do {
+            $removed = $this->connection->execute(
+                'DELETE FROM ' . Table::Flights->value
+                . ' WHERE departure_utc < ? LIMIT ' . $batchSize,
+                [$beforeUtc],
+            );
+
+            $deleted += $removed;
+        } while ($removed > 0);
+
+        return $deleted;
+    }
 }

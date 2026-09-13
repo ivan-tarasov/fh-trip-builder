@@ -90,4 +90,23 @@ return [
         Cron::WEEKDAY => Cron::EVERY,
         Schedule::COMMAND => 'db:prune --force',
     ],
+    [
+        // Flights that have departed (E24.2, #192). Nothing removed them until
+        // this line existed, so the table only ever grew.
+        //
+        // No flag to make it safe, unlike the two above, and it does not need
+        // one: `bookings.flight_outbound` is a JSON snapshot rather than a
+        // foreign key, so nothing sold points at a `flights` row and removing
+        // one cannot reach a booking.
+        //
+        // `:30` leaves `:00` and `:15` alone and, more to the point, leaves the
+        // half hour before it free for the daily generator that E24.1 (#191)
+        // will add -- a day should be filled before the previous one is swept.
+        Cron::MINUTE => 30,
+        Cron::HOUR => 3,
+        Cron::DAY => Cron::EVERY,
+        Cron::MONTH => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
+        Schedule::COMMAND => 'flights:cleaning',
+    ],
 ];

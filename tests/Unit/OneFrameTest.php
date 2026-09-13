@@ -29,13 +29,23 @@ final class OneFrameTest extends TestCase
     /** The columns that hold a wall-clock reading rather than an instant. */
     private const string LOCAL_COLUMNS = 'departure_time|arrival_time';
 
+    /**
+     * Every way SQL spells "now".
+     *
+     * `NOW()` alone was the original list, and the sweep that E24.2 (#192)
+     * fixed did not use any of them -- it compared against a bound parameter.
+     * The others are here so that at least the SQL-side spellings are all
+     * closed; see the note on the sweep below for the half a regex cannot see.
+     */
+    private const string SQL_NOW = 'NOW\(\)|CURDATE\(\)|CURRENT_DATE|CURRENT_TIMESTAMP|UTC_DATE\(\)|UTC_TIMESTAMP\(\)';
+
     public function testNoLocalTimeIsComparedAgainstAnInstant(): void
     {
         $offences = [];
 
         foreach (self::sourceFiles() as $file => $contents) {
             foreach (self::statements($contents) as $line => $statement) {
-                if (preg_match('/(' . self::LOCAL_COLUMNS . ')\s*(>=|<=|>|<)\s*NOW\(\)/', $statement) === 1) {
+                if (preg_match('/(' . self::LOCAL_COLUMNS . ')\s*(>=|<=|>|<)\s*(' . self::SQL_NOW . ')/', $statement) === 1) {
                     $offences[] = $file . ':' . $line;
                 }
             }
@@ -75,6 +85,72 @@ final class OneFrameTest extends TestCase
             'Something updates `departure_time`. `departure_utc` must move with it, or the two '
             . 'silently disagree and every "has it left yet" answer goes stale.',
         );
+    }
+
+    /**
+     * Whatever deletes flights asks `departure_utc`, wherever it lives.
+     *
+     * E24.2 (#192) asked for a general rule -- flag a local column in any
+     * comparison, rather than only against `NOW()`. That rule cannot be
+     * written, and the reason is worth writing down instead. Search compares
+     * `departure_time < ?` against a date the visitor typed, which is *correct*
+     * precisely because both sides are local; the sweep compared
+     * `departure_time < ?` against a UTC date, which was wrong. The two are the
+     * same characters, and twenty legitimate comparisons across four
+     * repositories look exactly like the one bug.
+     *
+     * So this guards the specific question instead: "has this flight gone" is
+     * asked of the UTC column or it is asked wrongly. It follows the statement
+     * rather than naming a file, because the first version of this named
+     * `Cleaning.php` and broke the moment the SQL moved to a repository -- a
+     * guard that has to be edited when the code is refactored is a guard that
+     * will be deleted instead.
+     */
+    public function testWhateverDeletesFlightsDecidesInUtc(): void
+    {
+        $offences = [];
+        $found = 0;
+
+        foreach (self::sourceFiles() as $file => $contents) {
+            foreach (self::deletesFromFlights($contents) as $line => $statement) {
+                $found++;
+
+                if (!str_contains($statement, 'departure_utc')) {
+                    $offences[] = $file . ':' . $line;
+                }
+            }
+        }
+
+        self::assertGreaterThan(0, $found, 'nothing deletes a flight any more; this guard is stale');
+        self::assertSame(
+            [],
+            $offences,
+            'A wall-clock reading at the departure airport says nothing about whether the flight '
+            . 'has left: at -11.00 it is eleven hours out, and the sweep deleted flights nine '
+            . 'hours before takeoff (E24.2, #192).',
+        );
+    }
+
+    /**
+     * Each `DELETE FROM flights`, with the clause that follows it.
+     *
+     * The SQL is concatenated across lines, so a line-at-a-time reader sees the
+     * verb and the predicate separately and can judge neither.
+     *
+     * @return array<int, string>
+     */
+    private static function deletesFromFlights(string $contents): array
+    {
+        $statements = [];
+        $needle = "'DELETE FROM ' . Table::Flights->value";
+        $offset = 0;
+
+        while (($at = strpos($contents, $needle, $offset)) !== false) {
+            $statements[substr_count($contents, "\n", 0, $at) + 1] = substr($contents, $at, 300);
+            $offset = $at + 1;
+        }
+
+        return $statements;
     }
 
     /**
