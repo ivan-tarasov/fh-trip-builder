@@ -10,6 +10,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
+use TripBuilder\Emissions;
 use TripBuilder\Party;
 
 /**
@@ -56,6 +57,10 @@ final readonly class FlightRepository
     // Highlighting a "cheapest" or "fastest" option only means something when
     // there are a few to choose between.
     private const int BADGE_MIN_CHOICES = 3;
+
+    // And "lower than typical for this route" means nothing at all with two
+    // itineraries, where one of them is always the lower.
+    private const int CO2_MIN_CHOICES = 3;
 
     // How much the balanced pick leans on fare over elapsed time.
     private const float BADGE_PRICE_WEIGHT = 0.6;
@@ -138,6 +143,10 @@ final readonly class FlightRepository
         // the hot path and its joins were tuned around a fixed shape, while a
         // candidate row already carries everything a filter asks about.
         $candidates = $this->withLayoverCountries($candidates);
+        // Measured against every itinerary the route offers rather than every
+        // one that survives the sidebar, so "lower than typical" says something
+        // about the route and does not move as filters are chosen.
+        $candidates = $this->withEmissions($candidates, $cabin);
         // Half of a round trip is priced as the whole trip on screen, so the
         // price filter and its slider work against that same total rather than
         // this direction's share of it.
@@ -156,7 +165,10 @@ final readonly class FlightRepository
         // A sort that scores an itinerary against the rest of the set can only
         // be resolved now, with filtering done and the whole result in hand.
         if ($sort->ranksAcrossResults()) {
-            $matching = $this->rankByValue($matching);
+            $matching = match ($sort) {
+                SortMethod::Emissions => $this->rankByEmissions($matching),
+                default => $this->rankByValue($matching),
+            };
         }
 
         $total = min(count($matching), self::COUNT_CAP);
@@ -280,6 +292,7 @@ final readonly class FlightRepository
             FlightFilters::DIM_NO_NIGHT => static fn(array $c): bool => new FlightFilters(noNightLayover: true)->matches($c),
             FlightFilters::DIM_NO_GULF => static fn(array $c): bool => new FlightFilters(noGulfLayover: true)->matches($c),
             FlightFilters::DIM_NO_VISA => static fn(array $c): bool => new FlightFilters(noVisaLayover: true)->matches($c),
+            FlightFilters::DIM_LOWER_CO2 => static fn(array $c): bool => new FlightFilters(lowerCo2: true)->matches($c),
         ] as $dimension => $wouldKeep) {
             $available[$dimension] = false;
             $cheapest = null;
@@ -333,6 +346,9 @@ final readonly class FlightRepository
             SortMethod::Rating->value => static fn(array $c, int $i): float => -(float) $c['rating'],
             SortMethod::Depart->value => static fn(array $c, int $i): float => (float) strtotime((string) $c['depart_time']),
             SortMethod::Arrive->value => static fn(array $c, int $i): float => (float) strtotime((string) $c['arrive_time']),
+            // Unknown sorts last here too, so the tab never advertises an
+            // itinerary the sort would not put first.
+            SortMethod::Emissions->value => static fn(array $c, int $i): float => (float) ($c['co2_kg'] ?? INF),
         ];
 
         $highlights = [];
@@ -687,6 +703,200 @@ final readonly class FlightRepository
     }
 
     /**
+     * A CO2 figure per candidate, and whether it beats the route's middle.
+     *
+     * `co2_kg` is kilograms for one seat over the whole itinerary and is null
+     * where any leg's type has no published burn -- an estimate missing a leg
+     * is not a smaller estimate. `co2_typical` marks the ones at or below the
+     * median, which is what "lower than typical for this route" means here: the
+     * middle of what this route actually offers on this day, not a figure from
+     * somewhere else (C5, #154).
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return list<array<string, mixed>>
+     */
+    private function withEmissions(array $candidates, CabinClass $cabin): array
+    {
+        $burn = $this->aircraftBurn();
+        $seats = $this->aircraftSeats();
+
+        foreach ($candidates as $i => $candidate) {
+            $candidates[$i]['co2_kg'] = $this->itineraryEmissions($candidate, $cabin, $burn, $seats);
+            $candidates[$i]['co2_typical'] = null;
+        }
+
+        $known = array_values(array_filter(
+            array_column($candidates, 'co2_kg'),
+            static fn(?float $kg): bool => $kg !== null,
+        ));
+
+        if (count($known) < self::CO2_MIN_CHOICES) {
+            return $candidates;
+        }
+
+        $median = self::median($known);
+
+        foreach ($candidates as $i => $candidate) {
+            $kg = $candidate['co2_kg'];
+            $candidates[$i]['co2_typical'] = $kg === null ? null : $kg <= $median;
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * Kilograms for one seat across every leg, or null when a leg cannot say.
+     *
+     * The type codes and the distances travel as two parallel comma-separated
+     * lists on the candidate, in leg order, because the alternative was three
+     * more joins in the one statement that costs anything (E31, #219).
+     *
+     * @param array<string, mixed> $candidate
+     * @param array<string, float> $burn
+     * @param array<string, array<string, int>> $seats
+     */
+    private function itineraryEmissions(array $candidate, CabinClass $cabin, array $burn, array $seats): ?float
+    {
+        $types = explode(',', (string) $candidate['aircraft']);
+        $distances = explode(',', (string) $candidate['distances']);
+        $total = 0.0;
+
+        foreach ($types as $leg => $type) {
+            $kilograms = Emissions::forLeg(
+                (float) ($distances[$leg] ?? 0),
+                $burn[$type] ?? 0.0,
+                $seats[$type] ?? [],
+                $cabin,
+            );
+
+            if ($kilograms === null) {
+                return null;
+            }
+
+            $total += $kilograms;
+        }
+
+        return round($total);
+    }
+
+    /**
+     * The same figure for an itinerary already chosen, from its hydrated legs.
+     *
+     * So the outbound on the confirmation step reads the same as it did in the
+     * list it was picked out of. There is no `co2_typical` to go with it: one
+     * itinerary is not a route to be typical of.
+     *
+     * @param list<array<string, mixed>> $legs
+     */
+    private function legsEmissions(array $legs, CabinClass $cabin): ?float
+    {
+        $burn = $this->aircraftBurn();
+        $seats = $this->aircraftSeats();
+        $total = 0.0;
+
+        foreach ($legs as $leg) {
+            $kilograms = Emissions::forLeg(
+                (float) $leg['distance'],
+                $burn[(string) $leg['aircraft_code']] ?? 0.0,
+                $seats[(string) $leg['aircraft_code']] ?? [],
+                $cabin,
+            );
+
+            if ($kilograms === null) {
+                return null;
+            }
+
+            $total += $kilograms;
+        }
+
+        return round($total);
+    }
+
+    /**
+     * Cruise fuel burn per type, memoised. Twenty-eight rows.
+     *
+     * @return array<string, float>
+     */
+    private function aircraftBurn(): array
+    {
+        static $map = null;
+
+        if ($map !== null) {
+            return $map;
+        }
+
+        $map = [];
+
+        foreach ($this->connection->fetchAll('SELECT code, fuel_burn_kg_per_km FROM ' . Table::Aircraft->value) as $row) {
+            $map[(string) $row['code']] = (float) $row['fuel_burn_kg_per_km'];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Seats fitted per type per cabin, memoised. Seventy-four rows.
+     *
+     * @return array<string, array<string, int>>
+     */
+    private function aircraftSeats(): array
+    {
+        static $map = null;
+
+        if ($map !== null) {
+            return $map;
+        }
+
+        $map = [];
+
+        foreach ($this->connection->fetchAll('SELECT aircraft, cabin, seats FROM ' . Table::AircraftCabins->value) as $row) {
+            $map[(string) $row['aircraft']][(string) $row['cabin']] = (int) $row['seats'];
+        }
+
+        return $map;
+    }
+
+    /**
+     * The middle value, or the mean of the middle two.
+     *
+     * @param list<float> $values
+     */
+    private static function median(array $values): float
+    {
+        sort($values);
+        $count = count($values);
+        $middle = intdiv($count, 2);
+
+        return $count % 2 === 1
+            ? $values[$middle]
+            : ($values[$middle - 1] + $values[$middle]) / 2;
+    }
+
+    /**
+     * Cleanest first, with the ones that cannot say at the back.
+     *
+     * Not an ORDER BY like the other single-column sorts, because the figure is
+     * computed here rather than stored -- see `SortMethod::ranksAcrossResults`.
+     *
+     * @param list<array<string, mixed>> $candidates
+     * @return list<array<string, mixed>>
+     */
+    private function rankByEmissions(array $candidates): array
+    {
+        usort($candidates, static function (array $a, array $b): int {
+            $left = $a['co2_kg'] ?? INF;
+            $right = $b['co2_kg'] ?? INF;
+
+            // Same tie-break as the SQL ordering, so equal figures come back in
+            // the same order on every page.
+            return [$left, $a['price_base'] + $a['price_tax'], $a['seg1']]
+                <=> [$right, $b['price_base'] + $b['price_tax'], $b['seg1']];
+        });
+
+        return $candidates;
+    }
+
+    /**
      * Rebuild a chosen itinerary from its ordered leg ids, with the aggregates
      * the display needs. Returns null unless every id resolves and the legs form
      * a connected chain — so a stale or tampered selection is rejected.
@@ -746,6 +956,8 @@ final readonly class FlightRepository
             'depart_time' => (string) $first['dep_datetime'],
             'arrive_time' => (string) $last['arr_datetime'],
             'rating' => $rating / count($legs),
+            'co2_kg' => $this->legsEmissions($legs, $cabin),
+            'co2_typical' => null,
         ];
     }
 
@@ -898,6 +1110,7 @@ final readonly class FlightRepository
             f1.departure_time AS depart_time, f1.arrival_time AS arrive_time,
             f1.rating AS rating,
             f1.airline AS carriers, f1.aircraft AS aircraft,
+            f1.distance AS distances,
             f1.departure_airport AS dep_airport, f1.arrival_airport AS arr_airport,
             NULL AS stops_at, 0 AS layover_minutes,
             NULL AS stop1_in, NULL AS stop1_out, NULL AS stop2_in, NULL AS stop2_out
@@ -923,6 +1136,7 @@ final readonly class FlightRepository
                     (f1.rating + f2.rating) / 2 AS rating,
                     CONCAT_WS(',', f1.airline, f2.airline) AS carriers,
                     CONCAT_WS(',', f1.aircraft, f2.aircraft) AS aircraft,
+                    CONCAT_WS(',', f1.distance, f2.distance) AS distances,
                     f1.departure_airport AS dep_airport, f2.arrival_airport AS arr_airport,
                     f1.arrival_airport AS stops_at,
                     TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time) AS layover_minutes,
@@ -965,6 +1179,7 @@ final readonly class FlightRepository
                     (f1.rating + f2.rating + f3.rating) / 3 AS rating,
                     CONCAT_WS(',', f1.airline, f2.airline, f3.airline) AS carriers,
                     CONCAT_WS(',', f1.aircraft, f2.aircraft, f3.aircraft) AS aircraft,
+                    CONCAT_WS(',', f1.distance, f2.distance, f3.distance) AS distances,
                     f1.departure_airport AS dep_airport, f3.arrival_airport AS arr_airport,
                     CONCAT_WS(',', f1.arrival_airport, f2.arrival_airport) AS stops_at,
                     TIMESTAMPDIFF(MINUTE, f1.arrival_time, f2.departure_time)
@@ -1350,6 +1565,8 @@ final readonly class FlightRepository
             'depart_time' => (string) $candidate['depart_time'],
             'arrive_time' => (string) $candidate['arrive_time'],
             'rating' => (float) $candidate['rating'],
+            'co2_kg' => $candidate['co2_kg'] ?? null,
+            'co2_typical' => $candidate['co2_typical'] ?? null,
         ];
     }
 

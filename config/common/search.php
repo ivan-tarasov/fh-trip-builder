@@ -123,6 +123,22 @@ return [
                 'color' => 'dark',
             ],
         ],
+        'emissions' => [
+            'id' => 'Emissions',
+            'tab_title' => 'Lowest CO2',
+            'icon' => 'fa-leaf',
+            'title' => 'Lowest CO2',
+            'note' => 'Least carbon per seat, estimated from the aircraft and the distance',
+            'order' => 'asc',
+            'roundtrip' => 1,
+            'oneway' => 1,
+            'badge' => [
+                'id' => 'emissions',
+                'text' => 'Lowest CO2',
+                'icon' => 'leaf',
+                'color' => 'success',
+            ],
+        ],
         'layover_short' => [
             'id' => 'ShortLayovers',
             'tab_title' => 'Short layovers',

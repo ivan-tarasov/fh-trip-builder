@@ -1,29 +1,29 @@
-code,title,manufacturer,max_range_km,cruise_speed_kmh,engine_count,is_widebody
-CR9,Bombardier CRJ-900,Bombardier,2900,829,2,0
-E75,Embraer 175,Embraer,3900,829,2,0
-E90,Embraer 190,Embraer,4500,829,2,0
-AT7,ATR 72,ATR,1500,510,2,0
-DH4,De Havilland Dash 8-400,De Havilland,2000,667,2,0
-223,Airbus A220-300,Airbus,6300,829,2,0
-319,Airbus A319,Airbus,6900,828,2,0
-320,Airbus A320,Airbus,6100,828,2,0
-321,Airbus A321,Airbus,5900,828,2,0
-32N,Airbus A320neo,Airbus,6300,833,2,0
-32Q,Airbus A321neo,Airbus,7400,833,2,0
-738,Boeing 737-800,Boeing,5400,842,2,0
-739,Boeing 737-900,Boeing,5900,842,2,0
-7M8,Boeing 737 MAX 8,Boeing,6500,839,2,0
-763,Boeing 767-300 (winglets),Boeing,11070,851,2,1
-332,Airbus A330-200,Airbus,13400,871,2,1
-333,Airbus A330-300,Airbus,11750,871,2,1
-339,Airbus A330-900neo,Airbus,13300,880,2,1
-359,Airbus A350-900,Airbus,15000,903,2,1
-35K,Airbus A350-1000,Airbus,16100,903,2,1
-388,Airbus A380-800,Airbus,15200,903,4,1
-772,Boeing 777-200ER,Boeing,13080,892,2,1
-77W,Boeing 777-300ER,Boeing,13650,892,2,1
-788,Boeing 787-8,Boeing,13530,903,2,1
-789,Boeing 787-9,Boeing,14140,903,2,1
-781,Boeing 787-10,Boeing,11750,903,2,1
-744,Boeing 747-400,Boeing,13450,917,4,1
-74H,Boeing 747-8,Boeing,14320,917,4,1
+code,title,manufacturer,max_range_km,cruise_speed_kmh,engine_count,is_widebody,fuel_burn_kg_per_km
+CR9,Bombardier CRJ-900,Bombardier,2900,829,2,0,1.85
+E75,Embraer 175,Embraer,3900,829,2,0,1.75
+E90,Embraer 190,Embraer,4500,829,2,0,2.05
+AT7,ATR 72,ATR,1500,510,2,0,0.90
+DH4,De Havilland Dash 8-400,De Havilland,2000,667,2,0,1.10
+223,Airbus A220-300,Airbus,6300,829,2,0,2.75
+319,Airbus A319,Airbus,6900,828,2,0,3.15
+320,Airbus A320,Airbus,6100,828,2,0,3.50
+321,Airbus A321,Airbus,5900,828,2,0,3.85
+32N,Airbus A320neo,Airbus,6300,833,2,0,2.95
+32Q,Airbus A321neo,Airbus,7400,833,2,0,3.25
+738,Boeing 737-800,Boeing,5400,842,2,0,3.55
+739,Boeing 737-900,Boeing,5900,842,2,0,3.80
+7M8,Boeing 737 MAX 8,Boeing,6500,839,2,0,3.00
+763,Boeing 767-300 (winglets),Boeing,11070,851,2,1,5.35
+332,Airbus A330-200,Airbus,13400,871,2,1,5.90
+333,Airbus A330-300,Airbus,11750,871,2,1,6.30
+339,Airbus A330-900neo,Airbus,13300,880,2,1,5.40
+359,Airbus A350-900,Airbus,15000,903,2,1,6.10
+35K,Airbus A350-1000,Airbus,16100,903,2,1,6.85
+388,Airbus A380-800,Airbus,15200,903,4,1,12.40
+772,Boeing 777-200ER,Boeing,13080,892,2,1,7.70
+77W,Boeing 777-300ER,Boeing,13650,892,2,1,8.60
+788,Boeing 787-8,Boeing,13530,903,2,1,5.20
+789,Boeing 787-9,Boeing,14140,903,2,1,5.55
+781,Boeing 787-10,Boeing,11750,903,2,1,5.90
+744,Boeing 747-400,Boeing,13450,917,4,1,11.00
+74H,Boeing 747-8,Boeing,14320,917,4,1,10.30

@@ -55,12 +55,22 @@ final class SortMethodTest extends TestCase
         self::assertStringStartsWith('(price_base + price_tax) ASC', SortMethod::Recommended->candidateOrderBy());
     }
 
-    public function testOnlyRecommendedNeedsTheWholeResultSet(): void
+    public function testOnlyTheTwoUnorderableSortsRankInPhp(): void
     {
-        // Everything else is expressible as an ORDER BY, so it can be settled
-        // in SQL before the page is cut.
+        // Everything else is expressible as an ORDER BY over columns the
+        // candidate query returns, so it is settled in SQL before the page is
+        // cut. These two are not, for one reason each: Recommended scores an
+        // itinerary against the cheapest and quickest of the set, and Emissions
+        // is not a candidate column at all -- it is worked out afterwards from
+        // the aircraft type and the distance.
+        $inPhp = [SortMethod::Recommended, SortMethod::Emissions];
+
         foreach (SortMethod::cases() as $sort) {
-            self::assertSame($sort === SortMethod::Recommended, $sort->ranksAcrossResults());
+            self::assertSame(
+                in_array($sort, $inPhp, true),
+                $sort->ranksAcrossResults(),
+                $sort->value . ' ranks in the wrong place',
+            );
         }
     }
 

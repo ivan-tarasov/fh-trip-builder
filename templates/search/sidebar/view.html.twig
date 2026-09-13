@@ -66,8 +66,10 @@
                     {% endblock %}
                 {% endembed %}
 
-                {# --- Layover conditions --- #}
-                {% embed 'search/sidebar/section.html.twig' with { 'id': 'conditions', 'title': 'Layover conditions', 'open': sidebar.active.conditions } %}
+                {# --- Conditions ---
+                   Not "Layover conditions": "All flights, one airline" was
+                   never one, and the CO2 toggle is not one either. #}
+                {% embed 'search/sidebar/section.html.twig' with { 'id': 'conditions', 'title': 'Conditions', 'open': sidebar.active.conditions } %}
                     {% block body %}
                         {% for name, toggle in sidebar.toggles %}
                             {% include 'search/sidebar/toggle.html.twig' with { 'name': sidebar.prefix ~ name, 'toggle': toggle } only %}

@@ -36,6 +36,8 @@ final readonly class FlightFinder
     private const string RESPONSE_BADGES = 'badges';
     private const string RESPONSE_STOPS = 'stops';
     private const string RESPONSE_TOTAL_DURATION = 'total_duration';
+    private const string RESPONSE_CO2_KG = 'co2_kg';
+    private const string RESPONSE_CO2_TYPICAL = 'co2_typical';
     private const string RESPONSE_LAYOVERS = 'layovers';
     private const string RESPONSE_WAIT_MINUTES = 'wait_minutes';
     private const string RESPONSE_DEPART = 'depart';
@@ -383,6 +385,11 @@ final readonly class FlightFinder
             self::RESPONSE_BADGES => $itinerary['badges'] ?? [],
             self::RESPONSE_STOPS => (int) $itinerary['stops'],
             self::RESPONSE_TOTAL_DURATION => (int) $itinerary['duration'],
+            // Null where a leg's type has no published fuel burn, and null all
+            // the way to the card: a missing estimate is shown as nothing
+            // rather than as a zero.
+            self::RESPONSE_CO2_KG => $itinerary['co2_kg'] ?? null,
+            self::RESPONSE_CO2_TYPICAL => $itinerary['co2_typical'] ?? null,
             self::RESPONSE_LAYOVERS => $layovers,
         ];
     }

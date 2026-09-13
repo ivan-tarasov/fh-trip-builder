@@ -18,6 +18,12 @@ return [
     | sell: `flights.cabins` is a copy of it, denormalised so a search can
     | filter on the cabin without joining.
     |
+    | `fuel_burn_kg_per_km` is what the type burns in the cruise, and with the
+    | seat counts next door it is everything the CO2 estimate on a search result
+    | needs (C5, #154). Published figures, rounded: they differ by operator,
+    | weight and route, so the site says the number is an estimate rather than
+    | pretending otherwise.
+    |
     */
 
     'primary' => 'code',
@@ -88,6 +94,17 @@ return [
             'nullable' => false,
             'auto_inc' => false,
             'comment' => false,
+        ],
+        [
+            // 0.90 for an ATR 72, 12.40 for an A380. Zero means "not known",
+            // and `Emissions` returns null for it rather than guessing.
+            'name' => 'fuel_burn_kg_per_km',
+            'type' => 'decimal',
+            'length' => '4,2',
+            'default' => [0],
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => 'Typical cruise fuel burn, kg/km',
         ],
     ],
 

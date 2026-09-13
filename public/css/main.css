@@ -2729,6 +2729,17 @@ textarea {
   font-size: .75rem;
 }
 
+/* The carbon estimate sits on the transit line because that is where the
+   comparable numbers are -- time, stops, then this. It inherits that line's
+   colour, so it is a fact among facts rather than a claim. */
+.route__co2 { white-space: nowrap; }
+
+/* Green only when the itinerary is at or below the middle of what the route
+   offered. Colour is doing real work here, so the card says it in words too --
+   in a visually-hidden span, because the leaf beside it is decorative and a
+   tooltip is not announced. */
+.route__co2--low { color: var(--brand-success); }
+
 .route__bar { display: flex; align-items: center; gap: 4px; }
 
 /* Every part is the same height, and the line you see is drawn by ::before.

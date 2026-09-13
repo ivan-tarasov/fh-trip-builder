@@ -40,6 +40,7 @@ final readonly class FlightFilters
     public const string DIM_NO_NIGHT = 'no_night';
     public const string DIM_NO_GULF = 'no_gulf';
     public const string DIM_NO_VISA = 'no_visa';
+    public const string DIM_LOWER_CO2 = 'lower_co2';
 
     /**
      * @param list<int> $stops allowed stop counts; empty means any
@@ -75,6 +76,7 @@ final readonly class FlightFilters
         public bool $noNightLayover = false,
         public bool $noGulfLayover = false,
         public bool $noVisaLayover = false,
+        public bool $lowerCo2 = false,
         // Last, and defaulted: everything that builds this positionally was
         // written before there was a party to carry.
         public Party $party = new Party(),
@@ -106,6 +108,7 @@ final readonly class FlightFilters
         self::DIM_NO_NIGHT,
         self::DIM_NO_GULF,
         self::DIM_NO_VISA,
+        self::DIM_LOWER_CO2,
     ];
 
     // The time dimensions take two keys: a set of named parts of the day, and
@@ -207,6 +210,7 @@ final readonly class FlightFilters
             noNightLayover: $flag($query[self::DIM_NO_NIGHT] ?? null),
             noGulfLayover: $flag($query[self::DIM_NO_GULF] ?? null),
             noVisaLayover: $flag($query[self::DIM_NO_VISA] ?? null),
+            lowerCo2: $flag($query[self::DIM_LOWER_CO2] ?? null),
         );
     }
 
@@ -332,7 +336,8 @@ final readonly class FlightFilters
             && $this->aircraft === []
             && !$this->noNightLayover
             && !$this->noGulfLayover
-            && !$this->noVisaLayover;
+            && !$this->noVisaLayover
+            && !$this->lowerCo2;
     }
 
     /**
@@ -360,6 +365,7 @@ final readonly class FlightFilters
             $this->noNightLayover,
             $this->noGulfLayover,
             $this->noVisaLayover,
+            $this->lowerCo2,
         ];
 
         return count(array_filter($set));
@@ -490,6 +496,15 @@ final readonly class FlightFilters
 
             self::DIM_NO_VISA => fn(array $c): bool => !$this->noVisaLayover
                 || $this->transitCountries($c) === [],
+
+            // `co2_typical` is worked out by the repository across every
+            // itinerary the route offered, before any of these filters run, so
+            // "typical" stays the route's middle rather than the middle of
+            // whatever is left after choosing an airline. Null -- no published
+            // burn for a type on board -- is not lower than typical; it is
+            // unknown, and this hides it (C5, #154).
+            self::DIM_LOWER_CO2 => fn(array $c): bool => !$this->lowerCo2
+                || ($c['co2_typical'] ?? false) === true,
         ];
     }
 
