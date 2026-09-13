@@ -313,4 +313,63 @@ final class RouteRepositoryTest extends IntegrationTestCase
             $routes,
         );
     }
+
+    /**
+     * The column is never short, whatever the `search` table holds.
+     *
+     * `popular()` was counted from recorded searches alone, so it was empty on
+     * a database nobody had used and one row long after one search — which is
+     * what a deployment looks like on its first day (A9.1, #174). It falls back
+     * to the city pairs with the most nonstop service, so the answer is always
+     * six or the database has no flights at all.
+     */
+    public function testPopularFillsTheColumnOnADatabaseNobodyHasSearched(): void
+    {
+        $routes = new RouteRepository($this->connection());
+
+        if ((int) $this->connection()->fetchValue('SELECT COUNT(*) FROM flights') === 0) {
+            self::markTestSkipped('No flights, so no route has a page to link to.');
+        }
+
+        $popular = $routes->popular(6);
+
+        self::assertCount(6, $popular, 'the Directions column came back short');
+
+        foreach ($popular as $route) {
+            foreach (['from_code', 'to_code', 'from_name', 'to_name'] as $field) {
+                self::assertArrayHasKey($field, $route);
+                self::assertNotSame('', (string) $route[$field], $field . ' is empty');
+            }
+
+            self::assertNotSame(
+                $route['from_code'],
+                $route['to_code'],
+                'a route from a city to itself is not a route',
+            );
+        }
+    }
+
+    /**
+     * One direction per pair, whichever source filled the column.
+     *
+     * London to New York and New York to London are two real pages, and in a
+     * six-line footer they are also two lines saying nearly the same thing.
+     */
+    public function testPopularNeverShowsBothDirectionsOfAPair(): void
+    {
+        if ((int) $this->connection()->fetchValue('SELECT COUNT(*) FROM flights') === 0) {
+            self::markTestSkipped('No flights, so no route has a page to link to.');
+        }
+
+        $seen = [];
+
+        foreach (new RouteRepository($this->connection())->popular(6) as $route) {
+            $pair = [(string) $route['from_code'], (string) $route['to_code']];
+            sort($pair);
+
+            self::assertNotContains(implode('-', $pair), $seen, 'both directions of one pair are listed');
+
+            $seen[] = implode('-', $pair);
+        }
+    }
 }

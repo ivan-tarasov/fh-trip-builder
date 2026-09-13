@@ -738,4 +738,47 @@ final class FooterRenderTest extends TestCase
 
         self::assertNull(new LayoutData()->subscribeNotice());
     }
+
+    /**
+     * The grid does not reserve a slot for a column that did not render.
+     *
+     * Every column in this band is counted from a table, so any of them can be
+     * empty on a database nobody has filled — a new deployment, a restored
+     * backup, a `db:clear` — and `links.html.twig` drops the ones that are. The
+     * grid was `repeat(6, 1fr)`, the number of columns *declared in config*
+     * rather than the number that rendered, so a dropped column left an empty
+     * sixth of the band. That is what showed on the deployed site (A9.2, #175).
+     *
+     * `grid-auto-flow: column` lets the columns make their own tracks. With all
+     * six present it is identical to what it replaced.
+     */
+    public function testTheColumnGridDoesNotReserveEmptySlots(): void
+    {
+        $rule = self::cssRule('.footer__columns');
+
+        self::assertStringContainsString('grid-auto-flow: column', $rule);
+        self::assertDoesNotMatchRegularExpression(
+            '/grid-template-columns:\s*repeat\(\s*\d/',
+            $rule,
+            'a fixed column count leaves a hole whenever a data-driven column is empty',
+        );
+    }
+
+    /**
+     * The declaration block of a selector, at the widest width.
+     *
+     * The first occurrence, which is the unmediated rule: the narrow overrides
+     * live inside `@media` blocks further down and are allowed their fixed
+     * counts, because a short last row reads as a wrap rather than a hole.
+     */
+    private static function cssRule(string $selector): string
+    {
+        $css = (string) file_get_contents(Helper::getPublicDir() . '/css/main.css');
+
+        preg_match('/' . preg_quote($selector, '/') . '\s*\{([^}]*)\}/', $css, $found);
+
+        self::assertNotEmpty($found, $selector . ' is not in main.css');
+
+        return $found[1];
+    }
 }

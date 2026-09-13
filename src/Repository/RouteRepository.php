@@ -91,10 +91,70 @@ final readonly class RouteRepository
      */
     public function popular(int $limit): array
     {
-        return array_slice(
+        $searched = array_slice(
             self::oneDirectionPerPair($this->searchedWithAPage(self::POPULAR_CANDIDATES)),
             0,
             max(0, $limit),
+        );
+
+        // Enough real searches to fill the column, so use them.
+        if (count($searched) >= $limit) {
+            return $searched;
+        }
+
+        return array_slice(
+            self::oneDirectionPerPair($this->mostFlown(self::POPULAR_CANDIDATES)),
+            0,
+            max(0, $limit),
+        );
+    }
+
+    /**
+     * The city pairs with the most nonstop service, busiest first.
+     *
+     * **This answers a different question than the one above**, and the column
+     * switches between them silently, so it is worth saying which is which.
+     * `searchedWithAPage()` answers "what have people looked for". This answers
+     * "what can you fly" -- and a column headed *Directions* is true of either.
+     *
+     * It exists because the first is empty on a database nobody has searched,
+     * which is every deployment on its first day and every developer's on its
+     * first hour. The footer is described in `config/common/site.php` as the
+     * way into the site for somebody arriving from a search engine; before
+     * this, that way was a missing column (A9.1, #174).
+     *
+     * All or nothing rather than topping the searched list up. Six rows ordered
+     * by two different measures is a list that cannot be read as either, and
+     * the threshold -- enough searches to fill the column -- is a sentence
+     * somebody can check.
+     *
+     * No filter on `departure_time`. This is a question about the schedule
+     * rather than about what is bookable this afternoon, and comparing that
+     * column against `NOW()` is the trap E17 (#171) exists for: PHP and MySQL
+     * do not agree about what time it is.
+     *
+     * Every pair here has a page by construction: the route page exists where
+     * you can fly it nonstop, and a row in `flights` is what nonstop means.
+     * That is the filter `searchedWithAPage()` has to apply by hand.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function mostFlown(int $candidates): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT o.city_code AS from_code, MIN(o.city) AS from_name,'
+            . ' d.city_code AS to_code, MIN(d.city) AS to_name, COUNT(*) AS flights'
+            . ' FROM ' . Table::Flights->value . ' f'
+            . ' JOIN ' . Table::Airports->value . ' o'
+            . '  ON o.code = f.departure_airport AND' . self::sellable('o')
+            . ' JOIN ' . Table::Airports->value . ' d'
+            . '  ON d.code = f.arrival_airport AND' . self::sellable('d')
+            . ' WHERE o.city_code <> d.city_code'
+            . ' GROUP BY o.city_code, d.city_code'
+            // The codes break the tie, so the same database gives the same six
+            // rows on every request rather than whatever the engine felt like.
+            . ' ORDER BY flights DESC, from_code, to_code'
+            . ' LIMIT ' . max(1, $candidates),
         );
     }
 
