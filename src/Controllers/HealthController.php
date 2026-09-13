@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use DateTimeImmutable;
 use Throwable;
+use TripBuilder\Clock;
 use TripBuilder\Health;
 use TripBuilder\Helper;
 use TripBuilder\Log;
@@ -41,7 +42,12 @@ final class HealthController extends AbstractController
         http_response_code(Health::statusCode($database));
 
         echo json_encode(
-            Health::report($database, $this->version(), $database ? $this->schedule() : []),
+            Health::report(
+                $database,
+                $this->version(),
+                $database ? $this->schedule() : [],
+                $database ? Clock::drift($this->connection()) : null,
+            ),
             JSON_UNESCAPED_SLASHES,
         );
     }

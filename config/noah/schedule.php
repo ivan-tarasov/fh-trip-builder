@@ -22,7 +22,11 @@ return [
     | lost (E16, #167). Adding a command is now a pull request.
     |
     | `every` is a Frequency and `at` is the time it wants: `03:00` for a daily
-    | task, `:20` for an hourly one. A task is due when nothing has run since
+    | task, `:20` for an hourly one. **In UTC**, which the entry points pin and
+    | which is not the server's own clock -- 03:00 here is 23:00 the evening
+    | before in Eastern (E17, #171). The crontab line fires on the server's wall
+    | clock; what it fires is judged on this one, and the fifteen-minute tick
+    | means the two never need to agree. A task is due when nothing has run since
     | the moment it was last supposed to, so a missed tick catches up on the
     | next one rather than skipping the day.
     |

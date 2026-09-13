@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Database;
 
+use DateTimeImmutable;
 use PDO;
 use PDOStatement;
 
@@ -23,7 +24,36 @@ final class Connection
      */
     private static ?self $shared = null;
 
-    public function __construct(private readonly PDO $pdo) {}
+    public function __construct(private readonly PDO $pdo)
+    {
+        // One clock for both halves of the application (E17, #171).
+        //
+        // Measured 2026-09-12, on the laptop and again in production: PHP on
+        // UTC, MySQL on `SYSTEM` and therefore on the server's Eastern clock,
+        // four hours apart. This codebase writes timestamps with both -- 37
+        // `NOW()` sites and `date()` everywhere else -- and the pair that
+        // decides what a visitor sees is `flights.departure_time >= NOW()`,
+        // where the column is written by PHP and the comparison was made by
+        // MySQL.
+        //
+        // Here and not in `fromEnv()`, which is where it was first written.
+        // The integration harness builds its own PDO and wraps it directly, so
+        // a fix in the factory left every test running against a connection
+        // configured differently from the one the application uses -- which is
+        // the shape of a test suite that agrees with itself and not with
+        // production.
+        //
+        // An offset and not a named zone. `SET time_zone = 'UTC'` needs MySQL's
+        // timezone tables loaded, which shared hosting frequently does not have
+        // and which fails a long way from this line. An offset is always
+        // understood.
+        //
+        // Read once, which is safe only because both entry points pin PHP to
+        // UTC and UTC has no transitions. On a zone that observed DST this
+        // offset would go stale an hour after one, inside any command running
+        // long enough to span it. ClockTest asserts both halves of that.
+        $pdo->exec(sprintf("SET time_zone = '%s'", new DateTimeImmutable()->format('P')));
+    }
 
     /**
      * Number of statements run on this connection (diagnostic).
