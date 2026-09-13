@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
+use TripBuilder\Horizon;
 use TripBuilder\Http\Input;
 use TripBuilder\SearchUrl;
 use TripBuilder\TripType;
@@ -17,6 +18,58 @@ final class SearchUrlTest extends TestCase
     protected function setUp(): void
     {
         new Config('common');
+    }
+
+    /**
+     * A search reaching past the last day the site has flights for is not a
+     * search it can run, so it is refused the way a span past `MAX_SPAN` is --
+     * null rather than a page that finds nothing, because an empty result looks
+     * like the route is empty rather than like the question being out of range
+     * (E30, #215).
+     */
+    public function testASearchPastTheHorizonIsNotASearch(): void
+    {
+        self::assertNotNull(SearchUrl::parse(self::at_(Horizon::DAYS)), 'the horizon itself is bookable');
+        self::assertNull(SearchUrl::parse(self::at_(Horizon::DAYS + 1)));
+        self::assertNull(SearchUrl::parse(self::at_(Horizon::DAYS + 200)));
+    }
+
+    /**
+     * The end of the window, not its start.
+     *
+     * A flexible search is up to three days wide, so one beginning on the last
+     * day the calendar offers reaches two days past it -- exactly the case a
+     * bound on the departure date alone waves through.
+     */
+    public function testAFlexibleWindowCannotReachPastTheHorizonEither(): void
+    {
+        $lastDay = self::short(Horizon::DAYS);
+
+        self::assertNotNull(SearchUrl::parse('/search/YUL' . $lastDay . 'LHRY1'), 'one day, on the horizon');
+        self::assertNull(
+            SearchUrl::parse('/search/YUL' . $lastDay . 'x3LHRY1'),
+            'a three-day window opening on the horizon ends two days past it',
+        );
+    }
+
+    /** And the return leg is bounded by it as well as the outbound. */
+    public function testAReturnPastTheHorizonIsRefused(): void
+    {
+        $out = self::short(10);
+
+        self::assertNotNull(SearchUrl::parse('/search/YUL' . $out . 'LHR' . self::short(Horizon::DAYS) . 'Y1'));
+        self::assertNull(SearchUrl::parse('/search/YUL' . $out . 'LHR' . self::short(Horizon::DAYS + 1) . 'Y1'));
+    }
+
+    /** A one-way path that departs `$days` from today. */
+    private static function at_(int $days): string
+    {
+        return '/search/YUL' . self::short($days) . 'LHRY1';
+    }
+
+    private static function short(int $days): string
+    {
+        return date('dmy', (int) strtotime('+' . $days . ' days'));
     }
 
     /**
@@ -97,19 +150,38 @@ final class SearchUrlTest extends TestCase
         self::assertSame($path, self::at($path)->path());
     }
 
+    /**
+     * The two-digit year is read as itself, with no "next occurrence" rule to
+     * get wrong: a date in the past is the date in the past, and finds nothing.
+     *
+     * The forward half used to be `050131` -- 2031 -- and cannot be now, because
+     * `parse()` refuses anything past the horizon (E30, #215). A date inside it
+     * makes the same point: `27` is 2027 and not 1927.
+     */
     public function testAYearIsReadLiterally(): void
     {
-        // No "next occurrence" rule to get wrong: a date in the past is read as
-        // the date in the past, and simply finds nothing.
         self::assertSame('2025-09-16', self::at('/search/YUL160925LHRY1')->depart);
-        self::assertSame('2031-01-05', self::at('/search/YUL050131LHRY1')->depart);
+        self::assertSame(
+            date('Y-m-d', (int) strtotime('+30 days')),
+            self::at('/search/YUL' . date('dmy', (int) strtotime('+30 days')) . 'LHRY1')->depart,
+        );
     }
 
+    /**
+     * `checkdate()` and not a `DateTimeImmutable`, which rolls 31 February into
+     * March without complaint and would quietly answer a different search from
+     * the one the URL names.
+     *
+     * Shown with a month that has no 31st rather than with a leap day: the next
+     * 29 February is 2028, which is past the horizon and so refused for a
+     * different reason, and a test that passes for the wrong reason is worse
+     * than no test.
+     */
     public function testARealCalendarIsRequired(): void
     {
-        // 2026 is not a leap year; 2028 is.
-        self::assertNull(SearchUrl::parse('/search/YUL290226LHRY1'));
-        self::assertSame('2028-02-29', self::at('/search/YUL290228LHRY1')->depart);
+        self::assertNull(SearchUrl::parse('/search/YUL290226LHRY1'), '2026 is not a leap year');
+        self::assertNull(SearchUrl::parse('/search/YUL310227LHRY1'), 'February has no 31st');
+        self::assertNotNull(SearchUrl::parse('/search/YUL280227LHRY1'), 'but it does have a 28th');
     }
 
     public function testAnAirportCodeCarryingADigitIsStillUnambiguous(): void

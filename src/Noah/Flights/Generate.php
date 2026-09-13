@@ -17,6 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
+use TripBuilder\Horizon;
 use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
@@ -31,7 +32,10 @@ class Generate extends AbstractCommand
     private const int FLIGHTS_COUNT = 10000;
     private const int NUMBERS_POOL = 9999;
 
-    private const array DATE_ADD_DAYS = [1, 90];
+    // The window, from the one place that says how far ahead this site goes.
+    // The calendar and the flights end on the same day or the calendar
+    // offers dates nothing can answer, which is E30 (#215).
+    private const array DATE_ADD_DAYS = [1, Horizon::DAYS];
 
     private const string PROGRESS_FORMAT = " %current%/%max% %bar% %percent:3s%% %elapsed:6s%/%estimated:-6s% %memory%\n %message%";
     private const string PROGRESS_CHARACTER_EMPTY = '<fg=default>░</>';

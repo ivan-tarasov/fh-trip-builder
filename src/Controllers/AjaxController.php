@@ -153,7 +153,21 @@ class AjaxController extends AbstractController
         $this->get = $params;
     }
 
-    /** How far ahead the calendar can be paged, and so how far a build looks. */
+    /**
+     * How far ahead fares are precomputed for the calendar.
+     *
+     * **Not the horizon, and deliberately not.** It reads like a third copy of
+     * `Horizon::DAYS` and is not one: the calendar stops at the horizon, but
+     * this number is bounded by what a build costs. One route over the ninety
+     * days that exist measured 13.3s, and the work scales with the flights in
+     * range — so a year would be about four times that, per route, while a
+     * visitor waits behind a lock.
+     *
+     * The comment here used to say this was "how far ahead the calendar can be
+     * paged", which was never true: nothing capped the calendar at all until
+     * E30 (#215). Days past this simply have no fare on them, which the picker
+     * already handles — it draws a day with no price as a day with no price.
+     */
     private const int PRICE_WINDOW_DAYS = 90;
 
     /** How old a route's prices may be before they are worked out again. */

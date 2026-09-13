@@ -192,7 +192,7 @@ missing column should not also re-import the content.
 ### 7. Generate Flights
 To generate flight data, use the following command:
 ```bash
-php noah flights:add 900000
+php noah flights:add 3650000
 ```
 
 **Say a number, and say this one.** Without an argument the command asks and
@@ -200,8 +200,10 @@ offers 10,000. That is enough for a site you can click around and nowhere near
 enough to search: the network has 49,000 routes across ninety days, and a
 search that finds nothing is the one thing this application exists to do.
 
-900,000 is ninety days at 10,000 a day, which is what the nightly run
-maintains. The number was measured on mid-ranked routes — rank 3,000 of 49,000,
+3,650,000 is a year at 10,000 a day, which is what the nightly run maintains.
+A year because the calendar offers a year: the picker stops on the same day the
+flights do, so there is no date a visitor can choose that answers nothing
+(E30, #215). The number was measured on mid-ranked routes — rank 3,000 of 49,000,
 which is what an ordinary visitor searches — by asking how often a search comes
 back empty:
 
@@ -211,7 +213,7 @@ back empty:
 | 8,000 | 22 of 25 | 221 ms | 718,000 | 437 MB |
 | 10,000 | 24 of 25 | 268 ms | 896,000 | 546 MB |
 
-It takes about a minute and leaves the table around 550 MB.
+It takes about four minutes and leaves the table around 2.2 GB.
 
 Once there is a network it is kept up rather than regenerated. `flights:add
 10000 --level` runs nightly and puts a day's worth into whichever days are

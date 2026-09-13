@@ -171,6 +171,11 @@
             // it is being changed.
             const picker = new window.TripDatePicker(departInput, {
                 parent: carrier(departInput),
+                // The last day the site has flights for, rendered by Horizon.
+                // Without it the calendar pages forward for ever and every
+                // month past the data answers "No flights found" on routes
+                // that have several a day (E30, #215).
+                max: departInput.dataset.horizon ? Day.parse(departInput.dataset.horizon) : null,
                 // The bar wraps on a narrow window, putting the party and the
                 // submit on a row of their own under the dates.
                 clears: departInput.closest('.searchbar'),
@@ -1517,6 +1522,8 @@
         const roundtrip = input.dataset.triptype === 'roundtrip';
 
         const picker = new window.TripDatePicker(input, {
+            // The same horizon the search bar stops at.
+            max: input.dataset.horizon ? Day.parse(input.dataset.horizon) : null,
             // A one-way is one day; a round trip is a departure and a return,
             // clicked out over two days with nothing capping how far apart they
             // are. Neither is the flexible window the search bar drags.
