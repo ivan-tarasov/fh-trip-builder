@@ -19,9 +19,33 @@ final class SearchUrlTest extends TestCase
         new Config('common');
     }
 
-    private static function at(string $path): ?SearchUrl
+    /**
+     * A path that parses, which is what every test below is about.
+     *
+     * The assertion is here rather than at each of two dozen call sites: a
+     * path that stops parsing should fail as "this is not a search" once,
+     * rather than as two dozen reads of a property on null.
+     *
+     * Which is why the tests about paths that should *not* parse call the
+     * parser directly. They are the ones for which null is the answer.
+     */
+    private static function at(string $path): SearchUrl
     {
-        return SearchUrl::parse($path);
+        $url = SearchUrl::parse($path);
+
+        self::assertInstanceOf(SearchUrl::class, $url, $path . ' should parse');
+
+        return $url;
+    }
+
+    /** The older query-string form, which is nullable for the same reason. */
+    private static function fromQuery(Input $query): SearchUrl
+    {
+        $url = SearchUrl::fromQuery($query);
+
+        self::assertInstanceOf(SearchUrl::class, $url, 'the query should describe a search');
+
+        return $url;
     }
 
     public function testReadsAOneWaySearch(): void
@@ -84,7 +108,7 @@ final class SearchUrlTest extends TestCase
     public function testARealCalendarIsRequired(): void
     {
         // 2026 is not a leap year; 2028 is.
-        self::assertNull(self::at('/search/YUL290226LHRY1'));
+        self::assertNull(SearchUrl::parse('/search/YUL290226LHRY1'));
         self::assertSame('2028-02-29', self::at('/search/YUL290228LHRY1')->depart);
     }
 
@@ -126,12 +150,12 @@ final class SearchUrlTest extends TestCase
     {
         // Null, not a half-built object: the caller falls through to the older
         // query-string form rather than searching for something nobody asked for.
-        self::assertNull(self::at($path));
+        self::assertNull(SearchUrl::parse($path));
     }
 
     public function testReadsTheOlderQueryStringForm(): void
     {
-        $url = SearchUrl::fromQuery(new Input([
+        $url = self::fromQuery(new Input([
             'from' => 'yul',
             'to' => 'lhr',
             'depart' => '2026-09-16',
@@ -149,7 +173,7 @@ final class SearchUrlTest extends TestCase
         // it says one-way, which is what let the tabs go. Reading an absent
         // `triptype` as one-way threw the return date away on the way in, and
         // every round trip submitted came back as a one-way search.
-        $url = SearchUrl::fromQuery(new Input([
+        $url = self::fromQuery(new Input([
             'from' => 'YUL',
             'to' => 'LHR',
             'depart' => '2026-09-16',
@@ -163,7 +187,7 @@ final class SearchUrlTest extends TestCase
 
     public function testNoReturnDateAndNoTripTypeIsAOneWay(): void
     {
-        $url = SearchUrl::fromQuery(new Input([
+        $url = self::fromQuery(new Input([
             'from' => 'YUL',
             'to' => 'LHR',
             'depart' => '2026-09-16',
@@ -178,7 +202,7 @@ final class SearchUrlTest extends TestCase
     {
         // The form leaves the return date in place when the tab is switched
         // back, so the trip type has to win.
-        $url = SearchUrl::fromQuery(new Input([
+        $url = self::fromQuery(new Input([
             'from' => 'YUL',
             'to' => 'LHR',
             'depart' => '2026-09-16',
@@ -286,7 +310,7 @@ final class SearchUrlTest extends TestCase
 
     public function testTheFormsFlexFieldsReachTheUrl(): void
     {
-        $url = SearchUrl::fromQuery(new Input([
+        $url = self::fromQuery(new Input([
             'from' => 'YUL',
             'to' => 'LHR',
             'depart' => '2026-10-15',
@@ -295,13 +319,13 @@ final class SearchUrlTest extends TestCase
             'return_flex' => '2',
         ]));
 
-        self::assertSame('/search/YUL151026x3LHR221026x2Y1', $url?->path());
+        self::assertSame('/search/YUL151026x3LHR221026x2Y1', $url->path());
     }
 
     public function testAFlexTheSearchWillNotRunBecomesNoFlex(): void
     {
         // Fewer days than asked for, never more.
-        $url = SearchUrl::fromQuery(new Input([
+        $url = self::fromQuery(new Input([
             'from' => 'YUL',
             'to' => 'LHR',
             'depart' => '2026-10-15',
@@ -315,7 +339,7 @@ final class SearchUrlTest extends TestCase
 
     public function testAOneWayCarriesNoReturnSpan(): void
     {
-        $url = SearchUrl::fromQuery(new Input([
+        $url = self::fromQuery(new Input([
             'from' => 'YUL',
             'to' => 'LHR',
             'depart' => '2026-10-15',

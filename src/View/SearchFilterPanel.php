@@ -277,7 +277,10 @@ final readonly class SearchFilterPanel
      * The cheapest total for one option of one dimension, formatted, or null
      * when the search could not price it.
      *
-     * @return array{whole: string, cents: string}|null
+     * `cents` is nullable and this used to say otherwise: at zero decimals --
+     * which is most of the currencies on offer -- `priceParts()` writes none.
+     *
+     * @return array{whole: string, cents: ?string}|null
      */
     private function optionPrice(string $dimension, string $value): ?array
     {

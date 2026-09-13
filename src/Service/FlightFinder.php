@@ -187,7 +187,9 @@ final readonly class FlightFinder
             ];
         }, $result['rows']);
 
-        $packagePrice = $return === null ? null : $this->partyTotal(
+        // Both halves, said in one place: a return is only ever set when an
+        // outbound was found (see above), but nothing in the types says so.
+        $packagePrice = $return === null || $outbound === null ? null : $this->partyTotal(
             $party,
             (float) $outbound['price_base'] + (float) $return['price_base'],
             (float) $outbound['price_tax'] + (float) $return['price_tax'],

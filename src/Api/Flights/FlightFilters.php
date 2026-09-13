@@ -274,7 +274,12 @@ final readonly class FlightFilters
      * A "from-to" minute-of-day range, or null when it is missing, malformed,
      * or covers the whole day (in which case it constrains nothing).
      *
-     * @return array{0: int|null, 1: int}|null
+     * Both ends are always a number. The shape here said the first could be
+     * null, which is `minutesRange()`'s shape and not this one -- a layover
+     * range can be a bare ceiling with no floor under it, and a time of day
+     * cannot.
+     *
+     * @return array{0: int, 1: int}|null
      */
     private static function window(mixed $raw): ?array
     {
@@ -545,8 +550,11 @@ final readonly class FlightFilters
     }
 
     /**
+     * `0: int|null`, because a bare ceiling has no floor under it -- which the
+     * body below reads twice and the shape used to deny.
+     *
      * @param array<string, mixed> $candidate
-     * @param array{0: int, 1: int} $range
+     * @param array{0: int|null, 1: int} $range
      */
     private function waitsWithin(array $candidate, array $range): bool
     {

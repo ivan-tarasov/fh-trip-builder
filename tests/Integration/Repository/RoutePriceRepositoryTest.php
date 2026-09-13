@@ -195,6 +195,8 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         // the same figure.
         $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
         $prices = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
+        self::assertNotSame([], $prices, 'the build should have written days to read');
+
         $day = $prices[array_key_first($prices)];
 
         $alone = new Party(adults: 1);

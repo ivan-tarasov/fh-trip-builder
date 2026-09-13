@@ -281,6 +281,12 @@ class Realign extends AbstractCommand
                 Table::Aircraft->value,
             ), [$lo, $hi])[0] ?? null;
 
+            // No row at all and no legs are the same answer here: a class of
+            // aircraft nothing flies has no share to report.
+            if ($row === null) {
+                continue;
+            }
+
             $count = (int) ($row['legs'] ?? 0);
 
             if ($count === 0) {

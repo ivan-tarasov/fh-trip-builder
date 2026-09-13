@@ -58,6 +58,8 @@ final class SearchRepositoryTest extends IntegrationTestCase
             // Same hash again → count increments, no duplicate row.
             $repo->record($hash, 'YUL', 'Montreal', 'YYZ', 'Toronto', '2026-09-15', '2026-09-22', 'roundtrip', CabinClass::Economy);
             $second = $repo->findByHash($hash);
+
+            self::assertNotNull($second, 'the hash was just recorded a second time');
             self::assertSame(2, (int) $second['search_count']);
         } finally {
             $connection->execute('DELETE FROM search WHERE hash = ?', [$hash]);
