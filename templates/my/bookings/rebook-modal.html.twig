@@ -39,6 +39,7 @@
                 <div class="form-floating mb-3">
                     <input type="text" class="form-control js-rebook-date"
                            id="rebook-date-{{ booking.id }}"
+                           data-horizon="{{ horizon }}"
                            data-triptype="{{ booking.rebook.triptype }}"
                            placeholder="Pick a date" autocomplete="off" readonly required />
                     <label for="rebook-date-{{ booking.id }}">{{ roundtrip ? 'Depart and return dates' : 'Departure date' }}</label>

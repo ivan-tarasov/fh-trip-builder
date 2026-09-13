@@ -153,6 +153,11 @@
             // dialog is the whole of what it belongs to.
             clears: null,
             min: Day.today(),
+            // The last day that can be chosen, or null for no end. The site
+            // holds a year of flights and the calendar stops where they do --
+            // it used to page to 2028 and offer 77 selectable days in a month
+            // nothing could answer (E30, #215).
+            max: null,
             start: null,
             span: 1,
             // Whether this calendar will carry fares. Declared up front rather
@@ -176,6 +181,9 @@
         this.settings = settings;
         this.id = 'datepicker-' + (++sequence);
         this.floor = Day.parse(settings.min) || Day.today();
+        // No leg logic, unlike the floor: a return cannot be taken before the
+        // outbound leaves, but both ends stop on the same last day.
+        this.ceiling = Day.parse(settings.max) || null;
         this.isOpen = false;
         this.touched = false;
         this.drag = null;
@@ -675,7 +683,7 @@
             cell.classList.add('is-outside');
         }
 
-        if (day.getTime() < this.min.getTime()) {
+        if (day.getTime() < this.min.getTime() || this.beyond(day)) {
             cell.classList.add('is-disabled');
             cell.setAttribute('aria-disabled', 'true');
         }
@@ -822,7 +830,19 @@
     };
 
     DatePicker.prototype.selectable = function (day) {
-        return Boolean(day) && day.getTime() >= this.min.getTime();
+        return Boolean(day) && day.getTime() >= this.min.getTime() && !this.beyond(day);
+    };
+
+    /**
+     * Past the last day the site has anything for.
+     *
+     * The navigation is deliberately left alone, which is how the floor already
+     * behaves: the calendar pages back past today and simply shows a month of
+     * disabled days. A month past the ceiling now reads the same way, rather
+     * than the two ends of the same calendar behaving differently.
+     */
+    DatePicker.prototype.beyond = function (day) {
+        return this.ceiling !== null && day.getTime() > this.ceiling.getTime();
     };
 
     /** A day pulled back inside the window the search will actually run. */
@@ -838,7 +858,11 @@
             }
         }
 
-        return capped.getTime() < this.min.getTime() ? this.min : capped;
+        if (capped.getTime() < this.min.getTime()) {
+            return this.min;
+        }
+
+        return this.beyond(capped) ? this.ceiling : capped;
     };
 
     /**

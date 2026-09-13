@@ -37,7 +37,7 @@ abstract class AbstractCommand extends Command
      * production deploy is built on -- cron calls `schedule:run`, `db:clear`
      * refuses to run without `db:backup`, and the runbook is made of it.
      */
-    private const string NOAH_VERSION = 'v1.1.0';
+    private const string NOAH_VERSION = 'v1.2.0';
 
     /**
      * Color presets

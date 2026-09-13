@@ -113,7 +113,13 @@
            a tab to switch it; these two can, by leaving the second one empty. #}
         <div class="searchbar__field searchbar__field--date">
             <label class="searchbar__label" for="depart_date">When</label>
+            {# The last day this site has flights for. The calendar stops there
+               rather than paging on into months nothing can answer -- it used
+               to reach 2028 while the flights ran out at ninety days (E30,
+               #215). One value, from Horizon, so the calendar and the data
+               cannot end on different days. #}
             <input type="text" class="searchbar__input js-depart-date" id="depart_date"
+                   data-horizon="{{ horizon }}"
                    placeholder="Add date" autocomplete="off" required readonly />
             <input type="hidden" id="depart_date_value"
                    name="{{ config('search.form.input.depart_date') }}" value="{{ depart_date }}" />

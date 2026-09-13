@@ -10,6 +10,7 @@ use TripBuilder\Config;
 use TripBuilder\Consent;
 use TripBuilder\Currency;
 use TripBuilder\Helper;
+use TripBuilder\Horizon;
 use TripBuilder\Money;
 use TripBuilder\Party;
 use TripBuilder\View\Airside\PostImages;
@@ -78,6 +79,10 @@ final readonly class TwigRenderer
         // includes that otherwise cut the context off. There is one definition
         // of how many seats a booking may hold and it is Party's.
         $this->twig->addGlobal('max_seats', Party::MAX_SEATS);
+        // The last day anything is offered, for the calendars to stop on.
+        // One value reaching the template, the URL reader and the generator,
+        // because two would drift the first time either changed (E30, #215).
+        $this->twig->addGlobal('horizon', Horizon::last());
 
         // Everything the layout needs to ask about analytics and to draw the
         // notice: the cookie's spelling for global.js, and the answer so far.

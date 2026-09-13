@@ -140,7 +140,7 @@ final readonly class SearchUrl
 
         $pax = str_split($match['pax']);
 
-        return new self(
+        return self::withinHorizon(new self(
             from: $match['from'],
             to: $match['to'],
             depart: $depart,
@@ -151,7 +151,7 @@ final readonly class SearchUrl
             infants: (int) ($pax[2] ?? 0),
             departSpan: $departSpan,
             returnSpan: $returnSpan,
-        );
+        ));
     }
 
     /**
@@ -189,7 +189,7 @@ final readonly class SearchUrl
             return null;
         }
 
-        return new self(
+        return self::withinHorizon(new self(
             from: $from,
             to: $to,
             depart: $depart,
@@ -200,7 +200,7 @@ final readonly class SearchUrl
             infants: self::paxFrom($query, 'infants', 0),
             departSpan: self::spanFrom($query, 'depart_flex'),
             returnSpan: $return === null ? 1 : self::spanFrom($query, 'return_flex'),
-        );
+        ));
     }
 
     public function path(): string
@@ -306,6 +306,26 @@ final readonly class SearchUrl
         $span = (int) substr($mark, 1);
 
         return $span >= 2 && $span <= self::MAX_SPAN ? $span : null;
+    }
+
+    /**
+     * The same search, or null when it reaches past where this site goes.
+     *
+     * Null rather than a page that finds nothing, for the reason a span past
+     * `MAX_SPAN` is null: the search cannot be run, and answering it with an
+     * empty result looks like the route is empty rather than like the question
+     * being out of range (E30, #215).
+     *
+     * **The end of the window, not its start.** A flexible search is up to
+     * three days wide, so one beginning on the last day the calendar offers
+     * reaches two days past it -- which is exactly the case a bound on the
+     * departure date alone would wave through.
+     */
+    private static function withinHorizon(self $url): ?self
+    {
+        $last = $url->returnUntil() ?? $url->departUntil();
+
+        return Horizon::covers($last) ? $url : null;
     }
 
     /**
