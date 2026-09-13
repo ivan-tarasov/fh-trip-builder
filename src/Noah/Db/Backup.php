@@ -72,7 +72,7 @@ final class Backup extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $dump = new Dump($binary, $database);
+        $dump = new Dump($binary, $database, Dump::supportsColumnStatistics($binary));
         $path = $this->destination($dump->fileName(new DateTimeImmutable()->format('Y-m-d-His')));
 
         try {

@@ -70,6 +70,41 @@ final class DumpTest extends TestCase
     }
 
     /**
+     * A MySQL 8 client reads a histogram out of
+     * `information_schema.COLUMN_STATISTICS` before each table, and MariaDB has
+     * no such table -- so the dump dies on the first one. CI's MariaDB job did
+     * exactly that the first time `db:backup` ever ran there.
+     */
+    public function testTheHistogramQueryIsTurnedOffWhereTheClientHasOne(): void
+    {
+        $arguments = new Dump('mysqldump', 'trip-builder', true)->arguments('/tmp/x.cnf');
+
+        self::assertContains('--column-statistics=0', $arguments);
+        self::assertSame('trip-builder', $arguments[array_key_last($arguments)]);
+    }
+
+    /**
+     * And is absent otherwise, because MariaDB's own client refuses an option
+     * it has no use for -- turning one dead dump into another.
+     */
+    public function testTheOptionIsAbsentWhereTheClientDoesNotKnowIt(): void
+    {
+        self::assertNotContains(
+            '--column-statistics=0',
+            new Dump('mysqldump', 'trip-builder')->arguments('/tmp/x.cnf'),
+        );
+    }
+
+    /**
+     * The answer comes from the binary and not from a version guess: a host can
+     * pair either client with either server, and the pairing is the problem.
+     */
+    public function testAMissingBinarySupportsNothing(): void
+    {
+        self::assertFalse(Dump::supportsColumnStatistics('mysqldump-that-is-not-installed'));
+    }
+
+    /**
      * A `#` in a password starts a comment in this file format, and everything
      * after it is silently dropped — which surfaces as "access denied" and
      * sends you looking at the wrong thing entirely.

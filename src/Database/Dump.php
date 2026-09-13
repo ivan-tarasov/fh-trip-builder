@@ -37,9 +37,15 @@ final readonly class Dump
         '--default-character-set=utf8mb4',
     ];
 
+    /**
+     * `$columnStatistics` says whether this client understands
+     * `--column-statistics`; see supportsColumnStatistics(). Defaulted off
+     * because omitting the option is the shape that every client accepts.
+     */
     public function __construct(
         private string $binary,
         private string $database,
+        private bool $columnStatistics = false,
     ) {}
 
     /**
@@ -55,6 +61,7 @@ final readonly class Dump
             // one and it refuses to start.
             '--defaults-extra-file=' . $defaultsFile,
             ...self::OPTIONS,
+            ...($this->columnStatistics ? ['--column-statistics=0'] : []),
             $this->database,
         ];
     }
@@ -92,6 +99,29 @@ final readonly class Dump
         }
 
         return $path;
+    }
+
+    /**
+     * Whether this `mysqldump` knows `--column-statistics`, which decides
+     * whether the option can be passed at all.
+     *
+     * A MySQL 8 client asks `information_schema.COLUMN_STATISTICS` for a
+     * histogram before it dumps each table. MariaDB has no such table, so the
+     * dump dies on the first one with `Unknown table 'COLUMN_STATISTICS'` --
+     * which is what CI's MariaDB job did on 2026-09-13, having never run
+     * `db:backup` before (E10.1, #148). `--column-statistics=0` turns the
+     * question off, and MariaDB's own client refuses the option because it
+     * never asked.
+     *
+     * So the binary is asked what it supports rather than guessed at from the
+     * server: a host can pair either client with either server, and the pairing
+     * is the whole problem.
+     */
+    public static function supportsColumnStatistics(string $binary): bool
+    {
+        $help = shell_exec(sprintf('%s --help 2>/dev/null', escapeshellarg($binary)));
+
+        return is_string($help) && str_contains($help, '--column-statistics');
     }
 
     public static function isAvailable(string $binary): bool
