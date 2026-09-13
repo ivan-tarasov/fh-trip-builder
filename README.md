@@ -246,13 +246,35 @@ the schedule lives in this repository — see below.
 ```
 
 ```php
-use TripBuilder\Frequency;
+use TripBuilder\Cron;
 
 return [
-    ['command' => 'currency:rates',   'every' => Frequency::Daily, 'at' => '03:00'],
-    ['command' => 'db:prune --force', 'every' => Frequency::Daily, 'at' => '03:15'],
+    [
+        Cron::MINUTE  => 0,
+        Cron::HOUR    => 3,
+        Cron::DAY     => Cron::EVERY,
+        Cron::MONTH   => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
+        'command'     => 'currency:rates',
+    ],
 ];
 ```
+
+Five named fields — minute, hour, day, month, weekday — the same five in the
+same order as cPanel's editor, so the two can be read against each other
+without counting positions — and in crontab order, when before what, so an
+entry reads down the page the way a crontab line reads across it. All five are
+required and none defaults to `*`: a
+schedule where forgetting the day field turns a monthly task into a daily one
+is a schedule that reads correctly while doing something else. `*`, a number, `a-b`, a
+comma-separated list, and any of those with `/step`. Names (`MON`), the
+`@daily` aliases and the `? L W #` extensions are not implemented, and a
+schedule using one is refused when it loads rather than quietly read as
+something else.
+
+**A missed occurrence is caught up rather than skipped**, which is the one way
+this differs from a real crontab: a tick lost to a deploy or a reboot is picked
+up on the next one instead of costing a day.
 
 Before this the crontab was the only record of what this application runs
 unattended, so a rebuilt server or a reset hosting panel took the schedule with

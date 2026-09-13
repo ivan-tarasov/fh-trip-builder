@@ -1,6 +1,6 @@
 <?php
 
-use TripBuilder\Frequency;
+use TripBuilder\Cron;
 
 return [
 
@@ -24,8 +24,31 @@ return [
     | reset panel took the schedule with it and nothing here said what had been
     | lost (E16, #167). Adding a command is now a pull request.
     |
-    | `every` is a Frequency and `at` is the time it wants: `03:00` for a daily
-    | task, `:20` for an hourly one. **In UTC**, which the entry points pin and
+    | Five named fields -- minute, hour, day, month, weekday -- the same five in
+    | the same order as cPanel's editor, so the two can be read against each
+    | other without counting positions. Each takes `*`, a number, `a-b`, a
+    | comma-separated list, or any of those with `/step`.
+    |
+    | Written in crontab order, when before what, so an entry reads down the page
+    | the way a crontab line reads across it. `command` is last and is a plain
+    | string rather than a constant, because it is the one thing here that is
+    | not one of the five fields -- the difference marks where the schedule
+    | stops and the work begins.
+    |
+    | `Cron::MINUTE` and friends rather than `'minute'`: a mistyped constant is
+    | a fatal error on the line that wrote it. All five are required and none
+    | defaults to `*`, because a schedule where forgetting the day field turns a
+    | monthly task into a daily one is a schedule that reads correctly while
+    | doing something else.
+    |
+    | Crontab and not a vocabulary of this project's own, because it is the
+    | notation everybody already reads and a second spelling of the same idea is
+    | a second thing to learn. Names (`MON`), the `@daily` aliases and the
+    | `? L W #` extensions are not implemented, and a schedule using one is
+    | refused when it loads rather than quietly read as something else.
+    |
+    | A missed occurrence is caught up on the next tick rather than skipped --
+    | so this is a crontab's notation with a crontab's weakness removed. **In UTC**, which the entry points pin and
     | which is not the server's own clock -- 03:00 here is 23:00 the evening
     | before in Eastern (E17, #171). The crontab line fires on the server's wall
     | clock; what it fires is judged on this one, and the fifteen-minute tick
@@ -42,9 +65,12 @@ return [
     [
         // Exchange rates for the currency switcher. Published once a day, so
         // reading them more often than that is asking the same question again.
+        Cron::MINUTE => 0,
+        Cron::HOUR => 3,
+        Cron::DAY => Cron::EVERY,
+        Cron::MONTH => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
         'command' => 'currency:rates',
-        'every' => Frequency::Daily,
-        'at' => '03:00',
     ],
     [
         // The retention policy (E9, #146): bookings whose flight left more than
@@ -55,8 +81,11 @@ return [
         // cron log nobody reads and delete nothing. The deploy runbook has the
         // operator run it dry once and read that list before this line is ever
         // enabled -- that is the only time the first sweep is visible.
+        Cron::MINUTE => 15,
+        Cron::HOUR => 3,
+        Cron::DAY => Cron::EVERY,
+        Cron::MONTH => Cron::EVERY,
+        Cron::WEEKDAY => Cron::EVERY,
         'command' => 'db:prune --force',
-        'every' => Frequency::Daily,
-        'at' => '03:15',
     ],
 ];
