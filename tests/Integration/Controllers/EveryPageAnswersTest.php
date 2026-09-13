@@ -135,7 +135,21 @@ final class EveryPageAnswersTest extends IntegrationTestCase
         // page rather than a bare status is the whole of what #165 was about.
         $redirect = $expected->value >= 300 && $expected->value < 400;
 
-        if ($redirect || in_array($controller, self::PAYLOAD, true)) {
+        if ($redirect) {
+            // And it should have no document at all. `Location` is the whole
+            // answer; drawing a page to go with it cost a full layout render on
+            // every bounce, of which there are eighteen (E26, #199).
+            if (trim($answer['body']) !== '') {
+                $complaints[] = sprintf(
+                    'a redirect carrying %s bytes of body nobody will see',
+                    number_format(strlen($answer['body'])),
+                );
+            }
+
+            return $complaints;
+        }
+
+        if (in_array($controller, self::PAYLOAD, true)) {
             return $complaints;
         }
 

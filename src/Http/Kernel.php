@@ -92,9 +92,22 @@ final readonly class Kernel
      * Page controllers render the whole document themselves, because their
      * templates extend `layout.html.twig`. One that returns a body fragment
      * instead -- the search redirect guard -- is wrapped here.
+     *
+     * Nothing is not a fragment. A controller that emitted no bytes meant to
+     * emit none: `bounce()` sets `Location` and a 3xx and returns, and there is
+     * no page to put inside a layout. Wrapping it anyway drew the whole
+     * document -- the currency table, the footer's git information, the
+     * navigation -- and answered a redirect with 47 KB that no client displays
+     * (E26, #199). Eighteen call sites do this, and the canonical-slug
+     * redirects on `/airline`, `/airport` and `/airside` are the ones a crawler
+     * triggers most.
      */
     private static function wrapped(string $body): string
     {
+        if (trim($body) === '') {
+            return '';
+        }
+
         if (str_starts_with(ltrim($body), '<!DOCTYPE')) {
             return $body;
         }
