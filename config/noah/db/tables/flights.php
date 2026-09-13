@@ -27,6 +27,14 @@ return [
         // route index above can't seek it by date; this one lets such legs seek
         // on (departure_airport, departure_time).
         ['name' => 'departure_airport_time', 'columns' => ['departure_airport', 'departure_time']],
+        // The same shape on the UTC column, for "upcoming from here".
+        //
+        // `departure_airport_time` cannot serve it: its second column is the
+        // local time, so a range on `departure_utc` is not seekable through it
+        // and the optimizer falls to another index entirely. Measured on the
+        // airline page: 761 rows examined became 3,313 and 1.06ms became
+        // 3.95ms, until this existed (E20, #180).
+        ['name' => 'departure_airport_utc', 'columns' => ['departure_airport', 'departure_utc']],
         ['name' => 'airline_number_departure_time', 'columns' => ['airline', 'number', 'departure_time']],
         // The maintenance commands work by distance band -- flights:realign
         // counts and deletes legs no aircraft can fly, and realign, reprice and
@@ -112,6 +120,37 @@ return [
             'nullable' => false,
             'auto_inc' => false,
             'comment' => false,
+        ],
+        [
+            // The same moment as `departure_time`, in UTC.
+            //
+            // `departure_time` is local at the departure airport -- 08:00 at
+            // YUL is 08:00 there, which is what a ticket says and what the page
+            // prints. Ten queries compared it against `NOW()` to ask "has it
+            // left yet", which is a wall clock against an instant: offsets in
+            // the seeded data run -11 to +13, so the answer was out by up to
+            // thirteen hours (E20, #180).
+            //
+            // A column and not a shift in the query. `NOW() + INTERVAL
+            // (o.timezone * 60) MINUTE` is correct and is not sargable:
+            // measured at 208,878 rows examined against 36, a scan where there
+            // was a seek, on the table that drives search.
+            //
+            // Both columns stay. They answer different questions -- "flights on
+            // the 20th" means the 20th *there*, and that is the hot path.
+            //
+            // Nullable, and that is not laziness. A flight whose departure
+            // airport has no row has no offset to convert with, and null is the
+            // true answer -- a guess would be a wrong instant that reads like a
+            // right one. `>= NOW()` excludes it either way, which is correct:
+            // nothing can say whether it has left.
+            'name' => 'departure_utc',
+            'type' => 'datetime',
+            'length' => null,
+            'default' => null,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => 'departure_time as a UTC instant, for whether it has left yet',
         ],
         [
             'name' => 'arrival_airport',

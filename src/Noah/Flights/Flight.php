@@ -6,6 +6,11 @@ namespace TripBuilder\Noah\Flights;
 
 /**
  * A generated flight row, ready to insert into the `flights` table.
+ *
+ * `departureTime` is local at the departure airport -- what a ticket says --
+ * and `departureUtc` is the same moment as an instant. Both, because they are
+ * asked different questions: "flights on the 20th" means the 20th *there*, and
+ * "has it left yet" cannot be answered by a wall clock (E20, #180).
  */
 final readonly class Flight
 {
@@ -16,6 +21,7 @@ final readonly class Flight
         public ?string $fareBrand,
         public string $departureAirport,
         public string $departureTime,
+        public string $departureUtc,
         public string $arrivalAirport,
         public string $arrivalTime,
         public int $distance,
@@ -35,7 +41,7 @@ final readonly class Flight
     {
         return [
             'airline', 'number', 'aircraft', 'fare_brand', 'departure_airport',
-            'departure_time', 'arrival_airport', 'arrival_time', 'distance',
+            'departure_time', 'departure_utc', 'arrival_airport', 'arrival_time', 'distance',
             'duration', 'cabins', 'price_base', 'price_tax', 'rating',
         ];
     }
@@ -54,6 +60,7 @@ final readonly class Flight
             $this->fareBrand,
             $this->departureAirport,
             $this->departureTime,
+            $this->departureUtc,
             $this->arrivalAirport,
             $this->arrivalTime,
             $this->distance,

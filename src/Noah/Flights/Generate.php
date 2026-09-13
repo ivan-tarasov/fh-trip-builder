@@ -230,6 +230,10 @@ class Generate extends AbstractCommand
                 fareBrand: $brandCodes[Helper::pickWeighted($brandCumulative, $brandTotal)],
                 departureAirport: $departAirport['code'],
                 departureTime: $departureDateTime,
+                departureUtc: LegBuilder::departureUtc(
+                    $departureDateTime,
+                    (string) $departAirport['timezone_name'],
+                ),
                 arrivalAirport: $arriveAirport['code'],
                 arrivalTime: LegBuilder::arrivalTime(
                     $departureDateTime,

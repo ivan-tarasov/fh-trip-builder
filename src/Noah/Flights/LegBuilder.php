@@ -146,6 +146,27 @@ final class LegBuilder
     }
 
     /**
+     * A local departure time as a UTC instant.
+     *
+     * The generator already holds the airport's zone -- it uses it to cross
+     * timezones properly when working out the arrival -- so the conversion
+     * costs nothing here and saves every later query from doing it per row,
+     * which measured as a table scan where there had been a seek (E20, #180).
+     *
+     * `DateTimeZone` by name rather than the numeric offset in `airports`,
+     * because a name knows about daylight saving and a number does not: a
+     * flight leaving Montreal in January is -05:00 and one in July is -04:00.
+     *
+     * @throws Exception when the zone or the departure stamp will not parse
+     */
+    public static function departureUtc(string $departureTime, string $departureZone): string
+    {
+        return new DateTimeImmutable($departureTime, new DateTimeZone($departureZone))
+            ->setTimezone(new DateTimeZone('UTC'))
+            ->format('Y-m-d H:i:s');
+    }
+
+    /**
      * Arrival time for a leg, as 'Y-m-d H:i'.
      *
      * Crosses timezones properly rather than adding minutes to a local clock:

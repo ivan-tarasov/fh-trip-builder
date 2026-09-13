@@ -118,8 +118,8 @@ final readonly class AirlineRepository
             . ' FROM ' . Table::Flights->value . ' f'
             . ' JOIN ' . Table::Aircraft->value . ' ac ON ac.code = f.aircraft'
             . ' WHERE f.airline = ? AND f.departure_airport IN (' . self::placeholders($hubs) . ')'
-            . ' AND f.departure_time >= NOW()'
-            . ' AND f.departure_time < NOW() + INTERVAL ' . self::WINDOW_DAYS . ' DAY',
+            . ' AND f.departure_utc >= NOW()'
+            . ' AND f.departure_utc < NOW() + INTERVAL ' . self::WINDOW_DAYS . ' DAY',
             [strtoupper($code), ...$hubs],
         );
 
@@ -160,8 +160,8 @@ final readonly class AirlineRepository
             'SELECT ac.title, ac.manufacturer, ac.is_widebody, COUNT(*) AS flights'
             . ' FROM ' . Table::Flights->value . ' f'
             . ' JOIN ' . Table::Aircraft->value . ' ac ON ac.code = f.aircraft'
-            . ' WHERE f.airline = ? AND f.departure_time >= NOW()'
-            . ' AND f.departure_time < NOW() + INTERVAL ' . self::WINDOW_DAYS . ' DAY'
+            . ' WHERE f.airline = ? AND f.departure_utc >= NOW()'
+            . ' AND f.departure_utc < NOW() + INTERVAL ' . self::WINDOW_DAYS . ' DAY'
             . ' GROUP BY ac.title, ac.manufacturer, ac.is_widebody'
             . ' ORDER BY flights DESC, ac.title ASC'
             . ' LIMIT ' . max(1, $limit),
@@ -199,8 +199,8 @@ final readonly class AirlineRepository
             . ' FROM ' . Table::Flights->value . ' f'
             . ' JOIN ' . Table::Airlines->value . ' al ON al.code = f.airline AND' . self::ONLY_SELLABLE
             . ' WHERE f.departure_airport IN (' . self::placeholders($hubs) . ')'
-            . ' AND f.departure_time >= NOW()'
-            . ' AND f.departure_time < NOW() + INTERVAL ' . self::WINDOW_DAYS . ' DAY'
+            . ' AND f.departure_utc >= NOW()'
+            . ' AND f.departure_utc < NOW() + INTERVAL ' . self::WINDOW_DAYS . ' DAY'
             . ' AND al.code <> ?'
             . ' GROUP BY al.code, al.title'
             . ' ORDER BY flights DESC, al.title ASC'

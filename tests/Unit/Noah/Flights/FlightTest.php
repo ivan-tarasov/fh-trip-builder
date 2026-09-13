@@ -18,6 +18,7 @@ final class FlightTest extends TestCase
             fareBrand: 'LT',
             departureAirport: 'YUL',
             departureTime: '2026-09-15 06:00:00',
+            departureUtc: '2026-09-15 10:00:00',
             arrivalAirport: 'YYZ',
             arrivalTime: '2026-09-15 07:15:00',
             distance: 504,
