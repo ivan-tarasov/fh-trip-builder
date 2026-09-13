@@ -247,15 +247,16 @@ the schedule lives in this repository — see below.
 
 ```php
 use TripBuilder\Cron;
+use TripBuilder\Schedule;
 
 return [
     [
-        Cron::MINUTE  => 0,
-        Cron::HOUR    => 3,
-        Cron::DAY     => Cron::EVERY,
-        Cron::MONTH   => Cron::EVERY,
-        Cron::WEEKDAY => Cron::EVERY,
-        'command'     => 'currency:rates',
+        Cron::MINUTE      => 0,
+        Cron::HOUR        => 3,
+        Cron::DAY         => Cron::EVERY,
+        Cron::MONTH       => Cron::EVERY,
+        Cron::WEEKDAY     => Cron::EVERY,
+        Schedule::COMMAND => 'currency:rates',
     ],
 ];
 ```
@@ -266,7 +267,11 @@ without counting positions — and in crontab order, when before what, so an
 entry reads down the page the way a crontab line reads across it. All five are
 required and none defaults to `*`: a
 schedule where forgetting the day field turns a monthly task into a daily one
-is a schedule that reads correctly while doing something else. `*`, a number, `a-b`, a
+is a schedule that reads correctly while doing something else.
+
+Constants rather than strings throughout — a mistyped `Cron::MINTUE` is a fatal
+error on the line that wrote it, where a mistyped `'mintue'` is a missing key
+reported from somewhere else. `*`, a number, `a-b`, a
 comma-separated list, and any of those with `/step`. Names (`MON`), the
 `@daily` aliases and the `? L W #` extensions are not implemented, and a
 schedule using one is refused when it loads rather than quietly read as

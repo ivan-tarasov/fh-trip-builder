@@ -23,6 +23,19 @@ use RuntimeException;
 final readonly class Schedule
 {
     /**
+     * What to run, as a key in the config.
+     *
+     * A constant like `Cron::MINUTE` and its siblings, and for the same reason:
+     * a mistyped `Schedule::COMMNAD` is a fatal error on the line that wrote
+     * it, while a mistyped `'commnad'` is a missing key reported from
+     * somewhere else. Both are caught; only one names the line.
+     *
+     * On `Schedule` and not on `Cron`, because the other five describe *when*
+     * and this one describes *what*.
+     */
+    public const string COMMAND = 'command';
+
+    /**
      * How far back `due()` will look for a missed occurrence when a command has
      * never run.
      *
@@ -51,11 +64,11 @@ final readonly class Schedule
         $tasks = [];
 
         foreach ($rows as $row) {
-            if (!is_array($row) || !isset($row['command'])) {
-                throw new RuntimeException('Every scheduled task needs a `command`.');
+            if (!is_array($row) || !isset($row[self::COMMAND])) {
+                throw new RuntimeException('Every scheduled task needs a `' . self::COMMAND . '`.');
             }
 
-            $command = (string) $row['command'];
+            $command = (string) $row[self::COMMAND];
 
             $tasks[] = [
                 'command' => $command,

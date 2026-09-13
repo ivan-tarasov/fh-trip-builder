@@ -1,6 +1,7 @@
 <?php
 
 use TripBuilder\Cron;
+use TripBuilder\Schedule;
 
 return [
 
@@ -30,10 +31,11 @@ return [
     | comma-separated list, or any of those with `/step`.
     |
     | Written in crontab order, when before what, so an entry reads down the page
-    | the way a crontab line reads across it. `command` is last and is a plain
-    | string rather than a constant, because it is the one thing here that is
-    | not one of the five fields -- the difference marks where the schedule
-    | stops and the work begins.
+    | the way a crontab line reads across it.
+    |
+    | `Schedule::COMMAND` and not `Cron::COMMAND`: the five fields describe when
+    | and this one describes what, and they come from the two classes that own
+    | those questions.
     |
     | `Cron::MINUTE` and friends rather than `'minute'`: a mistyped constant is
     | a fatal error on the line that wrote it. All five are required and none
@@ -70,7 +72,7 @@ return [
         Cron::DAY => Cron::EVERY,
         Cron::MONTH => Cron::EVERY,
         Cron::WEEKDAY => Cron::EVERY,
-        'command' => 'currency:rates',
+        Schedule::COMMAND => 'currency:rates',
     ],
     [
         // The retention policy (E9, #146): bookings whose flight left more than
@@ -86,6 +88,6 @@ return [
         Cron::DAY => Cron::EVERY,
         Cron::MONTH => Cron::EVERY,
         Cron::WEEKDAY => Cron::EVERY,
-        'command' => 'db:prune --force',
+        Schedule::COMMAND => 'db:prune --force',
     ],
 ];

@@ -181,7 +181,7 @@ final class ScheduleTest extends TestCase
             Cron::DAY => $day,
             Cron::MONTH => $month,
             Cron::WEEKDAY => $weekday,
-            'command' => $command,
+            Schedule::COMMAND => $command,
         ];
     }
 
@@ -356,7 +356,7 @@ final class ScheduleTest extends TestCase
     private static function fixture(array $tasks): string
     {
         $path = sys_get_temp_dir() . '/schedule-' . uniqid() . '.php';
-        $body = "<?php\n\nuse TripBuilder\\Cron;\n\nreturn [\n";
+        $body = "<?php\n\nuse TripBuilder\\Cron;\nuse TripBuilder\\Schedule;\n\nreturn [\n";
 
         foreach ($tasks as $task) {
             $body .= '    [';
