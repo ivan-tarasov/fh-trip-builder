@@ -111,6 +111,76 @@ final class RequestTest extends TestCase
     }
 
     /**
+     * `Authorization` reaches PHP only as a rewrite's environment variable,
+     * and an internal redirect prefixes it.
+     *
+     * Apache hands the header to CGI/FPM only when told to, so `.htaccess`
+     * copies it into `HTTP_AUTHORIZATION` with a RewriteRule — and the
+     * front-controller rewrite that follows turns that into
+     * `REDIRECT_HTTP_AUTHORIZATION`. Until this read both, every authenticated
+     * call to /api/* answered 401 for every client (E28, #207).
+     */
+    public function testCaptureReadsAHeaderARewriteHadToPutThere(): void
+    {
+        $server = $_SERVER;
+
+        try {
+            $_SERVER = [
+                'REQUEST_METHOD' => 'POST',
+                'REQUEST_URI' => '/api/airports',
+                'REDIRECT_HTTP_AUTHORIZATION' => 'Bearer from-the-rewrite',
+            ];
+
+            self::assertSame('Bearer from-the-rewrite', Request::capture()->header('Authorization'));
+        } finally {
+            $_SERVER = $server;
+        }
+    }
+
+    /**
+     * Two rewrites means two prefixes, and this deployment produces both.
+     */
+    public function testAHeaderSurvivesMoreThanOneRedirect(): void
+    {
+        $server = $_SERVER;
+
+        try {
+            $_SERVER = [
+                'REQUEST_METHOD' => 'POST',
+                'REQUEST_URI' => '/api/airports',
+                'REDIRECT_REDIRECT_HTTP_AUTHORIZATION' => 'Bearer twice-over',
+            ];
+
+            self::assertSame('Bearer twice-over', Request::capture()->header('Authorization'));
+        } finally {
+            $_SERVER = $server;
+        }
+    }
+
+    /**
+     * The header as it arrived wins over the copy a rewrite left behind. They
+     * hold the same value in practice; the rule is here so that "in practice"
+     * is not what it rests on.
+     */
+    public function testTheUnprefixedSpellingWins(): void
+    {
+        $server = $_SERVER;
+
+        try {
+            $_SERVER = [
+                'REQUEST_METHOD' => 'GET',
+                'REQUEST_URI' => '/api/airports',
+                'REDIRECT_HTTP_AUTHORIZATION' => 'Bearer stale',
+                'HTTP_AUTHORIZATION' => 'Bearer real',
+            ];
+
+            self::assertSame('Bearer real', Request::capture()->header('Authorization'));
+        } finally {
+            $_SERVER = $server;
+        }
+    }
+
+    /**
      * @param array<string, string> $headers
      */
     private static function from(array $headers, string $remoteAddress): Request
