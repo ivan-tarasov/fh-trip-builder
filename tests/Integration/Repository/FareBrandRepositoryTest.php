@@ -60,7 +60,7 @@ final class FareBrandRepositoryTest extends IntegrationTestCase
         $known = array_keys(new FareBrandRepository($this->connection())->all());
 
         foreach ($result['rows'] as $itinerary) {
-            $ids = array_map(static fn(array $leg): int => (int) $leg['id'], $itinerary['legs']);
+            $ids = array_values(array_map(static fn(array $leg): int => (int) $leg['id'], $itinerary['legs']));
             $codes = $flights->fareBrandsByIds($ids);
 
             self::assertCount(count($ids), $codes, 'A leg came back without a fare brand column.');
@@ -88,7 +88,7 @@ final class FareBrandRepositoryTest extends IntegrationTestCase
                 continue;
             }
 
-            $ids = array_map(static fn(array $leg): int => (int) $leg['id'], $itinerary['legs']);
+            $ids = array_values(array_map(static fn(array $leg): int => (int) $leg['id'], $itinerary['legs']));
             $codes = $flights->fareBrandsByIds($ids);
             $journey = $brands->rulesFor($codes);
 

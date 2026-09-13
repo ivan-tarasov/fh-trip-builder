@@ -209,11 +209,11 @@ class Generate extends AbstractCommand
             // Render departure date and time (UNIX timestamps for random day)
             $departureDateTime = date(
                 'Y-m-d H:i:s',
-                strtotime(
+                (int) strtotime(
                     sprintf('+ %d days', Helper::random(self::DATE_ADD_DAYS)),
                     rand(
-                        strtotime(date('Y-m-d') . ' 00:00:01'),
-                        strtotime(date('Y-m-d') . ' 23:59:59'),
+                        (int) strtotime(date('Y-m-d') . ' 00:00:01'),
+                        (int) strtotime(date('Y-m-d') . ' 23:59:59'),
                     ),
                 ),
             );

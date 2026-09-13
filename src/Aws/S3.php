@@ -182,6 +182,11 @@ final readonly class S3 implements ObjectStore
     }
 
     /**
+     * `non-empty-string`, because curl reads an empty CURLOPT_CUSTOMREQUEST as
+     * "no override" and would send a GET -- so an empty method here is not a
+     * failed request, it is a different one.
+     *
+     * @param non-empty-string $method
      * @param array<string, string> $headers
      * @param array<string, string> $query
      * @return array{0: int, 1: string}

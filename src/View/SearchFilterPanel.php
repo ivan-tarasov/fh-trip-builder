@@ -104,10 +104,12 @@ final readonly class SearchFilterPanel
         // survives the cast; bounds needs the round trip.
         $bounds = (array) json_decode((string) json_encode($this->data->bounds), true);
 
-        $codes = static fn(string $dimension): array => array_map(
+        // array_values, because these index the options as offered and a map
+        // with holes in it is not the list the builders below take.
+        $codes = static fn(string $dimension): array => array_values(array_map(
             strval(...),
             (array) ($available[$dimension] ?? []),
-        );
+        ));
 
         return [
             'stops' => $this->stopOptions($codes(FlightFilters::DIM_STOPS), $this->chosen),

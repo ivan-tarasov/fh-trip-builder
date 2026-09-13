@@ -76,6 +76,7 @@ final class SecurityHeadersTest extends TestCase
             $found,
         );
 
+        self::assertArrayHasKey(1, $found, 'HSTS should carry a max-age');
         self::assertLessThanOrEqual(
             86400,
             (int) $found[1],

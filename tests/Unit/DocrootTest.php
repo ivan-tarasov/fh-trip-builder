@@ -53,7 +53,7 @@ final class DocrootTest extends TestCase
     public function testTheDocrootHoldsOnlyPages(): void
     {
         $found = array_values(array_filter(
-            (array) scandir(Helper::getPublicDir()),
+            scandir(Helper::getPublicDir()) ?: [],
             static fn(string $entry): bool => !str_starts_with($entry, '.'),
         ));
 

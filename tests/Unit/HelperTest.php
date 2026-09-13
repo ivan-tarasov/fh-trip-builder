@@ -344,7 +344,7 @@ final class HelperTest extends TestCase
         $thisYear = date('Y');
 
         self::assertSame(
-            date('D, j M', strtotime($thisYear . '-06-01')),
+            date('D, j M', (int) strtotime($thisYear . '-06-01')),
             Helper::dateLabel($thisYear . '-06-01 09:00:00', 'D, j M', 'D, j M Y'),
         );
         self::assertStringEndsWith(

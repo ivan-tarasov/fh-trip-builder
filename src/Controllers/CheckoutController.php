@@ -180,7 +180,7 @@ class CheckoutController extends AbstractController
         $reference = strtoupper($this->request->query->str(self::GET_REFERENCE));
 
         $booking = preg_match('/^[A-Z0-9]{6}$/', $reference) === 1
-            ? new BookingRepository($this->connection())->findByReference($reference, session_id())
+            ? new BookingRepository($this->connection())->findByReference($reference, $this->sessionId())
             : null;
 
         if ($booking === null) {
@@ -276,7 +276,7 @@ class CheckoutController extends AbstractController
      * @param array<string, mixed> $itinerary
      * @throws Exception
      */
-    private function asObject(array $itinerary): object
+    private function asObject(array $itinerary): stdClass
     {
         $object = json_decode((string) json_encode($itinerary), false);
 
@@ -364,7 +364,7 @@ class CheckoutController extends AbstractController
 
         try {
             $bookingId = $bookings->create([
-                'session_id' => session_id(),
+                'session_id' => $this->sessionId(),
                 'reference' => $reference,
                 'status' => BookingStatus::Confirmed->value,
                 'departure_time' => $outbound[0]['depart']['date_time'] ?? null,

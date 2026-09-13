@@ -283,8 +283,13 @@ final class Import extends AbstractCommand
     /**
      * Every `.md` file in one directory, parsed and keyed by slug.
      *
-     * @param callable(string): array<string, mixed> $parse
-     * @return array<string, array<string, mixed>>
+     * Generic over what the parser returns, so the caller keeps the shape it
+     * asked for. Without the template every post is `array<string, mixed>`
+     * from here on, and nothing downstream can say which keys it has.
+     *
+     * @template TPost of array<string, mixed>
+     * @param callable(string): TPost $parse
+     * @return array<string, TPost>
      */
     private static function read(string $directory, callable $parse): array
     {
@@ -413,7 +418,7 @@ final class Import extends AbstractCommand
      * matters: an import that cannot resize must still record sizes, or a
      * machine without the extension would write rows the page then cannot use.
      *
-     * @param array{hero: string|null, body: string, ...} $post
+     * @param array{title: string, published_at: string, author: string, summary: string, hero: ?string, hero_alt: ?string, tags: array<string, string>, body: string} $post
      * @return array<string, array{width: int, height: int}>
      */
     private static function imageSizes(array $post): array
@@ -468,7 +473,7 @@ final class Import extends AbstractCommand
      * and an author's portrait are stored under the name they already have, at
      * one size, because the markup asks for them by that name.
      *
-     * @param array{hero: string|null, body: string, ...} $post
+     * @param array{title: string, published_at: string, author: string, summary: string, hero: ?string, hero_alt: ?string, tags: array<string, string>, body: string} $post
      * @return list<string>
      */
     private static function uploadImages(PostImageUploader $uploader, array $post): array

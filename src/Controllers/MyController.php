@@ -125,7 +125,7 @@ class MyController extends AbstractController
         $past = [];
         $cancelled = [];
 
-        $rows = new BookingRepository($this->connection())->forSession(session_id());
+        $rows = new BookingRepository($this->connection())->forSession($this->sessionId());
 
         // One count query for the page. The rows themselves are read without a
         // join, so without this a card could only ever name the lead.
@@ -287,7 +287,7 @@ class MyController extends AbstractController
             return null;
         }
 
-        return new BookingRepository($this->connection())->findForSession((int) $match[1], session_id());
+        return new BookingRepository($this->connection())->findForSession((int) $match[1], $this->sessionId());
     }
 
     /**
@@ -397,7 +397,7 @@ class MyController extends AbstractController
      * SearchUrl spells the cabin into every path it writes, economy included,
      * so this needs no special case for the default.
      */
-    private function searchUrl(object $itinerary, CabinClass $cabin): string
+    private function searchUrl(stdClass $itinerary, CabinClass $cabin): string
     {
         $segments = $itinerary->segments;
         $first = $segments[0];

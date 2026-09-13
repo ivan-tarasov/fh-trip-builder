@@ -167,8 +167,10 @@ final readonly class FlightRepository
         )));
 
         // Across every match, not just this page — otherwise page two would
-        // call its own first row the cheapest.
-        $cheapest = min(array_map(
+        // call its own first row the cheapest. Zero where there is nothing to
+        // compare: min() on an empty array is fatal, and a search with no
+        // matches has no cheapest.
+        $cheapest = $matching === [] ? 0.0 : min(array_map(
             // Without the offset: FlightFinder adds the other half itself, and
             // adding it twice would quote a round trip at double.
             fn(array $c): float => $this->displayTotal(
@@ -393,7 +395,7 @@ final readonly class FlightRepository
                 $highs[] = max($values);
             }
 
-            if ($lows === []) {
+            if ($lows === [] || $highs === []) {
                 continue;
             }
 
@@ -454,6 +456,12 @@ final readonly class FlightRepository
      */
     private function valueScores(array $candidates): array
     {
+        // Nothing to score against: min() and max() are fatal on an empty
+        // array, and a scale built from no candidates means nothing anyway.
+        if ($candidates === []) {
+            return [];
+        }
+
         $prices = [];
         $durations = [];
 

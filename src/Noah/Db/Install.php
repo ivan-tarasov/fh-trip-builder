@@ -368,13 +368,34 @@ class Install extends AbstractCommand
     {
         $directory = sprintf('%s/config/%s', Helper::getRootDir(), self::CONFIG_DIR_SEEDERS);
 
-        foreach (glob($directory . '/*.csv') as $file) {
+        foreach (glob($directory . '/*.csv') ?: [] as $file) {
             $table = pathinfo($file, PATHINFO_FILENAME);
             $action = sprintf(self::MESSAGE_SEEDING_TABLE, $table);
 
             $handle = fopen($file, 'r');
+
+            // An unreadable seed file used to reach fgetcsv() as `false` and
+            // seed the table with nothing, reporting "done".
+            if ($handle === false) {
+                $this->formatOutput($action, 'failed', 'danger');
+                $this->io->error(sprintf('Could not open `%s`.', $file));
+
+                continue;
+            }
+
             $columns = fgetcsv($handle, null, ',', '"', '');
-            $sql = $this->seedStatement($table, $columns);
+
+            // No header row is no columns, and an INSERT built from none of
+            // them is not a statement worth running.
+            if ($columns === false) {
+                fclose($handle);
+                $this->formatOutput($action, 'failed', 'danger');
+                $this->io->error(sprintf('`%s` has no header row.', $file));
+
+                continue;
+            }
+
+            $sql = $this->seedStatement($table, array_map(strval(...), $columns));
             $failed = false;
 
             while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {

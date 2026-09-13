@@ -485,6 +485,7 @@ final class HelpRenderTest extends TestCase
 
         preg_match('#<aside class="article__aside.*?</aside>#s', $html, $aside);
 
+        self::assertArrayHasKey(0, $aside, 'the siblings card should be findable');
         self::assertStringContainsString('fas ' . $group['icon'], $aside[0], 'the group icon should be drawn');
         self::assertStringContainsString(
             'help-group__icon--' . $group['accent'],

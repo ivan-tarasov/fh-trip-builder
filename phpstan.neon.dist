@@ -1,8 +1,17 @@
 includes:
     - phpstan-baseline.neon
+    # Teaches the analyser what an assertion proves: after
+    # `assertArrayHasKey(1, $match)` the offset is there, and after
+    # `assertNotNull()` the value is not null. Without it a test that checks a
+    # thing still reads as unchecked, and the only way past level 7 in the test
+    # suite is to stop asserting and start casting (E10.3, #150).
+    #
+    # `extension.neon` only, not its sibling `rules.neon`: those are opinions
+    # about how to write a test rather than checks on what it proves.
+    - vendor/phpstan/phpstan-phpunit/extension.neon
 
 parameters:
-    level: 6
+    level: 7
     tmpDir: cache/phpstan
     paths:
         - src
@@ -12,3 +21,13 @@ parameters:
     bootstrapFiles:
         - vendor/autoload.php
     treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # A test that asserts a constant still holds its value is "always true"
+        # to an analyser reading the constant, and is the only thing that fails
+        # when somebody edits it -- which is the one moment it exists for. The
+        # retention window, the crontab field order and PHP's own `(float)
+        # 'unknown'` are all tripwires of that shape.
+        -
+            identifier: staticMethod.alreadyNarrowedType
+            path: tests/*

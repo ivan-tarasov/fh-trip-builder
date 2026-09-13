@@ -21,7 +21,8 @@
         "phpstan/phpstan": "^2.0",
         "friendsofphp/php-cs-fixer": "^3.64",
         "rector/rector": "^2.0",
-        "php-parallel-lint/php-parallel-lint": "^1.4"
+        "php-parallel-lint/php-parallel-lint": "^1.4",
+        "phpstan/phpstan-phpunit": "^2.0"
     },
     "scripts": {
         "lint": "parallel-lint --exclude vendor src tests public/index.php noah",
