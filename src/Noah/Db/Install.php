@@ -8,7 +8,9 @@ use Exception;
 use PDO;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 use TripBuilder\Config;
@@ -32,14 +34,79 @@ class Install extends AbstractCommand
     /**
      * @throws Exception
      */
+    protected function configure(): void
+    {
+        $this->addOption(
+            'with-content',
+            null,
+            InputOption::VALUE_NONE,
+            'Also import the help articles and the Airside posts.',
+        );
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->createTables();
         $this->seedingTables();
 
+        if ($input->getOption('with-content') && !$this->importContent($output)) {
+            return Command::FAILURE;
+        }
+
         $this->io->newLine();
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * The content a fresh install otherwise leaves out.
+     *
+     * These used to be excluded because an install seeded articles from a CSV
+     * and would revert an edited one. A7 changed what the truth is: the files
+     * are, and `articles:import` deletes rows no file describes -- so
+     * re-running it cannot revert an edit, because edits are made in the files.
+     * The reason for the separation expired and the README had gone on saying
+     * it (E21, #182).
+     *
+     * Still a flag rather than the default. Somebody running `app:install` to
+     * add a missing column should not also get a content re-import.
+     *
+     * Articles before posts. Both stand alone today, but the posts are the half
+     * that reaches for S3, so a run that is going to fail on credentials fails
+     * after the cheap half has already succeeded.
+     *
+     * `flights:add` is not here: 200,000 rows and a judgement an installer
+     * cannot make -- the runbook warns against running it on a populated table.
+     * Neither is `db:prune`, because an installer must not delete.
+     */
+    private function importContent(OutputInterface $output): bool
+    {
+        $application = $this->getApplication();
+
+        if ($application === null) {
+            $this->io->error('No application to run the importers with.');
+
+            return false;
+        }
+
+        foreach (['articles:import', 'airside:import'] as $command) {
+            try {
+                // find()->run() and not Application::run(): `noah` never calls
+                // setAutoExit(false), so the application-level run would end
+                // the process here and the second importer would never happen.
+                if ($application->find($command)->run(new ArrayInput([]), $output) !== Command::SUCCESS) {
+                    $this->io->error($command . ' failed, so the install is incomplete.');
+
+                    return false;
+                }
+            } catch (Throwable $e) {
+                $this->io->error($command . ' threw: ' . $e->getMessage());
+
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

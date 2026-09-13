@@ -175,11 +175,20 @@ own command:
 ```bash
 php noah articles:import
 ```
-This is a separate step on purpose. `php noah install` seeds every table from a
-CSV and refreshes every column as it goes, so an article that had been edited
-would be reverted on the next install. Keeping articles out of the seeders means
-the install cannot overwrite them, and this command is the only thing that
-writes them.
+Or fold this and the Airside posts into the install:
+```bash
+php noah app:install --with-content
+```
+
+This used to be a separate step on purpose: articles were seeded from a CSV,
+and an install refreshed every column, so an edited article would be reverted.
+That is no longer how it works. The files are the whole truth now — the
+importer deletes rows no file describes, precisely so that a database which has
+been imported before and a fresh one cannot quietly disagree — and re-running it
+cannot revert an edit, because edits are made in the files.
+
+It is still a flag rather than the default. Running `app:install` to add a
+missing column should not also re-import the content.
 
 ### 7. Generate Flights
 To generate flight data, use the following command:
