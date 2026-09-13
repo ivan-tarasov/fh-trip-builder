@@ -18,7 +18,7 @@
                    value="{{ option.value }}"{{ option.checked ? ' checked' : '' }}{{ option.available ? '' : ' disabled' }} />
 
             {% if option.logo_url is defined and option.logo_url %}
-                <img src="{{ option.logo_url }}" class="filter-row__logo" alt="" />
+                <img src="{{ option.logo_url }}" class="filter-row__logo" width="24" height="24" alt="" />
             {% endif %}
             <span class="filter-row__text">
                 <span class="filter-row__label">

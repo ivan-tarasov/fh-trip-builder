@@ -24,10 +24,14 @@
                Lazy on purpose, and the opposite of the post's own hero: a card
                is below the fold on the hub and beside the fold at the foot of a
                post, so none of these is what a reader is waiting for. #}
+            {# 16:9 and not the file's own size: the CSS pins that ratio and
+               crops to it, and these attributes exist to hand the browser the
+               same ratio before the stylesheet has arrived. #}
             <img class="airside-card__image"
                  src="{{ post_image(post.hero) }}"
                  srcset="{{ post_srcset(post.hero) }}"
                  sizes="(min-width: 30em) 28rem, calc(100vw - 3rem)"
+                 width="1600" height="900"
                  alt="{{ post.hero_alt }}"
                  loading="lazy"
                  decoding="async" />

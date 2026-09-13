@@ -6,7 +6,7 @@
     <div class="col-auto">
         <div class="airline-logos{% if direction.carriers|length > 1 %} airline-logos--multi{% endif %}">
             {% for carrier in direction.carriers|slice(0, 3) %}
-                <img src="{{ carrier.logo_url }}" class="airline-logo rounded-circle"
+                <img src="{{ carrier.logo_url }}" class="airline-logo rounded-circle" width="40" height="40"
                      data-toggle="tooltip" data-placement="top" title="{{ carrier.name }}"
                      alt="{{ carrier.name }}" />
             {% endfor %}
