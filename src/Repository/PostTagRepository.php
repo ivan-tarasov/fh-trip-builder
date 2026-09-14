@@ -17,6 +17,10 @@ use TripBuilder\Database\Table;
  *
  * Not memoised, for the reason ArticleRepository gives at length: the importer
  * reads and writes in the same process.
+ *
+ * @phpstan-type TagNameRow array{name: string}
+ * @phpstan-type PostTagRow array{tag: string, name: string}
+ * @phpstan-type TagInUseRow array{slug: string, name: string, posts: int}
  */
 final readonly class PostTagRepository
 {
@@ -32,6 +36,7 @@ final readonly class PostTagRepository
      */
     public function name(string $tag, string $locale = self::DEFAULT_LOCALE): ?string
     {
+        /** @var TagNameRow|null $row */
         $row = $this->connection->fetchOne(
             'SELECT name FROM ' . Table::PostTagTranslations->value
             . ' WHERE slug = ? AND locale = ?',
@@ -52,6 +57,7 @@ final readonly class PostTagRepository
      */
     public function forPost(string $slug, string $locale = self::DEFAULT_LOCALE): array
     {
+        /** @var list<PostTagRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT m.tag, t.name FROM ' . Table::PostTagMap->value . ' m'
             . ' JOIN ' . Table::PostTagTranslations->value . ' t'
@@ -80,6 +86,7 @@ final readonly class PostTagRepository
      */
     public function inUse(string $locale = self::DEFAULT_LOCALE): array
     {
+        /** @var list<TagInUseRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT t.slug, t.name, COUNT(m.post) AS posts'
             . ' FROM ' . Table::PostTagTranslations->value . ' t'
