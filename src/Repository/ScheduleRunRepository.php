@@ -7,6 +7,11 @@ namespace TripBuilder\Repository;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
+/**
+ * @phpstan-type ScheduleRunRow array{
+ *     command: string, last_run_at: string, last_success_at: ?string, last_exit: int,
+ * }
+ */
 final readonly class ScheduleRunRepository
 {
     public function __construct(private Connection $connection) {}
@@ -20,7 +25,10 @@ final readonly class ScheduleRunRepository
     {
         $records = [];
 
-        foreach ($this->connection->fetchAll('SELECT * FROM ' . Table::ScheduleRuns->value) as $row) {
+        /** @var list<ScheduleRunRow> $rows */
+        $rows = $this->connection->fetchAll('SELECT * FROM ' . Table::ScheduleRuns->value);
+
+        foreach ($rows as $row) {
             $records[(string) $row['command']] = [
                 'last_run_at' => (string) $row['last_run_at'],
                 'last_success_at' => $row['last_success_at'] === null ? null : (string) $row['last_success_at'],
