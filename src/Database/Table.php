@@ -19,6 +19,7 @@ enum Table: string
     case ArticleTranslations = 'article_translations';
     case ArticleVotes = 'article_votes';
     case Bookings = 'bookings';
+    case BookingEvents = 'booking_events';
     case BookingPassengers = 'booking_passengers';
     case Countries = 'countries';
     case CurrencyRates = 'currency_rates';

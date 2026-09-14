@@ -29,10 +29,10 @@ use TripBuilder\Repository\SearchCandidateRepository;
  * Three sweeps, because they are one cron line and one decision -- how long
  * something is kept -- applied to three tables:
  *
- * **Bookings** past `BookingRepository::KEEP_DAYS_AFTER_DEPARTURE`, and the
- * passengers travelling on them. These hold an email, a phone number, names,
- * dates of birth and genders, and before this nothing in the codebase ever
- * deleted one: `db:clear` empties tables and is not a policy. For a site
+ * **Bookings** past `BookingRepository::KEEP_DAYS_AFTER_DEPARTURE`, the
+ * passengers travelling on them, and the log of what happened to each. These
+ * hold an email, a phone number, names, dates of birth and genders, and before
+ * this nothing in the codebase ever deleted one: `db:clear` empties tables and is not a policy. For a site
  * priced in CAD and addressed to Canadians that is PIPEDA scope, which asks
  * that personal information be kept only as long as it is needed (E9, #146).
  *
@@ -98,9 +98,9 @@ final class Prune extends AbstractCommand
 
         if (!$force) {
             $this->io->note(sprintf(
-                '%d booking(s) would be forgotten, with their passengers, and finished rate-limit '
-                . 'counters and %d stale search candidate(s) with them. Nothing was. Run again '
-                . 'with --force.',
+                '%d booking(s) would be forgotten, with their passengers and their log, and '
+                . 'finished rate-limit counters and %d stale search candidate(s) with them. '
+                . 'Nothing was. Run again with --force.',
                 count($expired),
                 $stale,
             ));
@@ -122,10 +122,11 @@ final class Prune extends AbstractCommand
         }
 
         $this->io->success(sprintf(
-            '%d booking(s) and %d passenger(s) forgotten, %d rate-limit counter(s) and %d search '
-            . 'candidate(s) dropped.',
+            '%d booking(s), %d passenger(s) and %d log line(s) forgotten, %d rate-limit '
+            . 'counter(s) and %d search candidate(s) dropped.',
             $removed['bookings'],
             $removed['passengers'],
+            $removed['events'],
             $counters,
             $stale,
         ));

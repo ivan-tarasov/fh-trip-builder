@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration\Repository;
 
+use TripBuilder\BookingActor;
+use TripBuilder\BookingEvent;
+use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -47,6 +50,11 @@ final class BookingRetentionTest extends IntegrationTestCase
 
         $this->connection()->execute(
             'DELETE FROM booking_passengers WHERE booking_id IN'
+            . ' (SELECT id FROM bookings WHERE session_id LIKE ?)',
+            [self::SESSION . '%'],
+        );
+        $this->connection()->execute(
+            'DELETE FROM booking_events WHERE booking_id IN'
             . ' (SELECT id FROM bookings WHERE session_id LIKE ?)',
             [self::SESSION . '%'],
         );
@@ -155,5 +163,27 @@ final class BookingRetentionTest extends IntegrationTestCase
 
         self::assertSame(1, $this->passengerCount($kept));
         self::assertSame(0, $this->passengerCount($gone));
+    }
+
+    /**
+     * The log goes with the booking.
+     *
+     * Its lines carry no personal data, but a log of a booking that has been
+     * forgotten is a record of a booking that has been forgotten -- which is the
+     * thing this sweep exists to prevent (A3.8, #233).
+     */
+    public function testForgettingRemovesTheLogToo(): void
+    {
+        [$bookings, $id] = $this->bookingDeparting(self::LONG_GONE);
+
+        new BookingEventRepository($this->connection())
+            ->record($id, BookingEvent::Booked, BookingActor::Visitor);
+
+        self::assertCount(1, new BookingEventRepository($this->connection())->forBooking($id));
+
+        $removed = $bookings->forgetDepartedBefore(self::CUTOFF);
+
+        self::assertGreaterThanOrEqual(1, $removed['events']);
+        self::assertSame([], new BookingEventRepository($this->connection())->forBooking($id));
     }
 }

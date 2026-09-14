@@ -228,7 +228,7 @@ final readonly class BookingRepository
      * that is gone -- which is the shape of a bug that keeps the personal
      * information and loses the thing that explains it.
      *
-     * @return array{bookings: int, passengers: int}
+     * @return array{bookings: int, passengers: int, events: int}
      */
     public function forgetDepartedBefore(string $cutoff): array
     {
@@ -239,11 +239,20 @@ final readonly class BookingRepository
             [$cutoff],
         );
 
+        // The log goes with it. The events carry no personal data, but a log of
+        // a booking that has been forgotten is a record of a booking that has
+        // been forgotten -- which is the thing this sweep exists to prevent
+        // (A3.8, #233).
+        $events = $this->connection->execute(
+            'DELETE FROM ' . Table::BookingEvents->value . ' WHERE booking_id IN (' . $expired . ')',
+            [$cutoff],
+        );
+
         $bookings = $this->connection->execute(
             'DELETE FROM ' . Table::Bookings->value . ' WHERE departure_time < ?',
             [$cutoff],
         );
 
-        return ['bookings' => $bookings, 'passengers' => $passengers];
+        return ['bookings' => $bookings, 'passengers' => $passengers, 'events' => $events];
     }
 }

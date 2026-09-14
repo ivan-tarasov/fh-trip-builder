@@ -6,6 +6,8 @@ namespace TripBuilder\Controllers;
 
 use Throwable;
 use TripBuilder\ArticleRating;
+use TripBuilder\BookingActor;
+use TripBuilder\BookingEvent;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
 use TripBuilder\Http\HttpStatus;
@@ -14,6 +16,7 @@ use TripBuilder\Log;
 use TripBuilder\Money;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
+use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostVoteRepository;
@@ -134,6 +137,16 @@ class AjaxController extends AbstractController
         }
 
         if ($cancelled > 0) {
+            // Only when the update actually moved a row: `cancelForSession()`
+            // matches on the session and refuses an already-cancelled booking,
+            // so a zero here is a cancel that did not happen and must not be
+            // logged as one (A3.8, #233).
+            new BookingEventRepository($this->connection())->record(
+                $this->get['booking_id'],
+                BookingEvent::Cancelled,
+                BookingActor::Visitor,
+            );
+
             $json = [
                 'status' => 'success',
                 'message' => 'Booking cancelled',
