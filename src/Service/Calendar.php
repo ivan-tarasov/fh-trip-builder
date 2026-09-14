@@ -6,7 +6,6 @@ namespace TripBuilder\Service;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use stdClass;
 use Throwable;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
@@ -21,6 +20,8 @@ use TripBuilder\View\StoredItinerary;
  * for anyone reading it from somewhere else. The zone comes from the airports
  * table, which is reference data about a place rather than anything about the
  * price, so reading it does not thaw the snapshot the booking froze.
+ *
+ * @phpstan-import-type ResponseSegment from FlightFinder
  */
 final readonly class Calendar
 {
@@ -42,7 +43,7 @@ final readonly class Calendar
         }
 
         $return = StoredItinerary::fromJson($row['flight_return'] ?? null);
-        $segments = array_values([...$outbound->segments, ...($return->segments ?? [])]);
+        $segments = array_values([...$outbound['segments'], ...($return['segments'] ?? [])]);
         $reference = trim((string) ($row['reference'] ?? ''));
         $zones = $this->timezones($segments);
 
@@ -87,19 +88,20 @@ final readonly class Calendar
     }
 
     /**
+     * @param ResponseSegment $segment
      * @param array<string, string> $zones
      * @return list<string>
      */
-    private function event(stdClass $segment, array $zones, int $bookingId, int $index, string $reference): array
+    private function event(array $segment, array $zones, int $bookingId, int $index, string $reference): array
     {
-        $from = (string) ($segment->depart->airport_code ?? '');
-        $to = (string) ($segment->arrive->airport_code ?? '');
-        $number = str_replace('-', ' ', (string) ($segment->number ?? ''));
+        $from = $segment['depart']['airport_code'];
+        $to = $segment['arrive']['airport_code'];
+        $number = str_replace('-', ' ', $segment['number']);
 
         $description = array_filter([
-            (string) ($segment->carrier_name ?? ''),
-            $segment->depart->airport_name ?? null,
-            $segment->arrive->airport_name ?? null,
+            $segment['carrier_name'],
+            $segment['depart']['airport_name'],
+            $segment['arrive']['airport_name'],
             $reference === '' ? null : 'Booking reference ' . $reference,
         ]);
 
@@ -109,8 +111,8 @@ final readonly class Calendar
             // place instead of adding a second copy of the same flight.
             sprintf('UID:booking-%d-leg-%d@trip-builder', $bookingId, $index),
             'DTSTAMP:' . gmdate('Ymd\THis\Z'),
-            $this->stamp('DTSTART', (string) $segment->depart->date_time, $zones[$from] ?? null),
-            $this->stamp('DTEND', (string) $segment->arrive->date_time, $zones[$to] ?? null),
+            $this->stamp('DTSTART', $segment['depart']['date_time'], $zones[$from] ?? null),
+            $this->stamp('DTEND', $segment['arrive']['date_time'], $zones[$to] ?? null),
             'SUMMARY:' . $this->escape(trim($number . ' ' . $from . ' to ' . $to)),
             'LOCATION:' . $this->escape($from),
             'DESCRIPTION:' . $this->escape(implode("\n", $description)),
@@ -144,7 +146,7 @@ final readonly class Calendar
     /**
      * IANA zone per airport code, for the codes this booking touches.
      *
-     * @param list<stdClass> $segments
+     * @param list<ResponseSegment> $segments
      * @return array<string, string>
      */
     private function timezones(array $segments): array
@@ -152,8 +154,8 @@ final readonly class Calendar
         $codes = [];
 
         foreach ($segments as $segment) {
-            $codes[(string) ($segment->depart->airport_code ?? '')] = true;
-            $codes[(string) ($segment->arrive->airport_code ?? '')] = true;
+            $codes[$segment['depart']['airport_code']] = true;
+            $codes[$segment['arrive']['airport_code']] = true;
         }
 
         $codes = array_values(array_filter(array_keys($codes)));

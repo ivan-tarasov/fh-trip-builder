@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace TripBuilder\Controllers;
 
 use Exception;
-use stdClass;
 use TripBuilder\CabinClass;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
@@ -17,6 +16,9 @@ use TripBuilder\View\Breadcrumbs;
 use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\TwigRenderer;
 
+/**
+ * @phpstan-import-type ResponseItinerary from FlightFinder
+ */
 class MyController extends AbstractController
 {
     // Where the upcoming list is cut. A week is what somebody is packing for;
@@ -315,22 +317,16 @@ class MyController extends AbstractController
                 continue;
             }
 
-            $decoded = json_decode((string) json_encode($itinerary), false);
-
-            if (! $decoded instanceof stdClass) {
-                continue;
-            }
-
-            $built = $presenter->direction($decoded->itinerary);
+            $built = $presenter->direction($itinerary['itinerary']);
             $direction = $built['direction'];
 
             $flights[] = [
                 'key' => $key,
                 'price' => $presenter->priceParts(
-                    (float) $decoded->price_base + (float) $decoded->price_tax,
+                    $itinerary['price_base'] + $itinerary['price_tax'],
                 ),
                 'itinerary' => $direction,
-                'search_url' => $this->searchUrl($decoded->itinerary, $cabin),
+                'search_url' => $this->searchUrl($itinerary['itinerary'], $cabin),
             ];
         }
 
@@ -396,17 +392,19 @@ class MyController extends AbstractController
      * In the cabin it was saved in, since that is the search that found it.
      * SearchUrl spells the cabin into every path it writes, economy included,
      * so this needs no special case for the default.
+     *
+     * @param ResponseItinerary $itinerary
      */
-    private function searchUrl(stdClass $itinerary, CabinClass $cabin): string
+    private function searchUrl(array $itinerary, CabinClass $cabin): string
     {
-        $segments = $itinerary->segments;
+        $segments = $itinerary['segments'];
         $first = $segments[0];
-        $last = $segments[array_key_last($segments)];
+        $last = $segments[array_key_last($segments) ?? 0];
 
         return new SearchUrl(
-            from: (string) $first->depart->airport_code,
-            to: (string) $last->arrive->airport_code,
-            depart: date('Y-m-d', (int) strtotime((string) $first->depart->date_time)),
+            from: $first['depart']['airport_code'],
+            to: $last['arrive']['airport_code'],
+            depart: date('Y-m-d', strtotime($first['depart']['date_time']) ?: null),
             return: null,
             cabin: $cabin,
         )->path();

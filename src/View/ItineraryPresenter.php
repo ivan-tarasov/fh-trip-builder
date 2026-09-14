@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use DateTime;
-use stdClass;
 use TripBuilder\Cdn;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Money;
+use TripBuilder\Service\FlightFinder;
 
 /**
  * Turns an itinerary (an ordered list of flight segments plus its layovers)
@@ -18,6 +18,15 @@ use TripBuilder\Money;
  * This lives outside the controllers because two pages draw the same card: the
  * search results and the saved-flights list. Keeping one presenter means a
  * change to how a route bar or a notice reads shows up in both.
+ *
+ * Takes the same `ResponseItinerary`/`ResponseSegment`/`ResponseLayover` array
+ * shapes `FlightFinder` produces, not a second `stdClass` shape of its own --
+ * the historical `json_decode(json_encode(...), false)` round trip this used
+ * to require is gone (E10.8, #206).
+ *
+ * @phpstan-import-type ResponseItinerary from FlightFinder
+ * @phpstan-import-type ResponseSegment from FlightFinder
+ * @phpstan-import-type ResponseLayover from FlightFinder
  */
 class ItineraryPresenter
 {
@@ -56,89 +65,90 @@ class ItineraryPresenter
     private const int LONG_TRIP_MINUTES = 1440;
 
     /**
+     * @param ResponseItinerary $itinerary
      * @return array{direction: array<string, mixed>, ids: list<int>}
      */
-    public function direction(stdClass $itinerary): array
+    public function direction(array $itinerary): array
     {
-        $segments = $itinerary->segments;
+        $segments = $itinerary['segments'];
         $first = $segments[0];
-        $last = $segments[array_key_last($segments)];
+        $last = $segments[array_key_last($segments) ?? 0];
 
         $ids = [];
         $detail = [];
         $carriers = [];
 
         foreach ($segments as $segment) {
-            $ids[] = (int) $segment->id;
+            $ids[] = $segment['id'];
 
             // One entry per airline, so a codeshare-ish itinerary shows each
             // logo rather than repeating the first.
-            $carriers[$segment->carrier] ??= [
-                'name' => $segment->carrier_name,
-                'logo_url' => $this->carrierLogo($segment->carrier),
+            $carriers[$segment['carrier']] ??= [
+                'name' => $segment['carrier_name'],
+                'logo_url' => $this->carrierLogo($segment['carrier']),
             ];
 
             $detail[] = [
-                'carrier_name' => $segment->carrier_name,
-                'logo_url' => $this->carrierLogo($segment->carrier),
-                'flight_number' => 'Flight ' . str_replace('-', '', $segment->number),
-                'duration' => $this->minutesToStringTime($segment->duration),
-                'cabin' => self::CABIN_NAMES[$segment->cabin_code ?? ''] ?? null,
-                'aircraft' => $segment->aircraft ?? null,
+                'carrier_name' => $segment['carrier_name'],
+                'logo_url' => $this->carrierLogo($segment['carrier']),
+                'flight_number' => 'Flight ' . str_replace('-', '', $segment['number']),
+                'duration' => $this->minutesToStringTime($segment['duration']),
+                'cabin' => self::CABIN_NAMES[$segment['cabin_code'] ?? ''] ?? null,
+                'aircraft' => $segment['aircraft'] ?? null,
                 // What the cabin is like on this frame. Each is null when the
                 // data does not reach that far -- an unknown type, or a type
                 // with no such cabin on board -- and the template prints only
                 // what it has rather than inventing a placeholder. This is the
                 // same restraint that removed the hardcoded amenity icons; the
                 // difference is that these are real, seeded per aircraft.
-                'aircraft_body' => match ($segment->aircraft_widebody ?? null) {
+                'aircraft_body' => match ($segment['aircraft_widebody'] ?? null) {
                     true => 'widebody',
                     false => 'narrowbody',
                     default => null,
                 },
-                'seat_layout' => $segment->seat_layout ?? null,
+                'seat_layout' => $segment['seat_layout'] ?? null,
                 // Pitch is held in inches, the trade's unit, and shown in
                 // centimetres to sit with the kilometres used everywhere else.
-                'seat_pitch' => isset($segment->seat_pitch) && $segment->seat_pitch > 0
-                    ? sprintf('%d cm', (int) round($segment->seat_pitch * 2.54))
+                'seat_pitch' => isset($segment['seat_pitch']) && $segment['seat_pitch'] > 0
+                    ? sprintf('%d cm', (int) round($segment['seat_pitch'] * 2.54))
                     : null,
-                'seat_width' => isset($segment->seat_width) && $segment->seat_width > 0
-                    ? sprintf('%d cm', (int) round($segment->seat_width * 2.54))
+                'seat_width' => isset($segment['seat_width']) && $segment['seat_width'] > 0
+                    ? sprintf('%d cm', (int) round($segment['seat_width'] * 2.54))
                     : null,
-                'seat_flat_bed' => (bool) ($segment->seat_flat_bed ?? false),
+                'seat_flat_bed' => (bool) ($segment['seat_flat_bed'] ?? false),
                 // How many seats the frame carries in total, across every cabin
                 // -- a different question from the layout beside it, which is
                 // about the row this ticket sits in.
-                'aircraft_seats' => isset($segment->aircraft_seats) && $segment->aircraft_seats > 0
-                    ? number_format((int) $segment->aircraft_seats)
+                'aircraft_seats' => isset($segment['aircraft_seats']) && $segment['aircraft_seats'] > 0
+                    ? number_format($segment['aircraft_seats'])
                     : null,
-                'depart_time' => date('H:i', strtotime($segment->depart->date_time)),
-                'depart_date' => Helper::dateLabel($segment->depart->date_time, 'D, d M', 'D, d M Y'),
-                'depart_city' => $segment->depart->airport_city,
-                'depart_code' => $segment->depart->airport_code,
-                'arrive_time' => date('H:i', strtotime($segment->arrive->date_time)),
-                'arrive_date' => Helper::dateLabel($segment->arrive->date_time, 'D, d M', 'D, d M Y'),
-                'arrive_city' => $segment->arrive->airport_city,
-                'arrive_code' => $segment->arrive->airport_code,
+                'depart_time' => date('H:i', strtotime($segment['depart']['date_time']) ?: null),
+                'depart_date' => Helper::dateLabel($segment['depart']['date_time'], 'D, d M', 'D, d M Y'),
+                'depart_city' => $segment['depart']['airport_city'],
+                'depart_code' => $segment['depart']['airport_code'],
+                'arrive_time' => date('H:i', strtotime($segment['arrive']['date_time']) ?: null),
+                'arrive_date' => Helper::dateLabel($segment['arrive']['date_time'], 'D, d M', 'D, d M Y'),
+                'arrive_city' => $segment['arrive']['airport_city'],
+                'arrive_code' => $segment['arrive']['airport_code'],
             ];
         }
 
         return [
             'direction' => [
-                'stops_label' => $this->stopsLabel((int) $itinerary->stops),
-                'duration' => $this->minutesToStringTime((int) $itinerary->total_duration),
+                'stops_label' => $this->stopsLabel($itinerary['stops']),
+                'duration' => $this->minutesToStringTime($itinerary['total_duration']),
                 'co2' => $this->emissions($itinerary),
                 'carriers' => array_values($carriers),
-                'depart_time' => date('H:i', strtotime($first->depart->date_time)),
-                'depart_code' => $first->depart->airport_code,
-                'depart_city' => $first->depart->airport_city,
-                'depart_day' => Helper::dateLabel($first->depart->date_time, 'D, j M', 'D, j M Y'),
-                'arrive_time' => date('H:i', strtotime($last->arrive->date_time)),
-                'arrive_code' => $last->arrive->airport_code,
-                'arrive_city' => $last->arrive->airport_city,
-                'arrive_day' => Helper::dateLabel($last->arrive->date_time, 'D, j M', 'D, j M Y'),
-                'notices' => $this->buildNotices($segments, $itinerary->layovers, (int) $itinerary->total_duration),
-                'badges' => array_map($this->badgeMeta(...), $itinerary->badges),
+                'depart_time' => date('H:i', strtotime($first['depart']['date_time']) ?: null),
+                'depart_code' => $first['depart']['airport_code'],
+                'depart_city' => $first['depart']['airport_city'],
+                'depart_day' => Helper::dateLabel($first['depart']['date_time'], 'D, j M', 'D, j M Y'),
+                'arrive_time' => date('H:i', strtotime($last['arrive']['date_time']) ?: null),
+                'arrive_code' => $last['arrive']['airport_code'],
+                'arrive_city' => $last['arrive']['airport_city'],
+                'arrive_day' => Helper::dateLabel($last['arrive']['date_time'], 'D, j M', 'D, j M Y'),
+                'notices' => $this->buildNotices($segments, $itinerary['layovers'], $itinerary['total_duration']),
+                'badges' => array_map($this->badgeMeta(...), $itinerary['badges']),
                 'route' => $this->routeParts($itinerary),
                 'layovers' => $this->layovers($itinerary, $segments),
                 'segments' => $detail,
@@ -152,44 +162,45 @@ class ItineraryPresenter
      * by its own minutes so the drawn widths show the real shape of the
      * journey. Airport codes sit under the part they belong to.
      *
+     * @param ResponseItinerary $itinerary
      * @return list<array<string, mixed>>
      */
-    private function routeParts(stdClass $itinerary): array
+    private function routeParts(array $itinerary): array
     {
-        $segments = $itinerary->segments;
+        $segments = $itinerary['segments'];
         $parts = [];
         $lastSegment = array_key_last($segments);
 
         foreach ($segments as $i => $segment) {
             $parts[] = [
                 'type' => 'leg',
-                'weight' => max(1, (int) $segment->duration),
+                'weight' => max(1, $segment['duration']),
                 'tooltip' => sprintf(
                     '%s in the air · %s–%s',
-                    $this->minutesToStringTime((int) $segment->duration),
-                    $segment->depart->airport_code,
-                    $segment->arrive->airport_code,
+                    $this->minutesToStringTime($segment['duration']),
+                    $segment['depart']['airport_code'],
+                    $segment['arrive']['airport_code'],
                 ),
-                'start_code' => $i === 0 ? $segment->depart->airport_code : null,
-                'end_code' => $i === $lastSegment ? $segment->arrive->airport_code : null,
+                'start_code' => $i === 0 ? $segment['depart']['airport_code'] : null,
+                'end_code' => $i === $lastSegment ? $segment['arrive']['airport_code'] : null,
                 'code' => null,
             ];
 
-            if (isset($itinerary->layovers[$i])) {
-                $layover = $itinerary->layovers[$i];
+            if (isset($itinerary['layovers'][$i])) {
+                $layover = $itinerary['layovers'][$i];
 
                 $parts[] = [
                     'type' => 'stop',
-                    'weight' => max(1, (int) $layover->wait_minutes),
+                    'weight' => max(1, $layover['wait_minutes']),
                     'tooltip' => sprintf(
                         'Layover at %s (%s) — %s',
-                        $layover->airport_name,
-                        $layover->airport_city,
-                        $this->minutesToStringTime((int) $layover->wait_minutes),
+                        $layover['airport_name'],
+                        $layover['airport_city'],
+                        $this->minutesToStringTime($layover['wait_minutes']),
                     ),
                     'start_code' => null,
                     'end_code' => null,
-                    'code' => $layover->airport_code,
+                    'code' => $layover['airport_code'],
                 ];
             }
         }
@@ -200,21 +211,22 @@ class ItineraryPresenter
     /**
      * The gaps between segments, each with the one note worth putting on it.
      *
-     * @param list<stdClass> $segments in flight order, so layover i sits between
-     *                               segment i and segment i + 1
+     * @param ResponseItinerary $itinerary
+     * @param list<ResponseSegment> $segments in flight order, so layover i sits
+     *                               between segment i and segment i + 1
      * @return list<array{airport_code: string, airport_city: string, wait: string, notes: list<array{text: string, tone: string}>}>
      */
-    private function layovers(stdClass $itinerary, array $segments): array
+    private function layovers(array $itinerary, array $segments): array
     {
         $layovers = [];
 
-        foreach ($itinerary->layovers as $i => $layover) {
-            $wait = (int) $layover->wait_minutes;
+        foreach ($itinerary['layovers'] as $i => $layover) {
+            $wait = $layover['wait_minutes'];
 
             // Layover i is the gap between segment i and the one after it.
             $overnight = isset($segments[$i], $segments[$i + 1]) && $this->spansNight(
-                $segments[$i]->arrive->date_time,
-                $segments[$i + 1]->depart->date_time,
+                $segments[$i]['arrive']['date_time'],
+                $segments[$i + 1]['depart']['date_time'],
             );
 
             // At most two notes, and they never say the same thing twice.
@@ -244,8 +256,8 @@ class ItineraryPresenter
             }
 
             $layovers[] = [
-                'airport_code' => $layover->airport_code,
-                'airport_city' => $layover->airport_city,
+                'airport_code' => $layover['airport_code'],
+                'airport_city' => $layover['airport_city'],
                 'wait' => $this->minutesToStringTime($wait),
                 'notes' => $notes,
             ];
@@ -282,8 +294,8 @@ class ItineraryPresenter
      * A 29-hour journey is not a warning; a 45-minute connection in a foreign
      * airport is. The colour now says which is which.
      *
-     * @param list<stdClass> $segments
-     * @param list<stdClass> $layovers
+     * @param list<ResponseSegment> $segments
+     * @param list<ResponseLayover> $layovers
      * @return list<array<string, string>>
      */
     private function buildNotices(array $segments, array $layovers, int $totalDuration): array
@@ -293,12 +305,12 @@ class ItineraryPresenter
         }
 
         $notices = [];
-        $originCountry = $segments[0]->depart->airport_country;
-        $destinationCountry = $segments[count($segments) - 1]->arrive->airport_country;
+        $originCountry = $segments[0]['depart']['airport_country'];
+        $destinationCountry = $segments[count($segments) - 1]['arrive']['airport_country'];
 
         foreach ($layovers as $i => $layover) {
-            $wait = (int) $layover->wait_minutes;
-            $city = $layover->airport_city;
+            $wait = $layover['wait_minutes'];
+            $city = $layover['airport_city'];
             $waitLabel = $this->minutesToStringTime($wait);
 
             if ($wait < self::LAYOVER_TIGHT_MINUTES) {
@@ -318,8 +330,8 @@ class ItineraryPresenter
             }
 
             if (isset($segments[$i], $segments[$i + 1]) && $this->spansNight(
-                $segments[$i]->arrive->date_time,
-                $segments[$i + 1]->depart->date_time,
+                $segments[$i]['arrive']['date_time'],
+                $segments[$i + 1]['depart']['date_time'],
             )) {
                 $notices['night'] = [
                     'severity' => 'note',
@@ -329,7 +341,7 @@ class ItineraryPresenter
                 ];
             }
 
-            $country = $segments[$i]->arrive->airport_country;
+            $country = $segments[$i]['arrive']['airport_country'];
 
             if ($country !== $originCountry && $country !== $destinationCountry) {
                 $notices['visa'] = [
@@ -341,7 +353,7 @@ class ItineraryPresenter
             }
         }
 
-        $carriers = array_unique(array_map(static fn(stdClass $s): string => $s->carrier, $segments));
+        $carriers = array_unique(array_map(static fn(array $s): string => $s['carrier'], $segments));
 
         if (count($carriers) > 1) {
             $notices['airlines'] = [
@@ -419,20 +431,21 @@ class ItineraryPresenter
      * `low` is set for the itineraries at or below the median of everything the
      * route offered, which is all "lower than typical" can honestly mean here.
      *
+     * @param ResponseItinerary $itinerary
      * @return array{label: string, low: bool, tooltip: string}|null
      */
-    private function emissions(stdClass $itinerary): ?array
+    private function emissions(array $itinerary): ?array
     {
-        $kilograms = $itinerary->co2_kg ?? null;
+        $kilograms = $itinerary['co2_kg'];
 
         if ($kilograms === null) {
             return null;
         }
 
-        $low = (bool) ($itinerary->co2_typical ?? false);
+        $low = $itinerary['co2_typical'] ?? false;
 
         return [
-            'label' => sprintf('%s kg CO₂', number_format((float) $kilograms)),
+            'label' => sprintf('%s kg CO₂', number_format($kilograms)),
             'low' => $low,
             'tooltip' => 'Estimated carbon for one seat, from the aircraft and the distance flown.'
                 . ($low ? ' Lower than typical for this route.' : ''),
