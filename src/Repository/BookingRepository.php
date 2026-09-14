@@ -9,6 +9,31 @@ use TripBuilder\BookingStatus;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
+/**
+ * Live-verified against a real fetch: `id` is a plain `int` column and stays
+ * `int`; `session_id`, `reference`, `status`, `contact_email`,
+ * `contact_phone`, `passenger_first`, `passenger_last`, `passenger_gender`,
+ * `currency` and `card_brand`/`card_last4` are non-nullable `varchar`/`char`;
+ * `departure_time` and `passenger_dob` are nullable, `created` is not, and
+ * all three come back `string`, not a `DateTime`; `flight_outbound` is a
+ * non-nullable `json` column and `flight_return`/`fare_brand`/`fare_rules`
+ * are nullable ones, all read back as the raw JSON `string`, not decoded;
+ * `price_base`, `price_tax` and `currency_rate` are DECIMAL and stringify
+ * like every other DECIMAL column in this codebase.
+ *
+ * @phpstan-type BookingRow array{
+ *     id: int, session_id: string, departure_time: string|null,
+ *     flight_outbound: string, flight_return: string|null,
+ *     created: string, reference: string, status: string,
+ *     contact_email: string, contact_phone: string,
+ *     passenger_first: string, passenger_last: string,
+ *     passenger_dob: string|null, passenger_gender: string,
+ *     fare_brand: string|null, fare_rules: string|null,
+ *     price_base: string, price_tax: string,
+ *     currency: string, currency_rate: string,
+ *     card_brand: string, card_last4: string,
+ * }
+ */
 final readonly class BookingRepository
 {
     /**
@@ -32,14 +57,17 @@ final readonly class BookingRepository
     /**
      * Bookings for a session, earliest departure first.
      *
-     * @return list<array<string, mixed>>
+     * @return list<BookingRow>
      */
     public function forSession(string $sessionId): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT * FROM ' . Table::Bookings->value . ' WHERE session_id = ? ORDER BY departure_time ASC',
             [$sessionId],
         );
+
+        return $rows;
     }
 
     /**
@@ -66,16 +94,17 @@ final readonly class BookingRepository
      * checkout issued references have none, and those bookings still belong to
      * whoever made them.
      *
-     * @return array<string, mixed>|null
+     * @return BookingRow|null
      */
     public function findForSession(int $bookingId, string $sessionId): ?array
     {
-        $row = $this->connection->fetchAll(
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT * FROM ' . Table::Bookings->value . ' WHERE id = ? AND session_id = ? LIMIT 1',
             [$bookingId, $sessionId],
         );
 
-        return $row[0] ?? null;
+        return $rows[0] ?? null;
     }
 
     /**
@@ -83,16 +112,17 @@ final readonly class BookingRepository
      * confirmation page is reachable by URL and a reference is short enough to
      * guess.
      *
-     * @return array<string, mixed>|null
+     * @return BookingRow|null
      */
     public function findByReference(string $reference, string $sessionId): ?array
     {
-        $row = $this->connection->fetchAll(
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT * FROM ' . Table::Bookings->value . ' WHERE reference = ? AND session_id = ? LIMIT 1',
             [$reference, $sessionId],
         );
 
-        return $row[0] ?? null;
+        return $rows[0] ?? null;
     }
 
     /**
@@ -114,12 +144,13 @@ final readonly class BookingRepository
                 $reference .= $alphabet[random_int(0, strlen($alphabet) - 1)];
             }
 
+            /** @var int $taken */
             $taken = $this->connection->fetchValue(
                 'SELECT COUNT(*) FROM ' . Table::Bookings->value . ' WHERE reference = ?',
                 [$reference],
             );
 
-            if ((int) $taken === 0) {
+            if ($taken === 0) {
                 return $reference;
             }
         }
@@ -162,23 +193,29 @@ final readonly class BookingRepository
      * the order they were made, where the traveller's own list is about the
      * order they will be flown.
      *
-     * @return list<array<string, mixed>>
+     * @return list<BookingRow>
      */
     public function recent(int $limit, int $offset = 0): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT * FROM ' . Table::Bookings->value
             // Id second, so two bookings made in the same second come back in a
             // fixed order rather than whichever the engine offers.
             . ' ORDER BY created DESC, id DESC'
             . ' LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset),
         );
+
+        return $rows;
     }
 
     /** How many there are, so the panel can page through them. */
     public function countAll(): int
     {
-        return (int) $this->connection->fetchValue('SELECT COUNT(*) FROM ' . Table::Bookings->value);
+        /** @var int $count */
+        $count = $this->connection->fetchValue('SELECT COUNT(*) FROM ' . Table::Bookings->value);
+
+        return $count;
     }
 
     /**
@@ -189,14 +226,17 @@ final readonly class BookingRepository
      * forgotten argument away from serving somebody else's booking to a
      * stranger, and this is only reachable from behind the panel's guard.
      *
-     * @return array<string, mixed>|null
+     * @return BookingRow|null
      */
     public function find(int $bookingId): ?array
     {
-        return $this->connection->fetchOne(
+        /** @var BookingRow|null $row */
+        $row = $this->connection->fetchOne(
             'SELECT * FROM ' . Table::Bookings->value . ' WHERE id = ?',
             [$bookingId],
         );
+
+        return $row;
     }
 
     /**
@@ -230,13 +270,14 @@ final readonly class BookingRepository
      * first. It scans; on a table this size that is nothing, and on one where
      * it is not, this is where a full-text index would go.
      *
-     * @return list<array<string, mixed>>
+     * @return list<BookingRow>
      */
     public function search(string $term, int $limit, int $offset = 0): array
     {
         $like = self::like($term);
 
-        return $this->connection->fetchAll(
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT b.* FROM ' . Table::Bookings->value . ' b'
             . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
             . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
@@ -249,6 +290,8 @@ final readonly class BookingRepository
             . ' LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset),
             [$like, $like, $like, $like],
         );
+
+        return $rows;
     }
 
     /** How many bookings a search matches, for the pager. */
@@ -256,7 +299,8 @@ final readonly class BookingRepository
     {
         $like = self::like($term);
 
-        return (int) $this->connection->fetchValue(
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
             'SELECT COUNT(*) FROM ' . Table::Bookings->value . ' b'
             . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
             . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
@@ -267,6 +311,8 @@ final readonly class BookingRepository
             . '  )',
             [$like, $like, $like, $like],
         );
+
+        return $count;
     }
 
     /**

@@ -43,6 +43,9 @@ use Twig\Error\Error;
  * counter -- which are the public layout's furniture. The panel draws its own
  * document and reads none of them, so asking would be a query per page for
  * something nothing prints (A3.5, #230).
+ *
+ * @phpstan-import-type BookingRow from BookingRepository
+ * @phpstan-import-type Presented from BookingPresenter
  */
 class AdminController extends AbstractController
 {
@@ -273,18 +276,29 @@ class AdminController extends AbstractController
         $names = $rows === []
             ? []
             : new BookingPassengerRepository($this->connection())
-                ->namesFor(array_map(static fn(array $row): int => (int) $row['id'], $rows));
+                ->namesFor(array_map(self::bookingId(...), $rows));
+
+        $listed = [];
+
+        foreach ($rows as $row) {
+            $listed[] = $this->listed($row, $names[$row['id']] ?? []);
+        }
 
         echo new TwigRenderer()->render('admin/bookings.html.twig', [
-            'bookings' => array_map(
-                fn(array $row): array => $this->listed($row, $names[(int) $row['id']] ?? []),
-                $rows,
-            ),
+            'bookings' => $listed,
             'total' => $term === '' ? $bookings->countAll() : $bookings->countMatching($term),
             'term' => $term,
             'page' => $page,
             'per_page' => self::PER_PAGE,
         ]);
+    }
+
+    /**
+     * @param BookingRow $row
+     */
+    private static function bookingId(array $row): int
+    {
+        return $row['id'];
     }
 
     /**
@@ -335,20 +349,20 @@ class AdminController extends AbstractController
             // stored anywhere on this site -- a brand and four digits is all
             // there has ever been, which is what a receipt shows.
             'extra' => [
-                'id' => (int) $row['id'],
+                'id' => $row['id'],
                 // Off the column and not off the presenter, which gives nothing
                 // at all for a booking whose flights will not build -- and that
                 // is the page whose tab most needs to say which booking it is.
-                'reference' => trim((string) $row['reference']),
-                'card_last4' => (string) $row['card_last4'],
+                'reference' => trim($row['reference']),
+                'card_last4' => $row['card_last4'],
                 // Which browser made it. Not identifying on its own, and it is
                 // how every other read of this table finds a booking, so an
                 // operator chasing a duplicate can see they came from one
                 // person rather than two.
-                'session' => (string) $row['session_id'],
-                'made' => (string) $row['created'],
-                'made_ago' => Helper::elapsed((string) $row['created']),
-                'is_cancelled' => BookingStatus::fromRow($row['status'] ?? null) === BookingStatus::Cancelled,
+                'session' => $row['session_id'],
+                'made' => $row['created'],
+                'made_ago' => Helper::elapsed($row['created']),
+                'is_cancelled' => BookingStatus::fromRow($row['status']) === BookingStatus::Cancelled,
             ],
             'passengers' => $passengers,
             // How many bookings each traveller appears on, in the order the
@@ -379,11 +393,11 @@ class AdminController extends AbstractController
      * cancel a booking somebody cancelled while this page was open, and the log
      * is written only when a row actually moved (A3.8, #233).
      *
-     * @param array<string, mixed> $row
+     * @param BookingRow $row
      */
     private function actOnBooking(BookingRepository $bookings, array $row): void
     {
-        $id = (int) $row['id'];
+        $id = $row['id'];
         $back = '/admin/bookings/' . $id;
 
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
@@ -790,7 +804,7 @@ class AdminController extends AbstractController
      * with no flights in it; an operator should, because that row is exactly
      * the one somebody is calling about. So the list falls back to the columns.
      *
-     * @param array<string, mixed> $row
+     * @param BookingRow $row
      * @param list<string> $names everyone on it, lead first, empty on a booking
      *     made before travellers had rows of their own
      * @return array<string, mixed>
@@ -800,7 +814,7 @@ class AdminController extends AbstractController
         // The lead off the booking's own row and not off `$names`, because
         // those two agree on every booking that has both and only the first
         // exists on the ones written before `booking_passengers` did.
-        $lead = trim((string) $row['passenger_first'] . ' ' . (string) $row['passenger_last']);
+        $lead = trim($row['passenger_first'] . ' ' . $row['passenger_last']);
         $party = [
             'lead' => $lead === '' ? ($names[0] ?? '') : $lead,
             // Everyone else, named rather than only counted: an operator
@@ -814,16 +828,16 @@ class AdminController extends AbstractController
 
         // The date answers when and this answers how long, and an operator
         // scanning the list is asking the second one.
-        $made = ['created' => (string) $row['created'], 'made_ago' => Helper::elapsed((string) $row['created'])];
+        $made = ['created' => $row['created'], 'made_ago' => Helper::elapsed($row['created'])];
 
         if ($shaped === null) {
             return [
                 ...$party,
                 ...$made,
-                'id' => (int) $row['id'],
-                'reference' => trim((string) $row['reference']),
-                'status_label' => (string) $row['status'],
-                'is_cancelled' => (string) $row['status'] === 'cancelled',
+                'id' => $row['id'],
+                'reference' => trim($row['reference']),
+                'status_label' => $row['status'],
+                'is_cancelled' => $row['status'] === 'cancelled',
                 'from' => null,
                 'to' => null,
                 'travellers' => $travellers,
@@ -840,7 +854,7 @@ class AdminController extends AbstractController
         return [
             ...$party,
             ...$made,
-            'id' => (int) $row['id'],
+            'id' => $row['id'],
             'reference' => $shaped['reference'],
             'status_label' => $shaped['status_label'],
             'is_cancelled' => $shaped['is_cancelled'],

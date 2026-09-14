@@ -11,6 +11,8 @@ use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Currency;
 use TripBuilder\Money;
+use TripBuilder\Repository\BookingPassengerRepository;
+use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 
@@ -29,6 +31,28 @@ use TripBuilder\TripType;
  * class's -- it only reports the facts those decisions are made from.
  *
  * @phpstan-import-type ResponseItinerary from FlightFinder
+ * @phpstan-import-type BookingRow from BookingRepository
+ * @phpstan-import-type BookingPassengerRow from BookingPassengerRepository
+ *
+ * @phpstan-type PriceParts array{
+ *     symbol: string, whole: string, cents: string|null, point: string,
+ *     before: bool, code: string, text: string,
+ * }
+ * @phpstan-type Presented array{
+ *     id: int, reference: string|null, status: string, status_label: string,
+ *     is_cancelled: bool, created: string,
+ *     passenger: string,
+ *     passengers: list<array{name: string, type: string, dob: string}>,
+ *     passenger_summary: string,
+ *     contact_email: string, contact_phone: string,
+ *     fare_brand: string|null, fare_rules: list<array{text: string, allowed: bool}>|null,
+ *     card_brand: string, card_last4: string,
+ *     price_total: PriceParts|null, price_base: PriceParts, price_tax: PriceParts,
+ *     outbound: array<string, mixed>, return: array<string, mixed>|null,
+ *     starts_at: DateTimeImmutable|null, ends_at: DateTimeImmutable|null,
+ *     is_past: bool, departs_in: string|null, days_until: int|null,
+ *     rebook: array<string, string>,
+ * }
  */
 final readonly class BookingPresenter
 {
@@ -44,20 +68,20 @@ final readonly class BookingPresenter
      * Null when the outbound will not build, so the caller skips the row rather
      * than draw a booking with no flights in it.
      *
-     * @param array<string, mixed> $row a bookings row as the repository returns it
-     * @param list<array<string, mixed>> $passengers rows from booking_passengers, lead first
-     * @return array<string, mixed>|null
+     * @param BookingRow $row a bookings row as the repository returns it
+     * @param list<BookingPassengerRow> $passengers rows from booking_passengers, lead first
+     * @return Presented|null
      */
     public function booking(array $row, array $passengers = [], ?int $travellerCount = null): ?array
     {
-        $stored = StoredItinerary::fromJson($row['flight_outbound'] ?? null);
+        $stored = StoredItinerary::fromJson($row['flight_outbound']);
 
         if ($stored === null) {
             return null;
         }
 
         $outbound = $this->itinerary->direction($stored)['direction'];
-        $storedReturn = StoredItinerary::fromJson($row['flight_return'] ?? null);
+        $storedReturn = StoredItinerary::fromJson($row['flight_return']);
         $return = $storedReturn === null ? null : $this->itinerary->direction($storedReturn)['direction'];
 
         // Per direction, not per booking: on a round trip the outbound is
@@ -69,17 +93,17 @@ final readonly class BookingPresenter
             $return['flown'] = $this->hasFlown($storedReturn);
         }
 
-        $status = BookingStatus::fromRow($row['status'] ?? null);
-        $reference = trim((string) ($row['reference'] ?? ''));
+        $status = BookingStatus::fromRow($row['status']);
+        $reference = trim($row['reference']);
 
         // The stamp the column was copied from at checkout, so the fallback is
         // the same number rather than a guess.
-        $startsAt = $this->time($row['departure_time'] ?? null)
+        $startsAt = $this->time($row['departure_time'])
             ?? $this->time($stored['segments'][0]['depart']['date_time'] ?? null);
         $endsAt = $this->endsAt($storedReturn ?? $stored);
 
-        $base = (float) ($row['price_base'] ?? 0);
-        $tax = (float) ($row['price_tax'] ?? 0);
+        $base = (float) $row['price_base'];
+        $tax = (float) $row['price_tax'];
 
         // The currency the buyer was quoted in, at the rate they were quoted
         // at, both off the row. Not the visitor's cookie: a booking made in
@@ -92,42 +116,35 @@ final readonly class BookingPresenter
         $money = self::moneyFor($row);
 
         return [
-            'id' => (int) $row['id'],
+            'id' => $row['id'],
             // Empty on rows written before checkout issued one. Absent, not
             // invented: a reference is what somebody quotes down a phone.
             'reference' => $reference === '' ? null : $reference,
             'status' => $status->value,
             'status_label' => $status->label(),
             'is_cancelled' => $status === BookingStatus::Cancelled,
-            'created' => $row['created'] ?? null,
+            'created' => $row['created'],
             // The lead, from the booking's own row -- the bookings list shows a
             // name for every row and reads them in one query.
-            'passenger' => trim(($row['passenger_first'] ?? '') . ' ' . ($row['passenger_last'] ?? '')),
+            'passenger' => trim($row['passenger_first'] . ' ' . $row['passenger_last']),
             // Everyone, when the caller has fetched them. Empty for the list
             // page, which does not join, and for rows written before a booking
             // could carry more than one traveller.
-            'passengers' => array_map(
-                static fn(array $p): array => [
-                    'name' => trim(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')),
-                    'type' => self::PASSENGER_TYPES[$p['type'] ?? 'A'] ?? 'Adult',
-                    'dob' => $p['dob'] ?? null,
-                ],
-                $passengers,
-            ),
+            'passengers' => array_map(self::describePassenger(...), $passengers),
             // The lead's name, and how many others are on the booking. The list
             // page knows only the count -- it does not join -- and the detail
             // page has everyone; either way a party of four stops reading as a
             // trip for one.
             'passenger_summary' => $this->passengerSummary(
-                trim(($row['passenger_first'] ?? '') . ' ' . ($row['passenger_last'] ?? '')),
+                trim($row['passenger_first'] . ' ' . $row['passenger_last']),
                 $passengers === [] ? $travellerCount : count($passengers),
             ),
-            'contact_email' => $row['contact_email'] ?? null,
-            'contact_phone' => $row['contact_phone'] ?? null,
-            'fare_brand' => $row['fare_brand'] ?? null,
-            'fare_rules' => $this->fareRules($row['fare_rules'] ?? null),
-            'card_brand' => $row['card_brand'] ?? null,
-            'card_last4' => $row['card_last4'] ?? null,
+            'contact_email' => $row['contact_email'],
+            'contact_phone' => $row['contact_phone'],
+            'fare_brand' => $row['fare_brand'],
+            'fare_rules' => $this->fareRules($row['fare_rules']),
+            'card_brand' => $row['card_brand'],
+            'card_last4' => $row['card_last4'],
             // From the columns, never from the segments. The per-leg prices in
             // the JSON are a search price from an older pricing pass and no card
             // was ever charged against them, so a row that predates the columns
@@ -202,12 +219,12 @@ final readonly class BookingPresenter
      * than throwing. The figures on the row are Canadian dollars either way, so
      * that reads as an unconverted price rather than a wrong one.
      *
-     * @param array<string, mixed> $row
+     * @param BookingRow $row
      */
     private static function moneyFor(array $row): Money
     {
-        $currency = Currency::tryFrom($row['currency'] ?? null);
-        $rate = (float) ($row['currency_rate'] ?? 1);
+        $currency = Currency::tryFrom($row['currency']);
+        $rate = (float) $row['currency_rate'];
 
         return $currency === null || $rate <= 0
             ? Money::base()
@@ -223,15 +240,33 @@ final readonly class BookingPresenter
      *
      * @return list<array{text: string, allowed: bool}>|null
      */
-    private function fareRules(mixed $stored): ?array
+    private function fareRules(?string $stored): ?array
     {
-        if (!is_string($stored) || $stored === '') {
+        if ($stored === null || $stored === '') {
             return null;
         }
 
         $data = json_decode($stored, true);
 
-        return is_array($data) ? FareRules::fromRow($data)->lines() : null;
+        if (!is_array($data)) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $data */
+        return FareRules::fromRow($data)->lines();
+    }
+
+    /**
+     * @param BookingPassengerRow $p
+     * @return array{name: string, type: string, dob: string}
+     */
+    private static function describePassenger(array $p): array
+    {
+        return [
+            'name' => trim($p['first_name'] . ' ' . $p['last_name']),
+            'type' => self::PASSENGER_TYPES[$p['type']] ?? 'Adult',
+            'dob' => $p['dob'],
+        ];
     }
 
     /**
