@@ -38,8 +38,25 @@ use TripBuilder\View\ItineraryPresenter;
  */
 final class SavedFlightCabinTest extends IntegrationTestCase
 {
-    // Past anything flights:add generates, so the fixture is the whole route.
+    /**
+     * A future date, and *not* past the generator's window -- that comment was
+     * here before and it was wrong twice over. `searchPage()` goes through the
+     * real `SearchController`, and `SearchUrl::withinHorizon()` refuses to
+     * build a search past `Horizon::last()` at all: a page-level test cannot
+     * use `dateBeyondGeneratedFlights()`, unlike the repository-level tests
+     * that call `FlightRepository::searchDirection()` directly and never meet
+     * that gate. Confirmed the hard way -- reaching for the same helper here
+     * made this test search nothing and fail outright.
+     *
+     * So this test lives with the shared corpus rather than escaping it. That
+     * is fine: every assertion here checks that this fixture's own
+     * `data-flight-key` is present, never a count or a total, so an unrelated
+     * generated flight on the same route has nothing to break. A literal is
+     * still a literal, though, and will need moving forward again one day --
+     * there is no date that is both inside the horizon and guaranteed empty.
+     */
     private const DATE = '2027-04-12';
+
     private const FROM = 'ABV';
     private const VIA = 'ACC';
     private const TO = 'ABJ';
