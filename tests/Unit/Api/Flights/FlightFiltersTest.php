@@ -8,7 +8,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Config;
+use TripBuilder\Repository\FlightRepository;
 
+/**
+ * @phpstan-import-type Candidate from FlightRepository
+ */
 final class FlightFiltersTest extends TestCase
 {
     protected function setUp(): void
@@ -25,19 +29,25 @@ final class FlightFiltersTest extends TestCase
      * AF -> KL itinerary connecting at Amsterdam.
      *
      * @param array<string, mixed> $overrides
-     * @return array<string, mixed>
+     * @return Candidate
      */
     private function candidate(array $overrides = []): array
     {
-        return $overrides + [
+        /** @var Candidate $candidate */
+        $candidate = $overrides + [
+            'seg1' => 1,
+            'seg2' => 2,
+            'seg3' => null,
             'stops' => 1,
-            'price_base' => 900.0,
-            'price_tax' => 100.0,
+            'price_base' => '900.0',
+            'price_tax' => '100.0',
             'duration' => 600,
             'depart_time' => '2026-09-15 08:30:00',
             'arrive_time' => '2026-09-15 18:45:00',
+            'rating' => '4.5',
             'carriers' => 'AF,KL',
             'aircraft' => '320,789',
+            'distances' => '3800,3600',
             'dep_airport' => 'CDG',
             'arr_airport' => 'JFK',
             'stops_at' => 'AMS',
@@ -49,7 +59,11 @@ final class FlightFiltersTest extends TestCase
             'stop_countries' => ['NL'],
             'origin_country' => 'FR',
             'destination_country' => 'US',
+            'co2_kg' => null,
+            'co2_typical' => null,
         ];
+
+        return $candidate;
     }
 
     public function testFromQueryReadsEveryFilter(): void

@@ -8,6 +8,18 @@ use TripBuilder\CabinClass;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
+/**
+ * Live-verified against the schema: every column is non-nullable except
+ * `return` (a DATE); `depart`/`return` come back `string`, not a `DateTime`;
+ * `depart_span`/`return_span` are plain `tinyint` columns and stay `int`.
+ *
+ * @phpstan-type SearchRow array{
+ *     hash: string, from_code: string, from_name: string,
+ *     to_code: string, to_name: string,
+ *     depart: string, depart_span: int, return: string|null, return_span: int,
+ *     triptype: string, class: string, search_count: int, last_search: string,
+ * }
+ */
 final readonly class SearchRepository
 {
     public function __construct(private Connection $connection) {}
@@ -16,7 +28,7 @@ final readonly class SearchRepository
      * The most-searched routes first (matches the legacy `orderBy('search_count')`
      * default DESC direction).
      *
-     * @return list<array<string, mixed>>
+     * @return list<SearchRow>
      */
     public function topSearches(int $limit): array
     {
@@ -30,22 +42,28 @@ final readonly class SearchRepository
         // CURDATE(), now that `depart` is a DATE: the comparison is between two
         // dates rather than between two strings that happen to sort like them,
         // and the cutoff is the database's own day rather than PHP's.
-        return $this->connection->fetchAll(
+        /** @var list<SearchRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT * FROM ' . Table::Search->value
             . ' WHERE depart >= CURDATE()'
             . ' ORDER BY search_count DESC LIMIT ' . $limit,
         );
+
+        return $rows;
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @return SearchRow|null
      */
     public function findByHash(string $hash): ?array
     {
-        return $this->connection->fetchOne(
+        /** @var SearchRow|null $row */
+        $row = $this->connection->fetchOne(
             'SELECT * FROM ' . Table::Search->value . ' WHERE hash = ? LIMIT 1',
             [$hash],
         );
+
+        return $row;
     }
 
     /**
