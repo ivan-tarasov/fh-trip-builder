@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\View;
 
-use stdClass;
+use TripBuilder\Service\FlightFinder;
 
 /**
  * Rebuilds the itinerary ItineraryPresenter expects from the segments a booking
@@ -20,20 +20,30 @@ use stdClass;
  * cards as a search result without a single query. Its price, cabin and
  * aircraft stay frozen at what was sold, which re-fetching by leg id would
  * quietly undo. Nothing here holds a Connection, and nothing here may.
+ *
+ * Decoded to arrays, not objects -- ItineraryPresenter and friends take the
+ * same `ResponseItinerary`/`ResponseSegment` array shapes `FlightFinder`
+ * produces, not a second `stdClass` shape only this class ever built.
+ *
+ * @phpstan-import-type ResponseAirport from FlightFinder
+ * @phpstan-import-type ResponseSegment from FlightFinder
+ * @phpstan-import-type ResponseLayover from FlightFinder
+ * @phpstan-import-type ResponseItinerary from FlightFinder
  */
 final class StoredItinerary
 {
     /**
      * Null when there is nothing renderable, so a caller can skip the row
      * rather than draw a broken card.
+     *
+     * @return ResponseItinerary|null
      */
-    public static function fromJson(?string $json): ?stdClass
+    public static function fromJson(?string $json): ?array
     {
-        $segments = json_decode((string) $json, false);
+        $segments = json_decode((string) $json, true);
 
-        // One decode to objects, matching how the saved page reaches the
-        // presenter. A bare object is a single leg from an older writer.
-        if ($segments instanceof stdClass) {
+        // A bare map is a single leg from an older writer.
+        if (is_array($segments) && array_is_list($segments) === false) {
             $segments = [$segments];
         }
 
@@ -48,19 +58,19 @@ final class StoredItinerary
         }
 
         // Every one passed isRenderable() above, which is what makes them
-        // stdClass; array_values, because the shape below is a list.
-        /** @var list<stdClass> $segments */
+        // ResponseSegment; array_values, because the shape below is a list.
+        /** @var list<ResponseSegment> $segments */
         $segments = array_values($segments);
 
         $layovers = self::layovers($segments);
-        $duration = array_sum(array_map(static fn(stdClass $s): int => (int) $s->duration, $segments));
+        $duration = array_sum(array_map(static fn(array $s): int => $s['duration'], $segments));
 
         foreach ($layovers as $layover) {
-            $duration += $layover->wait_minutes;
+            $duration += $layover['wait_minutes'];
         }
 
-        return (object) [
-            'segments' => array_values($segments),
+        return [
+            'segments' => $segments,
             'stops' => count($segments) - 1,
             'total_duration' => $duration,
             'layovers' => $layovers,
@@ -68,6 +78,12 @@ final class StoredItinerary
             // nothing about a trip already bought. The presenter maps over it,
             // so it has to be present and empty rather than absent.
             'badges' => [],
+            // Neither figure is known for a stored booking -- it is rebuilt
+            // from what was sold rather than from a search, and a search's
+            // ranking artefact has nothing to say about a trip already
+            // bought. See ItineraryPresenter::emissions().
+            'co2_kg' => null,
+            'co2_typical' => null,
         ];
     }
 
@@ -75,8 +91,8 @@ final class StoredItinerary
      * The wait at each intermediate airport, mirroring FlightFinder's own
      * layover pass so a booking and a search result agree on the numbers.
      *
-     * @param list<stdClass> $segments
-     * @return list<stdClass>
+     * @param list<ResponseSegment> $segments
+     * @return list<ResponseLayover>
      */
     private static function layovers(array $segments): array
     {
@@ -85,15 +101,15 @@ final class StoredItinerary
         for ($i = 1; $i < count($segments); $i++) {
             $previous = $segments[$i - 1];
 
-            $layovers[] = (object) [
-                'airport_code' => $previous->arrive->airport_code ?? null,
-                'airport_name' => $previous->arrive->airport_name ?? null,
-                'airport_city' => $previous->arrive->airport_city ?? null,
+            $layovers[] = [
+                'airport_code' => $previous['arrive']['airport_code'],
+                'airport_name' => $previous['arrive']['airport_name'],
+                'airport_city' => $previous['arrive']['airport_city'],
                 // A layover is at one airport, so this subtraction is safe
                 // (leg stamps are local, and can't be subtracted across zones).
                 'wait_minutes' => (int) round(
-                    (strtotime((string) $segments[$i]->depart->date_time)
-                        - strtotime((string) $previous->arrive->date_time)) / 60,
+                    (strtotime($segments[$i]['depart']['date_time'])
+                        - strtotime($previous['arrive']['date_time'])) / 60,
                 ),
             ];
         }
@@ -108,9 +124,11 @@ final class StoredItinerary
      */
     private static function isRenderable(mixed $segment): bool
     {
-        return $segment instanceof stdClass
-            && isset($segment->duration)
-            && isset($segment->depart->date_time)
-            && isset($segment->arrive->date_time);
+        return is_array($segment)
+            && isset($segment['duration'])
+            && is_array($segment['depart'] ?? null)
+            && isset($segment['depart']['date_time'])
+            && is_array($segment['arrive'] ?? null)
+            && isset($segment['arrive']['date_time']);
     }
 }

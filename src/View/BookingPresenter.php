@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use DateTimeImmutable;
-use stdClass;
 use Throwable;
 use TripBuilder\Api\Flights\FareRules;
 use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Currency;
 use TripBuilder\Money;
+use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
 
 /**
@@ -27,6 +27,8 @@ use TripBuilder\TripType;
  * A pure mapper: no database, no session, no request. Which list a booking
  * belongs in and how the lists are ordered is the page's business, not this
  * class's -- it only reports the facts those decisions are made from.
+ *
+ * @phpstan-import-type ResponseItinerary from FlightFinder
  */
 final readonly class BookingPresenter
 {
@@ -73,7 +75,7 @@ final readonly class BookingPresenter
         // The stamp the column was copied from at checkout, so the fallback is
         // the same number rather than a guess.
         $startsAt = $this->time($row['departure_time'] ?? null)
-            ?? $this->time($stored->segments[0]->depart->date_time ?? null);
+            ?? $this->time($stored['segments'][0]['depart']['date_time'] ?? null);
         $endsAt = $this->endsAt($storedReturn ?? $stored);
 
         $base = (float) ($row['price_base'] ?? 0);
@@ -158,17 +160,19 @@ final readonly class BookingPresenter
      * form's defaults -- offering a business round trip back as an economy
      * one-way is a worse answer than not offering it at all.
      *
+     * @param ResponseItinerary $outbound
+     * @param ResponseItinerary|null $storedReturn
      * @return array<string, string>
      */
-    private function rebook(stdClass $outbound, ?stdClass $storedReturn): array
+    private function rebook(array $outbound, ?array $storedReturn): array
     {
-        $segments = $outbound->segments;
+        $segments = $outbound['segments'];
         $last = $segments[count($segments) - 1];
-        $cabin = CabinClass::tryFromCode((string) ($segments[0]->cabin_code ?? ''));
+        $cabin = CabinClass::tryFromCode($segments[0]['cabin_code'] ?? '');
 
         return [
-            'from' => (string) ($segments[0]->depart->airport_code ?? ''),
-            'to' => (string) ($last->arrive->airport_code ?? ''),
+            'from' => $segments[0]['depart']['airport_code'],
+            'to' => $last['arrive']['airport_code'],
             'triptype' => ($storedReturn === null ? TripType::Oneway : TripType::Roundtrip)->value,
             'class' => ($cabin ?? CabinClass::Economy)->value,
         ];
@@ -232,12 +236,14 @@ final readonly class BookingPresenter
 
     /**
      * The last arrival of a direction, which is when the trip is actually over.
+     *
+     * @param ResponseItinerary $itinerary
      */
-    private function endsAt(stdClass $itinerary): ?DateTimeImmutable
+    private function endsAt(array $itinerary): ?DateTimeImmutable
     {
-        $segments = $itinerary->segments;
+        $segments = $itinerary['segments'];
 
-        return $this->time($segments[count($segments) - 1]->arrive->date_time ?? null);
+        return $this->time($segments[count($segments) - 1]['arrive']['date_time'] ?? null);
     }
 
     /**
@@ -257,8 +263,10 @@ final readonly class BookingPresenter
 
     /**
      * Whether this direction is behind us -- its last arrival has passed.
+     *
+     * @param ResponseItinerary $itinerary
      */
-    private function hasFlown(stdClass $itinerary): bool
+    private function hasFlown(array $itinerary): bool
     {
         $endsAt = $this->endsAt($itinerary);
 
