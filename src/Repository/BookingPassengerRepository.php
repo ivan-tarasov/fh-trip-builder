@@ -12,6 +12,31 @@ use TripBuilder\Database\Table;
  *
  * A booking's own row keeps the lead passenger, so the bookings list can render
  * a name without a join. Everyone, the lead included, is here.
+ *
+ * Verified live against a real fetch: `id`, `booking_id` and `position` come
+ * back native PHP `int` (plain INT/TINYINT columns, same as
+ * `AirportRepository`'s `altitude`), and `dob` -- a DATE column -- comes back
+ * `string`, not a `DateTime`.
+ *
+ * `keyFor()` reads only `first_name`, `last_name` and `dob`, and is called with
+ * three structurally different shapes: a full `BookingPassengerRow`, a
+ * `TravellerBookingCountRow`, and a bare `SubmittedPassenger` in tests. `...`
+ * marks the shape open rather than naming a fourth alias just for that
+ * intersection.
+ *
+ * @phpstan-type BookingPassengerRow array{
+ *     id: int, booking_id: int, position: int, type: string,
+ *     first_name: string, last_name: string, dob: string, gender: string,
+ * }
+ * @phpstan-type SubmittedPassenger array{
+ *     type: string, first_name: string, last_name: string, dob: string, gender: string,
+ * }
+ * @phpstan-type TravellerCountRow array{booking_id: int, travellers: int}
+ * @phpstan-type TravellerNameRow array{booking_id: int, first_name: string, last_name: string}
+ * @phpstan-type TravellerBookingCountRow array{
+ *     first_name: string, last_name: string, dob: string, bookings: int,
+ * }
+ * @phpstan-type PassengerNameKey array{first_name: string, last_name: string, dob: string, ...}
  */
 final readonly class BookingPassengerRepository
 {
@@ -23,7 +48,7 @@ final readonly class BookingPassengerRepository
      * The caller owns the transaction: this runs one statement per passenger
      * and a booking with half its party recorded is worse than no booking.
      *
-     * @param list<array<string, mixed>> $passengers
+     * @param list<SubmittedPassenger> $passengers
      */
     public function createFor(int $bookingId, array $passengers): void
     {
@@ -63,6 +88,7 @@ final readonly class BookingPassengerRepository
 
         $placeholders = implode(', ', array_fill(0, count($bookingIds), '?'));
 
+        /** @var list<TravellerCountRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT booking_id, COUNT(*) AS travellers FROM ' . Table::BookingPassengers->value
             . " WHERE booking_id IN ($placeholders) GROUP BY booking_id",
@@ -98,6 +124,7 @@ final readonly class BookingPassengerRepository
 
         $placeholders = implode(', ', array_fill(0, count($bookingIds), '?'));
 
+        /** @var list<TravellerNameRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT booking_id, first_name, last_name FROM ' . Table::BookingPassengers->value
             . " WHERE booking_id IN ($placeholders) ORDER BY booking_id ASC, position ASC",
@@ -132,7 +159,7 @@ final readonly class BookingPassengerRepository
      * One query for the party rather than one per traveller, which is what the
      * row constructor in the `IN` is for.
      *
-     * @param list<array<string, mixed>> $passengers rows as forBooking returns them
+     * @param list<BookingPassengerRow> $passengers rows as forBooking returns them
      * @return array<string, int> "first|last|dob" => how many bookings
      */
     public function bookingCountsFor(array $passengers): array
@@ -162,6 +189,7 @@ final readonly class BookingPassengerRepository
 
         $tuples = implode(', ', array_fill(0, count($wanted), '(?, ?, ?)'));
 
+        /** @var list<TravellerBookingCountRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT first_name, last_name, dob, COUNT(DISTINCT booking_id) AS bookings'
             . ' FROM ' . Table::BookingPassengers->value
@@ -184,7 +212,7 @@ final readonly class BookingPassengerRepository
      * and from a row of the count above, so the two can be matched in PHP
      * without the query having to return the key itself.
      *
-     * @param array<string, mixed> $passenger
+     * @param PassengerNameKey $passenger
      */
     public static function keyFor(array $passenger): string
     {
@@ -199,14 +227,17 @@ final readonly class BookingPassengerRepository
     /**
      * A booking's travellers, lead first.
      *
-     * @return list<array<string, mixed>>
+     * @return list<BookingPassengerRow>
      */
     public function forBooking(int $bookingId): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<BookingPassengerRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT * FROM ' . Table::BookingPassengers->value
             . ' WHERE booking_id = ? ORDER BY position ASC',
             [$bookingId],
         );
+
+        return $rows;
     }
 }

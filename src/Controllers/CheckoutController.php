@@ -38,6 +38,8 @@ use TripBuilder\View\TwigRenderer;
  * with the browser's Back button. Everything that matters is resolved from
  * those ids server-side: the price shown is the price in the database, never a
  * number the form sent us.
+ *
+ * @phpstan-import-type SubmittedPassenger from BookingPassengerRepository
  */
 class CheckoutController extends AbstractController
 {
@@ -337,7 +339,7 @@ class CheckoutController extends AbstractController
      *
      * @param array<string, mixed> $trip
      * @param array<string, string> $form
-     * @param list<array<string, string>> $passengers
+     * @param list<SubmittedPassenger> $passengers
      * @param list<int> $outboundIds
      * @param list<int> $returnIds
      * @throws Exception
@@ -525,7 +527,7 @@ class CheckoutController extends AbstractController
      * the party so a missing block is an empty passenger to complain about
      * rather than a passenger that quietly disappears.
      *
-     * @return list<array<string, string>>
+     * @return list<SubmittedPassenger>
      */
     private function submittedPassengers(Party $party): array
     {
