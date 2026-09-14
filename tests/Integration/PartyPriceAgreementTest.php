@@ -35,6 +35,8 @@ use TripBuilder\TripType;
  * this. Base and tax carry different shares — a lap infant pays a token fare
  * and no tax at all — so a party of plain adults would agree even if one side
  * summed before scaling and the other scaled before summing.
+ *
+ * @phpstan-import-type ResponseItinerary from FlightFinder
  */
 final class PartyPriceAgreementTest extends IntegrationTestCase
 {
@@ -178,7 +180,7 @@ final class PartyPriceAgreementTest extends IntegrationTestCase
      * The search row for exactly these legs, or null when the filters drop it.
      *
      * @param list<int> $ids
-     * @return array<string, mixed>|null
+     * @return array{price_base: float, price_tax: float, itinerary: ResponseItinerary}|null
      */
     private function findRow(array $ids, Party $party, FlightFilters $filters): ?array
     {

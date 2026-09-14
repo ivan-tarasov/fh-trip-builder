@@ -26,6 +26,74 @@ use TripBuilder\TripType;
  * The HTTP endpoint (Api\Flights\Response) and the page controllers both call
  * this directly, so a page render no longer makes an HTTP request to the app's
  * own API.
+ *
+ * @phpstan-import-type Itinerary from FlightRepository
+ * @phpstan-import-type LegRow from FlightRepository
+ *
+ * The response shapes below are `mapLeg()`/`mapItinerary()`'s own output, not
+ * read off anything -- so unlike `LegRow` and `Itinerary` they are derived
+ * from the transformation itself rather than verified against a live fetch.
+ * `number` becomes a formatted string here (`"AC-100"`), not `LegRow`'s raw
+ * int; `cabin_code` is whatever the caller passed in, not read off the row.
+ *
+ * @phpstan-type ResponseAirport array{
+ *     airport_code: string, airport_name: string,
+ *     airport_country: string|null, airport_city: string, date_time: string,
+ * }
+ * @phpstan-type ResponseSegment array{
+ *     id: int, carrier: string, carrier_name: string, number: string,
+ *     depart: ResponseAirport, arrive: ResponseAirport,
+ *     cabin_code: string|null,
+ *     aircraft: string|null, aircraft_widebody: bool|null,
+ *     seat_layout: string|null, seat_pitch: int|null,
+ *     seat_width: float|null, aircraft_seats: int|null,
+ *     seat_flat_bed: bool|null,
+ *     distance: int, duration: int, rating: float,
+ * }
+ * @phpstan-type ResponseLayover array{
+ *     airport_code: string, airport_name: string, airport_city: string,
+ *     wait_minutes: int,
+ * }
+ * @phpstan-type ResponseItinerary array{
+ *     segments: list<ResponseSegment>, badges: list<string>, stops: int,
+ *     total_duration: int, co2_kg: float|null, co2_typical: bool|null,
+ *     layovers: list<ResponseLayover>,
+ * }
+ *
+ * `findSegments()`'s own shape rather than composing `ResponseSegment` with
+ * `&` -- PHPStan does not merge array shapes that way, the same finding as
+ * `FlightRepository`'s `Candidate` alias.
+ *
+ * @phpstan-type ResponseBookingSegment array{
+ *     id: int, carrier: string, carrier_name: string, number: string,
+ *     depart: ResponseAirport, arrive: ResponseAirport,
+ *     cabin_code: string|null,
+ *     aircraft: string|null, aircraft_widebody: bool|null,
+ *     seat_layout: string|null, seat_pitch: int|null,
+ *     seat_width: float|null, aircraft_seats: int|null,
+ *     seat_flat_bed: bool|null,
+ *     distance: int, duration: int, rating: float,
+ *     price_base: float, price_tax: float,
+ * }
+ * @phpstan-type ResponseSearch array{
+ *     shown: int, has_more: bool, total_flights: int,
+ *     cheapest_total: float|null, trip_type: string, step: int|null,
+ *     price_mode: string,
+ *     selected: ResponseItinerary|null, selected_price: float|null,
+ *     selected_ids: list<int>,
+ *     selected_return: ResponseItinerary|null,
+ *     selected_return_price: float|null, selected_return_ids: list<int>,
+ *     package_price: float|null,
+ *     depart: string, arrive: string,
+ *     depart_city_name: string, arrive_city_name: string,
+ *     adult_count: int, child_count: int, infant_count: int,
+ *     party_label: string,
+ *     available: array<string, list<string>|list<int>|bool>,
+ *     option_prices: array<string, array<array-key, float>>,
+ *     bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>,
+ *     highlights: array<string, array{price: float, duration: int}>,
+ *     flights: list<array{price_base: float, price_tax: float, itinerary: ResponseItinerary}>,
+ * }
  */
 final readonly class FlightFinder
 {
@@ -81,7 +149,7 @@ final readonly class FlightFinder
      *
      * @param list<int> $outboundIds leg ids of an already-chosen outbound
      * @param list<int> $returnIds leg ids of an already-chosen return
-     * @return array<string, mixed>
+     * @return ResponseSearch
      */
     public function search(FlightSearchQuery $query, TripType $tripType, array $outboundIds = [], array $returnIds = []): array
     {
@@ -274,7 +342,7 @@ final readonly class FlightFinder
      * cabin was sold.
      *
      * @param list<int> $ids
-     * @return list<array<string, mixed>>
+     * @return list<ResponseBookingSegment>
      */
     public function findSegments(array $ids, CabinClass $cabin): array
     {
@@ -309,7 +377,7 @@ final readonly class FlightFinder
      * that does know the cabin — checkout does — passes it.
      *
      * @param list<int> $ids
-     * @return array<string, mixed>|null
+     * @return array{itinerary: ResponseItinerary, price_base: float, price_tax: float}|null
      */
     public function itinerary(array $ids, CabinClass $cabin = CabinClass::Economy): ?array
     {
@@ -333,7 +401,7 @@ final readonly class FlightFinder
      * own says nothing about the cabin, so the leg is priced in the one every
      * flight sells.
      *
-     * @return array<string, mixed>|null
+     * @return ResponseBookingSegment|null
      */
     public function findOne(int $id, CabinClass $cabin = CabinClass::Economy): ?array
     {
@@ -358,8 +426,8 @@ final readonly class FlightFinder
      * shape: per-segment legs, the stop count, total elapsed duration, and the
      * layover (connection airport + wait) between each pair of segments.
      *
-     * @param array<string, mixed> $itinerary
-     * @return array<string, mixed>
+     * @param Itinerary $itinerary
+     * @return ResponseItinerary
      */
     private function mapItinerary(array $itinerary, ?string $cabin): array
     {
@@ -397,8 +465,8 @@ final readonly class FlightFinder
     /**
      * Map one hydrated flight leg (plain columns) into the response segment shape.
      *
-     * @param array<string, mixed> $leg
-     * @return array<string, mixed>
+     * @param LegRow $leg
+     * @return ResponseSegment
      */
     private function mapLeg(array $leg, ?string $cabin): array
     {
