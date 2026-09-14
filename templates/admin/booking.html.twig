@@ -3,9 +3,29 @@
 
 {% set admin_section = 'bookings' %}
 
-{% block title %}{{ booking.reference|default('Booking') }}{% endblock %}
+{% block title %}{{ extra.reference ?: 'Booking ' ~ extra.id }}{% endblock %}
 
-{% block tools %}<a class="button" href="/admin/bookings">Back</a>{% endblock %}
+{% block tools %}
+    <span class="stamp mono">#{{ extra.id }}</span>
+
+    {# Cancel and reinstate are each other's undo, which is what makes them safe
+       to put on the page. Nothing here deletes: a cancelled booking is a row the
+       traveller can still see, which is the whole reason `bookings.status`
+       exists (A3.8, #233). #}
+    <form method="post" action="/admin/bookings/{{ extra.id }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="{{ extra.is_cancelled ? 'reinstate' : 'cancel' }}">
+        <button
+            type="submit"
+            class="button{{ extra.is_cancelled ? '' : ' button--bad' }}"
+            data-confirm="{{ extra.is_cancelled
+                ? 'Put this booking back to confirmed?'
+                : 'Cancel this booking? The traveller will see it as cancelled.' }}"
+        >{{ extra.is_cancelled ? 'Reinstate' : 'Cancel booking' }}</button>
+    </form>
+
+    <a class="button" href="/admin/bookings">Back</a>
+{% endblock %}
 
 {# Drawn through `BookingPresenter`, the same shaper the traveller's own booking
    page uses -- so the itinerary, the money at its stored rate and the state read
@@ -16,13 +36,15 @@
         <p class="notice notice--bad">
             This booking's flights will not build, so there is nothing to draw.
             The columns are still there; the legs it was folded from are gone.
+            The log below and the buttons above still work on it, because this is
+            exactly the row somebody rings up about.
         </p>
     {% else %}
         <div class="pair">
             <div class="tile tile--plain">
                 <p class="tile__label">Reference</p>
                 <p class="tile__value mono">{{ booking.reference ?: 'none issued' }}</p>
-                <p class="tile__note">made {{ booking.created|date('j M Y, H:i') }}</p>
+                <p class="tile__note">made {{ booking.created|date('j M Y, H:i') }} &middot; {{ extra.made_ago }}</p>
             </div>
 
             <div class="tile tile--plain">
@@ -58,6 +80,7 @@
                         <th scope="col">Name</th>
                         <th scope="col">Type</th>
                         <th scope="col">Born</th>
+                        <th scope="col">Bookings</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -66,9 +89,26 @@
                             <td>{{ passenger.name }}</td>
                             <td class="sheet__quiet">{{ passenger.type }}</td>
                             <td class="mono sheet__quiet">{{ passenger.dob }}</td>
+                            {# `elsewhere` is mapped from the same rows the
+                               presenter shaped, so position n here is position n
+                               there -- see AdminController::booking(). #}
+                            <td>
+                                {% set count = elsewhere[loop.index0]|default(1) %}
+                                {% if count > 1 %}
+                                    <a href="/admin/bookings?q={{ passenger.name|url_encode }}">{{ count }} bookings</a>
+                                    {# Said plainly, because the number is a match
+                                       on a name and a date of birth and not on a
+                                       person. This site has no passenger table and
+                                       no identity in it: a booking carries the
+                                       words somebody typed into a form. #}
+                                    <span class="sheet__quiet">same name and date of birth</span>
+                                {% else %}
+                                    <span class="sheet__quiet">only this one</span>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% else %}
-                        <tr><td colspan="3" class="sheet__quiet">{{ booking.passenger_summary }}</td></tr>
+                        <tr><td colspan="4" class="sheet__quiet">{{ booking.passenger_summary }}</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -146,5 +186,60 @@
                 </tbody>
             </table>
         </div>
+    {% endif %}
+
+    {# The log.
+
+       Outside the `if` above on purpose: a booking whose flights will not build
+       still has a history, and is the one an operator most wants it for.
+
+       **Two things it is honest about.** It begins the day it was installed, so
+       a booking older than that has no lines and says why rather than reading as
+       one nothing ever happened to. And it records what happened *to* a booking,
+       not every step the person took on the way to making it -- searches are
+       stored as an aggregate keyed by a hash, with no session and no booking on
+       them, so that history does not exist to show (A3.8, #233). #}
+    <p class="band">Booking log</p>
+
+    <div class="group">
+        <table class="sheet">
+            <tbody>
+                {% for line in log %}
+                    <tr>
+                        <td class="sheet__when mono">{{ line.at|date('j M Y, H:i') }}</td>
+                        <td>
+                            {{ line.event ? line.event.label() : line.raw }}
+                            <span class="sheet__quiet">
+                                by {{ line.actor ? line.actor.label() : 'somebody' }}{% if line.note %} &middot; {{ line.note }}{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td class="sheet__when mono">{{ extra.made|date('j M Y, H:i') }}</td>
+                        <td>
+                            Booked
+                            <span class="sheet__quiet">
+                                from the booking's own row, which is the one thing
+                                about a booking this old that was written down
+                            </span>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if log is empty %}
+        <p class="stamp">
+            {% if log_from %}
+                Nothing has been recorded against this booking. The log has been
+                running since {{ log_from|date('j M Y') }}, so anything that
+                happened to this one before then was not written down.
+            {% else %}
+                Nothing has been recorded against any booking yet. The log starts
+                with the next thing that happens.
+            {% endif %}
+        </p>
     {% endif %}
 {% endblock %}

@@ -577,6 +577,43 @@ class Helper
         );
     }
 
+    /**
+     * How long ago something was, in the coarsest unit that still says
+     * something.
+     *
+     * "3 days ago" beside a date, because the date answers *when* and this
+     * answers *how long* -- and an operator scanning a list of bookings is
+     * asking the second question. Minutes below an hour, hours below a day,
+     * days below a month, then months and years.
+     *
+     * Nothing finer than a minute: a booking made forty seconds ago reads
+     * "just now", which is what somebody would say out loud.
+     */
+    public static function elapsed(string|int $when, string|int|null $now = null): string
+    {
+        $seconds = ($now === null ? time() : self::stamp($now)) - self::stamp($when);
+
+        // A clock that is behind the database, or a row dated in the future.
+        // Neither is worth a sentence of its own on a list.
+        if ($seconds < 60) {
+            return 'just now';
+        }
+
+        $ago = static fn(int $count, string $unit): string
+            => self::plural($count, $unit, null, true) . ' ago';
+
+        return match (true) {
+            $seconds < 3600 => $ago(intdiv($seconds, 60), 'minute'),
+            $seconds < 86400 => $ago(intdiv($seconds, 3600), 'hour'),
+            $seconds < 2592000 => $ago(intdiv($seconds, 86400), 'day'),
+            // Thirty days to the month and three hundred and sixty five to the
+            // year. Wrong by a day or two and right about which word to use,
+            // which is all a label this coarse is being asked for.
+            $seconds < 31536000 => $ago(intdiv($seconds, 2592000), 'month'),
+            default => $ago(intdiv($seconds, 31536000), 'year'),
+        };
+    }
+
     private static function stamp(string|int $when): int
     {
         return is_int($when) ? $when : (int) strtotime($when);

@@ -8,12 +8,16 @@ use DateTimeImmutable;
 use Exception;
 use Throwable;
 use TripBuilder\Admin;
+use TripBuilder\BookingActor;
+use TripBuilder\BookingEvent;
+use TripBuilder\BookingStatus;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
+use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\DashboardRepository;
@@ -226,15 +230,23 @@ class AdminController extends AbstractController
     }
 
     /**
-     * Every booking, newest first.
+     * Every booking, newest first, or the ones a search matches.
      *
-     * **What the list shows is a decision, not an omission.** `bookings` holds
-     * an email, a phone number, a name, a date of birth and a gender -- PIPEDA
-     * scope, which is why `db:prune` sweeps it at all. A list is for finding
-     * the right booking, so it carries the reference, when it was made, when it
-     * leaves, its state, the party size and the total. Everything that
-     * identifies a person is on the page for the one booking somebody opened,
-     * where looking at it was a deliberate act (A3.8, #233).
+     * **What the list shows is a decision, and it has been taken twice.** The
+     * first time it left every name off: `bookings` holds an email, a phone
+     * number, a name, a date of birth and a gender -- PIPEDA scope, which is
+     * why `db:prune` sweeps it at all -- and a list is for finding the right
+     * booking, not for reading people.
+     *
+     * The travellers are on it now because finding the right booking is
+     * usually being done by name. Somebody rings up and says who they are;
+     * nobody rings up and quotes a database id. A list that cannot be scanned
+     * for the name on the phone is one an operator opens ten bookings from,
+     * and ten pages of contact details is worse than one column of names.
+     *
+     * So: names yes, and everything else still no. No email, no phone, no date
+     * of birth, no card. Those stay on the page for the one booking somebody
+     * opened, where looking at them was a deliberate act (A3.8, #233).
      *
      * @throws Exception|Error
      */
@@ -245,20 +257,31 @@ class AdminController extends AbstractController
         }
 
         $bookings = new BookingRepository($this->connection());
+        // Cut to a length somebody could have typed. A `LIKE` is a scan, and
+        // the term is the one thing on this page a stranger would control if
+        // the guard above ever failed.
+        $term = mb_substr(trim($this->request->query->str('q', '')), 0, 64);
         $page = max(1, (int) $this->request->query->str('page', '1'));
-        $rows = $bookings->recent(self::PER_PAGE, ($page - 1) * self::PER_PAGE);
+        $offset = ($page - 1) * self::PER_PAGE;
 
-        $counts = $rows === []
+        $rows = $term === ''
+            ? $bookings->recent(self::PER_PAGE, $offset)
+            : $bookings->search($term, self::PER_PAGE, $offset);
+
+        // Names and not just a count, which `countsFor()` would give: the same
+        // one query answers both, and the column needs the names.
+        $names = $rows === []
             ? []
             : new BookingPassengerRepository($this->connection())
-                ->countsFor(array_map(static fn(array $row): int => (int) $row['id'], $rows));
+                ->namesFor(array_map(static fn(array $row): int => (int) $row['id'], $rows));
 
         echo new TwigRenderer()->render('admin/bookings.html.twig', [
             'bookings' => array_map(
-                fn(array $row): array => $this->listed($row, $counts[(int) $row['id']] ?? 1),
+                fn(array $row): array => $this->listed($row, $names[(int) $row['id']] ?? []),
                 $rows,
             ),
-            'total' => $bookings->countAll(),
+            'total' => $term === '' ? $bookings->countAll() : $bookings->countMatching($term),
+            'term' => $term,
             'page' => $page,
             'per_page' => self::PER_PAGE,
         ]);
@@ -285,7 +308,8 @@ class AdminController extends AbstractController
         $parts = explode('/', trim($this->request->path(), '/'));
         $id = (int) end($parts);
 
-        $row = new BookingRepository($this->connection())->find($id);
+        $bookings = new BookingRepository($this->connection());
+        $row = $bookings->find($id);
 
         if ($row === null) {
             $this->notFound();
@@ -293,8 +317,17 @@ class AdminController extends AbstractController
             return;
         }
 
-        $passengers = new BookingPassengerRepository($this->connection())->forBooking($id);
+        if ($this->request->isPost()) {
+            $this->actOnBooking($bookings, $row);
+
+            return;
+        }
+
+        $travellers = new BookingPassengerRepository($this->connection());
+        $passengers = $travellers->forBooking($id);
         $booking = new BookingPresenter()->booking($row, $passengers);
+        $events = new BookingEventRepository($this->connection());
+        $counts = $travellers->bookingCountsFor($passengers);
 
         echo new TwigRenderer()->render('admin/booking.html.twig', [
             'booking' => $booking,
@@ -303,15 +336,86 @@ class AdminController extends AbstractController
             // there has ever been, which is what a receipt shows.
             'extra' => [
                 'id' => (int) $row['id'],
+                // Off the column and not off the presenter, which gives nothing
+                // at all for a booking whose flights will not build -- and that
+                // is the page whose tab most needs to say which booking it is.
+                'reference' => trim((string) $row['reference']),
                 'card_last4' => (string) $row['card_last4'],
                 // Which browser made it. Not identifying on its own, and it is
                 // how every other read of this table finds a booking, so an
                 // operator chasing a duplicate can see they came from one
                 // person rather than two.
                 'session' => (string) $row['session_id'],
+                'made' => (string) $row['created'],
+                'made_ago' => Helper::elapsed((string) $row['created']),
+                'is_cancelled' => BookingStatus::fromRow($row['status'] ?? null) === BookingStatus::Cancelled,
             ],
             'passengers' => $passengers,
+            // How many bookings each traveller appears on, in the order the
+            // presenter lists them -- both are mapped from `$passengers`, so
+            // position n here is position n there. A lookup instead would need
+            // the name split back into the two columns it was joined from.
+            'elsewhere' => array_map(
+                static fn(array $passenger): int
+                    => $counts[BookingPassengerRepository::keyFor($passenger)] ?? 1,
+                $passengers,
+            ),
+            'log' => $events->forBooking($id),
+            // When the log itself began, so a booking with no events can say
+            // why rather than reading as one nothing ever happened to.
+            'log_from' => $events->startedAt(),
         ]);
+    }
+
+    /**
+     * Cancel a booking, or put a cancelled one back.
+     *
+     * The two actions the panel has, and they are each other's undo -- which is
+     * what makes them safe to offer at all. Nothing here deletes: a cancelled
+     * booking is a row the traveller can still see, which is the whole reason
+     * `bookings.status` exists.
+     *
+     * The update names the status it expects to find, so the button cannot
+     * cancel a booking somebody cancelled while this page was open, and the log
+     * is written only when a row actually moved (A3.8, #233).
+     *
+     * @param array<string, mixed> $row
+     */
+    private function actOnBooking(BookingRepository $bookings, array $row): void
+    {
+        $id = (int) $row['id'];
+        $back = '/admin/bookings/' . $id;
+
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            $this->bounce($back);
+
+            return;
+        }
+
+        $change = match ($this->request->body->str('action')) {
+            'cancel' => [
+                'to' => BookingStatus::Cancelled,
+                'from' => BookingStatus::Confirmed,
+                'event' => BookingEvent::Cancelled,
+            ],
+            'reinstate' => [
+                'to' => BookingStatus::Confirmed,
+                'from' => BookingStatus::Cancelled,
+                'event' => BookingEvent::Reinstated,
+            ],
+            default => null,
+        };
+
+        if ($change !== null && $bookings->setStatus($id, $change['to'], $change['from']) > 0) {
+            new BookingEventRepository($this->connection())->record(
+                $id,
+                $change['event'],
+                BookingActor::Operator,
+                'from the panel',
+            );
+        }
+
+        $this->bounce($back);
     }
 
     /**
@@ -687,17 +791,37 @@ class AdminController extends AbstractController
      * the one somebody is calling about. So the list falls back to the columns.
      *
      * @param array<string, mixed> $row
+     * @param list<string> $names everyone on it, lead first, empty on a booking
+     *     made before travellers had rows of their own
      * @return array<string, mixed>
      */
-    private function listed(array $row, int $travellers): array
+    private function listed(array $row, array $names): array
     {
+        // The lead off the booking's own row and not off `$names`, because
+        // those two agree on every booking that has both and only the first
+        // exists on the ones written before `booking_passengers` did.
+        $lead = trim((string) $row['passenger_first'] . ' ' . (string) $row['passenger_last']);
+        $party = [
+            'lead' => $lead === '' ? ($names[0] ?? '') : $lead,
+            // Everyone else, named rather than only counted: an operator
+            // looking for the child on a family booking is looking for a name
+            // that is not the lead's. A party of one has none.
+            'others' => array_slice($names, 1),
+        ];
+
+        $travellers = max(1, count($names));
         $shaped = new BookingPresenter()->booking($row, [], $travellers);
+
+        // The date answers when and this answers how long, and an operator
+        // scanning the list is asking the second one.
+        $made = ['created' => (string) $row['created'], 'made_ago' => Helper::elapsed((string) $row['created'])];
 
         if ($shaped === null) {
             return [
+                ...$party,
+                ...$made,
                 'id' => (int) $row['id'],
                 'reference' => trim((string) $row['reference']),
-                'created' => (string) $row['created'],
                 'status_label' => (string) $row['status'],
                 'is_cancelled' => (string) $row['status'] === 'cancelled',
                 'from' => null,
@@ -714,9 +838,10 @@ class AdminController extends AbstractController
         $outbound = $shaped['outbound'];
 
         return [
+            ...$party,
+            ...$made,
             'id' => (int) $row['id'],
             'reference' => $shaped['reference'],
-            'created' => $shaped['created'],
             'status_label' => $shaped['status_label'],
             'is_cancelled' => $shaped['is_cancelled'],
             'from' => $outbound['depart_code'] ?? null,

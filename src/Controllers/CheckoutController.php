@@ -8,6 +8,8 @@ use DateTimeImmutable;
 use Exception;
 use stdClass;
 use Throwable;
+use TripBuilder\BookingActor;
+use TripBuilder\BookingEvent;
 use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Csrf;
@@ -17,6 +19,7 @@ use TripBuilder\Http\Input;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Money;
 use TripBuilder\Party;
+use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\CountryRepository;
@@ -412,6 +415,16 @@ class CheckoutController extends AbstractController
             ]);
 
             new BookingPassengerRepository($this->connection())->createFor($bookingId, $passengers);
+
+            // The first line of the booking's log. Inside the transaction, so a
+            // rollback takes it with the booking rather than leaving a note
+            // about one that does not exist (A3.8, #233).
+            new BookingEventRepository($this->connection())->record(
+                $bookingId,
+                BookingEvent::Booked,
+                BookingActor::Visitor,
+                sprintf('%d traveller(s)', count($passengers)),
+            );
 
             $this->connection()->commit();
         } catch (Throwable $e) {

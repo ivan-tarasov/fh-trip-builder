@@ -262,6 +262,9 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Wraps because the bookings pages put a search box and two buttons up here,
+     and a bar that cannot wrap pushes the title off a narrow screen instead. */
+  flex-wrap: wrap;
   gap: 1rem;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--rule);
@@ -269,7 +272,7 @@ a:hover { text-decoration: underline; }
 }
 
 .well__title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
-.well__tools { display: flex; align-items: center; gap: .5rem; }
+.well__tools { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .well__body { padding: 1.5rem; min-width: 0; }
 
 /*
@@ -325,6 +328,17 @@ a:hover { text-decoration: underline; }
   line-height: 1.5rem;
   color: var(--ink-quiet);
 }
+
+/* Destructive, and quiet about it. A filled red button in the top bar of every
+   booking would shout on the twenty-four pages where nothing is wrong; the
+   colour is in the word and the edge, and the fill arrives on hover. Cancelling
+   is reversible from the same bar anyway. */
+.button--bad {
+  border-color: var(--bad-edge);
+  color: var(--bad);
+}
+
+.button--bad:hover { background: var(--bad-soft); }
 
 /*
 |------------------------------------------------------------------------------
@@ -497,6 +511,11 @@ a:hover { text-decoration: underline; }
 /* A label column in a two-column sheet: the field name, not data. */
 .sheet__key { width: 9rem; color: var(--ink-quiet); }
 
+/* The same column when it holds a moment rather than a field name. Wider and
+   unbreakable, because "11 Sep 2026, 14:20" wrapped after the comma reads as
+   two entries in a log that is a list of them. */
+.sheet__when { width: 11rem; white-space: nowrap; color: var(--ink-quiet); }
+
 /* A caption is a heading for the table under it, so it sits above the head row
    rather than reading as one. */
 .sheet__caption {
@@ -549,6 +568,26 @@ a:hover { text-decoration: underline; }
 
 .field input:disabled { background: var(--sunken); color: var(--ink-quiet); }
 .field__hint { margin: .25rem 0 0; color: var(--ink-quiet); font-size: .75rem; }
+/* The bookings search, which lives in the title bar rather than over the table:
+   it is the page's control, not the table's, and it is the first thing reached
+   for when somebody is on the phone. */
+.finder { display: flex; gap: .35rem; }
+
+.finder input[type="search"] {
+  width: 16rem;
+  max-width: 40vw;
+  padding: 0 .5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: .8125rem;
+  line-height: calc(var(--row) - 2px);
+}
+
+.finder input[type="search"]::placeholder { color: var(--ink-faint); }
+
 /* Two columns, used by the forms and by the dashboard's two summaries. */
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .actions { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; }

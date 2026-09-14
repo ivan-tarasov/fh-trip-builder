@@ -363,4 +363,39 @@ final class HelperTest extends TestCase
         );
     }
 
+    /**
+     * How long ago, in the coarsest unit that still says something.
+     *
+     * The date beside it answers *when*; this answers *how long*, and an
+     * operator scanning a list of bookings is asking the second one.
+     */
+    #[DataProvider('elapsedProvider')]
+    public function testElapsed(string $expected, int $secondsAgo): void
+    {
+        $now = strtotime('2026-09-14 12:00:00');
+
+        self::assertSame($expected, Helper::elapsed($now - $secondsAgo, $now));
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: int}>
+     */
+    public static function elapsedProvider(): array
+    {
+        return [
+            'under a minute is just now' => ['just now', 30],
+            'exactly a minute' => ['1 minute ago', 60],
+            'minutes' => ['10 minutes ago', 600],
+            'the last minute of the hour' => ['59 minutes ago', 3599],
+            'hours' => ['2 hours ago', 7200],
+            'the last hour of the day' => ['23 hours ago', 86399],
+            'days' => ['3 days ago', 259200],
+            'months' => ['2 months ago', 5184000],
+            'years' => ['3 years ago', 94608000],
+            // A clock behind the database, or a row dated in the future.
+            // Neither is worth a sentence of its own on a list.
+            'the future reads as now' => ['just now', -8000],
+        ];
+    }
+
 }

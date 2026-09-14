@@ -233,26 +233,54 @@ final class AdminShellTest extends TestCase
     }
 
     /**
-     * The booking list carries nothing that identifies a person.
+     * The booking list carries a name and nothing else about a person.
      *
-     * A decision, not an omission. `bookings` holds an email, a phone number, a
-     * name, a date of birth and a gender -- PIPEDA scope, which is why
-     * `db:prune` sweeps it at all. A list is for finding the right booking;
-     * everything that names somebody is on the page for the one booking an
-     * operator opened, where looking was a deliberate act (A3.8, #233).
+     * This pinned *no names at all* when it was written. It was changed on
+     * purpose: finding the right booking is usually being done by name, because
+     * somebody rings up and says who they are and nobody rings up and quotes a
+     * database id. A list that cannot be scanned for the name on the phone is
+     * one an operator opens ten bookings from, and ten pages of contact details
+     * is worse than one column of names (A3.8, #233).
      *
-     * Worth a test because the cheapest way to make a list more useful is to
-     * add a column, and the cheapest column to add is a name.
+     * What did not change is everything else. `bookings` also holds an address,
+     * a phone number, a date of birth and four digits of a card -- PIPEDA scope,
+     * which is why `db:prune` sweeps it at all -- and those stay on the page for
+     * the one booking an operator opened, where looking was a deliberate act.
+     *
+     * Worth a test because the cheapest way to make a list more useful is to add
+     * a column, and every column left is one of those four.
      */
-    public function testTheBookingListNamesNobody(): void
+    public function testTheBookingListShowsNoContactDetails(): void
     {
         $list = self::stripComments(self::read('templates/admin/bookings.html.twig'));
 
-        foreach (['contact_email', 'contact_phone', 'passenger_first', 'passenger_last', 'dob', 'card_last4'] as $personal) {
+        foreach (['contact_email', 'contact_phone', 'dob', 'card_last4', 'session'] as $personal) {
             self::assertStringNotContainsString(
                 $personal,
                 $list,
                 $personal . ' is on the list, where finding a booking does not need it',
+            );
+        }
+    }
+
+    /**
+     * Every form in the panel that changes something carries its token.
+     *
+     * The panel's POSTs move an article, cancel a booking and sign an operator
+     * out, and a `Csrf::isValid()` in the controller is only half of that pair:
+     * the other half is a hidden field somebody has to remember to put in the
+     * template. Counted rather than parsed, because a form with no token and a
+     * token with no form are both the same mistake.
+     */
+    public function testEveryFormThatChangesSomethingCarriesItsToken(): void
+    {
+        foreach ([...self::PAGES, self::LAYOUT] as $page) {
+            $template = self::stripComments(self::read($page));
+
+            self::assertSame(
+                preg_match_all('/<form[^>]*method="post"/i', $template),
+                substr_count($template, 'csrf_field()'),
+                $page . ' has a POST form and a token, and not the same number of each',
             );
         }
     }
