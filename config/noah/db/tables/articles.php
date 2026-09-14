@@ -97,6 +97,19 @@ return [
             'comment' => false,
         ],
         [
+            // NULL while the importer owns this row; a timestamp once somebody
+            // saved it in the panel, after which `articles:import` neither
+            // rewrites nor deletes it. A person wins once they edit, which is
+            // what A3.4 (#102) settled -- see `ArticleRepository::store()`.
+            'name' => 'edited_at',
+            'type' => 'datetime',
+            'length' => null,
+            'default' => false,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => 'When a person last edited this by hand, or NULL while the files own it',
+        ],
+        [
             'name' => 'created_at',
             'type' => 'datetime',
             'length' => null,

@@ -6,6 +6,7 @@ namespace TripBuilder\Repository;
 
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
+use TripBuilder\ImportOutcome;
 
 /**
  * The groups the help hub is built out of.
@@ -73,12 +74,12 @@ final readonly class ArticleCategoryRepository
     /**
      * Every category the panel can edit, disabled ones included.
      *
-     * @return list<array{slug: string, title: string, position: int, enabled: bool}>
+     * @return list<array{slug: string, title: string, position: int, enabled: bool, edited: bool}>
      */
     public function forPanel(string $locale = self::DEFAULT_LOCALE): array
     {
         $rows = $this->connection->fetchAll(
-            'SELECT c.slug, c.position, c.enabled, t.title'
+            'SELECT c.slug, c.position, c.enabled, c.edited_at, t.title'
             . ' FROM ' . Table::ArticleCategories->value . ' c'
             . ' LEFT JOIN ' . Table::ArticleCategoryTranslations->value . ' t'
             . '  ON t.slug = c.slug AND t.locale = ?'
@@ -91,18 +92,19 @@ final readonly class ArticleCategoryRepository
             'title' => (string) ($row['title'] ?? $row['slug']),
             'position' => (int) $row['position'],
             'enabled' => (bool) $row['enabled'],
+            'edited' => $row['edited_at'] !== null,
         ], $rows);
     }
 
     /**
      * One category as the editor needs it: every column, enabled or not.
      *
-     * @return array{slug: string, title: string, summary: string, icon: string, accent: string, position: int, enabled: bool}|null
+     * @return array{slug: string, title: string, summary: string, icon: string, accent: string, position: int, enabled: bool, edited: bool}|null
      */
     public function forEditing(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
     {
         $row = $this->connection->fetchOne(
-            'SELECT c.slug, c.icon, c.accent, c.position, c.enabled, t.title, t.summary'
+            'SELECT c.slug, c.icon, c.accent, c.position, c.enabled, c.edited_at, t.title, t.summary'
             . ' FROM ' . Table::ArticleCategories->value . ' c'
             . ' LEFT JOIN ' . Table::ArticleCategoryTranslations->value . ' t'
             . '  ON t.slug = c.slug AND t.locale = ?'
@@ -122,6 +124,7 @@ final readonly class ArticleCategoryRepository
             'accent' => (string) $row['accent'],
             'position' => (int) $row['position'],
             'enabled' => (bool) $row['enabled'],
+            'edited' => $row['edited_at'] !== null,
         ];
     }
 
@@ -249,16 +252,22 @@ final readonly class ArticleCategoryRepository
      * MySQL applies assignments left to right, so reading `title` after
      * assigning it would read the value just written.
      *
+     * **A row somebody has edited in the panel is left alone** (A3.4, #102),
+     * for the reason `ArticleRepository::store()` gives.
+     *
      * @param array{icon: string, accent: string, position: int} $category
      * @param array{title: string, summary: string} $translation
-     * @return bool whether the stored words differ from the ones passed in
      */
     public function store(
         string $slug,
         array $category,
         array $translation,
         string $locale = self::DEFAULT_LOCALE,
-    ): bool {
+    ): ImportOutcome {
+        if ($this->isHandEdited($slug)) {
+            return ImportOutcome::Kept;
+        }
+
         $stored = $this->connection->fetchOne(
             'SELECT title, summary FROM ' . Table::ArticleCategoryTranslations->value
             . ' WHERE slug = ? AND locale = ?',
@@ -296,6 +305,77 @@ final readonly class ArticleCategoryRepository
             [$slug, $locale, $translation['title'], $translation['summary']],
         );
 
-        return $changed;
+        return $changed ? ImportOutcome::Written : ImportOutcome::Unchanged;
+    }
+
+    /**
+     * The panel's write, which takes the row away from the files.
+     *
+     * `ArticleRepository::edit()` says why this is its own method rather than a
+     * flag (A3.4, #102).
+     *
+     * @param array{icon: string, accent: string, position: int} $category
+     * @param array{title: string, summary: string} $translation
+     */
+    public function edit(
+        string $slug,
+        array $category,
+        array $translation,
+        string $locale = self::DEFAULT_LOCALE,
+    ): void {
+        $this->connection->execute(
+            'INSERT INTO ' . Table::ArticleCategories->value
+            . ' (slug, icon, accent, position, enabled, created_at, edited_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW(), NOW())'
+            . ' ON DUPLICATE KEY UPDATE icon = VALUES(icon),'
+            . '  accent = VALUES(accent), position = VALUES(position), edited_at = NOW()',
+            [$slug, $category['icon'], $category['accent'], $category['position']],
+        );
+
+        $this->connection->execute(
+            'INSERT INTO ' . Table::ArticleCategoryTranslations->value
+            . ' (slug, locale, title, summary, updated_at)'
+            . ' VALUES (?, ?, ?, ?, NOW())'
+            . ' ON DUPLICATE KEY UPDATE'
+            . '  updated_at = IF('
+            . '   title <=> VALUES(title) AND summary <=> VALUES(summary),'
+            . '   updated_at, NOW()'
+            . '  ),'
+            . '  title = VALUES(title), summary = VALUES(summary)',
+            [$slug, $locale, $translation['title'], $translation['summary']],
+        );
+    }
+
+    /** Whether a person has taken this row over from the files. */
+    public function isHandEdited(string $slug): bool
+    {
+        return $this->connection->fetchValue(
+            'SELECT edited_at FROM ' . Table::ArticleCategories->value . ' WHERE slug = ?',
+            [$slug],
+        ) !== null;
+    }
+
+    /**
+     * Every slug a person owns, which is what the prune must not touch.
+     *
+     * @return list<string>
+     */
+    public function handEditedSlugs(): array
+    {
+        return array_map(
+            static fn(array $row): string => (string) $row['slug'],
+            $this->connection->fetchAll(
+                'SELECT slug FROM ' . Table::ArticleCategories->value . ' WHERE edited_at IS NOT NULL',
+            ),
+        );
+    }
+
+    /** Give the rows back to the files. See `ArticleRepository::reclaim()`. */
+    public function reclaim(): int
+    {
+        return $this->connection->execute(
+            'UPDATE ' . Table::ArticleCategories->value
+            . ' SET edited_at = NULL WHERE edited_at IS NOT NULL',
+        );
     }
 }
