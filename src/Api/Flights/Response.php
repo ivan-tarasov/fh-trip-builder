@@ -8,6 +8,7 @@ use Exception;
 use TripBuilder\Api\AbstractApi;
 use TripBuilder\Api\ApiResponder;
 use TripBuilder\Http\HttpStatus;
+use TripBuilder\Http\Input;
 use TripBuilder\Party;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
@@ -35,18 +36,23 @@ class Response extends AbstractApi
      */
     public function get(): void
     {
+        // Typed the same way a query string is -- this body is as untrusted
+        // as one, and Input already settles presence, type and default in
+        // one place for exactly this reason.
+        $data = new Input($this->data);
+
         // Throw Bad Request Exception if data or one of the necessary params is empty
-        if (empty($this->data)
-            || empty($this->data[self::DATA_TRIPTYPE])
-            || empty($this->data[self::DATA_DEPART])
-            || empty($this->data[self::DATA_ARRIVE])
-            || empty($this->data[self::DATA_DEPART_DATE])
-            || empty($this->data[self::DATA_ADULT_COUNT])
+        if ($this->data === []
+            || $data->str(self::DATA_TRIPTYPE) === ''
+            || $data->str(self::DATA_DEPART) === ''
+            || $data->str(self::DATA_ARRIVE) === ''
+            || $data->str(self::DATA_DEPART_DATE) === ''
+            || $data->int(self::DATA_ADULT_COUNT) === 0
         ) {
             ApiResponder::badRequest();
         }
 
-        $tripType = TripType::tryFrom($this->data[self::DATA_TRIPTYPE]);
+        $tripType = TripType::tryFrom($data->str(self::DATA_TRIPTYPE));
 
         if ($tripType === null) {
             ApiResponder::badRequest('Wrong trip type');
@@ -56,22 +62,22 @@ class Response extends AbstractApi
         // browser's growing list is a view concern — so the page number is
         // turned into the window the search now takes, and the paging fields
         // are put back on the response below.
-        $page = max(1, (int) ($this->data[self::DATA_PAGE] ?? 1));
+        $page = max(1, $data->int(self::DATA_PAGE, 1));
 
         $query = new FlightSearchQuery(
             offset: ($page - 1) * self::PAGE_SIZE,
             limit: self::PAGE_SIZE,
-            sort: $this->data[self::DATA_SORT] ?? SortMethod::Price->value,
-            from: $this->data[self::DATA_DEPART],
-            to: $this->data[self::DATA_ARRIVE],
-            departDate: $this->data[self::DATA_DEPART_DATE],
-            returnDate: $this->data[self::DATA_RETURN_DATE] ?? '',
+            sort: $data->str(self::DATA_SORT, SortMethod::Price->value),
+            from: $data->str(self::DATA_DEPART),
+            to: $data->str(self::DATA_ARRIVE),
+            departDate: $data->str(self::DATA_DEPART_DATE),
+            returnDate: $data->str(self::DATA_RETURN_DATE),
             // Falls back to a lone adult when the payload asks for a party
             // that cannot fly -- no adult, or more laps than adults.
             party: Party::fromCounts(
-                (int) $this->data[self::DATA_ADULT_COUNT],
-                (int) ($this->data[self::DATA_CHILD_COUNT] ?? 0),
-                (int) ($this->data[self::DATA_INFANT_COUNT] ?? 0),
+                $data->int(self::DATA_ADULT_COUNT),
+                $data->int(self::DATA_CHILD_COUNT),
+                $data->int(self::DATA_INFANT_COUNT),
             ) ?? new Party(),
         );
 
@@ -90,12 +96,14 @@ class Response extends AbstractApi
      */
     public function getOne(): void
     {
+        $flightId = new Input($this->data)->int(self::DATA_FLIGHT_ID);
+
         // Throw Bad Request Exception if depart_id is empty
-        if (empty($this->data) || empty($this->data[self::DATA_FLIGHT_ID])) {
+        if ($this->data === [] || $flightId === 0) {
             ApiResponder::badRequest();
         }
 
-        $flight = new FlightFinder($this->connection())->findOne((int) $this->data[self::DATA_FLIGHT_ID]);
+        $flight = new FlightFinder($this->connection())->findOne($flightId);
 
         if ($flight === null) {
             ApiResponder::notFound('Flight not found');

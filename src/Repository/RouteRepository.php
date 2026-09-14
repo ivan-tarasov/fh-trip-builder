@@ -109,10 +109,19 @@ final readonly class RouteRepository
      * CityRepository::namesSql() states -- grouped here rather than joined to
      * it, which measured 4.7ms against 9.7ms for the same twelve rows.
      *
-     * @return list<array<string, mixed>>
+     * `oneDirectionPerPair()`'s own signature only names `from_code`/`to_code`
+     * -- the two keys it reads -- because its two callers otherwise select
+     * different columns. Both of *these* callers' rows carry `from_name`/
+     * `to_name` too (`searchedWithAPage()` names them in `SearchedRouteRow`;
+     * `mostFlown()` selects them as `MIN(o.city) AS from_name` and its
+     * `to_name` twin), so this asserts the fuller shape that is actually
+     * true here.
+     *
+     * @return list<array{from_code: string, from_name: string, to_code: string, to_name: string, ...}>
      */
     public function popular(int $limit): array
     {
+        /** @var list<array{from_code: string, from_name: string, to_code: string, to_name: string, ...}> $searched */
         $searched = array_slice(
             self::oneDirectionPerPair($this->searchedWithAPage(self::POPULAR_CANDIDATES)),
             0,
@@ -124,11 +133,14 @@ final readonly class RouteRepository
             return $searched;
         }
 
-        return array_slice(
+        /** @var list<array{from_code: string, from_name: string, to_code: string, to_name: string, ...}> $flown */
+        $flown = array_slice(
             self::oneDirectionPerPair($this->mostFlown(self::POPULAR_CANDIDATES)),
             0,
             max(0, $limit),
         );
+
+        return $flown;
     }
 
     /**

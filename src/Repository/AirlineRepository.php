@@ -28,6 +28,7 @@ use TripBuilder\Database\Table;
  * }
  * @phpstan-type AircraftTypeRow array{title: string, manufacturer: ?string, is_widebody: int, flights: int}
  * @phpstan-type AirlinePeerRow array{code: string, name: string, flights: int}
+ * @phpstan-type AirlineBookedRow array{code: string, name: string}
  */
 final readonly class AirlineRepository
 {
@@ -256,9 +257,12 @@ final readonly class AirlineRepository
 
     public function countSellable(): int
     {
-        return (int) $this->connection->fetchValue(
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
             'SELECT COUNT(*) FROM ' . Table::Airlines->value . ' al WHERE' . self::ONLY_SELLABLE,
         );
+
+        return $count;
     }
 
     /**
@@ -342,16 +346,19 @@ final readonly class AirlineRepository
      * whatever the table hands back: with the curated tier behind it the column
      * still opens on the carriers worth naming.
      *
-     * @return list<array<string, mixed>>
+     * @return list<AirlineBookedRow>
      */
     public function mostBooked(int $limit): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<AirlineBookedRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT al.code, al.title AS name'
             . ' FROM ' . Table::Airlines->value . ' al'
             . ' WHERE' . self::ONLY_SELLABLE
             . ' ORDER BY al.book_count DESC, al.traffic DESC, al.title ASC'
             . ' LIMIT ' . max(1, $limit),
         );
+
+        return $rows;
     }
 }

@@ -16,6 +16,7 @@ abstract class AbstractApi
 
     // Parsed request payload: readable by the endpoint subclasses, but only
     // this base class may populate it (from setRequestData()).
+    /** @var array<string, mixed> */
     protected private(set) array $data = [];
     private HttpMethod $allowedMethod;
 
@@ -145,6 +146,7 @@ abstract class AbstractApi
             ApiResponder::badRequest('Malformed JSON body');
         }
 
+        /** @var array<string, mixed> $decoded */
         $this->data = $decoded;
     }
 

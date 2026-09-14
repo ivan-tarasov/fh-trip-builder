@@ -182,7 +182,11 @@ final class LayoutData
         // stale, so it is rounded and marked rather than printed as though it
         // were counted. A precise-looking wrong number is worse than an
         // obviously approximate right one.
-        $rows = (int) $this->connection()->fetchValue(
+        // information_schema.tables.table_rows is a plain INT column and
+        // comes back as a native int, live-verified the same way every
+        // other plain int column in this codebase has been.
+        /** @var int $rows */
+        $rows = $this->connection()->fetchValue(
             'SELECT table_rows FROM information_schema.tables'
             . ' WHERE table_schema = DATABASE() AND table_name = ?',
             [Table::Flights->value],
@@ -295,8 +299,8 @@ final class LayoutData
         $links = [];
 
         foreach ($routes as $route) {
-            $from = (string) $route['from_name'];
-            $to = (string) $route['to_name'];
+            $from = $route['from_name'];
+            $to = $route['to_name'];
 
             // Held together by no-break spaces inside each name, so the only
             // place the label may wrap is the dash between them. "Fort
@@ -510,8 +514,8 @@ final class LayoutData
         $links = [];
 
         foreach ($airlines as $airline) {
-            $name = (string) $airline['name'];
-            $links[$name] = Helper::airlineUrl($name, (string) $airline['code']);
+            $name = $airline['name'];
+            $links[$name] = Helper::airlineUrl($name, $airline['code']);
         }
 
         return $links;
@@ -606,8 +610,8 @@ final class LayoutData
         $links = [];
 
         foreach ($countries as $country) {
-            $name = (string) $country['name'];
-            $links[$name] = '/country/' . Helper::placeSlug($name, (string) $country['code']);
+            $name = $country['name'];
+            $links[$name] = '/country/' . Helper::placeSlug($name, $country['code']);
         }
 
         return $links;
@@ -699,7 +703,11 @@ final class LayoutData
             return null;
         }
 
-        return ['tone' => (string) $notice['tone'], 'message' => (string) $notice['message']];
+        // $_SESSION is opaque to phpstan regardless of what is written into
+        // it -- both writers (AjaxController::answerVote()/answerSubscribe())
+        // store exactly this shape.
+        /** @var array{tone: string, message: string} $notice */
+        return $notice;
     }
 
     /**
