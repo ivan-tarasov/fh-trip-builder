@@ -40,6 +40,11 @@ use TripBuilder\View\TwigRenderer;
  * with only connecting itineraries has no page here even though the search
  * sells it. Measured against real demand, that costs five of the 163 city pairs
  * anybody has searched for, all of them the long way round the world.
+ *
+ * @phpstan-import-type CityRow from CityRepository
+ * @phpstan-import-type RouteDateRow from RouteRepository
+ * @phpstan-import-type RouteCarrierRow from RouteRepository
+ * @phpstan-import-type RouteEndRow from RouteRepository
  */
 class RouteController extends AbstractController
 {
@@ -155,7 +160,7 @@ class RouteController extends AbstractController
      * hides the eight other pairs on the route, and the cheapest answer for the
      * day is what the visitor came for.
      *
-     * @param list<array<string, mixed>> $dates
+     * @param list<RouteDateRow> $dates
      * @return list<array<string, mixed>>
      */
     private static function datesFor(array $dates, string $fromCode, string $toCode): array
@@ -176,7 +181,7 @@ class RouteController extends AbstractController
     /**
      * Who flies it, each with its own page's address.
      *
-     * @param list<array<string, mixed>> $carriers
+     * @param list<RouteCarrierRow> $carriers
      * @return list<array<string, mixed>>
      */
     private static function addressableCarriers(array $carriers): array
@@ -211,7 +216,7 @@ class RouteController extends AbstractController
         foreach ($sides as $i => $side) {
             $sides[$i]['airports'] = array_map(
                 static fn(array $airport): array => $airport + [
-                    'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
+                    'url' => Helper::airportUrl($airport['title'], $airport['code']),
                 ],
                 $routes->ends($origins, $destinations, CabinClass::Economy, (bool) $side['arriving']),
             );
@@ -231,8 +236,8 @@ class RouteController extends AbstractController
      * question behind this page is "where can I go from here", and the city
      * page is where the rest of that answer is.
      *
-     * @param array<string, mixed> $from
-     * @param array<string, mixed> $to
+     * @param CityRow $from
+     * @param CityRow $to
      * @return list<array{label: string, url: string|null, current: bool}>
      */
     private static function trailFor(array $from, array $to): array
@@ -240,8 +245,8 @@ class RouteController extends AbstractController
         return [
             ['label' => (string) Config::get('breadcrumbs.home', 'Home'), 'url' => '/', 'current' => false],
             [
-                'label' => (string) $from['name'],
-                'url' => '/city/' . Helper::placeSlug((string) $from['name'], (string) $from['code']),
+                'label' => $from['name'],
+                'url' => '/city/' . Helper::placeSlug($from['name'], $from['code']),
                 'current' => false,
             ],
             [
@@ -273,8 +278,8 @@ class RouteController extends AbstractController
      * for the person reading, and withholding one to a page that works would
      * be tidiness at their expense.
      *
-     * @param array<string, mixed> $from
-     * @param array<string, mixed> $to
+     * @param CityRow $from
+     * @param CityRow $to
      * @param list<string> $origins airports at the far end -- this route's destinations
      * @param list<string> $destinations airports at this end
      * @return array<string, mixed>|null
@@ -293,9 +298,9 @@ class RouteController extends AbstractController
         }
 
         return [
-            'from' => (string) $to['name'],
-            'to' => (string) $from['name'],
-            'url' => RouteAddress::path((string) $to['name'], (string) $from['name']),
+            'from' => $to['name'],
+            'to' => $from['name'],
+            'url' => RouteAddress::path($to['name'], $from['name']),
             'cheapest' => $summary['cheapest'],
         ];
     }
