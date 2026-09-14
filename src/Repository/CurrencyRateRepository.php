@@ -15,6 +15,9 @@ use TripBuilder\Database\Table;
  * a filter against MAX(rate_date): on a table seeded in one go every row shares
  * a date, and a code compared against the whole table's maximum would match
  * every row it has -- the same trap AirportRepository::mostSearched() documents.
+ *
+ * @phpstan-type LatestRateRow array{code: string, rate: string}
+ * @phpstan-type RateHistoryRow array{rate_date: string, rate: string}
  */
 final readonly class CurrencyRateRepository
 {
@@ -31,6 +34,7 @@ final readonly class CurrencyRateRepository
      */
     public function latest(): array
     {
+        /** @var list<LatestRateRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT x.code, x.rate FROM ('
             . ' SELECT code, rate,'
@@ -77,6 +81,7 @@ final readonly class CurrencyRateRepository
      */
     public function history(string $code, int $days): array
     {
+        /** @var list<RateHistoryRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT rate_date, rate FROM ' . Table::CurrencyRates->value
             . ' WHERE code = ? ORDER BY rate_date DESC LIMIT ' . max(1, $days),
