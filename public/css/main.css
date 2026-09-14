@@ -8515,3 +8515,91 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
   .airside-intro__title { font-size: 2rem; }
   .airside-list { gap: 1.25rem; }
 }
+
+/*
+|------------------------------------------------------------------------------
+| The admin panel
+|------------------------------------------------------------------------------
+|
+| One operator behind one password, so there is one page and a door into it.
+| Deliberately plain: this is not a surface anybody is being persuaded by, and
+| every rule here is one that would otherwise have to be maintained twice.
+|
+*/
+
+/* Narrow and centred, because the form is one field. A sign-in stretched across
+   a desktop makes the reader hunt for the thing to type in. */
+.admin-gate {
+  max-width: 22rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+}
+
+.admin-gate__title {
+  margin-bottom: 1.25rem;
+  font-size: 1.5rem;
+}
+
+.admin-gate__form { display: grid; gap: .5rem; }
+
+.admin-gate__label {
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+}
+
+/* The same border and radius the currency filter uses, which is the only other
+   bare text input in the app. */
+.admin-gate__input {
+  padding: .55rem .75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: .5rem;
+  background: var(--surface);
+  color: var(--ink-body);
+  font-size: 1rem;
+}
+
+.admin-gate__submit { margin-top: .5rem; }
+
+/* Refusal and explanation are different things and read differently. The error
+   is what just happened; the note is what is wrong with the server. */
+.admin-gate__error,
+.admin-gate__note {
+  margin-bottom: 1rem;
+  padding: .6rem .75rem;
+  border-radius: .5rem;
+  font-size: .8125rem;
+}
+
+.admin-gate__error {
+  border: 1px solid var(--danger-tint-edge);
+  background: var(--danger-tint);
+  color: var(--brand-danger);
+}
+
+.admin-gate__note {
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+  color: var(--ink-secondary);
+}
+
+.admin {
+  max-width: 60rem;
+  margin: 2.5rem auto;
+  padding: 0 1rem;
+}
+
+.admin__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin__title { margin: 0; font-size: 1.5rem; }
+.admin__signout { margin: 0; }
+
+.admin__note {
+  color: var(--ink-muted);
+  font-size: .875rem;
+}

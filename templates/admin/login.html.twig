@@ -1,0 +1,42 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Sign in{% endblock %}
+
+{# One field and one button. There is one account and no way to make another,
+   so there is nothing here to register, reset or remember -- see src/Admin.php
+   for why that is the honest size of this (A3.2, #100). #}
+{% block content %}
+{# Every page template opens its own <main>: there is no shared wrapper
+   inside the layout for one to sit in. See SkipLinkTest. #}
+<main role="main" class="admin-gate">
+    <h1 class="admin-gate__title">Sign in</h1>
+
+    {% if not configured %}
+        {# Said on the page where the person who can fix it is standing. The
+           alternative is a correct password refused with no explanation. #}
+        <p class="admin-gate__note" role="status">
+            No password is set on this server. Run <code>php noah admin:password</code>
+            and put the line it prints in <code>.env</code>.
+        </p>
+    {% endif %}
+
+    {% if error %}
+        {# `assertive`, not `polite`: the field is about to be retyped, and a
+           message read out after the typing has started is read out too late. #}
+        <p class="admin-gate__error" role="alert" aria-live="assertive">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="/admin/login" class="admin-gate__form">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+
+        <label class="admin-gate__label" for="admin-password">Password</label>
+        {# `current-password` so a password manager offers the right entry, and
+           autofocus because this page has one thing on it. #}
+        <input class="admin-gate__input" id="admin-password" name="password" type="password"
+               autocomplete="current-password" autocapitalize="off" spellcheck="false"
+               required autofocus>
+
+        <button type="submit" class="btn btn-primary admin-gate__submit">Sign in</button>
+    </form>
+</main>
+{% endblock %}

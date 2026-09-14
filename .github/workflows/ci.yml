@@ -184,6 +184,22 @@ jobs:
           # the table prompt; --no-interaction answers no to both confirmations.
           php noah db:clear rate_limits --no-interaction --no-ansi
 
+          # Also boots and refuses, and there is no other way to run it: it asks
+          # for a password and will not take one as an argument, because a
+          # password on a command line is in the shell history. So what CI can
+          # check is that it refuses, and refuses for that reason.
+          if php noah admin:password --no-interaction --no-ansi > "$RUNNER_TEMP/admin.log" 2>&1; then
+            cat "$RUNNER_TEMP/admin.log"
+            echo "::error::admin:password should refuse when it cannot ask."
+            exit 1
+          fi
+
+          if ! grep -q 'has to be run by hand' "$RUNNER_TEMP/admin.log"; then
+            cat "$RUNNER_TEMP/admin.log"
+            echo "::error::admin:password refused, but not because it could not ask."
+            exit 1
+          fi
+
       # Separately, because it must *fail*.
       #
       # With no distribution configured there is no bucket to sweep, and the

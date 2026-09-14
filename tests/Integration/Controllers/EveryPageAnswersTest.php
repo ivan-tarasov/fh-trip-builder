@@ -222,6 +222,10 @@ final class EveryPageAnswersTest extends IntegrationTestCase
             'My' => ['GET', '/my/bookings', HttpStatus::Ok],
             'Search' => ['GET', self::aSearch(), HttpStatus::Ok],
 
+            // Behind a password, so the address that answers a stranger is the
+            // door and not the room -- which is what a test run is, every time.
+            'Admin' => ['GET', '/admin/login', HttpStatus::Ok],
+
             // With nothing being bought, checkout sends the visitor back to the
             // homepage rather than drawing a form over an empty trip.
             'Checkout' => ['GET', '/checkout', HttpStatus::Found],

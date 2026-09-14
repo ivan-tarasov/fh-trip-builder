@@ -55,6 +55,21 @@ class Routes
         |--------------------------------------------------------------------------
         */
 
+        /*
+        |--------------------------------------------------------------------------
+        | The admin panel
+        |--------------------------------------------------------------------------
+        |
+        | One operator, one password hash in `.env`, one session flag. Listed
+        | under PRIVATE_PREFIXES below, which keeps every one of these out of
+        | the sitemap and out of an index (A3.2, #100).
+        |
+        */
+
+        '/admin' => 'Admin@index',
+        '/admin/login' => 'Admin@login',
+        '/admin/logout' => 'Admin@logout',
+
         '/my/bookings' => 'My@bookings',
         // Cancelled bookings keep their own address rather than a tab the URL
         // cannot describe: a booking somebody is arguing with an airline about
@@ -178,14 +193,17 @@ class Routes
      *
      * A search result is a snapshot of prices that will be wrong tomorrow, and
      * there are more possible search URLs than there are flights. A checkout is
-     * a step in a transaction. /my is one browser's own bookings.
+     * a step in a transaction. /my is one browser's own bookings. /admin is not
+     * a page a stranger has any business arriving at, and listing it here is
+     * what keeps it out of the sitemap -- not a security measure, which is what
+     * the password is for, but there is no reason to publish the address.
      *
      * Two things read this and they must agree: the robots meta tag that keeps
      * these out of an index, and the sitemap that would otherwise invite a
      * crawler in. It lives here because this class is what already knows what a
      * path is.
      */
-    public const array PRIVATE_PREFIXES = ['/search', '/checkout', '/my'];
+    public const array PRIVATE_PREFIXES = ['/search', '/checkout', '/my', '/admin'];
 
     /**
      * Whether a path is a page worth a stranger arriving at.
