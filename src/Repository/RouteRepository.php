@@ -40,6 +40,18 @@ use TripBuilder\Database\Table;
  *
  * @phpstan-type RouteSummaryRow array{flights: int, carriers: int, typical: string, km: int, cheapest: string}
  * @phpstan-type SearchedRouteRow array{from_code: string, from_name: string, to_code: string, to_name: string, searches: string}
+ * @phpstan-type RouteCarrierRow array{code: string, name: string, flights: int}
+ * @phpstan-type RouteEndRow array{code: string, title: string, flights: int}
+ *
+ * `cheapestDates()`'s own shape follows `summary()`'s own aggregates: `fare()`
+ * is the same DECIMAL arithmetic that makes `summary()`'s `cheapest` a
+ * `string`, `duration` is a plain `int` column, and the window function `rn`
+ * is `int`.
+ *
+ * @phpstan-type RouteDateRow array{
+ *     depart_date: string, airline: string, departure_airport: string, arrival_airport: string,
+ *     departure_time: string, arrival_time: string, duration: int, total: string, rn: int,
+ * }
  */
 final readonly class RouteRepository
 {
@@ -378,7 +390,7 @@ final readonly class RouteRepository
      *
      * @param list<string> $from
      * @param list<string> $to
-     * @return list<array<string, mixed>>
+     * @return list<RouteCarrierRow>
      */
     public function carriers(array $from, array $to, CabinClass $cabin): array
     {
@@ -386,7 +398,8 @@ final readonly class RouteRepository
             return [];
         }
 
-        return $this->connection->fetchAll(
+        /** @var list<RouteCarrierRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT f.airline AS code, al.title AS name, COUNT(*) AS flights'
             . self::source(' JOIN ' . Table::Airlines->value . ' al ON al.code = f.airline')
             . self::filter($from, $to, $cabin)
@@ -395,6 +408,8 @@ final readonly class RouteRepository
             . ' ORDER BY flights DESC, name ASC',
             [...$from, ...$to],
         );
+
+        return $rows;
     }
 
     /**
@@ -412,7 +427,7 @@ final readonly class RouteRepository
      *
      * @param list<string> $from
      * @param list<string> $to
-     * @return list<array<string, mixed>>
+     * @return list<RouteEndRow>
      */
     public function ends(array $from, array $to, CabinClass $cabin, bool $arriving): array
     {
@@ -422,7 +437,8 @@ final readonly class RouteRepository
 
         $column = $arriving ? 'f.arrival_airport' : 'f.departure_airport';
 
-        return $this->connection->fetchAll(
+        /** @var list<RouteEndRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT a.code, a.title, COUNT(*) AS flights'
             . self::source(' JOIN ' . Table::Airports->value . ' a ON a.code = ' . $column)
             . self::filter($from, $to, $cabin)
@@ -430,6 +446,8 @@ final readonly class RouteRepository
             . ' ORDER BY flights DESC, a.title ASC',
             [...$from, ...$to],
         );
+
+        return $rows;
     }
 
     /**
@@ -450,7 +468,7 @@ final readonly class RouteRepository
      *
      * @param list<string> $from
      * @param list<string> $to
-     * @return list<array<string, mixed>>
+     * @return list<RouteDateRow>
      */
     public function cheapestDates(array $from, array $to, CabinClass $cabin, int $limit): array
     {
@@ -460,7 +478,8 @@ final readonly class RouteRepository
 
         $fare = self::fare('f', $cabin);
 
-        return $this->connection->fetchAll(
+        /** @var list<RouteDateRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT x.* FROM ('
             . ' SELECT DATE(f.departure_time) AS depart_date, f.airline,'
             . '  f.departure_airport, f.arrival_airport,'
@@ -477,6 +496,8 @@ final readonly class RouteRepository
             . ' LIMIT ' . max(1, $limit),
             [...$from, ...$to],
         );
+
+        return $rows;
     }
 
     /**
