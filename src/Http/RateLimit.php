@@ -14,12 +14,16 @@ namespace TripBuilder\Http;
  * The numbers are generous for a person and a wall for a script. Somebody who
  * subscribes ten times in an hour has not been stopped from anything they
  * meant to do; somebody inserting the eleventh is not a person.
+ *
+ * The fourth writes nothing and guards the admin sign-in, where the thing
+ * being spent is guesses at a password rather than rows in a table.
  */
 enum RateLimit: string
 {
     case Subscribe = 'subscribe';
     case Vote = 'vote';
     case Checkout = 'checkout';
+    case AdminLogin = 'admin_login';
 
     /**
      * Requests one client may make in one hour.
@@ -38,6 +42,12 @@ enum RateLimit: string
             // A booking is minutes of typing. Twenty in an hour is already
             // more than anybody does, and this one guards a card form.
             self::Checkout => 20,
+
+            // The only limit here that is guarding a secret rather than a
+            // table. There is one password and one person who knows it, so ten
+            // tries an hour is generous for them and useless to anybody
+            // guessing (A3.2, #100).
+            self::AdminLogin => 10,
         };
     }
 

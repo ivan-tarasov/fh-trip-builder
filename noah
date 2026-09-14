@@ -25,6 +25,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 date_default_timezone_set('UTC');
 
 use Symfony\Component\Console\Application;
+use TripBuilder\Noah\Admin\Password as AdminPassword;
 use TripBuilder\Noah\Airside\Import as AirsideImport;
 use TripBuilder\Noah\Airside\Prune as AirsidePrune;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
@@ -264,6 +265,23 @@ try {
     */
 
     $application->add(new ScheduleRun());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin
+    |--------------------------------------------------------------------------
+    |
+    | Hashes a password for the panel and prints the `.env` line to paste. The
+    | panel has one operator and no accounts table, so this is the only way a
+    | password is ever set (A3.2, #100).
+    |
+    | It asks rather than taking an argument -- a password on a command line is
+    | in the shell history -- and it writes nothing, which is what makes it safe
+    | to run somewhere that is not the server.
+    |
+    */
+
+    $application->add(new AdminPassword());
 
     /*
     |--------------------------------------------------------------------------

@@ -1,0 +1,30 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}Admin{% endblock %}
+
+{# Empty on purpose. A3.2 (#100) is the door; what goes through it is A3.3
+   (#101), which edits articles and categories. Shipping the door on its own is
+   what lets the editing be reviewed as editing rather than as editing plus a
+   password. #}
+{% block content %}
+{# Every page template opens its own <main>: there is no shared wrapper
+   inside the layout for one to sit in. See SkipLinkTest. #}
+<main role="main" class="admin">
+    <div class="admin__bar">
+        <h1 class="admin__title">Admin</h1>
+
+        {# A form and not a link: a GET that changes something can be fired by
+           any image tag on any page. #}
+        <form method="post" action="/admin/logout" class="admin__signout">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Sign out</button>
+        </form>
+    </div>
+
+    <p class="admin__note">
+        Signed in. This session ends after {{ idle_minutes }} minutes without a page here.
+    </p>
+
+    <p class="admin__note">Nothing to edit yet — that is the next piece of work.</p>
+</main>
+{% endblock %}

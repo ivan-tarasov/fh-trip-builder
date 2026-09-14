@@ -150,6 +150,29 @@ final class RoutesTest extends TestCase
         self::assertNotContains('My', Routes::EXCLUDE_HEADER_FOOTER);
     }
 
+    /**
+     * The panel is reachable and is not advertised.
+     *
+     * The password is what keeps a stranger out; this is what keeps the
+     * address out of the sitemap and out of an index, which robots.txt is
+     * built from as well. Not a security measure -- there is simply no reason
+     * to publish it (A3.2, #100).
+     */
+    public function testTheAdminPanelIsRoutedAndPrivate(): void
+    {
+        self::assertSame('Admin@index', Routes::resolve('/admin'));
+        self::assertSame('Admin@login', Routes::resolve('/admin/login'));
+        self::assertSame('Admin@logout', Routes::resolve('/admin/logout'));
+
+        self::assertFalse(Routes::isPublic('/admin'));
+        self::assertFalse(Routes::isPublic('/admin/login'));
+        self::assertFalse(Routes::isPublic('/admin/logout'));
+
+        // A page, not a payload: it renders through the layout like the rest.
+        self::assertNotContains('Admin', Routes::EXCLUDE_HEADER_FOOTER);
+        self::assertFalse(Routes::emitsOwnPayload('/admin'));
+    }
+
     public function testEveryDynamicRouteIsAValidPatternNamingAnAction(): void
     {
         foreach (Routes::DYNAMIC_ROUTES as $pattern => $route) {
