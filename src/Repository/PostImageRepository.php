@@ -14,6 +14,8 @@ use TripBuilder\Database\Table;
  * against the staging directory -- which stopped being possible when A8.6 sent
  * the files to a bucket instead of committing them. The importer is holding
  * the bytes anyway, so it records the answer once and the page reads it.
+ *
+ * @phpstan-type PostImageRow array{file: string, width: int, height: int}
  */
 final readonly class PostImageRepository
 {
@@ -50,9 +52,12 @@ final readonly class PostImageRepository
     {
         $sizes = [];
 
-        foreach ($this->connection->fetchAll(
+        /** @var list<PostImageRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT file, width, height FROM ' . Table::PostImages->value,
-        ) as $row) {
+        );
+
+        foreach ($rows as $row) {
             $sizes[(string) $row['file']] = [(int) $row['width'], (int) $row['height']];
         }
 
