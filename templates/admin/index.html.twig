@@ -51,6 +51,13 @@
                     <span class="admin-row__flag">Hidden</span>
                 {% endif %}
 
+                {# Whose row this is. Edited here, the next `articles:import`
+                   leaves it alone; untouched, the files still own it and an
+                   import will rewrite it (A3.4, #102). #}
+                {% if category.edited %}
+                    <span class="admin-row__flag admin-row__flag--owned">Edited here</span>
+                {% endif %}
+
                 <span class="admin-row__acts">
                     {{ act.action('Up', 'category', category.slug, 'up', category.position == 0) }}
                     {{ act.action('Down', 'category', category.slug, 'down', false) }}
@@ -65,6 +72,10 @@
 
                     {% if not article.enabled %}
                         <span class="admin-row__flag">Hidden</span>
+                    {% endif %}
+
+                    {% if article.edited %}
+                        <span class="admin-row__flag admin-row__flag--owned">Edited here</span>
                     {% endif %}
 
                     <span class="admin-row__acts">

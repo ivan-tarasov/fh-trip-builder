@@ -17,6 +17,14 @@
         <p class="admin-form__error" role="alert" aria-live="assertive">{{ error }}</p>
     {% endif %}
 
+        {# Said on the form as well as in the list, because this is where
+           somebody is about to take a row away from the files. #}
+        {% if article and article.edited %}
+            <p class="admin-form__note">Edited here, so <code>articles:import</code> leaves it alone.</p>
+        {% elseif article %}
+            <p class="admin-form__note">The files still own this. Saving takes it over, and imports will stop rewriting it.</p>
+        {% endif %}
+
     <form method="post" class="admin-form"
           action="/admin/article{{ article and article.slug ? '/' ~ article.slug : '' }}">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">

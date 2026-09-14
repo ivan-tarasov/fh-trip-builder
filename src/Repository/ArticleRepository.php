@@ -6,6 +6,7 @@ namespace TripBuilder\Repository;
 
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
+use TripBuilder\ImportOutcome;
 
 /**
  * The help articles, which used to be an array in config/common/help.php.
@@ -95,16 +96,24 @@ final readonly class ArticleRepository
      * `<=>` and not `=`, because `short` is nullable and NULL = NULL is not
      * true.
      *
+     * **A row somebody has edited in the panel is left alone.** That is A3.4
+     * (#102): the importer owns a row until a person opens it and saves, and
+     * after that the row is theirs. Without it the panel was a place to type
+     * things that the next deploy quietly undid.
+     *
      * @param array{category: string, icon: string, position: int} $article
      * @param array{title: string, short: ?string, summary: string, body: string} $translation
-     * @return bool whether the stored words differ from the ones passed in
      */
     public function store(
         string $slug,
         array $article,
         array $translation,
         string $locale = self::DEFAULT_LOCALE,
-    ): bool {
+    ): ImportOutcome {
+        if ($this->isHandEdited($slug)) {
+            return ImportOutcome::Kept;
+        }
+
         $stored = $this->connection->fetchOne(
             'SELECT title, short, summary, body FROM ' . Table::ArticleTranslations->value
             . ' WHERE slug = ? AND locale = ?',
@@ -155,7 +164,99 @@ final readonly class ArticleRepository
             ],
         );
 
-        return $changed;
+        return $changed ? ImportOutcome::Written : ImportOutcome::Unchanged;
+    }
+
+    /**
+     * The panel's write, which takes the row away from the files.
+     *
+     * The same two statements as `store()` and one more, and the one more is
+     * the point: `edited_at` is what tells the next import to leave this alone.
+     * A separate method rather than a flag on `store()`, because a boolean at a
+     * call site says nothing about who is writing and this is entirely a
+     * question of who is writing (A3.4, #102).
+     *
+     * @param array{category: string, icon: string, position: int} $article
+     * @param array{title: string, short: ?string, summary: string, body: string} $translation
+     */
+    public function edit(
+        string $slug,
+        array $article,
+        array $translation,
+        string $locale = self::DEFAULT_LOCALE,
+    ): void {
+        $this->connection->execute(
+            'INSERT INTO ' . Table::Articles->value
+            . ' (slug, category, icon, position, enabled, created_at, edited_at)'
+            . ' VALUES (?, ?, ?, ?, 1, NOW(), NOW())'
+            . ' ON DUPLICATE KEY UPDATE category = VALUES(category),'
+            . '  icon = VALUES(icon), position = VALUES(position), edited_at = NOW()',
+            [$slug, $article['category'], $article['icon'], $article['position']],
+        );
+
+        $this->connection->execute(
+            'INSERT INTO ' . Table::ArticleTranslations->value
+            . ' (slug, locale, title, short, summary, body, updated_at)'
+            . ' VALUES (?, ?, ?, ?, ?, ?, NOW())'
+            . ' ON DUPLICATE KEY UPDATE'
+            . '  updated_at = IF('
+            . '   title <=> VALUES(title) AND short <=> VALUES(short)'
+            . '   AND summary <=> VALUES(summary) AND body <=> VALUES(body),'
+            . '   updated_at, NOW()'
+            . '  ),'
+            . '  title = VALUES(title), short = VALUES(short),'
+            . '  summary = VALUES(summary), body = VALUES(body)',
+            [
+                $slug,
+                $locale,
+                $translation['title'],
+                $translation['short'],
+                $translation['summary'],
+                $translation['body'],
+            ],
+        );
+    }
+
+    /** Whether a person has taken this row over from the files. */
+    public function isHandEdited(string $slug): bool
+    {
+        return $this->connection->fetchValue(
+            'SELECT edited_at FROM ' . Table::Articles->value . ' WHERE slug = ?',
+            [$slug],
+        ) !== null;
+    }
+
+    /**
+     * Every slug a person owns, which is what the prune must not touch.
+     *
+     * An article written in the panel has no file at all, so the prune would
+     * read it as one the files had dropped and delete it -- taking somebody's
+     * work with it on the next deploy.
+     *
+     * @return list<string>
+     */
+    public function handEditedSlugs(): array
+    {
+        return array_map(
+            static fn(array $row): string => (string) $row['slug'],
+            $this->connection->fetchAll(
+                'SELECT slug FROM ' . Table::Articles->value . ' WHERE edited_at IS NOT NULL',
+            ),
+        );
+    }
+
+    /**
+     * Give the rows back to the files.
+     *
+     * What `articles:import --force` does before it writes. Clearing the stamp
+     * rather than writing through it keeps one rule in one place: the importer
+     * still refuses a row a person owns, and this is how a row stops being one.
+     */
+    public function reclaim(): int
+    {
+        return $this->connection->execute(
+            'UPDATE ' . Table::Articles->value . ' SET edited_at = NULL WHERE edited_at IS NOT NULL',
+        );
     }
 
     /**
@@ -166,12 +267,12 @@ final readonly class ArticleRepository
      * it back everywhere at once. The panel is the one reader that has to see
      * what it is hiding (A3.3, #101).
      *
-     * @return list<array{slug: string, title: string, category: string, position: int, enabled: bool, updated_at: string}>
+     * @return list<array{slug: string, title: string, category: string, position: int, enabled: bool, edited: bool, updated_at: string}>
      */
     public function forPanel(string $locale = self::DEFAULT_LOCALE): array
     {
         $rows = $this->connection->fetchAll(
-            'SELECT a.slug, a.category, a.position, a.enabled, t.title, t.updated_at'
+            'SELECT a.slug, a.category, a.position, a.enabled, a.edited_at, t.title, t.updated_at'
             . ' FROM ' . Table::Articles->value . ' a'
             // LEFT, for the same reason `all()` gives: a row with no
             // translation in this locale is still an article somebody has to
@@ -188,6 +289,9 @@ final readonly class ArticleRepository
             'category' => (string) $row['category'],
             'position' => (int) $row['position'],
             'enabled' => (bool) $row['enabled'],
+            // Whether the files still own this row, which decides what the next
+            // `articles:import` does to it (A3.4, #102).
+            'edited' => $row['edited_at'] !== null,
             'updated_at' => (string) ($row['updated_at'] ?? ''),
         ], $rows);
     }
@@ -195,12 +299,12 @@ final readonly class ArticleRepository
     /**
      * One article as the editor needs it: every column, enabled or not.
      *
-     * @return array{slug: string, title: string, short: ?string, icon: string, category: string, summary: string, body: string, position: int, enabled: bool}|null
+     * @return array{slug: string, title: string, short: ?string, icon: string, category: string, summary: string, body: string, position: int, enabled: bool, edited: bool}|null
      */
     public function forEditing(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
     {
         $row = $this->connection->fetchOne(
-            'SELECT a.slug, a.icon, a.category, a.position, a.enabled,'
+            'SELECT a.slug, a.icon, a.category, a.position, a.enabled, a.edited_at,'
             . ' t.title, t.short, t.summary, t.body'
             . ' FROM ' . Table::Articles->value . ' a'
             . ' LEFT JOIN ' . Table::ArticleTranslations->value . ' t'
@@ -223,6 +327,7 @@ final readonly class ArticleRepository
             'body' => (string) ($row['body'] ?? ''),
             'position' => (int) $row['position'],
             'enabled' => (bool) $row['enabled'],
+            'edited' => $row['edited_at'] !== null,
         ];
     }
 

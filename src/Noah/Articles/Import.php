@@ -12,6 +12,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
 use TripBuilder\Helper;
+use TripBuilder\ImportOutcome;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
@@ -87,10 +88,19 @@ class Import extends AbstractCommand
             InputOption::VALUE_NONE,
             'Parse and report, without writing anything.',
         );
+
+        $this->addOption(
+            'force',
+            null,
+            InputOption::VALUE_NONE,
+            'Take back the rows edited in the panel and rewrite them from the files.',
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $force = (bool) $input->getOption('force');
+
         try {
             // Categories first: an article names one.
             $categories = self::read(self::CATEGORY_DIR, self::parseCategory(...));
@@ -159,12 +169,18 @@ class Import extends AbstractCommand
             // The half of a dry run that matters now the command deletes. A
             // preview that showed what would be written and stayed quiet about
             // what would be removed would be a preview of the safe half.
-            foreach (array_diff($repository->slugs(), array_keys($articles)) as $slug) {
+            foreach (self::removable($repository->slugs(), $articles, $repository->handEditedSlugs(), $force) as $slug) {
                 $this->formatOutput($slug, 'would remove', 'comment');
             }
 
-            foreach (array_diff($categoryRepository->slugs(), array_keys($categories)) as $slug) {
+            foreach (self::removable($categoryRepository->slugs(), $categories, $categoryRepository->handEditedSlugs(), $force) as $slug) {
                 $this->formatOutput($slug, 'would remove', 'comment');
+            }
+
+            // And the rows this run would not touch, which is the question
+            // somebody runs a dry run to answer once the panel exists.
+            foreach ([...$repository->handEditedSlugs(), ...$categoryRepository->handEditedSlugs()] as $slug) {
+                $this->formatOutput($slug, $force ? 'would take back' : 'would keep', 'comment');
             }
 
             $this->io->note(sprintf(
@@ -176,7 +192,18 @@ class Import extends AbstractCommand
             return Command::SUCCESS;
         }
 
+        // Before anything is written, so the rows below are the files' again
+        // and `store()` applies to them like any other. One rule, in one place:
+        // the importer still refuses a row a person owns, and this is how a row
+        // stops being one.
+        $reclaimed = 0;
+
+        if ($force) {
+            $reclaimed = $repository->reclaim() + $categoryRepository->reclaim();
+        }
+
         $changed = 0;
+        $kept = 0;
 
         foreach ($categories as $slug => $category) {
             try {
@@ -195,8 +222,9 @@ class Import extends AbstractCommand
                 return Command::FAILURE;
             }
 
-            $changed += $moved ? 1 : 0;
-            $this->formatOutput($slug, $moved ? 'updated' : 'unchanged', $moved ? 'success' : 'info');
+            $changed += $moved === ImportOutcome::Written ? 1 : 0;
+            $kept += $moved === ImportOutcome::Kept ? 1 : 0;
+            $this->report($slug, $moved);
         }
 
         foreach ($articles as $slug => $article) {
@@ -221,8 +249,9 @@ class Import extends AbstractCommand
                 return Command::FAILURE;
             }
 
-            $changed += $moved ? 1 : 0;
-            $this->formatOutput($slug, $moved ? 'updated' : 'unchanged', $moved ? 'success' : 'info');
+            $changed += $moved === ImportOutcome::Written ? 1 : 0;
+            $kept += $moved === ImportOutcome::Kept ? 1 : 0;
+            $this->report($slug, $moved);
         }
 
         try {
@@ -234,12 +263,28 @@ class Import extends AbstractCommand
         }
 
         $this->io->success(sprintf(
-            '%d categor(y|ies) and %d article(s) imported, %d changed, %d removed.',
+            '%d categor(y|ies) and %d article(s) imported, %d changed, %d kept, %d removed.',
             count($categories),
             count($articles),
             $changed,
+            $kept,
             $removed,
         ));
+
+        if ($kept > 0) {
+            // Said out loud, because a row that was not written is the one
+            // thing somebody re-running an import wants to know about, and a
+            // count in a success line is easy to read past.
+            $this->io->note(sprintf(
+                '%d row(s) were edited in the panel and left alone. Run with --force to take them'
+                . ' back and rewrite them from the files.',
+                $kept,
+            ));
+        }
+
+        if ($reclaimed > 0) {
+            $this->io->note(sprintf('%d row(s) were taken back from the panel.', $reclaimed));
+        }
 
         return Command::SUCCESS;
     }
@@ -270,7 +315,7 @@ class Import extends AbstractCommand
     ): int {
         $removed = 0;
 
-        foreach (array_diff($repository->slugs(), array_keys($articles)) as $slug) {
+        foreach (self::removable($repository->slugs(), $articles, $repository->handEditedSlugs(), false) as $slug) {
             // The votes with it. They are keyed on the slug, so a later
             // article reusing a retired one would otherwise inherit them.
             $votes->delete($slug);
@@ -280,7 +325,7 @@ class Import extends AbstractCommand
             $this->formatOutput($slug, 'removed', 'comment');
         }
 
-        foreach (array_diff($categoryRepository->slugs(), array_keys($categories)) as $slug) {
+        foreach (self::removable($categoryRepository->slugs(), $categories, $categoryRepository->handEditedSlugs(), false) as $slug) {
             $categoryRepository->delete($slug);
 
             $removed++;
@@ -288,6 +333,46 @@ class Import extends AbstractCommand
         }
 
         return $removed;
+    }
+
+    /**
+     * The rows no file describes and nobody owns.
+     *
+     * The second half is A3.4 (#102) and it is the half that matters most: an
+     * article written in the panel has no file at all, so without this the
+     * prune reads it as one the files had dropped and deletes somebody's work
+     * on the next deploy. `--force` has already cleared the stamps by the time
+     * a real run reaches here, so the list it passes is empty and the old
+     * behaviour is exactly what happens.
+     *
+     * Public and static for the reason `parse()` is: it is a decision about
+     * plain data, it needs no connection and no directory, and it is where the
+     * one mistake that costs somebody their work would be.
+     *
+     * @param list<string> $stored every slug the table holds
+     * @param array<string, array<string, mixed>> $described keyed by slug
+     * @param list<string> $owned slugs a person has edited
+     * @return list<string>
+     */
+    public static function removable(array $stored, array $described, array $owned, bool $force): array
+    {
+        return array_values(array_diff(
+            $stored,
+            array_keys($described),
+            $force ? [] : $owned,
+        ));
+    }
+
+    /** One row's fate, in the word for it. */
+    private function report(string $slug, ImportOutcome $outcome): void
+    {
+        [$label, $tone] = match ($outcome) {
+            ImportOutcome::Written => ['updated', 'success'],
+            ImportOutcome::Unchanged => ['unchanged', 'info'],
+            ImportOutcome::Kept => ['kept, edited here', 'comment'],
+        };
+
+        $this->formatOutput($slug, $label, $tone);
     }
 
     /**

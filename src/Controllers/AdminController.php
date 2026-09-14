@@ -327,7 +327,9 @@ class AdminController extends AbstractController
             return;
         }
 
-        $articles->store(
+        // `edit()` and not `store()`: this write takes the row away from the
+        // files, and the importer will leave it alone from now on (A3.4, #102).
+        $articles->edit(
             $posted['slug'],
             [
                 'category' => $posted['category'],
@@ -382,7 +384,7 @@ class AdminController extends AbstractController
             return;
         }
 
-        $categories->store(
+        $categories->edit(
             $posted['slug'],
             [
                 'icon' => $posted['icon'],

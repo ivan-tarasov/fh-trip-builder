@@ -254,6 +254,58 @@ final class ArticlesImportTest extends TestCase
         Import::parseCategory(self::file(self::CATEGORY . "\nsummary: not here"));
     }
 
+    /**
+     * What a run would delete, which is the one decision here that can lose
+     * work that exists nowhere else.
+     *
+     * An article written in the panel has no file, so without the third list
+     * the prune reads it exactly as it reads one whose file was deleted on
+     * purpose (A3.4, #102).
+     */
+    public function testARowSomebodyOwnsIsNotRemovable(): void
+    {
+        $described = ['from-a-file' => []];
+
+        self::assertSame(
+            ['no-file-at-all'],
+            Import::removable(['from-a-file', 'no-file-at-all'], $described, [], false),
+            'a row no file describes is the case this has always handled',
+        );
+
+        self::assertSame(
+            [],
+            Import::removable(['from-a-file', 'written-here'], $described, ['written-here'], false),
+            'an article written in the panel has no file and must survive anyway',
+        );
+    }
+
+    /**
+     * And `--force` takes them back, which is the way out of owning one.
+     */
+    public function testForceRemovesWhatNobodyDescribesEvenIfOwned(): void
+    {
+        self::assertSame(
+            ['written-here'],
+            Import::removable(['from-a-file', 'written-here'], ['from-a-file' => []], ['written-here'], true),
+        );
+    }
+
+    /**
+     * Owning a row that a file still describes changes nothing about removal.
+     * It is `store()` that leaves such a row alone, not the prune.
+     */
+    public function testOwningARowThatHasAFileIsNotAboutRemoval(): void
+    {
+        self::assertSame(
+            [],
+            Import::removable(['from-a-file'], ['from-a-file' => []], ['from-a-file'], false),
+        );
+        self::assertSame(
+            [],
+            Import::removable(['from-a-file'], ['from-a-file' => []], ['from-a-file'], true),
+        );
+    }
+
     /** One file, composed the way the committed ones are written. */
     private static function file(string $header, string $body = 'Prose.'): string
     {

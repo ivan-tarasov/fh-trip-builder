@@ -8644,6 +8644,24 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
   letter-spacing: .03em;
 }
 
+/* Not a warning and not a success: a statement of whose row it is. Green,
+   because an edited row is the one the next deploy cannot undo. */
+.admin-row__flag--owned {
+  border: 1px solid var(--success-tint-edge);
+  background: var(--success-tint);
+  color: var(--brand-success);
+}
+
+.admin-form__note {
+  margin-bottom: 1rem;
+  padding: .6rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background: var(--surface-sunken);
+  color: var(--ink-secondary);
+  font-size: .8125rem;
+}
+
 .admin-row__acts { display: flex; gap: .25rem; }
 .admin-row__act { margin: 0; }
 
