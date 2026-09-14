@@ -33,6 +33,56 @@ use TripBuilder\Party;
  *   ['legs' => list<leg>, 'stops' => int, 'price_base' => float, 'price_tax' => float,
  *    'duration' => int, 'depart_time' => string, 'arrive_time' => string, 'rating' => float]
  * and a leg is one hydrated flight row (see legColumns()).
+ *
+ * Three shapes for one row, because it is not one row -- it is three pipeline
+ * stages, and a type that claimed the last stage's keys at the first stage
+ * would be phpstan trusting a lie the same way the casts it replaces did not.
+ * Verified against a live fetch rather than assumed: PDO with native prepares
+ * still returns a DECIMAL column as `string`, not `float` -- `price_base`,
+ * `price_tax` and `rating` are strings here for that reason, and the union
+ * across the direct/1-stop/2-stop branches in `candidateSql()` makes every
+ * `CONCAT_WS` column a string for every row once the branches are combined,
+ * even the direct ones.
+ *
+ * @phpstan-type RawCandidate array{
+ *     seg1: int, seg2: int|null, seg3: int|null, stops: int,
+ *     price_base: string, price_tax: string, duration: int,
+ *     depart_time: string, arrive_time: string, rating: string,
+ *     carriers: string, aircraft: string, distances: string,
+ *     dep_airport: string, arr_airport: string,
+ *     stops_at: string|null, layover_minutes: int,
+ *     stop1_in: string|null, stop1_out: string|null,
+ *     stop2_in: string|null, stop2_out: string|null,
+ * }
+ * @phpstan-type WithCountries array{
+ *     seg1: int, seg2: int|null, seg3: int|null, stops: int,
+ *     price_base: string, price_tax: string, duration: int,
+ *     depart_time: string, arrive_time: string, rating: string,
+ *     carriers: string, aircraft: string, distances: string,
+ *     dep_airport: string, arr_airport: string,
+ *     stops_at: string|null, layover_minutes: int,
+ *     stop1_in: string|null, stop1_out: string|null,
+ *     stop2_in: string|null, stop2_out: string|null,
+ *     stop_countries: list<string>,
+ *     origin_country: string|null,
+ *     destination_country: string|null,
+ * }
+ * @phpstan-type Candidate array{
+ *     seg1: int, seg2: int|null, seg3: int|null, stops: int,
+ *     price_base: string, price_tax: string, duration: int,
+ *     depart_time: string, arrive_time: string, rating: string,
+ *     carriers: string, aircraft: string, distances: string,
+ *     dep_airport: string, arr_airport: string,
+ *     stops_at: string|null, layover_minutes: int,
+ *     stop1_in: string|null, stop1_out: string|null,
+ *     stop2_in: string|null, stop2_out: string|null,
+ *     stop_countries: list<string>,
+ *     origin_country: string|null,
+ *     destination_country: string|null,
+ *     co2_kg: float|null,
+ *     co2_typical: bool|null,
+ *     price_offset?: float,
+ * }
  */
 final readonly class FlightRepository
 {
@@ -135,6 +185,10 @@ final readonly class FlightRepository
             $cache->put($key, $candidates);
         }
 
+        // SearchCandidateRepository is generic -- any search's rows pass
+        // through it -- so its own return type stays untyped. This is the one
+        // place the columns candidateSql() actually selects are named.
+        /** @var list<RawCandidate> $candidates */
         if ($candidates === []) {
             return $empty;
         }
@@ -219,7 +273,7 @@ final readonly class FlightRepository
      * offer narrow as you choose elsewhere without the dimension you are
      * choosing in collapsing to the one value you picked.
      *
-     * @param list<array<string, mixed>> $candidates
+     * @param list<Candidate> $candidates
      * @return array{available: array<string, list<string>|list<int>|bool>, prices: array<string, array<array-key, float>>}
      */
     private function availability(array $candidates, FlightFilters $filters): array
@@ -320,7 +374,7 @@ final readonly class FlightRepository
      * blind unless both numbers are on the control. One pass per option over
      * the same rows the page was built from, so this costs nothing extra.
      *
-     * @param list<array<string, mixed>> $candidates
+     * @param list<Candidate> $candidates
      * @return array<string, array{price: float, duration: int}>
      */
     private function highlights(array $candidates, Party $party): array
@@ -384,28 +438,24 @@ final readonly class FlightRepository
      * reachable, with that slider's own filter lifted so dragging it never
      * shrinks its own track out from under the handle.
      *
-     * @param list<array<string, mixed>> $candidates
+     * @param list<Candidate> $candidates
      * @return array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>
      */
     private function bounds(array $candidates, FlightFilters $filters): array
     {
-        $measures = [
-            // Includes the offset and the party, so the slider spans what the
-            // cards say. Scaled here rather than after, because base and tax
-            // carry different shares and this is the last place they are apart.
-            FlightFilters::DIM_PRICE => fn(array $c): array => [$this->displayTotal($c, $filters->party)],
-            FlightFilters::DIM_DURATION => static fn(array $c): array => [(float) $c['duration']],
-            // Every wait, not their total: the slider constrains connections
-            // one at a time, so its ends have to span single waits.
-            FlightFilters::DIM_LAYOVER_RANGE => static fn(array $c): array => array_map(
-                floatval(...),
-                FlightFilters::waits($c),
-            ),
-        ];
+        // A dispatch table of closures would put an untyped `array $c` between
+        // here and priceMeasure()/durationMeasure()/layoverMeasure() -- an
+        // arrow function's own parameter is plain `array` in PHP, and PHPStan
+        // does not narrow one from where it is later called, in an array
+        // literal or in a variable holding it. `$candidate` below really is
+        // `Candidate`, straight from the `foreach` over `$candidates`, so a
+        // `match` on the dimension keeps that rather than losing it through a
+        // callable.
+        $dimensions = [FlightFilters::DIM_PRICE, FlightFilters::DIM_DURATION, FlightFilters::DIM_LAYOVER_RANGE];
 
         $bounds = [];
 
-        foreach ($measures as $dimension => $measure) {
+        foreach ($dimensions as $dimension) {
             $lows = [];
             $highs = [];
 
@@ -414,7 +464,11 @@ final readonly class FlightRepository
                     continue;
                 }
 
-                $values = $measure($candidate);
+                $values = match ($dimension) {
+                    FlightFilters::DIM_PRICE => $this->priceMeasure($candidate, $filters->party),
+                    FlightFilters::DIM_DURATION => $this->durationMeasure($candidate),
+                    default => $this->layoverMeasure($candidate),
+                };
 
                 // An itinerary this range cannot constrain — a direct flight
                 // has no wait at all — says nothing about how far either
@@ -475,6 +529,44 @@ final readonly class FlightRepository
     }
 
     /**
+     * The price slider's measure: what `bounds()` scores one itinerary by on
+     * the price dimension. Includes the offset and the party, so the slider
+     * spans what the cards say -- base and tax carry different shares and this
+     * is the last place they are apart.
+     *
+     * @param Candidate $candidate
+     * @return list<float>
+     */
+    private function priceMeasure(array $candidate, Party $party): array
+    {
+        return [$this->displayTotal($candidate, $party)];
+    }
+
+    /**
+     * The duration slider's measure.
+     *
+     * @param Candidate $candidate
+     * @return list<float>
+     */
+    private function durationMeasure(array $candidate): array
+    {
+        return [(float) $candidate['duration']];
+    }
+
+    /**
+     * The layover slider's measure: every wait, not their total, since the
+     * slider constrains connections one at a time and its ends have to span
+     * single waits.
+     *
+     * @param Candidate $candidate
+     * @return list<float>
+     */
+    private function layoverMeasure(array $candidate): array
+    {
+        return array_map(floatval(...), FlightFilters::waits($candidate));
+    }
+
+    /**
      * How good each itinerary is on price against travel time, lowest best.
      *
      * Both are min-max scaled across the set being ranked, so the score says
@@ -483,7 +575,7 @@ final readonly class FlightRepository
      * "Best value" badge marks its minimum and the Best sort orders by it, so
      * the top row of that sort is the badged one.
      *
-     * @param list<array<string, mixed>> $candidates
+     * @param list<Candidate> $candidates
      * @return list<float>
      */
     private function valueScores(array $candidates): array
@@ -522,8 +614,8 @@ final readonly class FlightRepository
      * Order itineraries by value, best first, keeping the incoming order as the
      * tie-break so equal scores stay stable from one page to the next.
      *
-     * @param list<array<string, mixed>> $candidates
-     * @return list<array<string, mixed>>
+     * @param list<Candidate> $candidates
+     * @return list<Candidate>
      */
     private function rankByValue(array $candidates): array
     {
@@ -547,8 +639,8 @@ final readonly class FlightRepository
      * The price is the cheapest itinerary carrying that value — what you would
      * pay if you picked it and nothing else changed.
      *
-     * @param list<array<string, mixed>> $candidates
-     * @param callable(array<string, mixed>): list<string> $values
+     * @param list<Candidate> $candidates
+     * @param callable(Candidate): list<string> $values
      * @return array<array-key, float> value => cheapest total, ordered
      *         (PHP narrows numeric keys such as a stop count to int)
      */
@@ -592,7 +684,13 @@ final readonly class FlightRepository
      * An itinerary's price as the cards will show it, including whatever the
      * other half of a round trip adds.
      *
-     * @param array<string, mixed> $candidate
+     * Not `Candidate` -- the three keys this actually reads, because one call
+     * site (searchDirection()'s `$cheapest`) builds a bare array with only
+     * these two rather than passing a real candidate row, and a full
+     * `Candidate` here would have refused it. That call site was correct and
+     * this signature was overclaiming what the function needs.
+     *
+     * @param array{price_base: string, price_tax: string, price_offset?: float} $candidate
      */
     private function displayTotal(array $candidate, Party $party): float
     {
@@ -632,8 +730,8 @@ final readonly class FlightRepository
      * so the visa and Gulf filters can be decided without joining `airports`
      * into the search query.
      *
-     * @param list<array<string, mixed>> $candidates
-     * @return list<array<string, mixed>>
+     * @param list<RawCandidate> $candidates
+     * @return list<WithCountries>
      */
     private function withLayoverCountries(array $candidates): array
     {
@@ -660,8 +758,8 @@ final readonly class FlightRepository
      * Record on each candidate what will be added to its price before it is
      * shown, so a filter can compare against the displayed figure.
      *
-     * @param list<array<string, mixed>> $candidates
-     * @return list<array<string, mixed>>
+     * @param list<Candidate> $candidates
+     * @return list<Candidate>
      */
     private function withPriceOffset(array $candidates, float $offset): array
     {
@@ -712,8 +810,8 @@ final readonly class FlightRepository
      * middle of what this route actually offers on this day, not a figure from
      * somewhere else (C5, #154).
      *
-     * @param list<array<string, mixed>> $candidates
-     * @return list<array<string, mixed>>
+     * @param list<WithCountries> $candidates
+     * @return list<Candidate>
      */
     private function withEmissions(array $candidates, CabinClass $cabin): array
     {
@@ -751,7 +849,7 @@ final readonly class FlightRepository
      * lists on the candidate, in leg order, because the alternative was three
      * more joins in the one statement that costs anything (E31, #219).
      *
-     * @param array<string, mixed> $candidate
+     * @param WithCountries $candidate
      * @param array<string, float> $burn
      * @param array<string, array<string, int>> $seats
      */
@@ -878,19 +976,23 @@ final readonly class FlightRepository
      * Not an ORDER BY like the other single-column sorts, because the figure is
      * computed here rather than stored -- see `SortMethod::ranksAcrossResults`.
      *
-     * @param list<array<string, mixed>> $candidates
-     * @return list<array<string, mixed>>
+     * @param list<Candidate> $candidates
+     * @return list<Candidate>
      */
     private function rankByEmissions(array $candidates): array
     {
+        /**
+         * @param Candidate $a
+         * @param Candidate $b
+         */
         usort($candidates, static function (array $a, array $b): int {
             $left = $a['co2_kg'] ?? INF;
             $right = $b['co2_kg'] ?? INF;
 
             // Same tie-break as the SQL ordering, so equal figures come back in
             // the same order on every page.
-            return [$left, $a['price_base'] + $a['price_tax'], $a['seg1']]
-                <=> [$right, $b['price_base'] + $b['price_tax'], $b['seg1']];
+            return [$left, (float) $a['price_base'] + (float) $a['price_tax'], $a['seg1']]
+                <=> [$right, (float) $b['price_base'] + (float) $b['price_tax'], $b['seg1']];
         });
 
         return $candidates;
@@ -1505,7 +1607,7 @@ final readonly class FlightRepository
     /**
      * Collect the non-null leg ids across a set of candidate/itinerary rows.
      *
-     * @param list<array<string, mixed>> $candidates
+     * @param list<Candidate> $candidates
      * @return list<int>
      */
     private function collectLegIds(array $candidates): array
@@ -1527,7 +1629,7 @@ final readonly class FlightRepository
      * Turn a candidate row + hydrated legs into an itinerary (ordered legs and
      * the pre-aggregated totals).
      *
-     * @param array<string, mixed> $candidate
+     * @param Candidate $candidate
      * @param array<int, array<string, mixed>> $legs
      * @param array<string, list<string>> $badges
      * @return array<string, mixed>|null null when a leg could not be built
@@ -1578,7 +1680,7 @@ final readonly class FlightRepository
      * result set, weighted toward fare — the trade-off most travellers make.
      * A nonstop is only called out when it isn't already the cheapest.
      *
-     * @param list<array<string, mixed>> $candidates
+     * @param list<Candidate> $candidates
      * @return array<string, list<string>>
      */
     private function badgeKeys(array $candidates): array
@@ -1636,7 +1738,7 @@ final readonly class FlightRepository
     /**
      * Identity of a candidate itinerary: its leg ids in order.
      *
-     * @param array<string, mixed> $candidate
+     * @param Candidate $candidate
      */
     private function candidateKey(array $candidate): string
     {
