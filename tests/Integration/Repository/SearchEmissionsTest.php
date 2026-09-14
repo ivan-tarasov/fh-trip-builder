@@ -19,6 +19,8 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * above it, and -- in the last test -- a type nobody has a burn figure for,
  * which has to come back as nothing rather than as a very clean flight
  * (C5, #154).
+ *
+ * @phpstan-import-type Itinerary from FlightRepository
  */
 final class SearchEmissionsTest extends IntegrationTestCase
 {
@@ -189,7 +191,7 @@ final class SearchEmissionsTest extends IntegrationTestCase
         return $figures;
     }
 
-    /** @return array<string, mixed> */
+    /** @return array{rows: list<Itinerary>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>} */
     private function search(SortMethod $sort = SortMethod::Price, ?FlightFilters $filters = null): array
     {
         return new FlightRepository($this->connection())->searchDirection(
