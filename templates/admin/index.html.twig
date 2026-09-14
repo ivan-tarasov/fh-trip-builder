@@ -2,29 +2,98 @@
 
 {% block title %}Admin{% endblock %}
 
-{# Empty on purpose. A3.2 (#100) is the door; what goes through it is A3.3
-   (#101), which edits articles and categories. Shipping the door on its own is
-   what lets the editing be reviewed as editing rather than as editing plus a
-   password. #}
-{% block content %}
+{# Categories, and the articles filed under each. Everything that changes
+   something is a form posting back here, so a refresh does not repeat the last
+   move (A3.3, #101). #}
+{% macro action(label, kind, slug, action, disabled) %}
+    <form method="post" action="/admin" class="admin-row__act">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <input type="hidden" name="kind" value="{{ kind }}">
+        <input type="hidden" name="slug" value="{{ slug }}">
+        <input type="hidden" name="action" value="{{ action }}">
+        <button type="submit" class="admin-row__button"{{ disabled|default(false) ? ' disabled' : '' }}>{{ label }}</button>
+    </form>
+{% endmacro %}
+
+{% import _self as act %}
+
 {# Every page template opens its own <main>: there is no shared wrapper
    inside the layout for one to sit in. See SkipLinkTest. #}
+{% block content %}
 <main role="main" class="admin">
     <div class="admin__bar">
-        <h1 class="admin__title">Admin</h1>
+        <h1 class="admin__title">Help content</h1>
 
-        {# A form and not a link: a GET that changes something can be fired by
-           any image tag on any page. #}
-        <form method="post" action="/admin/logout" class="admin__signout">
-            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-secondary btn-sm">Sign out</button>
-        </form>
+        <div class="admin__tools">
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/category">New category</a>
+            <a class="btn btn-primary btn-sm" href="/admin/article">New article</a>
+
+            {# A form and not a link: a GET that changes something can be fired
+               by any image tag on any page. #}
+            <form method="post" action="/admin/logout" class="admin__signout">
+                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Sign out</button>
+            </form>
+        </div>
     </div>
 
     <p class="admin__note">
-        Signed in. This session ends after {{ idle_minutes }} minutes without a page here.
+        This session ends after {{ idle_minutes }} minutes without a page here.
     </p>
 
-    <p class="admin__note">Nothing to edit yet — that is the next piece of work.</p>
+    {% for category in categories %}
+        <section class="admin-group">
+            <div class="admin-row admin-row--group">
+                <a class="admin-row__name" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
+                <span class="admin-row__slug">{{ category.slug }}</span>
+
+                {% if not category.enabled %}
+                    <span class="admin-row__flag">Hidden</span>
+                {% endif %}
+
+                <span class="admin-row__acts">
+                    {{ act.action('Up', 'category', category.slug, 'up', category.position == 0) }}
+                    {{ act.action('Down', 'category', category.slug, 'down', false) }}
+                    {{ act.action(category.enabled ? 'Hide' : 'Show', 'category', category.slug, category.enabled ? 'hide' : 'show', false) }}
+                </span>
+            </div>
+
+            {% for article in articles[category.slug]|default([]) %}
+                <div class="admin-row admin-row--article">
+                    <a class="admin-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                    <span class="admin-row__slug">{{ article.slug }}</span>
+
+                    {% if not article.enabled %}
+                        <span class="admin-row__flag">Hidden</span>
+                    {% endif %}
+
+                    <span class="admin-row__acts">
+                        {{ act.action('Up', 'article', article.slug, 'up', article.position == 0) }}
+                        {{ act.action('Down', 'article', article.slug, 'down', false) }}
+                        {{ act.action(article.enabled ? 'Hide' : 'Show', 'article', article.slug, article.enabled ? 'hide' : 'show', false) }}
+                    </span>
+                </div>
+            {% else %}
+                <p class="admin-group__empty">No articles in this category.</p>
+            {% endfor %}
+        </section>
+    {% endfor %}
+
+    {# An article whose category names no row. ArticleRepository::all() says why
+       one is kept rather than dropped; this is where it gets fixed. #}
+    {% if orphans %}
+        <section class="admin-group">
+            <div class="admin-row admin-row--group">
+                <span class="admin-row__name">Filed under a category that does not exist</span>
+            </div>
+
+            {% for article in orphans %}
+                <div class="admin-row admin-row--article">
+                    <a class="admin-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                    <span class="admin-row__slug">{{ article.slug }} &mdash; {{ article.category }}</span>
+                </div>
+            {% endfor %}
+        </section>
+    {% endif %}
 </main>
 {% endblock %}

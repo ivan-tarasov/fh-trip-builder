@@ -173,6 +173,35 @@ final class RoutesTest extends TestCase
         self::assertFalse(Routes::emitsOwnPayload('/admin'));
     }
 
+    /**
+     * The editors, with a slug and without.
+     *
+     * Without one they create and with one they edit, and the same address
+     * takes the POST that saves -- so one pattern has to answer to both or
+     * half the panel 404s (A3.3, #101).
+     */
+    public function testTheEditorsAnswerWithAndWithoutASlug(): void
+    {
+        self::assertSame('Admin@article', Routes::resolve('/admin/article'));
+        self::assertSame('Admin@article', Routes::resolve('/admin/article/searching-for-flights'));
+        self::assertSame('Admin@category', Routes::resolve('/admin/category'));
+        self::assertSame('Admin@category', Routes::resolve('/admin/category/before-you-book'));
+
+        // A slug is the shape the help pages use, because it is the same slug.
+        self::assertNull(Routes::resolve('/admin/article/Not A Slug'));
+        self::assertNull(Routes::resolve('/admin/article/one/two'));
+    }
+
+    /**
+     * The preview answers a fragment, and a header and footer wrapped around
+     * one would be spliced into the page it is previewing.
+     */
+    public function testThePreviewWritesItsOwnBytes(): void
+    {
+        self::assertSame('Admin@preview', Routes::resolve('/admin/preview'));
+        self::assertTrue(Routes::emitsOwnPayload('/admin/preview'));
+    }
+
     public function testEveryDynamicRouteIsAValidPatternNamingAnAction(): void
     {
         foreach (Routes::DYNAMIC_ROUTES as $pattern => $route) {

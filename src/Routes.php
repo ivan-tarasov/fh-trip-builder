@@ -69,6 +69,10 @@ class Routes
         '/admin' => 'Admin@index',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
+        // Markdown in, HTML out, for the editor's preview pane. Listed in
+        // EXCLUDE_HEADER_FOOTER_ROUTES below: it answers a fragment, and a
+        // header and footer wrapped around one would be spliced into the page.
+        '/admin/preview' => 'Admin@preview',
 
         '/my/bookings' => 'My@bookings',
         // Cancelled bookings keep their own address rather than a tab the URL
@@ -177,6 +181,12 @@ class Routes
         // capitalised spelling to redirect from -- unlike a post, whose slug a
         // reader may well have typed.
         '#^/airside/tag/[a-z0-9-]+$#' => 'Airside@tag',
+
+        // The editors. Without a slug they create; with one they edit, and the
+        // same address takes the POST that saves. A slug is the same shape the
+        // help pages use, because it is the same slug (A3.3, #101).
+        '#^/admin/article(?:/[a-z0-9-]+)?$#' => 'Admin@article',
+        '#^/admin/category(?:/[a-z0-9-]+)?$#' => 'Admin@category',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [
@@ -236,6 +246,7 @@ class Routes
      * in a header and footer corrupts the file.
      */
     public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
+        '#^/admin/preview$#',
         '#^/my/bookings/\d+/calendar$#',
         '#^/sitemap\.xml$#',
         '#^/robots\.txt$#',
