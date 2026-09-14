@@ -7,6 +7,48 @@ namespace TripBuilder\Repository;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 
+/**
+ * Three row shapes, verified against a live fetch rather than assumed.
+ * `timezone`, `latitude` and `longitude` are DECIMAL columns and come back as
+ * `string`, the same trap `FlightRepository` documents. `km`, in `nearby()`,
+ * does not: `ST_Distance_Sphere(...) / 1000` is a computed expression, not a
+ * stored column, and PDO hands it back as a real `float` -- a stored decimal
+ * and a decimal-shaped computation are not the same thing, and guessing one
+ * from the other would have been wrong here.
+ *
+ * @phpstan-type AirportRow array{
+ *     code: string, title: string, country: string|null, city_code: string,
+ *     city: string, timezone: string, timezone_name: string,
+ *     latitude: string, longitude: string, altitude: int,
+ * }
+ * @phpstan-type AirportRowWithTraffic array{
+ *     code: string, title: string, country: string|null, city_code: string,
+ *     city: string, timezone: string, timezone_name: string,
+ *     latitude: string, longitude: string, altitude: int,
+ *     country_code: string, traffic_weight: int,
+ * }
+ * @phpstan-type AirportRowRanked array{
+ *     code: string, title: string, country: string|null, city_code: string,
+ *     city: string, timezone: string, timezone_name: string,
+ *     latitude: string, longitude: string, altitude: int,
+ *     search_count: int, traffic_weight: int,
+ * }
+ * @phpstan-type AirportRowNearby array{
+ *     code: string, title: string, country: string|null, city_code: string,
+ *     city: string, timezone: string, timezone_name: string,
+ *     latitude: string, longitude: string, altitude: int,
+ *     km: float,
+ * }
+ * @phpstan-type PickableRow array{
+ *     code: string, label: string, short: string, sub: string, city: string,
+ *     city_code: string, is_city: int,
+ * }
+ * @phpstan-type ScheduleRow array{
+ *     airline: string, number: int, departure_time: string,
+ *     arrival_time: string, duration: int, other_code: string,
+ *     other_title: string, other_city: string, other_city_code: string,
+ * }
+ */
 final readonly class AirportRepository
 {
     /**
@@ -87,10 +129,11 @@ final readonly class AirportRepository
      * still opens on the airports worth naming instead of on whatever the table
      * hands back first.
      *
-     * @return list<array<string, mixed>>
+     * @return list<AirportRowRanked>
      */
     public function mostSearched(int $limit): array
     {
+        /** @var list<AirportRowRanked> */
         return $this->connection->fetchAll(
             'SELECT x.* FROM ('
             . ' SELECT ' . self::COLUMNS . ', a.search_count, a.traffic_weight,'
@@ -115,7 +158,7 @@ final readonly class AirportRepository
      * Enabled airports (optionally major only), joined to their country,
      * ordered by title.
      *
-     * @return list<array<string, mixed>>
+     * @return list<AirportRow>
      */
     public function enabled(bool $majorOnly): array
     {
@@ -128,6 +171,7 @@ final readonly class AirportRepository
 
         $sql .= ' ORDER BY a.title ASC';
 
+        /** @var list<AirportRow> */
         return $this->connection->fetchAll($sql);
     }
 
@@ -171,7 +215,7 @@ final readonly class AirportRepository
      * from one definition instead of three. `/city/new-york-nyc` is the same
      * name, because it is the same source.
      *
-     * @return list<array<string, mixed>>
+     * @return list<PickableRow>
      */
     public function pickable(): array
     {
@@ -226,6 +270,7 @@ final readonly class AirportRepository
             . ' ))'
             . ') places ORDER BY in_city ASC, depth ASC, label ASC';
 
+        /** @var list<PickableRow> */
         return $this->connection->fetchAll($sql);
     }
 
@@ -235,7 +280,7 @@ final readonly class AirportRepository
      * country rather than three letters.
      *
      * @param list<string> $codes
-     * @return list<array<string, mixed>>
+     * @return list<AirportRow>
      */
     public function byCodes(array $codes): array
     {
@@ -245,6 +290,7 @@ final readonly class AirportRepository
 
         $placeholders = implode(', ', array_fill(0, count($codes), '?'));
 
+        /** @var list<AirportRow> */
         return $this->connection->fetchAll(
             'SELECT ' . self::COLUMNS . self::source()
             . " WHERE a.code IN ($placeholders)"
@@ -289,10 +335,11 @@ final readonly class AirportRepository
      * breadcrumb has to link the country it sits in and the name alone will not
      * spell an address.
      *
-     * @return array<string, mixed>|null
+     * @return AirportRowWithTraffic|null
      */
     public function byCode(string $code): ?array
     {
+        /** @var AirportRowWithTraffic|null */
         return $this->connection->fetchOne(
             'SELECT ' . self::COLUMNS . ', a.country_code, a.traffic_weight' . self::source()
             . ' WHERE' . self::ONLY_SELLABLE . ' AND a.code = ?',
@@ -318,11 +365,12 @@ final readonly class AirportRepository
      * Gulf of Guinea, so the radius refuses it like any other point in the
      * sea. A guard would be one more branch nothing can reach.
      *
-     * @param list<array<string, mixed>>|null $places the picker's rows, where
+     * @param list<PickableRow>|null $places the picker's rows, where
      *     the caller already holds them -- see byCity()
      */
     public function nearestPlaceTo(float $latitude, float $longitude, int $maxKm, ?array $places = null): ?string
     {
+        /** @var list<array{city_code: string, km: float}> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT a.city_code,'
             . ' ST_Distance_Sphere(POINT(?, ?), POINT(AVG(a.longitude), AVG(a.latitude))) / 1000 AS km'
@@ -361,7 +409,7 @@ final readonly class AirportRepository
      * documents for callers that cannot afford its join -- this class is
      * `readonly`, so there is nowhere to memoise it.
      *
-     * @param list<array<string, mixed>> $places
+     * @param list<PickableRow> $places
      * @return array{cities: array<string, string>, airports: array<string, list<string>>}
      */
     private static function byCity(array $places): array
@@ -407,7 +455,7 @@ final readonly class AirportRepository
      * the 254 airports. The block is meant to drop for those rather than reach
      * further to fill itself.
      *
-     * @param list<array<string, mixed>>|null $places the picker's rows, where
+     * @param list<PickableRow>|null $places the picker's rows, where
      *     the caller already holds them -- see byCity()
      * @return list<string>
      */
@@ -508,10 +556,11 @@ final readonly class AirportRepository
      * Airports of the same city are included and are usually the first two.
      * That is the point: Heathrow's most useful alternative is Gatwick.
      *
-     * @return list<array<string, mixed>>
+     * @return list<AirportRowNearby>
      */
     public function nearby(string $code, int $limit, int $maxKm): array
     {
+        /** @var list<AirportRowNearby> */
         return $this->connection->fetchAll(
             'SELECT ' . self::COLUMNS . ','
             . ' ST_Distance_Sphere(POINT(here.longitude, here.latitude), POINT(a.longitude, a.latitude)) / 1000 AS km'
@@ -538,10 +587,11 @@ final readonly class AirportRepository
      * seeked and the query costs 7ms, where the range seeks
      * (departure_airport, departure_time) and costs 1.6ms for the same 50 rows.
      *
-     * @return list<array<string, mixed>>
+     * @return list<ScheduleRow>
      */
     public function departures(string $code, string $date): array
     {
+        /** @var list<ScheduleRow> */
         return $this->connection->fetchAll(
             'SELECT f.airline, f.number, f.departure_time, f.arrival_time, f.duration,'
             . ' other.code AS other_code, other.title AS other_title,'
@@ -575,10 +625,11 @@ final readonly class AirportRepository
      * FlightRepository::cheapestDirectPerOrigin() works around by naming its
      * origins. With it the same 40 rows come back in 1.3ms.
      *
-     * @return list<array<string, mixed>>
+     * @return list<ScheduleRow>
      */
     public function arrivals(string $code, string $date): array
     {
+        /** @var list<ScheduleRow> */
         return $this->connection->fetchAll(
             'SELECT f.airline, f.number, f.departure_time, f.arrival_time, f.duration,'
             . ' other.code AS other_code, other.title AS other_title,'
