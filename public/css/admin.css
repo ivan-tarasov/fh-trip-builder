@@ -4,64 +4,84 @@
 |------------------------------------------------------------------------------
 |
 | Its own stylesheet, because it is its own document. The site's `main.css` is
-| 8,769 lines of a marketing surface -- hero bands, search bar, fare cards, a
-| footer of directories -- and the panel uses none of it. Nothing here is
-| imported from there and nothing external is loaded at all: no Bootstrap, no
-| Font Awesome, no web font (A3.5, #230).
+| 8,500 lines of a marketing surface -- hero bands, search bar, fare cards, a
+| footer of directories -- and the panel uses none of it. Nothing external is
+| loaded except the typeface the site already self-hosts: no Bootstrap, no
+| Font Awesome, no jQuery (A3.5, #230).
 |
-| The look is deliberately not the site's. Out there is navy and teal, rounded,
-| selling flights. In here is a warm neutral with one sodium-amber signal --
-| the colour of a departure board -- a dark rail against a light well, and
-| fixed-width type for every identifier. An operator should never have to look
-| twice to know which side of the site they are on, and the type should read
-| like a board rather than a brochure, because what is on these pages is slugs,
-| counts and states.
+| **The palette is the site's**, copied rather than inherited. Copied, because
+| inheriting would mean loading `main.css` to get forty tokens; and the copy is
+| held in step by `AdminShellTest`, which reads both files and fails if a shared
+| value drifts. The panel should look like the same people made it -- teal, the
+| site's cool greys, Plus Jakarta Sans, the navy of the header band on the rail.
 |
-| The tokens are this file's own for the same reason. Sharing main.css's
-| palette would mean loading main.css.
+| What is *not* the site's is the density and the fixed-width type on data. The
+| chrome belongs to the family; the rows are a board of slugs, counts and cron
+| lines, and those read better in a column that lines up.
 |
 */
 
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+  /* Latin only. The panel shows slugs, commands and English labels; the other
+     three subsets exist for airport names the public pages carry. */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Every value below that is shared with the site is spelled the same as
+   `main.css` spells it. AdminShellTest compares them. */
 :root {
-  /* Warm neutrals rather than the site's cool greys, so the two never look
-     like the same page with a different header. */
-  --ground:      #F7F7F5;
-  --surface:     #FFFFFF;
-  --sunken:      #EFEEEA;
-  --rule:        #E2E1DC;
-  --rule-strong: #CFCDC6;
+  --ground:      #EFF2F7;   /* main.css --surface, which is what body wears */
+  --surface:     #FFFFFF;   /* --surface-raised */
+  --sunken:      #E8EDF3;   /* --surface-sunken */
+  --rule:        #E1E6ED;   /* --line */
+  --rule-strong: #D3DAE3;   /* --line-strong */
 
-  --ink:         #1A1917;   /* 15.9 on --ground */
-  --ink-quiet:   #6B6862;   /*  5.0 on --ground */
-  --ink-faint:   #918D85;   /*  3.1 -- ornament only */
+  --ink:         #151A21;   /* --ink-body */
+  --ink-quiet:   #5F6875;   /* --ink-muted */
+  --ink-faint:   #828C99;   /* --ink-faint */
 
-  /* Sodium amber: 5.3 on the ground, which clears AA for text. Everything
-     that means "this is the one" wears it, and nothing else does. */
-  --signal:      #B45309;
-  --signal-soft: #FBF0E2;
-  --signal-edge: #EBD5B4;
+  /* The site's teal, and the pale surface it wears. Sodium amber was tried
+     here first, to make the panel unmistakably not the public site; the owner
+     asked for one family instead, and one family is the stronger answer --
+     an operator already knows where they are from the rail. */
+  --signal:      #0F766E;   /* --brand-accent */
+  --signal-soft: #E6F2F1;   /* --brand-tint */
+  --signal-edge: #BFDDDA;   /* --brand-tint-edge */
 
-  --good:        #146C43;
-  --good-soft:   #E4F2EA;
-  --good-edge:   #B2E2C4;
-  --bad:         #B02A37;
-  --bad-soft:    #FBE9EB;
-  --bad-edge:    #F3C7CC;
+  --good:        #146C43;   /* --brand-success */
+  --good-soft:   #E4F2EA;   /* --success-tint */
+  --good-edge:   #B2E2C4;   /* --success-tint-edge */
+  --bad:         #B02A37;   /* --brand-danger */
+  --bad-soft:    #FBE9EB;   /* --danger-tint */
+  --bad-edge:    #F3C7CC;   /* --danger-tint-edge */
 
-  /* The rail keeps its own near-black in both palettes: it is the one surface
-     that must not change character when the lights go out. */
-  --rail:        #1C1B18;
-  --rail-ink:    #E8E6E1;
-  --rail-quiet:  #8F8B83;
-  --rail-rule:   #302E2A;
+  /* The navy the site's own header and footer bands wear. */
+  --rail:        #10243F;   /* --brand-ink-fill */
+  --rail-ink:    #E4E8EF;
+  --rail-quiet:  #8D97A7;
+  --rail-rule:   #1B3A63;   /* --brand-ink-700 */
 
+  /* The teal, lifted, because the rail is a dark band in both palettes and
+     `--signal` is the light palette's text teal. Measured: #0F766E on this
+     navy is 2.85, which is under the bar for text; #2AC3B2 is 7.9. This is the
+     same split main.css spends two paragraphs on -- a colour worn as text on a
+     dark ground and as ink on a light one cannot be one token. */
+  --rail-signal: #2AC3B2;   /* --d-brand-accent */
+
+  --sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  /* Nearly square. A panel is a board, and a board has corners. */
-  --radius: 3px;
+  /* The site's two: .75rem on a card, .5rem on a control. */
+  --radius: .5rem;
+  --radius-card: .75rem;
 
-  /* One row height, everywhere. It is what makes a list scannable. */
+  /* One row height, everywhere. It is what makes a list scannable, and it is
+     the one measurement here that is the panel's own. */
   --row: 2.25rem;
 }
 
@@ -70,56 +90,56 @@
    picked dark out there gets dark in here. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ground:      #141311;
-    --surface:     #1C1B18;
-    --sunken:      #232220;
-    --rule:        #2E2C28;
-    --rule-strong: #423F3A;
+    --ground:      #0B111C;
+    --surface:     #141C2B;
+    --sunken:      #070C14;
+    --rule:        #232C3D;
+    --rule-strong: #2F3A4E;
 
-    --ink:         #E8E6E1;
-    --ink-quiet:   #9A968E;
-    --ink-faint:   #6F6B64;
+    --ink:         #E4E8EF;
+    --ink-quiet:   #8D97A7;
+    --ink-faint:   #6A7484;
 
-    --signal:      #E0A458;   /* 8.6 on the dark ground */
-    --signal-soft: #2A2117;
-    --signal-edge: #4A3A24;
+    --signal:      #2AC3B2;
+    --signal-soft: #0E2A28;
+    --signal-edge: #1B4340;
 
     --good:        #3DD68C;
     --good-soft:   #0E2A1B;
     --good-edge:   #1C4A31;
-    --bad:         #F08A94;
-    --bad-soft:    #2C1518;
-    --bad-edge:    #4E2429;
+    --bad:         #F1707C;
+    --bad-soft:    #2A1216;
+    --bad-edge:    #4A2027;
 
-    --rail:        #0F0E0D;
-    --rail-rule:   #262421;
+    --rail:        #1C2942;
+    --rail-rule:   #2F3A4E;
   }
 }
 
 :root[data-theme="dark"] {
-  --ground:      #141311;
-  --surface:     #1C1B18;
-  --sunken:      #232220;
-  --rule:        #2E2C28;
-  --rule-strong: #423F3A;
+  --ground:      #0B111C;
+  --surface:     #141C2B;
+  --sunken:      #070C14;
+  --rule:        #232C3D;
+  --rule-strong: #2F3A4E;
 
-  --ink:         #E8E6E1;
-  --ink-quiet:   #9A968E;
-  --ink-faint:   #6F6B64;
+  --ink:         #E4E8EF;
+  --ink-quiet:   #8D97A7;
+  --ink-faint:   #6A7484;
 
-  --signal:      #E0A458;
-  --signal-soft: #2A2117;
-  --signal-edge: #4A3A24;
+  --signal:      #2AC3B2;
+  --signal-soft: #0E2A28;
+  --signal-edge: #1B4340;
 
   --good:        #3DD68C;
   --good-soft:   #0E2A1B;
   --good-edge:   #1C4A31;
-  --bad:         #F08A94;
-  --bad-soft:    #2C1518;
-  --bad-edge:    #4E2429;
+  --bad:         #F1707C;
+  --bad-soft:    #2A1216;
+  --bad-edge:    #4A2027;
 
-  --rail:        #0F0E0D;
-  --rail-rule:   #262421;
+  --rail:        #1C2942;
+  --rail-rule:   #2F3A4E;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -134,8 +154,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Every identifier is fixed-width: a slug, a code, a count, a state. It is
-   what makes a column of them read as a column. */
+/* Every identifier is fixed-width: a slug, a code, a cron line, a count. It is
+   what makes a column of them read as a column, and it is the one thing here
+   the public pages do not do -- they have no identifiers to line up. */
 code, .mono { font-family: var(--mono); }
 
 a { color: var(--signal); text-decoration: none; }
@@ -192,11 +213,11 @@ a:hover { text-decoration: underline; }
 /* The word that says which side of the site this is. */
 .rail__mark-role {
   display: block;
-  font-family: var(--mono);
   font-size: .6875rem;
+  font-weight: 600;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--signal);
+  color: var(--rail-signal);
 }
 
 .rail__list { margin: 0 0 1.25rem; padding: 0; list-style: none; }
@@ -207,7 +228,6 @@ a:hover { text-decoration: underline; }
   line-height: var(--row);
   border-radius: var(--radius);
   color: var(--rail-ink);
-  font-family: var(--mono);
   font-size: .8125rem;
 }
 
@@ -217,15 +237,14 @@ a:hover { text-decoration: underline; }
    colour as well as with it. */
 .rail__item.is-current {
   background: #ffffff0f;
-  box-shadow: inset 2px 0 0 var(--signal);
-  color: var(--signal);
+  box-shadow: inset 2px 0 0 var(--rail-signal);
+  color: var(--rail-signal);
 }
 
 .rail__soon-label {
   margin: 0 0 .25rem;
   padding: 0 .5rem;
   color: var(--rail-quiet);
-  font-family: var(--mono);
   font-size: .6875rem;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -286,13 +305,14 @@ a:hover { text-decoration: underline; }
 
 .button--go:hover { background: var(--signal); filter: brightness(1.08); }
 
-/* White on the sodium amber, in both palettes. In dark the amber lifts to
-   #E0A458, where white is 2.1 and near-black is 9.8 -- so the glyph flips
-   rather than the fill. */
-:root[data-theme="dark"] .button--go { color: #17150F; }
+/* White on the teal in light, and near-black on it in dark, where the teal
+   lifts to #2AC3B2 -- white on that is 1.9 and the site's own ink is 8.9, so
+   the glyph flips rather than the fill. The same trade main.css documents for
+   every colour that is worn both ways. */
+:root[data-theme="dark"] .button--go { color: #0B111C; }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .button--go { color: #17150F; }
+  :root:not([data-theme="light"]) .button--go { color: #0B111C; }
 }
 
 .button--quiet { background: transparent; color: var(--rail-ink); border-color: var(--rail-rule); }
@@ -319,7 +339,7 @@ a:hover { text-decoration: underline; }
 .group {
   margin-bottom: 1.25rem;
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   background: var(--surface);
   overflow: hidden;
 }
@@ -386,11 +406,12 @@ a:hover { text-decoration: underline; }
 
 /* The band label, in the type identifiers are read in, so a section reads as a
    heading without being one more size of bold text. */
+/* A section heading in the site's own face, at the size a caption wears. */
 .band {
   margin: 0 0 .5rem;
   color: var(--ink-quiet);
-  font-family: var(--mono);
   font-size: .6875rem;
+  font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -409,13 +430,13 @@ a:hover { text-decoration: underline; }
 .tile {
   padding: .75rem .85rem;
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   background: var(--surface);
 }
 
 .tile__label { margin: 0 0 .15rem; font-size: .75rem; color: var(--ink-quiet); }
 .tile__value { margin: 0; font-size: 1.0625rem; font-weight: 600; }
-.tile__note { margin: .15rem 0 0; font-size: .6875rem; color: var(--ink-quiet); font-family: var(--mono); }
+.tile__note { margin: .15rem 0 0; font-size: .6875rem; color: var(--ink-quiet); }
 .tile__line { margin: .15rem 0 0; font-size: .8125rem; }
 
 /* A count nobody has yet. Quiet rather than bold, because the number that is
@@ -542,8 +563,8 @@ a:hover { text-decoration: underline; }
 .editor__label {
   margin: 0 0 .25rem;
   color: var(--ink-quiet);
-  font-family: var(--mono);
   font-size: .6875rem;
+  font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -556,7 +577,7 @@ a:hover { text-decoration: underline; }
   overflow-y: auto;
   padding: .75rem 1rem;
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   background: var(--surface);
 }
 
@@ -588,8 +609,8 @@ a:hover { text-decoration: underline; }
 
 .gate__mark {
   margin-bottom: 1.5rem;
-  font-family: var(--mono);
   font-size: .6875rem;
+  font-weight: 600;
   letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--signal);
