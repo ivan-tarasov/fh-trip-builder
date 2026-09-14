@@ -59,6 +59,7 @@ final readonly class ArticleRepository
      */
     public function find(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
     {
+        /** @var array{icon: string, category: string, title: string, short: string|null, summary: string, body: string, updated_at: string}|null $row */
         $row = $this->connection->fetchOne(
             'SELECT a.icon, a.category, t.title, t.short, t.summary, t.body, t.updated_at'
             . ' FROM ' . Table::Articles->value . ' a'
@@ -114,6 +115,7 @@ final readonly class ArticleRepository
             return ImportOutcome::Kept;
         }
 
+        /** @var array{title: string, short: string|null, summary: string, body: string}|null $stored */
         $stored = $this->connection->fetchOne(
             'SELECT title, short, summary, body FROM ' . Table::ArticleTranslations->value
             . ' WHERE slug = ? AND locale = ?',
@@ -237,12 +239,12 @@ final readonly class ArticleRepository
      */
     public function handEditedSlugs(): array
     {
-        return array_map(
-            static fn(array $row): string => (string) $row['slug'],
-            $this->connection->fetchAll(
-                'SELECT slug FROM ' . Table::Articles->value . ' WHERE edited_at IS NOT NULL',
-            ),
+        /** @var list<array{slug: string}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT slug FROM ' . Table::Articles->value . ' WHERE edited_at IS NOT NULL',
         );
+
+        return array_column($rows, 'slug');
     }
 
     /**
@@ -271,6 +273,7 @@ final readonly class ArticleRepository
      */
     public function forPanel(string $locale = self::DEFAULT_LOCALE): array
     {
+        /** @var list<array{slug: string, category: string, position: int, enabled: int, edited_at: string|null, title: string|null, updated_at: string|null}> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT a.slug, a.category, a.position, a.enabled, a.edited_at, t.title, t.updated_at'
             . ' FROM ' . Table::Articles->value . ' a'
@@ -303,6 +306,7 @@ final readonly class ArticleRepository
      */
     public function forEditing(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
     {
+        /** @var array{slug: string, icon: string, category: string, position: int, enabled: int, edited_at: string|null, title: string|null, short: string|null, summary: string|null, body: string|null}|null $row */
         $row = $this->connection->fetchOne(
             'SELECT a.slug, a.icon, a.category, a.position, a.enabled, a.edited_at,'
             . ' t.title, t.short, t.summary, t.body'
@@ -361,6 +365,7 @@ final readonly class ArticleRepository
      */
     public function move(string $slug, int $direction): void
     {
+        /** @var array{category: string}|null $row */
         $row = $this->connection->fetchOne(
             'SELECT category FROM ' . Table::Articles->value . ' WHERE slug = ?',
             [$slug],
@@ -370,16 +375,14 @@ final readonly class ArticleRepository
             return;
         }
 
-        $siblings = array_map(
-            static fn(array $sibling): string => (string) $sibling['slug'],
-            $this->connection->fetchAll(
-                'SELECT slug FROM ' . Table::Articles->value
-                . ' WHERE category = ? ORDER BY position ASC, slug ASC',
-                [(string) $row['category']],
-            ),
+        /** @var list<array{slug: string}> $siblingRows */
+        $siblingRows = $this->connection->fetchAll(
+            'SELECT slug FROM ' . Table::Articles->value
+            . ' WHERE category = ? ORDER BY position ASC, slug ASC',
+            [$row['category']],
         );
 
-        self::reordered($siblings, $slug, $direction, $this->setPosition(...));
+        self::reordered(array_column($siblingRows, 'slug'), $slug, $direction, $this->setPosition(...));
     }
 
     /**
@@ -432,10 +435,10 @@ final readonly class ArticleRepository
      */
     public function slugs(): array
     {
-        return array_map(
-            static fn(array $row): string => (string) $row['slug'],
-            $this->connection->fetchAll('SELECT slug FROM ' . Table::Articles->value),
-        );
+        /** @var list<array{slug: string}> $rows */
+        $rows = $this->connection->fetchAll('SELECT slug FROM ' . Table::Articles->value);
+
+        return array_column($rows, 'slug');
     }
 
     /**
@@ -475,6 +478,7 @@ final readonly class ArticleRepository
      */
     public function all(string $locale = self::DEFAULT_LOCALE): array
     {
+        /** @var list<array{slug: string, icon: string, category: string, title: string, short: string|null, summary: string}> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT a.slug, a.icon, a.category, t.title, t.short, t.summary'
             . ' FROM ' . Table::Articles->value . ' a'
