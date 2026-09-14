@@ -1,0 +1,123 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ article ? 'Edit article' : 'New article' }}{% endblock %}
+
+{# Every page template opens its own <main>: there is no shared wrapper
+   inside the layout for one to sit in. See SkipLinkTest. #}
+{% block content %}
+<main role="main" class="admin admin--form">
+    <div class="admin__bar">
+        <h1 class="admin__title">{{ article ? 'Edit article' : 'New article' }}</h1>
+        <a class="btn btn-outline-secondary btn-sm" href="/admin">Back</a>
+    </div>
+
+    {% if error %}
+        {# `assertive`: the form is about to be corrected, and a message read
+           out after the typing has started is read out too late. #}
+        <p class="admin-form__error" role="alert" aria-live="assertive">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" class="admin-form"
+          action="/admin/article{{ article and article.slug ? '/' ~ article.slug : '' }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+
+        <div class="admin-form__row">
+            <label for="slug">Slug</label>
+            {# An existing article keeps its slug: renaming one orphans every
+               link to it, and nothing here would move them. #}
+            {% if article and article.slug %}
+                <input id="slug" type="text" value="{{ article.slug }}" disabled>
+                <p class="admin-form__hint">A slug cannot change &mdash; every link to this page is built from it.</p>
+            {% else %}
+                <input id="slug" name="slug" type="text" required
+                       pattern="[a-z0-9][a-z0-9-]*" maxlength="64"
+                       value="{{ article.slug|default('') }}"
+                       autocapitalize="off" spellcheck="false">
+                <p class="admin-form__hint">Lower case letters, digits and hyphens. This becomes the address.</p>
+            {% endif %}
+        </div>
+
+        <div class="admin-form__row">
+            <label for="title">Title</label>
+            <input id="title" name="title" type="text" required maxlength="255"
+                   value="{{ article.title|default('') }}">
+        </div>
+
+        <div class="admin-form__row">
+            <label for="short">Short name</label>
+            <input id="short" name="short" type="text" maxlength="255"
+                   value="{{ article.short|default('') }}">
+            <p class="admin-form__hint">For lists where the full title is too long. Left empty, the title is used.</p>
+        </div>
+
+        <div class="admin-form__row">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+                {% for category in categories %}
+                    <option value="{{ category.slug }}"{{ article and article.category == category.slug ? ' selected' : '' }}>
+                        {{ category.title }}{{ category.enabled ? '' : ' (hidden)' }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="admin-form__pair">
+            <div class="admin-form__row">
+                <label for="icon">Icon</label>
+                <input id="icon" name="icon" type="text" maxlength="64"
+                       value="{{ article.icon|default('') }}" autocapitalize="off" spellcheck="false">
+                <p class="admin-form__hint">A Font Awesome name, like <code>fa-suitcase</code>.</p>
+            </div>
+
+            <div class="admin-form__row">
+                <label for="position">Position</label>
+                <input id="position" name="position" type="number" min="0" step="1"
+                       value="{{ article.position|default(0) }}">
+                <p class="admin-form__hint">Lowest first, within the category.</p>
+            </div>
+        </div>
+
+        <div class="admin-form__row">
+            <label for="summary">Summary</label>
+            <textarea id="summary" name="summary" rows="3" required>{{ article.summary|default('') }}</textarea>
+            <p class="admin-form__hint">One or two sentences. Shown on the hub and in the page description.</p>
+        </div>
+
+        <div class="admin-form__row admin-form__row--body">
+            <label for="body">Body</label>
+
+            {# The preview is rendered by the server, by the same converter the
+               help page uses. A second implementation in the browser would
+               agree with this one right up until it did not, and the whole
+               point of a preview is that it is what will be published. #}
+            <div class="admin-editor">
+                <textarea id="body" name="body" rows="22" class="admin-editor__input js-markdown-source"
+                          data-preview-url="/admin/preview" data-csrf="{{ csrf_token() }}"
+                          spellcheck="true">{{ article.body|default('') }}</textarea>
+
+                <div class="admin-editor__preview">
+                    <p class="admin-editor__label">Preview</p>
+                    <div class="admin-editor__pane js-markdown-preview" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <p class="admin-form__hint">Markdown.</p>
+        </div>
+
+        <div class="admin-form__row admin-form__row--check">
+            <label>
+                <input type="checkbox" name="enabled" value="1"
+                       {{ article is null or article.enabled ? 'checked' : '' }}>
+                Show this article on the site
+            </label>
+        </div>
+
+        <div class="admin-form__actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+            {% if article and article.slug %}
+                <a class="admin-form__link" href="/help/{{ article.slug }}">View the page</a>
+            {% endif %}
+        </div>
+    </form>
+</main>
+{% endblock %}

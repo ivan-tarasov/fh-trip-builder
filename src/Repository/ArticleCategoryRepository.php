@@ -71,6 +71,136 @@ final readonly class ArticleCategoryRepository
     }
 
     /**
+     * Every category the panel can edit, disabled ones included.
+     *
+     * @return list<array{slug: string, title: string, position: int, enabled: bool}>
+     */
+    public function forPanel(string $locale = self::DEFAULT_LOCALE): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT c.slug, c.position, c.enabled, t.title'
+            . ' FROM ' . Table::ArticleCategories->value . ' c'
+            . ' LEFT JOIN ' . Table::ArticleCategoryTranslations->value . ' t'
+            . '  ON t.slug = c.slug AND t.locale = ?'
+            . ' ORDER BY c.position ASC, c.slug ASC',
+            [$locale],
+        );
+
+        return array_map(static fn(array $row): array => [
+            'slug' => (string) $row['slug'],
+            'title' => (string) ($row['title'] ?? $row['slug']),
+            'position' => (int) $row['position'],
+            'enabled' => (bool) $row['enabled'],
+        ], $rows);
+    }
+
+    /**
+     * One category as the editor needs it: every column, enabled or not.
+     *
+     * @return array{slug: string, title: string, summary: string, icon: string, accent: string, position: int, enabled: bool}|null
+     */
+    public function forEditing(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
+    {
+        $row = $this->connection->fetchOne(
+            'SELECT c.slug, c.icon, c.accent, c.position, c.enabled, t.title, t.summary'
+            . ' FROM ' . Table::ArticleCategories->value . ' c'
+            . ' LEFT JOIN ' . Table::ArticleCategoryTranslations->value . ' t'
+            . '  ON t.slug = c.slug AND t.locale = ?'
+            . ' WHERE c.slug = ?',
+            [$locale, $slug],
+        );
+
+        if ($row === null) {
+            return null;
+        }
+
+        return [
+            'slug' => (string) $row['slug'],
+            'title' => (string) ($row['title'] ?? ''),
+            'summary' => (string) ($row['summary'] ?? ''),
+            'icon' => (string) $row['icon'],
+            'accent' => (string) $row['accent'],
+            'position' => (int) $row['position'],
+            'enabled' => (bool) $row['enabled'],
+        ];
+    }
+
+    /**
+     * Show or hide one category.
+     *
+     * A disabled category keeps its articles: the importer checks membership
+     * against `slugs()`, which is unfiltered for exactly this reason, so
+     * hiding a group does not break the next import of everything in it.
+     */
+    public function setEnabled(string $slug, bool $enabled): void
+    {
+        $this->connection->execute(
+            'UPDATE ' . Table::ArticleCategories->value . ' SET enabled = ? WHERE slug = ?',
+            [$enabled ? 1 : 0, $slug],
+        );
+    }
+
+    /**
+     * Move one category one place among the others.
+     *
+     * A swap rather than a step, for the reason `ArticleRepository::move()`
+     * gives: positions are spaced in the seeded data and adding one to them
+     * moved nothing.
+     *
+     * @param int $direction -1 for up, 1 for down
+     */
+    public function move(string $slug, int $direction): void
+    {
+        $siblings = array_map(
+            static fn(array $sibling): string => (string) $sibling['slug'],
+            $this->connection->fetchAll(
+                'SELECT slug FROM ' . Table::ArticleCategories->value
+                . ' ORDER BY position ASC, slug ASC',
+            ),
+        );
+
+        self::reordered($siblings, $slug, $direction, $this->setPosition(...));
+    }
+
+    /**
+     * One slug moved one place in a list, written back as 0..n-1.
+     *
+     * Shared because an article among its category and a category among the
+     * others are the same operation on two tables, and two copies of it would
+     * be two chances to get the edges wrong.
+     *
+     * @param list<string> $order the siblings, in the order they are shown
+     * @param int $direction -1 for up, 1 for down
+     * @param callable(string, int): void $write
+     */
+    private static function reordered(array $order, string $slug, int $direction, callable $write): void
+    {
+        $at = array_search($slug, $order, true);
+        $to = $at === false ? -1 : $at + $direction;
+
+        // Already at the end it is being asked to move towards. Nothing to do,
+        // and renumbering anyway would be a write that changed nothing.
+        if ($at === false || $to < 0 || $to >= count($order)) {
+            return;
+        }
+
+        [$order[$at], $order[$to]] = [$order[$to], $order[$at]];
+
+        foreach ($order as $position => $moved) {
+            $write($moved, $position);
+        }
+    }
+
+    /** Where one category sits among the others. */
+    public function setPosition(string $slug, int $position): void
+    {
+        $this->connection->execute(
+            'UPDATE ' . Table::ArticleCategories->value . ' SET position = ? WHERE slug = ?',
+            [max(0, $position), $slug],
+        );
+    }
+
+    /**
      * Every category slug, enabled or not.
      *
      * Deliberately unfiltered, and the one read here that is. The importer

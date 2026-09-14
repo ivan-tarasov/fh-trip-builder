@@ -1,0 +1,84 @@
+{% extends 'layout.html.twig' %}
+
+{% block title %}{{ category ? 'Edit category' : 'New category' }}{% endblock %}
+
+{# Every page template opens its own <main>: there is no shared wrapper
+   inside the layout for one to sit in. See SkipLinkTest. #}
+{% block content %}
+<main role="main" class="admin admin--form">
+    <div class="admin__bar">
+        <h1 class="admin__title">{{ category ? 'Edit category' : 'New category' }}</h1>
+        <a class="btn btn-outline-secondary btn-sm" href="/admin">Back</a>
+    </div>
+
+    {% if error %}
+        <p class="admin-form__error" role="alert" aria-live="assertive">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" class="admin-form"
+          action="/admin/category{{ category and category.slug ? '/' ~ category.slug : '' }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+
+        <div class="admin-form__row">
+            <label for="slug">Slug</label>
+            {% if category and category.slug %}
+                <input id="slug" type="text" value="{{ category.slug }}" disabled>
+                <p class="admin-form__hint">A slug cannot change &mdash; the articles in this category name it.</p>
+            {% else %}
+                <input id="slug" name="slug" type="text" required
+                       pattern="[a-z0-9][a-z0-9-]*" maxlength="64"
+                       value="{{ category.slug|default('') }}"
+                       autocapitalize="off" spellcheck="false">
+                <p class="admin-form__hint">Lower case letters, digits and hyphens.</p>
+            {% endif %}
+        </div>
+
+        <div class="admin-form__row">
+            <label for="title">Title</label>
+            <input id="title" name="title" type="text" required maxlength="255"
+                   value="{{ category.title|default('') }}">
+        </div>
+
+        <div class="admin-form__row">
+            <label for="summary">Summary</label>
+            <textarea id="summary" name="summary" rows="3" required>{{ category.summary|default('') }}</textarea>
+            <p class="admin-form__hint">One sentence, shown under the heading on the help hub.</p>
+        </div>
+
+        <div class="admin-form__pair">
+            <div class="admin-form__row">
+                <label for="icon">Icon</label>
+                <input id="icon" name="icon" type="text" maxlength="64"
+                       value="{{ category.icon|default('') }}" autocapitalize="off" spellcheck="false">
+                <p class="admin-form__hint">A Font Awesome name, like <code>fa-plane</code>.</p>
+            </div>
+
+            <div class="admin-form__row">
+                <label for="accent">Accent</label>
+                <input id="accent" name="accent" type="text" maxlength="32"
+                       value="{{ category.accent|default(accent) }}" autocapitalize="off" spellcheck="false">
+                <p class="admin-form__hint">The colour name the hub card uses.</p>
+            </div>
+        </div>
+
+        <div class="admin-form__row">
+            <label for="position">Position</label>
+            <input id="position" name="position" type="number" min="0" step="1"
+                   value="{{ category.position|default(0) }}">
+            <p class="admin-form__hint">Lowest first.</p>
+        </div>
+
+        <div class="admin-form__row admin-form__row--check">
+            <label>
+                <input type="checkbox" name="enabled" value="1"
+                       {{ category is null or category.enabled ? 'checked' : '' }}>
+                Show this category on the site
+            </label>
+        </div>
+
+        <div class="admin-form__actions">
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </form>
+</main>
+{% endblock %}

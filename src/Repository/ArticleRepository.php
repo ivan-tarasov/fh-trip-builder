@@ -159,6 +159,163 @@ final readonly class ArticleRepository
     }
 
     /**
+     * Every article the panel can edit, disabled ones included.
+     *
+     * `all()` cannot be reused and that is the point of it: it filters
+     * `enabled = 1`, which is what makes holding an article back actually hold
+     * it back everywhere at once. The panel is the one reader that has to see
+     * what it is hiding (A3.3, #101).
+     *
+     * @return list<array{slug: string, title: string, category: string, position: int, enabled: bool, updated_at: string}>
+     */
+    public function forPanel(string $locale = self::DEFAULT_LOCALE): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT a.slug, a.category, a.position, a.enabled, t.title, t.updated_at'
+            . ' FROM ' . Table::Articles->value . ' a'
+            // LEFT, for the same reason `all()` gives: a row with no
+            // translation in this locale is still an article somebody has to
+            // be able to find and fix, and an inner join would hide it.
+            . ' LEFT JOIN ' . Table::ArticleTranslations->value . ' t'
+            . '  ON t.slug = a.slug AND t.locale = ?'
+            . ' ORDER BY a.category ASC, a.position ASC, a.slug ASC',
+            [$locale],
+        );
+
+        return array_map(static fn(array $row): array => [
+            'slug' => (string) $row['slug'],
+            'title' => (string) ($row['title'] ?? $row['slug']),
+            'category' => (string) $row['category'],
+            'position' => (int) $row['position'],
+            'enabled' => (bool) $row['enabled'],
+            'updated_at' => (string) ($row['updated_at'] ?? ''),
+        ], $rows);
+    }
+
+    /**
+     * One article as the editor needs it: every column, enabled or not.
+     *
+     * @return array{slug: string, title: string, short: ?string, icon: string, category: string, summary: string, body: string, position: int, enabled: bool}|null
+     */
+    public function forEditing(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
+    {
+        $row = $this->connection->fetchOne(
+            'SELECT a.slug, a.icon, a.category, a.position, a.enabled,'
+            . ' t.title, t.short, t.summary, t.body'
+            . ' FROM ' . Table::Articles->value . ' a'
+            . ' LEFT JOIN ' . Table::ArticleTranslations->value . ' t'
+            . '  ON t.slug = a.slug AND t.locale = ?'
+            . ' WHERE a.slug = ?',
+            [$locale, $slug],
+        );
+
+        if ($row === null) {
+            return null;
+        }
+
+        return [
+            'slug' => (string) $row['slug'],
+            'title' => (string) ($row['title'] ?? ''),
+            'short' => $row['short'] === null ? null : (string) $row['short'],
+            'icon' => (string) $row['icon'],
+            'category' => (string) $row['category'],
+            'summary' => (string) ($row['summary'] ?? ''),
+            'body' => (string) ($row['body'] ?? ''),
+            'position' => (int) $row['position'],
+            'enabled' => (bool) $row['enabled'],
+        ];
+    }
+
+    /**
+     * Show or hide one article.
+     *
+     * Its own statement rather than a field on `store()`, because the two are
+     * different acts: `store()` is the importer writing words, and this is
+     * somebody deciding whether a finished page is on the site. Keeping them
+     * apart is also what stops an import quietly re-enabling something that
+     * was held back.
+     */
+    public function setEnabled(string $slug, bool $enabled): void
+    {
+        $this->connection->execute(
+            'UPDATE ' . Table::Articles->value . ' SET enabled = ? WHERE slug = ?',
+            [$enabled ? 1 : 0, $slug],
+        );
+    }
+
+    /**
+     * Move one article one place among the others in its category.
+     *
+     * A swap, not a step: `position` is spaced 10, 20, 30 in the seeded data,
+     * so adding one to it moved nothing and the button looked broken. Both
+     * neighbours are renumbered so the order is always well defined -- two
+     * articles sharing a position fall back to the slug, which is not an order
+     * anybody chose.
+     *
+     * @param int $direction -1 for up, 1 for down
+     */
+    public function move(string $slug, int $direction): void
+    {
+        $row = $this->connection->fetchOne(
+            'SELECT category FROM ' . Table::Articles->value . ' WHERE slug = ?',
+            [$slug],
+        );
+
+        if ($row === null) {
+            return;
+        }
+
+        $siblings = array_map(
+            static fn(array $sibling): string => (string) $sibling['slug'],
+            $this->connection->fetchAll(
+                'SELECT slug FROM ' . Table::Articles->value
+                . ' WHERE category = ? ORDER BY position ASC, slug ASC',
+                [(string) $row['category']],
+            ),
+        );
+
+        self::reordered($siblings, $slug, $direction, $this->setPosition(...));
+    }
+
+    /**
+     * One slug moved one place in a list, written back as 0..n-1.
+     *
+     * Shared because an article among its category and a category among the
+     * others are the same operation on two tables, and two copies of it would
+     * be two chances to get the edges wrong.
+     *
+     * @param list<string> $order the siblings, in the order they are shown
+     * @param int $direction -1 for up, 1 for down
+     * @param callable(string, int): void $write
+     */
+    private static function reordered(array $order, string $slug, int $direction, callable $write): void
+    {
+        $at = array_search($slug, $order, true);
+        $to = $at === false ? -1 : $at + $direction;
+
+        // Already at the end it is being asked to move towards. Nothing to do,
+        // and renumbering anyway would be a write that changed nothing.
+        if ($at === false || $to < 0 || $to >= count($order)) {
+            return;
+        }
+
+        [$order[$at], $order[$to]] = [$order[$to], $order[$at]];
+
+        foreach ($order as $position => $moved) {
+            $write($moved, $position);
+        }
+    }
+
+    /** Where one article sits among its siblings. */
+    public function setPosition(string $slug, int $position): void
+    {
+        $this->connection->execute(
+            'UPDATE ' . Table::Articles->value . ' SET position = ? WHERE slug = ?',
+            [max(0, $position), $slug],
+        );
+    }
+
+    /**
      * Every article slug, enabled or not.
      *
      * Unfiltered on purpose, and the only read here that is. The importer
