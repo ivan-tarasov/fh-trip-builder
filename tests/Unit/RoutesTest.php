@@ -161,12 +161,13 @@ final class RoutesTest extends TestCase
     public function testTheAdminPanelIsRoutedAndPrivate(): void
     {
         self::assertSame('Admin@index', Routes::resolve('/admin'));
+        self::assertSame('Admin@content', Routes::resolve('/admin/content'));
         self::assertSame('Admin@login', Routes::resolve('/admin/login'));
         self::assertSame('Admin@logout', Routes::resolve('/admin/logout'));
 
-        self::assertFalse(Routes::isPublic('/admin'));
-        self::assertFalse(Routes::isPublic('/admin/login'));
-        self::assertFalse(Routes::isPublic('/admin/logout'));
+        foreach (['/admin', '/admin/content', '/admin/login', '/admin/logout'] as $path) {
+            self::assertFalse(Routes::isPublic($path), $path . ' is being advertised');
+        }
 
         // A page, not a payload: it renders through the layout like the rest.
         self::assertNotContains('Admin', Routes::EXCLUDE_HEADER_FOOTER);

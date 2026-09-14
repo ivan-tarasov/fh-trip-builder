@@ -25,7 +25,8 @@ final class AdminShellTest extends TestCase
 
     /** Every page of the panel. */
     private const array PAGES = [
-        'templates/admin/index.html.twig',
+        'templates/admin/overview.html.twig',
+        'templates/admin/content.html.twig',
         'templates/admin/article.html.twig',
         'templates/admin/category.html.twig',
         'templates/admin/login.html.twig',
