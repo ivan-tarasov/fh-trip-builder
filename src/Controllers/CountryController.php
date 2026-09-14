@@ -25,6 +25,12 @@ use TripBuilder\View\TwigRenderer;
  * a country does not get is an airlines block: 90% of the 105 airlines in this
  * database serve any given country we sell to, so "airlines flying to Canada"
  * is a list of nearly every airline and tells a reader nothing.
+ *
+ * @phpstan-import-type CountryDetailRow from CountryRepository
+ * @phpstan-import-type CountryAirportRow from CountryRepository
+ * @phpstan-import-type CountrySellableRow from CountryRepository
+ * @phpstan-import-type CityRowInCountry from CityRepository
+ * @phpstan-import-type CheapestDestinationRow from FlightRepository
  */
 class CountryController extends AbstractController
 {
@@ -77,7 +83,7 @@ class CountryController extends AbstractController
             // One country, one address -- the same rule the city page follows
             // and for the same reason. 301, because this is how the page is
             // spelled and not where it happens to be today.
-            $canonical = Helper::placeSlug((string) $country['name'], (string) $country['code']);
+            $canonical = Helper::placeSlug($country['name'], $country['code']);
 
             if ($slug !== $canonical) {
                 $this->bounce('/country/' . $canonical, HttpStatus::MovedPermanently);
@@ -113,7 +119,7 @@ class CountryController extends AbstractController
      * difference from the city page: what varies down a country's strip is
      * where in the country you land.
      *
-     * @param array<string, mixed> $country
+     * @param CountryDetailRow $country
      * @param list<string> $airports
      * @return list<array<string, mixed>>
      */
@@ -138,9 +144,9 @@ class CountryController extends AbstractController
                 'fares' => array_map(
                     static fn(array $fare): array => $fare + [
                         'search' => new SearchUrl(
-                            from: (string) $fare['from_city_code'],
-                            to: (string) $fare['to_city_code'],
-                            depart: substr((string) $fare['departure_time'], 0, 10),
+                            from: $fare['from_city_code'],
+                            to: $fare['to_city_code'],
+                            depart: substr($fare['departure_time'], 0, 10),
                             return: null,
                         )->path(),
                     ],
@@ -160,7 +166,7 @@ class CountryController extends AbstractController
      * has no geographic parent, so the honest one is the directory that lists
      * every country, which is also the only page that links to all of them.
      *
-     * @param array<string, mixed> $country
+     * @param CountryDetailRow $country
      * @return list<array{label: string, url: string|null, current: bool}>
      */
     private static function trailFor(array $country): array
@@ -178,14 +184,14 @@ class CountryController extends AbstractController
     /**
      * Give each country the address it is reached at.
      *
-     * @param list<array<string, mixed>> $countries
+     * @param list<CountrySellableRow> $countries
      * @return list<array<string, mixed>>
      */
     private static function addressable(array $countries): array
     {
         return array_map(
             static fn(array $country): array => $country + [
-                'url' => '/country/' . Helper::placeSlug((string) $country['name'], (string) $country['code']),
+                'url' => '/country/' . Helper::placeSlug($country['name'], $country['code']),
             ],
             $countries,
         );
@@ -197,14 +203,14 @@ class CountryController extends AbstractController
      * A country page's job is to hand a reader on to one of its cities, so the
      * chips are links and not labels.
      *
-     * @param list<array<string, mixed>> $cities
+     * @param list<CityRowInCountry> $cities
      * @return list<array<string, mixed>>
      */
     private static function cityAddresses(array $cities): array
     {
         return array_map(
             static fn(array $city): array => $city + [
-                'url' => '/city/' . Helper::placeSlug((string) $city['name'], (string) $city['code']),
+                'url' => '/city/' . Helper::placeSlug($city['name'], $city['code']),
             ],
             $cities,
         );
@@ -216,14 +222,14 @@ class CountryController extends AbstractController
      * Same reason the cities above are links: an airport has a page now, and a
      * country page that names one without reaching it is a dead end.
      *
-     * @param list<array<string, mixed>> $airports
+     * @param list<CountryAirportRow> $airports
      * @return list<array<string, mixed>>
      */
     private static function airportAddresses(array $airports): array
     {
         return array_map(
             static fn(array $airport): array => $airport + [
-                'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
+                'url' => Helper::airportUrl($airport['title'], $airport['code']),
             ],
             $airports,
         );

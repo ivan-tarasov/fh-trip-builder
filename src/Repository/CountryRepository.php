@@ -21,6 +21,15 @@ use TripBuilder\Database\Table;
  * new seed data rather than a new query.
  *
  * @phpstan-type CountryNameRow array{code: string, title: string}
+ * @phpstan-type CountryDetailRow array{
+ *     code: string, code_iso_3: string, name: string, cities: int, airports: int,
+ *     timezone_min: string, timezone_max: string,
+ * }
+ * @phpstan-type CountryAirportRow array{
+ *     code: string, title: string, city: string, city_code: string,
+ *     latitude: string, longitude: string,
+ * }
+ * @phpstan-type CountrySellableRow array{code: string, name: string, cities: int}
  */
 final readonly class CountryRepository
 {
@@ -38,11 +47,12 @@ final readonly class CountryRepository
      * +11. The reference shows one value for Canada and is wrong for the same
      * reason.
      *
-     * @return array<string, mixed>|null
+     * @return CountryDetailRow|null
      */
     public function byCode(string $code): ?array
     {
-        return $this->connection->fetchOne(
+        /** @var CountryDetailRow|null $row */
+        $row = $this->connection->fetchOne(
             'SELECT c.code, c.code_iso_3, c.title AS name,'
             . ' COUNT(DISTINCT a.city_code) AS cities,'
             . ' COUNT(*) AS airports,'
@@ -53,6 +63,8 @@ final readonly class CountryRepository
             . ' GROUP BY c.code, c.code_iso_3, c.title',
             [strtoupper($code)],
         );
+
+        return $row;
     }
 
     /**
@@ -93,11 +105,12 @@ final readonly class CountryRepository
      * 255 countries and we fly to 93 of them, and a directory listing the other
      * 162 would be 162 links to a 404.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CountrySellableRow>
      */
     public function sellable(): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<CountrySellableRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT c.code, c.title AS name, COUNT(DISTINCT a.city_code) AS cities'
             . ' FROM ' . Table::Countries->value . ' c'
             . ' JOIN ' . Table::Airports->value . ' a ON a.country_code = c.code'
@@ -105,6 +118,8 @@ final readonly class CountryRepository
             . ' GROUP BY c.code, c.title'
             . ' ORDER BY name ASC',
         );
+
+        return $rows;
     }
 
     /** Counts what sellable() lists, so the join that excludes empty countries stays. */
@@ -165,16 +180,19 @@ final readonly class CountryRepository
      * for the two, since 32 rows is the largest answer here -- the United
      * States -- and asking twice would be the more expensive of the two.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CountryAirportRow>
      */
     public function airports(string $code): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<CountryAirportRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT a.code, a.title, a.city, a.city_code, a.latitude, a.longitude'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' WHERE' . self::ONLY_SELLABLE . ' AND a.country_code = ?'
             . ' ORDER BY a.traffic_weight DESC, a.title ASC',
             [strtoupper($code)],
         );
+
+        return $rows;
     }
 }
