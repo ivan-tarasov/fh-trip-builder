@@ -28,6 +28,17 @@ use TripBuilder\Database\Table;
  * assembles up to two connections and prices the whole trip for the party,
  * where this is the cheapest single seat over at most one. It is a signpost
  * towards a cheaper day, not a quote.
+ *
+ * Verified live, including `cheapestPerDay()`'s uplifted fare: multiplying a
+ * DECIMAL column by `CabinClass::sqlPriceMultiplier()`'s literal-decimal
+ * expression stays DECIMAL arithmetic all the way through, so PDO still hands
+ * it back as `string` -- "computed" alone does not mean `float` here, same
+ * refinement `CityRepository` found for its own aggregates. Only a
+ * genuinely DOUBLE-returning function, not present in this file, would.
+ *
+ * @phpstan-type RouteDayPriceRow array{depart_date: string, price_base: string, price_tax: string}
+ * @phpstan-type CheapestDayRow array{d: string, base: string, tax: string}
+ * @phpstan-type RoutePriceBuildRow array{built_at: string}
  */
 final readonly class RoutePriceRepository
 {
@@ -50,6 +61,7 @@ final readonly class RoutePriceRepository
         string $since,
         string $until,
     ): array {
+        /** @var list<RouteDayPriceRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT depart_date, price_base, price_tax FROM ' . Table::RouteDayPrice->value
             . ' WHERE from_code = ? AND to_code = ? AND cabin = ?'
@@ -78,6 +90,7 @@ final readonly class RoutePriceRepository
      */
     public function builtAt(string $from, string $to, CabinClass $cabin): ?string
     {
+        /** @var RoutePriceBuildRow|null $row */
         $row = $this->connection->fetchOne(
             'SELECT built_at FROM ' . Table::RoutePriceBuild->value
             . ' WHERE from_code = ? AND to_code = ? AND cabin = ? LIMIT 1',
@@ -166,6 +179,7 @@ final readonly class RoutePriceRepository
         // different flights and price a trip nobody can buy. Ranked rather than
         // grouped, because MIN() over the sum cannot hand back the row it came
         // from.
+        /** @var list<CheapestDayRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT d, base, tax FROM ('
             . ' SELECT d, base, tax,'
@@ -273,13 +287,14 @@ final readonly class RoutePriceRepository
      */
     private function airportsFor(string $code): array
     {
+        /** @var list<array{code: string}> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT code FROM ' . Table::Airports->value
             . ' WHERE (code = ? OR city_code = ?) AND enabled = 1 AND traffic_weight > 0',
             [$code, $code],
         );
 
-        return array_map(static fn(array $row): string => (string) $row['code'], $rows);
+        return array_column($rows, 'code');
     }
 
     /** @param list<string> $values */
