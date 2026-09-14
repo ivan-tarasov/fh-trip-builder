@@ -1,0 +1,70 @@
+{#
+   The panel's own document.
+
+   Not a variant of `layout.html.twig` and not a flag on it: the site's layout
+   carries a search bar, a currency switcher, a cookie notice, a footer of 231
+   city links, and fourteen external assets -- jQuery, Bootstrap, Font Awesome,
+   sweetalert, a range slider, a datepicker. Measured on the sign-in page
+   before this existed: 48KB of HTML and eighteen link/script tags, for one
+   password field. None of it is for the person running the site (A3.5, #230).
+
+   `Routes::EXCLUDE_HEADER_FOOTER` looks like the lever for this and is not: it
+   means "emits its own payload", for JSON. This is a different document, not
+   the absence of one -- and `Kernel::wrapped()` lets it through untouched
+   because it opens with a doctype.
+#}
+<!DOCTYPE html>
+<html lang="en" data-admin>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {# Nobody should ever arrive here from a search engine. #}
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>{% block title %}Admin{% endblock %} &middot; {{ config('app.name') }}</title>
+
+    {# The stored theme before the first paint, for the reason the site's own
+       header gives: a stylesheet cannot read localStorage and a script at the
+       foot runs after the paint, so a dark reader would see the light palette
+       flash on every navigation. The same key as the public side, so choosing
+       dark out there means dark in here. #}
+    <script>
+        (function () {
+            try {
+                var choice = window.localStorage.getItem('tb-theme');
+
+                if (choice === 'light' || choice === 'dark') {
+                    document.documentElement.setAttribute('data-theme', choice);
+                }
+            } catch (e) {}
+        }());
+    </script>
+
+    <link href="{{ asset(config('site.directory.css') ~ '/admin.css') }}" rel="stylesheet">
+</head>
+<body class="shell{% block shell_class %}{% endblock %}">
+
+{% block shell %}
+    {# One rail, one well. The rail is dark against a light well on purpose:
+       an operator should never have to look twice to know which side of the
+       site they are on. #}
+    {% include 'admin/partials/rail.html.twig' %}
+
+    <div class="well">
+        <header class="well__top">
+            <h1 class="well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
+            <div class="well__tools">{% block tools %}{% endblock %}</div>
+        </header>
+
+        {# `tabindex="-1"` so the skip link can put focus here, the same reason
+           the public layout gives for its own landing point. #}
+        <main class="well__body" id="main" tabindex="-1">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+{% endblock %}
+
+<script src="{{ asset(config('site.directory.js') ~ '/admin.js') }}" defer></script>
+</body>
+</html>

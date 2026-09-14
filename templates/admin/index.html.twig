@@ -1,91 +1,65 @@
-{% extends 'layout.html.twig' %}
+{% extends 'admin/layout.html.twig' %}
 
-{% block title %}Admin{% endblock %}
+{% set admin_section = 'content' %}
 
-{# Categories, and the articles filed under each. Everything that changes
-   something is a form posting back here, so a refresh does not repeat the last
-   move (A3.3, #101). #}
-{% macro action(label, kind, slug, action, disabled) %}
-    <form method="post" action="/admin" class="admin-row__act">
+{% block title %}Help content{% endblock %}
+
+{# Everything that changes something is a form posting back here, so a refresh
+   does not repeat the last move (A3.3, #101). #}
+{% macro act(label, kind, slug, action, disabled) %}
+    <form method="post" action="/admin" class="row__act">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
         <input type="hidden" name="kind" value="{{ kind }}">
         <input type="hidden" name="slug" value="{{ slug }}">
         <input type="hidden" name="action" value="{{ action }}">
-        <button type="submit" class="admin-row__button"{{ disabled|default(false) ? ' disabled' : '' }}>{{ label }}</button>
+        <button type="submit" class="button button--tiny"{{ disabled|default(false) ? ' disabled' : '' }}>{{ label }}</button>
     </form>
 {% endmacro %}
 
-{% import _self as act %}
+{% import _self as do %}
 
-{# Every page template opens its own <main>: there is no shared wrapper
-   inside the layout for one to sit in. See SkipLinkTest. #}
+{% block tools %}
+    <a class="button" href="/admin/category">New category</a>
+    <a class="button button--go" href="/admin/article">New article</a>
+{% endblock %}
+
 {% block content %}
-<main role="main" class="admin">
-    <div class="admin__bar">
-        <h1 class="admin__title">Help content</h1>
-
-        <div class="admin__tools">
-            <a class="btn btn-outline-secondary btn-sm" href="/admin/category">New category</a>
-            <a class="btn btn-primary btn-sm" href="/admin/article">New article</a>
-
-            {# A form and not a link: a GET that changes something can be fired
-               by any image tag on any page. #}
-            <form method="post" action="/admin/logout" class="admin__signout">
-                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Sign out</button>
-            </form>
-        </div>
-    </div>
-
-    <p class="admin__note">
-        This session ends after {{ idle_minutes }} minutes without a page here.
-    </p>
-
     {% for category in categories %}
-        <section class="admin-group">
-            <div class="admin-row admin-row--group">
-                <a class="admin-row__name" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
-                <span class="admin-row__slug">{{ category.slug }}</span>
+        <section class="group">
+            <div class="row row--head">
+                <a class="row__name" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
+                <span class="row__slug">{{ category.slug }}</span>
 
-                {% if not category.enabled %}
-                    <span class="admin-row__flag">Hidden</span>
-                {% endif %}
+                {% if not category.enabled %}<span class="flag">Hidden</span>{% endif %}
 
                 {# Whose row this is. Edited here, the next `articles:import`
                    leaves it alone; untouched, the files still own it and an
                    import will rewrite it (A3.4, #102). #}
-                {% if category.edited %}
-                    <span class="admin-row__flag admin-row__flag--owned">Edited here</span>
-                {% endif %}
+                {% if category.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
 
-                <span class="admin-row__acts">
-                    {{ act.action('Up', 'category', category.slug, 'up', category.position == 0) }}
-                    {{ act.action('Down', 'category', category.slug, 'down', false) }}
-                    {{ act.action(category.enabled ? 'Hide' : 'Show', 'category', category.slug, category.enabled ? 'hide' : 'show', false) }}
+                <span class="row__acts">
+                    {{ do.act('Up', 'category', category.slug, 'up', loop.first) }}
+                    {{ do.act('Down', 'category', category.slug, 'down', loop.last) }}
+                    {{ do.act(category.enabled ? 'Hide' : 'Show', 'category', category.slug, category.enabled ? 'hide' : 'show', false) }}
                 </span>
             </div>
 
             {% for article in articles[category.slug]|default([]) %}
-                <div class="admin-row admin-row--article">
-                    <a class="admin-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="admin-row__slug">{{ article.slug }}</span>
+                <div class="row row--child">
+                    <a class="row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                    <span class="row__slug">{{ article.slug }}</span>
 
-                    {% if not article.enabled %}
-                        <span class="admin-row__flag">Hidden</span>
-                    {% endif %}
+                    {% if not article.enabled %}<span class="flag">Hidden</span>{% endif %}
+                    {% if article.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
 
-                    {% if article.edited %}
-                        <span class="admin-row__flag admin-row__flag--owned">Edited here</span>
-                    {% endif %}
-
-                    <span class="admin-row__acts">
-                        {{ act.action('Up', 'article', article.slug, 'up', article.position == 0) }}
-                        {{ act.action('Down', 'article', article.slug, 'down', false) }}
-                        {{ act.action(article.enabled ? 'Hide' : 'Show', 'article', article.slug, article.enabled ? 'hide' : 'show', false) }}
+                    <span class="row__acts">
+                        {{ do.act('Up', 'article', article.slug, 'up', loop.first) }}
+                        {{ do.act('Down', 'article', article.slug, 'down', loop.last) }}
+                        {{ do.act(article.enabled ? 'Hide' : 'Show', 'article', article.slug, article.enabled ? 'hide' : 'show', false) }}
                     </span>
                 </div>
             {% else %}
-                <p class="admin-group__empty">No articles in this category.</p>
+                <p class="group__empty">No articles in this category.</p>
             {% endfor %}
         </section>
     {% endfor %}
@@ -93,18 +67,19 @@
     {# An article whose category names no row. ArticleRepository::all() says why
        one is kept rather than dropped; this is where it gets fixed. #}
     {% if orphans %}
-        <section class="admin-group">
-            <div class="admin-row admin-row--group">
-                <span class="admin-row__name">Filed under a category that does not exist</span>
+        <section class="group">
+            <div class="row row--head">
+                <span class="row__name">Filed under a category that does not exist</span>
             </div>
 
             {% for article in orphans %}
-                <div class="admin-row admin-row--article">
-                    <a class="admin-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="admin-row__slug">{{ article.slug }} &mdash; {{ article.category }}</span>
+                <div class="row row--child">
+                    <a class="row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                    <span class="row__slug">{{ article.slug }} &mdash; {{ article.category }}</span>
                 </div>
             {% endfor %}
         </section>
     {% endif %}
-</main>
+
+    <p class="field__hint">This session ends after {{ idle_minutes }} minutes without a page here.</p>
 {% endblock %}

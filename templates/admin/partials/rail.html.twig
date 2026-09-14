@@ -1,0 +1,36 @@
+{# The sections, and the ones that are not built yet.
+
+   Listing what is coming is unusual in a panel and right in this one: there is
+   one operator, they are the person who decides what gets built next, and a
+   rail that showed a single entry would say less than the truth. Nothing here
+   is a dead link -- what does not exist is not clickable. #}
+<nav class="rail" aria-label="Sections">
+    <a class="rail__mark" href="/" title="Back to the site">
+        <span class="rail__mark-name">{{ config('app.name') }}</span>
+        <span class="rail__mark-role">admin</span>
+    </a>
+
+    <ul class="rail__list">
+        {% for item in [
+            { 'href': '/admin', 'label': 'Help content', 'match': 'content' }
+        ] %}
+            {% set current = admin_section|default('') == item.match %}
+            <li>
+                <a class="rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
+                   {{ current ? 'aria-current="page"' : '' }}>{{ item.label }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <p class="rail__soon-label">Not built yet</p>
+    <ul class="rail__list rail__list--soon">
+        {% for label in ['Overview', 'Settings', 'Bookings', 'Fare alerts'] %}
+            <li><span class="rail__item rail__item--soon">{{ label }}</span></li>
+        {% endfor %}
+    </ul>
+
+    <form method="post" action="/admin/logout" class="rail__out">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <button type="submit" class="button button--quiet button--block">Sign out</button>
+    </form>
+</nav>
