@@ -11,6 +11,8 @@ use TripBuilder\Database\Table;
  * Aircraft types. A flight stores only the IATA type code, so the search never
  * joins this table — the sidebar looks the titles up once to label the codes a
  * search turned out to offer.
+ *
+ * @phpstan-type AircraftRow array{code: string, title: string, max_range_km: int, is_widebody: int}
  */
 final readonly class AircraftRepository
 {
@@ -25,9 +27,12 @@ final readonly class AircraftRepository
     {
         $types = [];
 
-        foreach ($this->connection->fetchAll(
+        /** @var list<AircraftRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT code, title, max_range_km, is_widebody FROM ' . Table::Aircraft->value . ' ORDER BY title ASC',
-        ) as $row) {
+        );
+
+        foreach ($rows as $row) {
             $types[(string) $row['code']] = [
                 'code' => (string) $row['code'],
                 'title' => (string) $row['title'],
