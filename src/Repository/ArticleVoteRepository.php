@@ -18,6 +18,13 @@ use TripBuilder\Database\Table;
  * `SUM(helpful)` and `COUNT(*)` both come back from PDO as strings, so both are
  * cast on the way out for the reason CurrencyRateRepository::latest() casts its
  * rate: the score they are handed to is typed.
+ *
+ * `helpful` is non-null, so `tally()`'s grouped `SUM()` -- at least one row per
+ * group -- never comes back null. `tallyFor()` has no `GROUP BY`, so a slug
+ * with no votes still returns one row, with `SUM()` over zero rows null.
+ *
+ * @phpstan-type ArticleVoteTally array{slug: string, votes: string, helpful: string}
+ * @phpstan-type ArticleVoteTallyRow array{votes: string, helpful: ?string}
  */
 final readonly class ArticleVoteRepository
 {
@@ -70,6 +77,7 @@ final readonly class ArticleVoteRepository
      */
     public function tally(): array
     {
+        /** @var list<ArticleVoteTally> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT slug, COUNT(*) AS votes, SUM(helpful) AS helpful'
             . ' FROM ' . Table::ArticleVotes->value
@@ -98,6 +106,10 @@ final readonly class ArticleVoteRepository
      */
     public function tallyFor(string $slug): array
     {
+        // An aggregate query with no GROUP BY always returns exactly one row,
+        // even over zero matching votes -- never the null fetchOne()'s own
+        // signature allows for.
+        /** @var ArticleVoteTallyRow $row */
         $row = $this->connection->fetchOne(
             'SELECT COUNT(*) AS votes, SUM(helpful) AS helpful'
             . ' FROM ' . Table::ArticleVotes->value
