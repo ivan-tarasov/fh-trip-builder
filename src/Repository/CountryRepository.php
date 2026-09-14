@@ -19,6 +19,8 @@ use TripBuilder\Database\Table;
  * Two facts the reference shows are simply not here. Its Canada page names a
  * currency and a visa requirement, and this schema has neither -- both would be
  * new seed data rather than a new query.
+ *
+ * @phpstan-type CountryNameRow array{code: string, title: string}
  */
 final readonly class CountryRepository
 {
@@ -70,6 +72,7 @@ final readonly class CountryRepository
      */
     public function all(): array
     {
+        /** @var list<CountryNameRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT code, title FROM ' . Table::Countries->value . ' ORDER BY title ASC',
         );
