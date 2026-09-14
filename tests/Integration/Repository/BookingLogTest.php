@@ -6,13 +6,14 @@ namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
+use TripBuilder\BookingStatus;
 use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
 /**
- * The log, and finding a booking by the name on it.
+ * The log, the panel's two buttons, and finding a booking by the name on it.
  *
  * The rows here carry a made-up session and references no allocator will issue,
  * and they are removed afterwards: this table holds real personal data on any
@@ -88,6 +89,39 @@ final class BookingLogTest extends IntegrationTestCase
         self::assertSame('refunded', $lines[0]['raw']);
     }
 
+    /**
+     * The buttons are each other's undo, and neither fires twice.
+     *
+     * The update names the status it expects to find, so a second click on a
+     * page somebody left open changes nothing and reports nothing -- which is
+     * what stops the log recording a cancellation that did not happen.
+     */
+    public function testCancellingAndReinstatingOnlyMoveARowThatIsThere(): void
+    {
+        $id = $this->insert('ZZL003');
+        $bookings = $this->bookings();
+
+        self::assertSame(
+            1,
+            $bookings->setStatus($id, BookingStatus::Cancelled, BookingStatus::Confirmed),
+        );
+        self::assertSame(
+            0,
+            $bookings->setStatus($id, BookingStatus::Cancelled, BookingStatus::Confirmed),
+            'cancelling an already-cancelled booking reported a change',
+        );
+
+        $found = $bookings->find($id);
+
+        self::assertNotNull($found);
+        self::assertSame('cancelled', (string) $found['status']);
+
+        self::assertSame(
+            1,
+            $bookings->setStatus($id, BookingStatus::Confirmed, BookingStatus::Cancelled),
+        );
+    }
+
     /** The log begins the day it is installed, and says when that was. */
     public function testTheLogKnowsWhenItStarted(): void
     {
@@ -135,6 +169,31 @@ final class BookingLogTest extends IntegrationTestCase
 
         self::assertSame(0, $this->bookings()->countMatching('%'));
         self::assertSame(0, $this->bookings()->countMatching('ZZL00_'));
+    }
+
+    /**
+     * How many bookings a traveller appears on, matched on name *and* birthday.
+     *
+     * Two people can share a name: this data already holds one booking carrying
+     * `Felix Okafor` twice, born thirty-one years apart. The name alone would
+     * report both of them as one person.
+     */
+    public function testTravellersAreCountedByNameAndBirthdayTogether(): void
+    {
+        $first = $this->insert('ZZL007');
+        $second = $this->insert('ZZL008');
+
+        $elder = ['type' => 'A', 'first_name' => 'Zzsame', 'last_name' => 'Zzname', 'dob' => '1960-03-10', 'gender' => 'M'];
+        $younger = ['type' => 'A', 'first_name' => 'Zzsame', 'last_name' => 'Zzname', 'dob' => '1991-11-22', 'gender' => 'M'];
+
+        $travellers = new BookingPassengerRepository($this->connection());
+        $travellers->createFor($first, [$elder, $younger]);
+        $travellers->createFor($second, [$elder]);
+
+        $counts = $travellers->bookingCountsFor($travellers->forBooking($first));
+
+        self::assertSame(2, $counts[BookingPassengerRepository::keyFor($elder)] ?? null);
+        self::assertSame(1, $counts[BookingPassengerRepository::keyFor($younger)] ?? null);
     }
 
     /** Everyone on a booking, lead first, for the list's one query. */

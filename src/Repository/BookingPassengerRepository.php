@@ -116,6 +116,87 @@ final readonly class BookingPassengerRepository
     }
 
     /**
+     * How many bookings each of these travellers appears on.
+     *
+     * **Matched on the name and the date of birth together, and that is a
+     * match on what was typed rather than on a person.** There is no passenger
+     * table and no identity here: a booking carries the words somebody entered
+     * into a form. Two people can share a name, one person can be entered two
+     * ways, and this data already proves the first half -- one booking in it
+     * carries `Felix Okafor` twice, born thirty-one years apart.
+     *
+     * So the name alone would be wrong, and the name with the date of birth is
+     * the closest thing to a person the schema holds. The panel says which it
+     * is rather than calling the number a person's history (A3.8, #233).
+     *
+     * One query for the party rather than one per traveller, which is what the
+     * row constructor in the `IN` is for.
+     *
+     * @param list<array<string, mixed>> $passengers rows as forBooking returns them
+     * @return array<string, int> "first|last|dob" => how many bookings
+     */
+    public function bookingCountsFor(array $passengers): array
+    {
+        $wanted = [];
+        $values = [];
+
+        foreach ($passengers as $passenger) {
+            $key = self::keyFor($passenger);
+
+            if (isset($wanted[$key])) {
+                continue;
+            }
+
+            $wanted[$key] = 0;
+            $values = [
+                ...$values,
+                (string) ($passenger['first_name'] ?? ''),
+                (string) ($passenger['last_name'] ?? ''),
+                (string) ($passenger['dob'] ?? ''),
+            ];
+        }
+
+        if ($wanted === []) {
+            return [];
+        }
+
+        $tuples = implode(', ', array_fill(0, count($wanted), '(?, ?, ?)'));
+
+        $rows = $this->connection->fetchAll(
+            'SELECT first_name, last_name, dob, COUNT(DISTINCT booking_id) AS bookings'
+            . ' FROM ' . Table::BookingPassengers->value
+            . " WHERE (first_name, last_name, dob) IN ($tuples)"
+            . ' GROUP BY first_name, last_name, dob',
+            $values,
+        );
+
+        foreach ($rows as $row) {
+            $wanted[self::keyFor($row)] = (int) $row['bookings'];
+        }
+
+        return $wanted;
+    }
+
+    /**
+     * The three fields that stand in for a traveller, as one string.
+     *
+     * A key and not a lookup: it is built the same way from a row of this table
+     * and from a row of the count above, so the two can be matched in PHP
+     * without the query having to return the key itself.
+     *
+     * @param array<string, mixed> $passenger
+     */
+    public static function keyFor(array $passenger): string
+    {
+        return sprintf(
+            '%s|%s|%s',
+            $passenger['first_name'] ?? '',
+            $passenger['last_name'] ?? '',
+            $passenger['dob'] ?? '',
+        );
+    }
+
+    /**
      * A booking's travellers, lead first.
      *
      * @return list<array<string, mixed>>

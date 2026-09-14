@@ -200,6 +200,24 @@ final readonly class BookingRepository
     }
 
     /**
+     * Move one booking's status from the panel.
+     *
+     * Unscoped, like `find()`, and narrowed the same way `cancelForSession()`
+     * narrows: the update names the status it expects to find, so asking to
+     * cancel an already-cancelled booking changes nothing and returns zero.
+     * The caller logs only when a row actually moved -- a log of a change that
+     * did not happen is worse than no log.
+     */
+    public function setStatus(int $bookingId, BookingStatus $to, BookingStatus $from): int
+    {
+        return $this->connection->execute(
+            'UPDATE ' . Table::Bookings->value
+            . ' SET status = ? WHERE id = ? AND status = ?',
+            [$to->value, $bookingId, $from->value],
+        );
+    }
+
+    /**
      * Bookings matching a search, newest first.
      *
      * What an operator has in front of them when somebody calls: a reference

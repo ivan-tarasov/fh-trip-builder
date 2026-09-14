@@ -8,12 +8,16 @@ use DateTimeImmutable;
 use Exception;
 use Throwable;
 use TripBuilder\Admin;
+use TripBuilder\BookingActor;
+use TripBuilder\BookingEvent;
+use TripBuilder\BookingStatus;
 use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
+use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\DashboardRepository;
@@ -304,7 +308,8 @@ class AdminController extends AbstractController
         $parts = explode('/', trim($this->request->path(), '/'));
         $id = (int) end($parts);
 
-        $row = new BookingRepository($this->connection())->find($id);
+        $bookings = new BookingRepository($this->connection());
+        $row = $bookings->find($id);
 
         if ($row === null) {
             $this->notFound();
@@ -312,8 +317,17 @@ class AdminController extends AbstractController
             return;
         }
 
-        $passengers = new BookingPassengerRepository($this->connection())->forBooking($id);
+        if ($this->request->isPost()) {
+            $this->actOnBooking($bookings, $row);
+
+            return;
+        }
+
+        $travellers = new BookingPassengerRepository($this->connection());
+        $passengers = $travellers->forBooking($id);
         $booking = new BookingPresenter()->booking($row, $passengers);
+        $events = new BookingEventRepository($this->connection());
+        $counts = $travellers->bookingCountsFor($passengers);
 
         echo new TwigRenderer()->render('admin/booking.html.twig', [
             'booking' => $booking,
@@ -322,15 +336,86 @@ class AdminController extends AbstractController
             // there has ever been, which is what a receipt shows.
             'extra' => [
                 'id' => (int) $row['id'],
+                // Off the column and not off the presenter, which gives nothing
+                // at all for a booking whose flights will not build -- and that
+                // is the page whose tab most needs to say which booking it is.
+                'reference' => trim((string) $row['reference']),
                 'card_last4' => (string) $row['card_last4'],
                 // Which browser made it. Not identifying on its own, and it is
                 // how every other read of this table finds a booking, so an
                 // operator chasing a duplicate can see they came from one
                 // person rather than two.
                 'session' => (string) $row['session_id'],
+                'made' => (string) $row['created'],
+                'made_ago' => Helper::elapsed((string) $row['created']),
+                'is_cancelled' => BookingStatus::fromRow($row['status'] ?? null) === BookingStatus::Cancelled,
             ],
             'passengers' => $passengers,
+            // How many bookings each traveller appears on, in the order the
+            // presenter lists them -- both are mapped from `$passengers`, so
+            // position n here is position n there. A lookup instead would need
+            // the name split back into the two columns it was joined from.
+            'elsewhere' => array_map(
+                static fn(array $passenger): int
+                    => $counts[BookingPassengerRepository::keyFor($passenger)] ?? 1,
+                $passengers,
+            ),
+            'log' => $events->forBooking($id),
+            // When the log itself began, so a booking with no events can say
+            // why rather than reading as one nothing ever happened to.
+            'log_from' => $events->startedAt(),
         ]);
+    }
+
+    /**
+     * Cancel a booking, or put a cancelled one back.
+     *
+     * The two actions the panel has, and they are each other's undo -- which is
+     * what makes them safe to offer at all. Nothing here deletes: a cancelled
+     * booking is a row the traveller can still see, which is the whole reason
+     * `bookings.status` exists.
+     *
+     * The update names the status it expects to find, so the button cannot
+     * cancel a booking somebody cancelled while this page was open, and the log
+     * is written only when a row actually moved (A3.8, #233).
+     *
+     * @param array<string, mixed> $row
+     */
+    private function actOnBooking(BookingRepository $bookings, array $row): void
+    {
+        $id = (int) $row['id'];
+        $back = '/admin/bookings/' . $id;
+
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            $this->bounce($back);
+
+            return;
+        }
+
+        $change = match ($this->request->body->str('action')) {
+            'cancel' => [
+                'to' => BookingStatus::Cancelled,
+                'from' => BookingStatus::Confirmed,
+                'event' => BookingEvent::Cancelled,
+            ],
+            'reinstate' => [
+                'to' => BookingStatus::Confirmed,
+                'from' => BookingStatus::Cancelled,
+                'event' => BookingEvent::Reinstated,
+            ],
+            default => null,
+        };
+
+        if ($change !== null && $bookings->setStatus($id, $change['to'], $change['from']) > 0) {
+            new BookingEventRepository($this->connection())->record(
+                $id,
+                $change['event'],
+                BookingActor::Operator,
+                'from the panel',
+            );
+        }
+
+        $this->bounce($back);
     }
 
     /**

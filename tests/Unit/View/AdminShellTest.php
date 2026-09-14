@@ -263,6 +263,28 @@ final class AdminShellTest extends TestCase
         }
     }
 
+    /**
+     * Every form in the panel that changes something carries its token.
+     *
+     * The panel's POSTs move an article, cancel a booking and sign an operator
+     * out, and a `Csrf::isValid()` in the controller is only half of that pair:
+     * the other half is a hidden field somebody has to remember to put in the
+     * template. Counted rather than parsed, because a form with no token and a
+     * token with no form are both the same mistake.
+     */
+    public function testEveryFormThatChangesSomethingCarriesItsToken(): void
+    {
+        foreach ([...self::PAGES, self::LAYOUT] as $page) {
+            $template = self::stripComments(self::read($page));
+
+            self::assertSame(
+                preg_match_all('/<form[^>]*method="post"/i', $template),
+                substr_count($template, 'csrf_field()'),
+                $page . ' has a POST form and a token, and not the same number of each',
+            );
+        }
+    }
+
     private static function read(string $path): string
     {
         $file = Helper::getRootDir() . '/' . $path;

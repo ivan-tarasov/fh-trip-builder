@@ -329,6 +329,17 @@ a:hover { text-decoration: underline; }
   color: var(--ink-quiet);
 }
 
+/* Destructive, and quiet about it. A filled red button in the top bar of every
+   booking would shout on the twenty-four pages where nothing is wrong; the
+   colour is in the word and the edge, and the fill arrives on hover. Cancelling
+   is reversible from the same bar anyway. */
+.button--bad {
+  border-color: var(--bad-edge);
+  color: var(--bad);
+}
+
+.button--bad:hover { background: var(--bad-soft); }
+
 /*
 |------------------------------------------------------------------------------
 | Rows
@@ -499,6 +510,11 @@ a:hover { text-decoration: underline; }
 
 /* A label column in a two-column sheet: the field name, not data. */
 .sheet__key { width: 9rem; color: var(--ink-quiet); }
+
+/* The same column when it holds a moment rather than a field name. Wider and
+   unbreakable, because "11 Sep 2026, 14:20" wrapped after the comma reads as
+   two entries in a log that is a list of them. */
+.sheet__when { width: 11rem; white-space: nowrap; color: var(--ink-quiet); }
 
 /* A caption is a heading for the table under it, so it sits above the head row
    rather than reading as one. */
