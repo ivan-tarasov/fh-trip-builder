@@ -7,6 +7,7 @@ namespace TripBuilder\Tests\Integration;
 use DateTimeImmutable;
 use TripBuilder\Currency;
 use TripBuilder\Money;
+use TripBuilder\Repository\BookingRepository;
 use TripBuilder\View\BookingPresenter;
 
 /**
@@ -20,6 +21,8 @@ use TripBuilder\View\BookingPresenter;
  * catalogue offers has a seeded row, so "no rate" only happens on a machine
  * somebody has cleared -- and a fallback nothing exercises is a fallback nobody
  * knows is broken.
+ *
+ * @phpstan-import-type BookingRow from BookingRepository
  */
 final class MoneyActiveRatesTest extends IntegrationTestCase
 {
@@ -107,6 +110,7 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
             ->booking(self::legacyRow());
 
         self::assertIsArray($booking, 'the presenter could not render this booking');
+        self::assertNotNull($booking['price_total']);
         self::assertSame('CAD', $booking['price_total']['code']);
         self::assertSame('1,000', $booking['price_total']['whole']);
     }
@@ -114,7 +118,7 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
     /**
      * The smallest booking row the presenter will read, with no currency on it.
      *
-     * @return array<string, mixed>
+     * @return BookingRow
      */
     private static function legacyRow(): array
     {
@@ -133,20 +137,26 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
 
         return [
             'id' => 100001,
+            'session_id' => 'legacy-session',
             'reference' => 'K7PQ2M',
             'status' => 'confirmed',
             'created' => '2026-09-01 10:00:00',
             'departure_time' => '2026-09-08 07:00:00',
             'passenger_first' => 'Ada',
             'passenger_last' => 'Lovelace',
+            'passenger_dob' => null,
+            'passenger_gender' => 'F',
             'contact_email' => 'ada@example.test',
             'contact_phone' => '+15145550100',
             'fare_brand' => 'Flex',
+            'fare_rules' => null,
             'card_brand' => 'Visa',
             'card_last4' => '4242',
-            'price_base' => 900.00,
-            'price_tax' => 100.00,
-            'flight_outbound' => json_encode([$segment]),
+            'price_base' => '900.00',
+            'price_tax' => '100.00',
+            'currency' => 'CAD',
+            'currency_rate' => '1.000000',
+            'flight_outbound' => (string) json_encode([$segment]),
             'flight_return' => null,
         ];
     }

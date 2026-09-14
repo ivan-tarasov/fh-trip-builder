@@ -9,8 +9,15 @@ use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
 use TripBuilder\Currency;
 use TripBuilder\Money;
+use TripBuilder\Repository\BookingPassengerRepository;
+use TripBuilder\Repository\BookingRepository;
 use TripBuilder\View\BookingPresenter;
 
+/**
+ * @phpstan-import-type BookingRow from BookingRepository
+ * @phpstan-import-type BookingPassengerRow from BookingPassengerRepository
+ * @phpstan-import-type Presented from BookingPresenter
+ */
 final class BookingPresenterTest extends TestCase
 {
     private string|false $cdn = false;
@@ -60,28 +67,39 @@ final class BookingPresenterTest extends TestCase
 
     /**
      * @param array<string, mixed> $overrides
-     * @return array<string, mixed>
+     * @return BookingRow
      */
     private static function row(array $overrides = []): array
     {
-        return $overrides + [
+        /** @var BookingRow $row */
+        $row = $overrides + [
             'id' => 100001,
+            'session_id' => 'test-session',
             'reference' => 'K7PQ2M',
             'status' => 'confirmed',
             'created' => '2026-09-01 10:00:00',
             'departure_time' => '2026-09-08 07:00:00',
             'passenger_first' => 'Ada',
             'passenger_last' => 'Lovelace',
+            'passenger_dob' => null,
+            'passenger_gender' => 'F',
             'contact_email' => 'ada@example.test',
             'contact_phone' => '+15145550100',
             'fare_brand' => 'Flex',
+            'fare_rules' => null,
             'card_brand' => 'Visa',
             'card_last4' => '4242',
-            'price_base' => 900.00,
-            'price_tax' => 100.00,
-            'flight_outbound' => json_encode([self::segment('YUL', 'LHR', '2026-09-08 07:00', '2026-09-08 19:00')]),
-            'flight_return' => json_encode([self::segment('LHR', 'YUL', '2026-09-15 09:00', '2026-09-15 11:30')]),
+            'price_base' => '900.00',
+            'price_tax' => '100.00',
+            // The truth a migration backfilled onto every pre-currency row --
+            // see moneyFor()'s own docblock.
+            'currency' => 'CAD',
+            'currency_rate' => '1.000000',
+            'flight_outbound' => (string) json_encode([self::segment('YUL', 'LHR', '2026-09-08 07:00', '2026-09-08 19:00')]),
+            'flight_return' => (string) json_encode([self::segment('LHR', 'YUL', '2026-09-15 09:00', '2026-09-15 11:30')]),
         ];
+
+        return $row;
     }
 
     private static function presenter(string $now = '2026-09-04 12:00:00'): BookingPresenter
@@ -97,9 +115,9 @@ final class BookingPresenterTest extends TestCase
      * test below is about what the card says, so a null is the row being wrong
      * rather than the assertion failing, and it should say so once here.
      *
-     * @param array<string, mixed> $row
-     * @param list<array<string, mixed>> $passengers
-     * @return array<string, mixed>
+     * @param BookingRow $row
+     * @param list<BookingPassengerRow> $passengers
+     * @return Presented
      */
     private static function card(
         array $row,
@@ -134,9 +152,10 @@ final class BookingPresenterTest extends TestCase
 
         $booking = self::card(self::row([
             'currency' => 'JPY',
-            'currency_rate' => 111.32,
+            'currency_rate' => '111.32',
         ]));
 
+        self::assertNotNull($booking['price_total']);
         self::assertSame('JPY', $booking['price_total']['code']);
         self::assertSame('¥', $booking['price_total']['symbol']);
         self::assertNull($booking['price_total']['cents'], 'yen has no minor unit');
@@ -153,9 +172,11 @@ final class BookingPresenterTest extends TestCase
      */
     public function testTwoBookingsAtDifferentRatesReportDifferentTotals(): void
     {
-        $march = self::card(self::row(['currency' => 'JPY', 'currency_rate' => 95.0]));
-        $today = self::card(self::row(['currency' => 'JPY', 'currency_rate' => 111.32]));
+        $march = self::card(self::row(['currency' => 'JPY', 'currency_rate' => '95.0']));
+        $today = self::card(self::row(['currency' => 'JPY', 'currency_rate' => '111.32']));
 
+        self::assertNotNull($march['price_total']);
+        self::assertNotNull($today['price_total']);
         self::assertSame('95,000', $march['price_total']['whole']);
         self::assertSame('111,320', $today['price_total']['whole']);
     }
@@ -165,18 +186,18 @@ final class BookingPresenterTest extends TestCase
      *
      * Not in the cookie's currency, which would be the tempting default and
      * would silently convert a figure that was never converted. Those rows
-     * genuinely were dollars, which is why the column defaults say so.
+     * genuinely were dollars, which is why the column defaults say so --
+     * `row()`'s own defaults are exactly the CAD/1 a migration backfilled
+     * onto every row written before these columns existed.
      */
     public function testALegacyRowWithoutTheColumnsReadsAsCanadianDollars(): void
     {
         $_COOKIE[Currency::COOKIE] = 'JPY';
         Money::forget();
 
-        $row = self::row();
-        unset($row['currency'], $row['currency_rate']);
+        $booking = self::card(self::row());
 
-        $booking = self::card($row);
-
+        self::assertNotNull($booking['price_total']);
         self::assertSame('CAD', $booking['price_total']['code']);
         self::assertSame('1,000', $booking['price_total']['whole']);
     }
@@ -192,9 +213,10 @@ final class BookingPresenterTest extends TestCase
     {
         $booking = self::card(self::row([
             'currency' => 'RUB',
-            'currency_rate' => 62.45,
+            'currency_rate' => '62.45',
         ]));
 
+        self::assertNotNull($booking['price_total']);
         self::assertSame('CAD', $booking['price_total']['code']);
         self::assertSame('1,000', $booking['price_total']['whole']);
     }
@@ -206,8 +228,10 @@ final class BookingPresenterTest extends TestCase
     {
         $booking = self::card(self::row([
             'currency' => 'JPY',
-            'currency_rate' => 111.32,
+            'currency_rate' => '111.32',
         ]));
+
+        self::assertNotNull($booking['price_total']);
 
         $whole = static fn(array $part): int => (int) str_replace(',', '', $part['whole']);
 
@@ -223,6 +247,7 @@ final class BookingPresenterTest extends TestCase
         // columns are what a card was charged.
         $booking = self::card(self::row());
 
+        self::assertNotNull($booking['price_total']);
         self::assertSame('1,000', $booking['price_total']['whole']);
         self::assertSame('00', $booking['price_total']['cents']);
     }
@@ -231,8 +256,8 @@ final class BookingPresenterTest extends TestCase
     {
         $booking = self::card(self::row([
             'reference' => '',
-            'price_base' => 0.00,
-            'price_tax' => 0.00,
+            'price_base' => '0.00',
+            'price_tax' => '0.00',
         ]));
 
         // Six rows in the live table look like this. Showing the segment sum
@@ -264,6 +289,7 @@ final class BookingPresenterTest extends TestCase
     {
         $booking = self::card(self::row(['departure_time' => null]));
 
+        self::assertNotNull($booking['starts_at']);
         self::assertSame('2026-09-08 07:00', $booking['starts_at']->format('Y-m-d H:i'));
     }
 
@@ -342,8 +368,14 @@ final class BookingPresenterTest extends TestCase
         // Handed the travellers themselves, it counts those rather than relying
         // on a number the caller also has to remember to pass.
         $booking = self::card(self::row(), [
-            ['first_name' => 'Ada', 'last_name' => 'Lovelace', 'type' => 'A', 'dob' => '1990-01-01'],
-            ['first_name' => 'Mary', 'last_name' => 'Somerville', 'type' => 'A', 'dob' => '1992-02-02'],
+            [
+                'id' => 1, 'booking_id' => 100001, 'position' => 0, 'type' => 'A',
+                'first_name' => 'Ada', 'last_name' => 'Lovelace', 'dob' => '1990-01-01', 'gender' => 'F',
+            ],
+            [
+                'id' => 2, 'booking_id' => 100001, 'position' => 1, 'type' => 'A',
+                'first_name' => 'Mary', 'last_name' => 'Somerville', 'dob' => '1992-02-02', 'gender' => 'F',
+            ],
         ]);
 
         self::assertSame('Ada Lovelace + 1', $booking['passenger_summary']);

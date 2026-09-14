@@ -18,6 +18,7 @@ use TripBuilder\View\TwigRenderer;
 
 /**
  * @phpstan-import-type ResponseItinerary from FlightFinder
+ * @phpstan-import-type BookingRow from BookingRepository
  */
 class MyController extends AbstractController
 {
@@ -132,11 +133,11 @@ class MyController extends AbstractController
         // One count query for the page. The rows themselves are read without a
         // join, so without this a card could only ever name the lead.
         $counts = new BookingPassengerRepository($this->connection())->countsFor(
-            array_map(static fn(array $row): int => (int) $row['id'], $rows),
+            array_map(self::bookingId(...), $rows),
         );
 
         foreach ($rows as $row) {
-            $booking = $presenter->booking($row, travellerCount: $counts[(int) $row['id']] ?? null);
+            $booking = $presenter->booking($row, travellerCount: $counts[$row['id']] ?? null);
 
             // Stored flight JSON that will not rebuild. Skip the row rather
             // than draw a booking with no flights in it.
@@ -170,6 +171,14 @@ class MyController extends AbstractController
         ));
 
         return self::byNearness($upcoming) + ['past' => $past, 'cancelled' => $cancelled];
+    }
+
+    /**
+     * @param BookingRow $row
+     */
+    private static function bookingId(array $row): int
+    {
+        return $row['id'];
     }
 
     /**
@@ -218,7 +227,7 @@ class MyController extends AbstractController
             ? null
             : new BookingPresenter()->booking(
                 $row,
-                new BookingPassengerRepository($this->connection())->forBooking((int) $row['id']),
+                new BookingPassengerRepository($this->connection())->forBooking($row['id']),
             );
 
         if ($booking === null) {
@@ -281,7 +290,7 @@ class MyController extends AbstractController
      * which keeps the routing table a plain map of address to action and stops
      * a second piece of global state existing just to carry one integer.
      *
-     * @return array<string, mixed>|null
+     * @return BookingRow|null
      */
     private function findRow(): ?array
     {

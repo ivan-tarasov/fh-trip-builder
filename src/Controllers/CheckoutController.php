@@ -39,6 +39,7 @@ use TripBuilder\View\TwigRenderer;
  * number the form sent us.
  *
  * @phpstan-import-type SubmittedPassenger from BookingPassengerRepository
+ * @phpstan-import-type BookingRow from BookingRepository
  */
 class CheckoutController extends AbstractController
 {
@@ -198,7 +199,7 @@ class CheckoutController extends AbstractController
         // drawn from one shape rather than two that drift.
         $presented = new BookingPresenter()->booking(
             $booking,
-            new BookingPassengerRepository($this->connection())->forBooking((int) $booking['id']),
+            new BookingPassengerRepository($this->connection())->forBooking($booking['id']),
         );
 
         if ($presented === null) {
