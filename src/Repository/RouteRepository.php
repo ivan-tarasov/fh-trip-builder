@@ -39,6 +39,7 @@ use TripBuilder\Database\Table;
  * both consistent with every aggregate this initiative has checked live.
  *
  * @phpstan-type RouteSummaryRow array{flights: int, carriers: int, typical: string, km: int, cheapest: string}
+ * @phpstan-type SearchedRouteRow array{from_code: string, from_name: string, to_code: string, to_name: string, searches: string}
  */
 final readonly class RouteRepository
 {
@@ -212,7 +213,7 @@ final readonly class RouteRepository
      * the expensive half runs over tens of rows rather than 213. Measured at
      * 1.6 to 6.3ms, the worst of it London.
      *
-     * @return list<array<string, mixed>>
+     * @return list<SearchedRouteRow>
      */
     public function departing(string $city, int $limit): array
     {
@@ -222,7 +223,7 @@ final readonly class RouteRepository
     /**
      * The same the other way round: the busiest routes into one city.
      *
-     * @return list<array<string, mixed>>
+     * @return list<SearchedRouteRow>
      */
     public function arriving(string $city, int $limit): array
     {
@@ -244,11 +245,11 @@ final readonly class RouteRepository
      * of the two column names this class passes it -- never anything that came
      * from a request.
      *
-     * @return list<array{from_code: string, to_code: string, ...}>
+     * @return list<SearchedRouteRow>
      */
     private function searchedWithAPage(?int $candidates, ?string $endColumn = null, string $city = ''): array
     {
-        /** @var list<array{from_code: string, to_code: string, ...}> $rows */
+        /** @var list<SearchedRouteRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT p.from_code, MIN(o.city) AS from_name,'
             . ' p.to_code, MIN(d.city) AS to_name, p.searches'

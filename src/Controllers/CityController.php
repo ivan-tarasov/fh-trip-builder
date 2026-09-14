@@ -18,6 +18,13 @@ use TripBuilder\SearchUrl;
 use TripBuilder\View\Directory;
 use TripBuilder\View\TwigRenderer;
 
+/**
+ * @phpstan-import-type CityRow from CityRepository
+ * @phpstan-import-type CityAirportRow from CityRepository
+ * @phpstan-import-type CityRowNearby from CityRepository
+ * @phpstan-import-type CheapestOriginRow from FlightRepository
+ * @phpstan-import-type SearchedRouteRow from RouteRepository
+ */
 class CityController extends AbstractController
 {
     /**
@@ -117,13 +124,13 @@ class CityController extends AbstractController
      * whose country has no other airport we sell, most obviously -- and the
      * block drops a tab that has nothing rather than showing an empty strip.
      *
-     * @param array<string, mixed> $city
+     * @param CityRow $city
      * @return list<array<string, mixed>>
      */
     private function fares(CityRepository $cities, array $city): array
     {
-        $code = (string) $city['code'];
-        $country = (string) $city['country_code'];
+        $code = $city['code'];
+        $country = $city['country_code'];
         $destinations = array_column($cities->airports($code), 'code');
         $flights = new FlightRepository($this->connection());
 
@@ -139,7 +146,7 @@ class CityController extends AbstractController
 
             $tabs[] = [
                 'id' => $domestic ? 'home' : 'away',
-                'label' => $domestic ? 'From ' . $city['country'] : 'Other countries',
+                'label' => $domestic ? 'From ' . ($city['country'] ?? '') : 'Other countries',
                 'fares' => array_map(
                     fn(array $fare): array => $fare + [
                         // The strip is shared with the country page, where the
@@ -150,9 +157,9 @@ class CityController extends AbstractController
                         // Where the card goes: the same search anybody would
                         // have run to find this fare, already filled in.
                         'search' => new SearchUrl(
-                            from: (string) $fare['from_city_code'],
+                            from: $fare['from_city_code'],
                             to: $code,
-                            depart: substr((string) $fare['departure_time'], 0, 10),
+                            depart: substr($fare['departure_time'], 0, 10),
                             return: null,
                         )->path(),
                     ],
@@ -182,7 +189,7 @@ class CityController extends AbstractController
      * built. It is spelled the way the city above it is -- name then code -- so
      * it will work the day that page exists.
      *
-     * @param array<string, mixed> $city
+     * @param CityRow $city
      * @return list<array{label: string, url: string|null, current: bool}>
      */
     private static function trailFor(array $city): array
@@ -193,10 +200,10 @@ class CityController extends AbstractController
             ['label' => (string) Config::get('breadcrumbs.home', 'Home'), 'url' => '/', 'current' => false],
             [
                 'label' => $country,
-                'url' => '/country/' . Helper::placeSlug($country, (string) $city['country_code']),
+                'url' => '/country/' . Helper::placeSlug($country, $city['country_code']),
                 'current' => false,
             ],
-            ['label' => (string) $city['name'], 'url' => null, 'current' => true],
+            ['label' => $city['name'], 'url' => null, 'current' => true],
         ];
     }
 
@@ -209,14 +216,18 @@ class CityController extends AbstractController
      * one place that knows where a city lives is this method -- a template that
      * writes "/city/" in front of a slug is a second place to change.
      *
-     * @param list<array<string, mixed>> $cities
+     * Takes either `all()`'s or `nearby()`'s rows -- both carry `code` and
+     * `name`, which is all this reads, so the shape is open rather than
+     * forcing one caller's extra columns onto the other.
+     *
+     * @param list<array{code: string, name: string, ...}> $cities
      * @return list<array<string, mixed>>
      */
     private static function addressable(array $cities): array
     {
         return array_map(
             static fn(array $city): array => $city + [
-                'url' => '/city/' . Helper::placeSlug((string) $city['name'], (string) $city['code']),
+                'url' => '/city/' . Helper::placeSlug($city['name'], $city['code']),
             ],
             $cities,
         );
@@ -229,14 +240,14 @@ class CityController extends AbstractController
      * country pages, 1,091 airports that each have a page of their own sat
      * there as plain text. Where an airport lives is Helper::airportUrl().
      *
-     * @param list<array<string, mixed>> $airports
+     * @param list<CityAirportRow> $airports
      * @return list<array<string, mixed>>
      */
     private static function addressableAirports(array $airports): array
     {
         return array_map(
             static fn(array $airport): array => $airport + [
-                'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
+                'url' => Helper::airportUrl($airport['title'], $airport['code']),
             ],
             $airports,
         );
@@ -251,14 +262,14 @@ class CityController extends AbstractController
      * called "Flights from". Between the two, no route page is left with
      * nothing linking to it -- see RouteRepository::departing().
      *
-     * @param list<array<string, mixed>> $routes
+     * @param list<SearchedRouteRow> $routes
      * @return list<array<string, mixed>>
      */
     private static function addressableRoutes(array $routes): array
     {
         return array_map(
             static fn(array $route): array => $route + [
-                'url' => RouteAddress::path((string) $route['from_name'], (string) $route['to_name']),
+                'url' => RouteAddress::path($route['from_name'], $route['to_name']),
             ],
             $routes,
         );
