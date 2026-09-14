@@ -226,15 +226,23 @@ class AdminController extends AbstractController
     }
 
     /**
-     * Every booking, newest first.
+     * Every booking, newest first, or the ones a search matches.
      *
-     * **What the list shows is a decision, not an omission.** `bookings` holds
-     * an email, a phone number, a name, a date of birth and a gender -- PIPEDA
-     * scope, which is why `db:prune` sweeps it at all. A list is for finding
-     * the right booking, so it carries the reference, when it was made, when it
-     * leaves, its state, the party size and the total. Everything that
-     * identifies a person is on the page for the one booking somebody opened,
-     * where looking at it was a deliberate act (A3.8, #233).
+     * **What the list shows is a decision, and it has been taken twice.** The
+     * first time it left every name off: `bookings` holds an email, a phone
+     * number, a name, a date of birth and a gender -- PIPEDA scope, which is
+     * why `db:prune` sweeps it at all -- and a list is for finding the right
+     * booking, not for reading people.
+     *
+     * The travellers are on it now because finding the right booking is
+     * usually being done by name. Somebody rings up and says who they are;
+     * nobody rings up and quotes a database id. A list that cannot be scanned
+     * for the name on the phone is one an operator opens ten bookings from,
+     * and ten pages of contact details is worse than one column of names.
+     *
+     * So: names yes, and everything else still no. No email, no phone, no date
+     * of birth, no card. Those stay on the page for the one booking somebody
+     * opened, where looking at them was a deliberate act (A3.8, #233).
      *
      * @throws Exception|Error
      */
@@ -245,20 +253,31 @@ class AdminController extends AbstractController
         }
 
         $bookings = new BookingRepository($this->connection());
+        // Cut to a length somebody could have typed. A `LIKE` is a scan, and
+        // the term is the one thing on this page a stranger would control if
+        // the guard above ever failed.
+        $term = mb_substr(trim($this->request->query->str('q', '')), 0, 64);
         $page = max(1, (int) $this->request->query->str('page', '1'));
-        $rows = $bookings->recent(self::PER_PAGE, ($page - 1) * self::PER_PAGE);
+        $offset = ($page - 1) * self::PER_PAGE;
 
-        $counts = $rows === []
+        $rows = $term === ''
+            ? $bookings->recent(self::PER_PAGE, $offset)
+            : $bookings->search($term, self::PER_PAGE, $offset);
+
+        // Names and not just a count, which `countsFor()` would give: the same
+        // one query answers both, and the column needs the names.
+        $names = $rows === []
             ? []
             : new BookingPassengerRepository($this->connection())
-                ->countsFor(array_map(static fn(array $row): int => (int) $row['id'], $rows));
+                ->namesFor(array_map(static fn(array $row): int => (int) $row['id'], $rows));
 
         echo new TwigRenderer()->render('admin/bookings.html.twig', [
             'bookings' => array_map(
-                fn(array $row): array => $this->listed($row, $counts[(int) $row['id']] ?? 1),
+                fn(array $row): array => $this->listed($row, $names[(int) $row['id']] ?? []),
                 $rows,
             ),
-            'total' => $bookings->countAll(),
+            'total' => $term === '' ? $bookings->countAll() : $bookings->countMatching($term),
+            'term' => $term,
             'page' => $page,
             'per_page' => self::PER_PAGE,
         ]);
@@ -687,17 +706,37 @@ class AdminController extends AbstractController
      * the one somebody is calling about. So the list falls back to the columns.
      *
      * @param array<string, mixed> $row
+     * @param list<string> $names everyone on it, lead first, empty on a booking
+     *     made before travellers had rows of their own
      * @return array<string, mixed>
      */
-    private function listed(array $row, int $travellers): array
+    private function listed(array $row, array $names): array
     {
+        // The lead off the booking's own row and not off `$names`, because
+        // those two agree on every booking that has both and only the first
+        // exists on the ones written before `booking_passengers` did.
+        $lead = trim((string) $row['passenger_first'] . ' ' . (string) $row['passenger_last']);
+        $party = [
+            'lead' => $lead === '' ? ($names[0] ?? '') : $lead,
+            // Everyone else, named rather than only counted: an operator
+            // looking for the child on a family booking is looking for a name
+            // that is not the lead's. A party of one has none.
+            'others' => array_slice($names, 1),
+        ];
+
+        $travellers = max(1, count($names));
         $shaped = new BookingPresenter()->booking($row, [], $travellers);
+
+        // The date answers when and this answers how long, and an operator
+        // scanning the list is asking the second one.
+        $made = ['created' => (string) $row['created'], 'made_ago' => Helper::elapsed((string) $row['created'])];
 
         if ($shaped === null) {
             return [
+                ...$party,
+                ...$made,
                 'id' => (int) $row['id'],
                 'reference' => trim((string) $row['reference']),
-                'created' => (string) $row['created'],
                 'status_label' => (string) $row['status'],
                 'is_cancelled' => (string) $row['status'] === 'cancelled',
                 'from' => null,
@@ -714,9 +753,10 @@ class AdminController extends AbstractController
         $outbound = $shaped['outbound'];
 
         return [
+            ...$party,
+            ...$made,
             'id' => (int) $row['id'],
             'reference' => $shaped['reference'],
-            'created' => $shaped['created'],
             'status_label' => $shaped['status_label'],
             'is_cancelled' => $shaped['is_cancelled'],
             'from' => $outbound['depart_code'] ?? null,

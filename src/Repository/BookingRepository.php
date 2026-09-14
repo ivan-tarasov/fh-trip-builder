@@ -200,6 +200,72 @@ final readonly class BookingRepository
     }
 
     /**
+     * Bookings matching a search, newest first.
+     *
+     * What an operator has in front of them when somebody calls: a reference
+     * off an email, a name, or the address they wrote from. The address is
+     * searched and never listed -- see `AdminController::bookings()` on what a
+     * list is for.
+     *
+     * `LIKE` with the term in the middle rather than a prefix, because a
+     * surname typed into a support ticket is as often the second word as the
+     * first. It scans; on a table this size that is nothing, and on one where
+     * it is not, this is where a full-text index would go.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function search(string $term, int $limit, int $offset = 0): array
+    {
+        $like = self::like($term);
+
+        return $this->connection->fetchAll(
+            'SELECT b.* FROM ' . Table::Bookings->value . ' b'
+            . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
+            . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
+            . '  OR EXISTS ('
+            . '   SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
+            . '   WHERE p.booking_id = b.id'
+            . '    AND CONCAT(p.first_name, \' \', p.last_name) LIKE ?'
+            . '  )'
+            . ' ORDER BY b.created DESC, b.id DESC'
+            . ' LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset),
+            [$like, $like, $like, $like],
+        );
+    }
+
+    /** How many bookings a search matches, for the pager. */
+    public function countMatching(string $term): int
+    {
+        $like = self::like($term);
+
+        return (int) $this->connection->fetchValue(
+            'SELECT COUNT(*) FROM ' . Table::Bookings->value . ' b'
+            . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
+            . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
+            . '  OR EXISTS ('
+            . '   SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
+            . '   WHERE p.booking_id = b.id'
+            . '    AND CONCAT(p.first_name, \' \', p.last_name) LIKE ?'
+            . '  )',
+            [$like, $like, $like, $like],
+        );
+    }
+
+    /**
+     * A search term as a `LIKE` pattern, with its wildcards as characters.
+     *
+     * `%` and `_` mean something to `LIKE`, and somebody searching for a
+     * reference with an underscore in it means the underscore. Not a safety
+     * matter -- the term is bound, never concatenated -- but a search that
+     * quietly matches everything for a term of `%` is a search that lies about
+     * what it did.
+     */
+    private static function like(string $term): string
+    {
+        return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term) . '%';
+    }
+
+    /**
      * Bookings whose flight left before the cutoff, oldest first.
      *
      * Read before deleting so the sweep can say what it is about to remove.

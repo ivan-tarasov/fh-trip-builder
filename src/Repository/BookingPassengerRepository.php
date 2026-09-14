@@ -79,6 +79,43 @@ final readonly class BookingPassengerRepository
     }
 
     /**
+     * Everyone on each of these bookings, in the order they were entered.
+     *
+     * One query for the whole page, like `countsFor()` beside it, and it
+     * answers the same question with more of the answer -- so the panel's list
+     * asks this one instead of both. A booking written before this table
+     * existed comes back absent rather than empty-handed: its only traveller is
+     * the lead on the booking's own row (A3.8, #233).
+     *
+     * @param list<int> $bookingIds
+     * @return array<int, list<string>> booking id => names, lead first
+     */
+    public function namesFor(array $bookingIds): array
+    {
+        if ($bookingIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($bookingIds), '?'));
+
+        $rows = $this->connection->fetchAll(
+            'SELECT booking_id, first_name, last_name FROM ' . Table::BookingPassengers->value
+            . " WHERE booking_id IN ($placeholders) ORDER BY booking_id ASC, position ASC",
+            $bookingIds,
+        );
+
+        $names = [];
+
+        foreach ($rows as $row) {
+            $names[(int) $row['booking_id']][] = trim(
+                (string) $row['first_name'] . ' ' . (string) $row['last_name'],
+            );
+        }
+
+        return $names;
+    }
+
+    /**
      * A booking's travellers, lead first.
      *
      * @return list<array<string, mixed>>

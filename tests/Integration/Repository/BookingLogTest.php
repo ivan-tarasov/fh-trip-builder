@@ -7,11 +7,12 @@ namespace TripBuilder\Tests\Integration\Repository;
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
 use TripBuilder\Repository\BookingEventRepository;
+use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
 /**
- * What happened to a booking, in the order it happened.
+ * The log, and finding a booking by the name on it.
  *
  * The rows here carry a made-up session and references no allocator will issue,
  * and they are removed afterwards: this table holds real personal data on any
@@ -94,6 +95,61 @@ final class BookingLogTest extends IntegrationTestCase
         $this->log()->record($id, BookingEvent::Booked, BookingActor::Visitor);
 
         self::assertNotNull($this->log()->startedAt());
+    }
+
+    /**
+     * A booking is found by the name of anyone on it, not just the lead.
+     *
+     * Which is the whole point: somebody rings up about the trip their daughter
+     * is on, and the lead passenger is their spouse.
+     */
+    public function testABookingIsFoundByAnyTravellerOnIt(): void
+    {
+        $id = $this->insert('ZZL005');
+
+        new BookingPassengerRepository($this->connection())->createFor($id, [
+            ['type' => 'A', 'first_name' => 'Zzlead', 'last_name' => 'Zzsurname', 'dob' => '1990-01-01', 'gender' => 'F'],
+            ['type' => 'C', 'first_name' => 'Zzchild', 'last_name' => 'Zzsurname', 'dob' => '2015-05-05', 'gender' => 'M'],
+        ]);
+
+        $found = static fn(array $rows): bool => in_array($id, array_map(
+            static fn(array $row): int => (int) $row['id'],
+            $rows,
+        ), true);
+
+        self::assertTrue($found($this->bookings()->search('Zzchild Zzsurname', 50)), 'the child did not find it');
+        self::assertTrue($found($this->bookings()->search('ZZL005', 50)), 'the reference did not find it');
+        self::assertGreaterThan(0, $this->bookings()->countMatching('ZZL005'));
+    }
+
+    /**
+     * A `%` in the box is a per cent sign, not "everything".
+     *
+     * Never a safety matter -- the term is bound and never concatenated -- but a
+     * search that quietly matches every booking is one that lies about what it
+     * did.
+     */
+    public function testAWildcardTypedIntoTheBoxIsJustACharacter(): void
+    {
+        $this->insert('ZZL006');
+
+        self::assertSame(0, $this->bookings()->countMatching('%'));
+        self::assertSame(0, $this->bookings()->countMatching('ZZL00_'));
+    }
+
+    /** Everyone on a booking, lead first, for the list's one query. */
+    public function testTheListGetsEveryNameInPositionOrder(): void
+    {
+        $id = $this->insert('ZZL009');
+
+        new BookingPassengerRepository($this->connection())->createFor($id, [
+            ['type' => 'A', 'first_name' => 'Zzfirst', 'last_name' => 'Zzparty', 'dob' => '1980-01-01', 'gender' => 'F'],
+            ['type' => 'A', 'first_name' => 'Zzsecond', 'last_name' => 'Zzparty', 'dob' => '1982-02-02', 'gender' => 'M'],
+        ]);
+
+        $names = new BookingPassengerRepository($this->connection())->namesFor([$id]);
+
+        self::assertSame(['Zzfirst Zzparty', 'Zzsecond Zzparty'], $names[$id] ?? []);
     }
 
     private function log(): BookingEventRepository

@@ -262,6 +262,9 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Wraps because the bookings pages put a search box and two buttons up here,
+     and a bar that cannot wrap pushes the title off a narrow screen instead. */
+  flex-wrap: wrap;
   gap: 1rem;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--rule);
@@ -269,7 +272,7 @@ a:hover { text-decoration: underline; }
 }
 
 .well__title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
-.well__tools { display: flex; align-items: center; gap: .5rem; }
+.well__tools { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .well__body { padding: 1.5rem; min-width: 0; }
 
 /*
@@ -549,6 +552,26 @@ a:hover { text-decoration: underline; }
 
 .field input:disabled { background: var(--sunken); color: var(--ink-quiet); }
 .field__hint { margin: .25rem 0 0; color: var(--ink-quiet); font-size: .75rem; }
+/* The bookings search, which lives in the title bar rather than over the table:
+   it is the page's control, not the table's, and it is the first thing reached
+   for when somebody is on the phone. */
+.finder { display: flex; gap: .35rem; }
+
+.finder input[type="search"] {
+  width: 16rem;
+  max-width: 40vw;
+  padding: 0 .5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: .8125rem;
+  line-height: calc(var(--row) - 2px);
+}
+
+.finder input[type="search"]::placeholder { color: var(--ink-faint); }
+
 /* Two columns, used by the forms and by the dashboard's two summaries. */
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .actions { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; }
