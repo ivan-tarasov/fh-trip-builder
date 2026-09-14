@@ -67,6 +67,9 @@ class Routes
         */
 
         '/admin' => 'Admin@index',
+        // The content list moved off `/admin` when the dashboard took it
+        // (A3.6, #231). One address per section, so the rail can name them.
+        '/admin/content' => 'Admin@content',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in

@@ -12,7 +12,8 @@
 
     <ul class="rail__list">
         {% for item in [
-            { 'href': '/admin', 'label': 'Help content', 'match': 'content' }
+            { 'href': '/admin', 'label': 'Overview', 'match': 'overview' },
+            { 'href': '/admin/content', 'label': 'Help content', 'match': 'content' }
         ] %}
             {% set current = admin_section|default('') == item.match %}
             <li>
@@ -24,7 +25,7 @@
 
     <p class="rail__soon-label">Not built yet</p>
     <ul class="rail__list rail__list--soon">
-        {% for label in ['Overview', 'Settings', 'Bookings', 'Fare alerts'] %}
+        {% for label in ['Settings', 'Bookings', 'Fare alerts'] %}
             <li><span class="rail__item rail__item--soon">{{ label }}</span></li>
         {% endfor %}
     </ul>

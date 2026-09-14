@@ -7,7 +7,7 @@
 {# Everything that changes something is a form posting back here, so a refresh
    does not repeat the last move (A3.3, #101). #}
 {% macro act(label, kind, slug, action, disabled) %}
-    <form method="post" action="/admin" class="row__act">
+    <form method="post" action="/admin/content" class="row__act">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
         <input type="hidden" name="kind" value="{{ kind }}">
         <input type="hidden" name="slug" value="{{ slug }}">
