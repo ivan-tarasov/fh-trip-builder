@@ -35,6 +35,12 @@ use TripBuilder\View\Tone;
  *
  * Every reading is its own private method and the public lists are one line
  * each, so adding one is a method and a line rather than an edit to a template.
+ *
+ * `topSearches()`'s raw row is verified live: `SUM(search_count)` over the
+ * INT column comes back `string`, same as `CityRepository`'s aggregates, not
+ * the `int` the existing `(int)` cast might suggest it already was.
+ *
+ * @phpstan-type TopSearchRow array{from_code: string, to_code: string, runs: string, last: string}
  */
 final readonly class DashboardRepository
 {
@@ -154,6 +160,7 @@ final readonly class DashboardRepository
      */
     public function topSearches(int $limit): array
     {
+        /** @var list<TopSearchRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT from_code, to_code, SUM(search_count) AS runs, MAX(last_search) AS last'
             . ' FROM ' . Table::Search->value
