@@ -25,6 +25,8 @@ use TripBuilder\Database\Table;
  *
  * The key carries the highest flight id, so writing flights is what makes an
  * answer old rather than the clock. See `generation()`.
+ *
+ * @phpstan-type CandidateCacheRow array{candidates: string}
  */
 final readonly class SearchCandidateRepository
 {
@@ -68,6 +70,7 @@ final readonly class SearchCandidateRepository
      */
     public function get(string $key): ?array
     {
+        /** @var CandidateCacheRow|null $row */
         $row = $this->connection->fetchOne(
             'SELECT candidates FROM ' . Table::SearchCandidates->value
             . ' WHERE id = ? AND built_at >= ?',
@@ -81,12 +84,13 @@ final readonly class SearchCandidateRepository
         // Silenced because both of these warn on input they cannot make sense
         // of, and `failOnWarning` would turn a bad row into a broken test run.
         // A bad row is not an error here; it is a miss.
-        $raw = @gzuncompress((string) $row['candidates']);
+        $raw = @gzuncompress($row['candidates']);
 
         if ($raw === false) {
             return null;
         }
 
+        /** @var list<array<string, mixed>>|false $candidates */
         $candidates = @unserialize($raw, ['allowed_classes' => false]);
 
         return is_array($candidates) ? array_values($candidates) : null;
