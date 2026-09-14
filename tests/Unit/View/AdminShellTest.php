@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Unit\View;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Helper;
 
@@ -57,6 +58,12 @@ final class AdminShellTest extends TestCase
 
         self::assertStringContainsString("/admin.css'", $layout);
         self::assertStringContainsString("/admin.js'", $layout);
+
+        // Nothing is fetched from anywhere but this server. Every CDN link in
+        // this codebase is written protocol-relative, so one `//` outside a
+        // comment is one asset too many. The typeface is the site's and is
+        // self-hosted, so it arrives through `admin.css` rather than as a tag.
+        self::assertStringNotContainsString('//', $layout, 'the panel is fetching something from off this server');
 
         foreach (['jquery', 'bootstrap', 'fontawesome', 'font-awesome', 'sweetalert', 'rangeslider', 'mapbox', 'cdnjs', 'jsdelivr'] as $stranger) {
             self::assertStringNotContainsString(
@@ -146,6 +153,81 @@ final class AdminShellTest extends TestCase
         self::assertIsInt($script, 'nothing reads the stored theme');
         self::assertIsInt($sheet);
         self::assertLessThan($sheet, $script, 'the theme is read after the stylesheet, so it cannot beat the paint');
+    }
+
+    /**
+     * The panel wears the site's palette, and keeps wearing it.
+     *
+     * The values are copied into `admin.css` rather than inherited, because
+     * inheriting would mean loading all 8,500 lines of `main.css` to get forty
+     * tokens. A copy drifts, so this is what stops it: change a colour on the
+     * public side and this fails until the panel is changed with it.
+     *
+     * The rail is the deliberate exception and is not listed. It wears the
+     * site's navy, but its accent has to be the *lifted* teal in both palettes
+     * -- measured, the light one is 2.85 on that navy, which is under the bar
+     * for text.
+     */
+    #[DataProvider('sharedColours')]
+    public function testThePanelWearsTheSitesPalette(string $admin, string $site): void
+    {
+        self::assertSame(
+            self::colour(self::read('public/css/main.css'), $site),
+            self::colour(self::read('public/css/admin.css'), $admin),
+            $admin . ' has drifted from main.css ' . $site,
+        );
+    }
+
+    /**
+     * Admin token => the one in `main.css` it was copied from.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function sharedColours(): iterable
+    {
+        $light = [
+            '--ground' => '--surface',
+            '--surface' => '--surface-raised',
+            '--sunken' => '--surface-sunken',
+            '--rule' => '--line',
+            '--rule-strong' => '--line-strong',
+            '--ink' => '--ink-body',
+            '--ink-quiet' => '--ink-muted',
+            '--ink-faint' => '--ink-faint',
+            '--signal' => '--brand-accent',
+            '--signal-soft' => '--brand-tint',
+            '--signal-edge' => '--brand-tint-edge',
+            '--good' => '--brand-success',
+            '--good-soft' => '--success-tint',
+            '--good-edge' => '--success-tint-edge',
+            '--bad' => '--brand-danger',
+            '--bad-soft' => '--danger-tint',
+            '--bad-edge' => '--danger-tint-edge',
+            '--rail' => '--brand-ink',
+            '--rail-rule' => '--brand-ink-700',
+            // The rail's accent is the dark-palette teal in both palettes,
+            // because the rail is a dark band in both.
+            '--rail-signal' => '--d-brand-accent',
+        ];
+
+        foreach ($light as $admin => $site) {
+            yield $admin . ' is ' . $site => [$admin, $site];
+        }
+    }
+
+    /**
+     * A token's first declared colour.
+     *
+     * First, because both files declare each one twice -- once for the light
+     * palette and once for dark -- and the light block comes first in each.
+     */
+    private static function colour(string $css, string $token): string
+    {
+        $found = preg_match('/' . preg_quote($token, '/') . ':\s*(#[0-9A-Fa-f]{3,8})\s*;/', $css, $match);
+
+        self::assertSame(1, $found, $token . ' is not declared as a colour');
+
+        return strtoupper($match[1]);
     }
 
     private static function read(string $path): string
