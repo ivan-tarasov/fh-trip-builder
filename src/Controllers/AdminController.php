@@ -24,6 +24,12 @@ use Twig\Error\Error;
  * Everything under `/admin` goes through `guard()`, so a page added here is
  * gated by being here. That is deliberate: a panel where each action remembers
  * to check for itself is a panel where one of them eventually does not.
+ *
+ * **`render()` and not `renderPage()`, throughout.** `renderPage()` adds the
+ * breadcrumb trail and the footer's stats -- a flights count and a query
+ * counter -- which are the public layout's furniture. The panel draws its own
+ * document and reads none of them, so asking would be a query per page for
+ * something nothing prints (A3.5, #230).
  */
 class AdminController extends AbstractController
 {
@@ -70,7 +76,7 @@ class AdminController extends AbstractController
             $grouped[$article['category']][] = $article;
         }
 
-        echo new TwigRenderer()->renderPage('admin/index.html.twig', [
+        echo new TwigRenderer()->render('admin/index.html.twig', [
             'idle_minutes' => Admin::IDLE_MINUTES,
             'categories' => new ArticleCategoryRepository($this->connection())->forPanel(),
             'articles' => $grouped,
@@ -452,7 +458,7 @@ class AdminController extends AbstractController
      */
     private function articleForm(?array $article, ArticleCategoryRepository $categories, ?string $error = null): void
     {
-        echo new TwigRenderer()->renderPage('admin/article.html.twig', [
+        echo new TwigRenderer()->render('admin/article.html.twig', [
             'article' => $article,
             'categories' => $categories->forPanel(),
             'error' => $error,
@@ -465,7 +471,7 @@ class AdminController extends AbstractController
      */
     private function categoryForm(?array $category, ?string $error = null): void
     {
-        echo new TwigRenderer()->renderPage('admin/category.html.twig', [
+        echo new TwigRenderer()->render('admin/category.html.twig', [
             'category' => $category,
             'accent' => ArticleCategoryRepository::DEFAULT_ACCENT,
             'error' => $error,
@@ -533,7 +539,7 @@ class AdminController extends AbstractController
             http_response_code($status->value);
         }
 
-        echo new TwigRenderer()->renderPage('admin/login.html.twig', [
+        echo new TwigRenderer()->render('admin/login.html.twig', [
             'error' => $error,
             // So a server with no hash says so on its own sign-in page, where
             // the person who can fix it is standing, rather than refusing a
