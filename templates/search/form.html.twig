@@ -58,7 +58,18 @@
                         {{ recent is not empty ? 'data-recent="searchbar-recent"' : '' }} required>
                     <option value="">City or airport</option>
                     {% for row in places|default([]) %}
-                        <option value="{{ row.code }}" data-sub="{{ row.sub }}" data-short="{{ row.city|default(row.label) }}" data-in-city="{{ row.city_code }}"{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
+                        {# `data-nested` is what to call this airport when its own
+                           city is on screen a line above it -- "Gatwick", not
+                           "London Gatwick Airport". Written only where there is
+                           one, which is 41 of 266 rows: an empty attribute on
+                           every other option is bytes on every page for nothing.
+
+                           The option's text stays the full name. It is what the
+                           list is searched and ranked on, and it is what the row
+                           shows when the city is *not* alongside it -- typing
+                           "gatwick" finds one airport and no city, and "Gatwick"
+                           on its own would not say where it is. #}
+                        <option value="{{ row.code }}" data-sub="{{ row.sub }}" data-short="{{ row.city|default(row.label) }}" data-in-city="{{ row.city_code }}"{% if row.short %} data-nested="{{ row.short }}"{% endif %}{{ row.is_city ? ' data-city' : '' }}{{ place.value == row.code ? ' selected' : '' }}>{{ row.label }}</option>
                     {% endfor %}
                 </select>
                 {# Filled by the combobox from whatever the select holds, and

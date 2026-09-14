@@ -550,4 +550,121 @@ final class AirportRepositoryTest extends IntegrationTestCase
         }
     }
 
+    /**
+     * Every airport that can be drawn under a city has a name for it.
+     *
+     * The one that will actually break. A short name is data somebody types,
+     * and the day a second airport is made major in a city that had one, that
+     * city grows a heading and its airports start nesting -- with nothing to
+     * show but "Chicago O'hare International" under "Chicago". Nothing else
+     * here would say so (C2.5, #106).
+     *
+     * Asked of the table rather than of `pickable()`, because `pickable()`
+     * drops the airport carrying its own city's code and that one is a heading
+     * away from being drawn too.
+     */
+    public function testEveryAirportThatCanNestHasAShortName(): void
+    {
+        foreach ($this->inMultiAirportCities() as $airport) {
+            self::assertNotSame(
+                '',
+                (string) $airport['short_title'],
+                $airport['code'] . ' is drawn under ' . $airport['city'] . ' with nothing short to call it',
+            );
+        }
+    }
+
+    /**
+     * And nowhere else carries one.
+     *
+     * A short name on an airport that is the only one in its city is a value
+     * nothing will ever read: it is never drawn under a heading, so it has no
+     * second name to have. Pinned so the column keeps one meaning.
+     */
+    public function testNoOtherAirportCarriesOne(): void
+    {
+        $nestable = array_column($this->inMultiAirportCities(), 'code');
+
+        $rows = $this->connection()->fetchAll(
+            'SELECT code, short_title FROM airports WHERE short_title IS NOT NULL AND short_title <> ?',
+            [''],
+        );
+
+        self::assertNotEmpty($rows, 'no short names are installed at all');
+
+        foreach ($rows as $row) {
+            self::assertContains(
+                (string) $row['code'],
+                $nestable,
+                $row['code'] . ' has a short name and is the only airport in its city',
+            );
+        }
+    }
+
+    /**
+     * A short name is never longer than the name it stands in for.
+     *
+     * Not a style rule: the reason this column exists is that the full name
+     * repeats the city heading above it, so one that is longer is the wrong
+     * value in the cell rather than a debatable one.
+     */
+    public function testAShortNameIsNoLongerThanTheFullOne(): void
+    {
+        foreach ($this->inMultiAirportCities() as $airport) {
+            self::assertLessThanOrEqual(
+                mb_strlen((string) $airport['title']),
+                mb_strlen((string) $airport['short_title']),
+                $airport['code'] . ' has a "short" name longer than its real one',
+            );
+        }
+    }
+
+    /**
+     * The picker hands the short name over beside the full one.
+     */
+    public function testThePickerCarriesBothNames(): void
+    {
+        $places = $this->repository()->pickable();
+        $cities = array_column(
+            array_filter($places, static fn(array $p): bool => (int) $p['is_city'] === 1),
+            'city_code',
+        );
+
+        self::assertNotEmpty($cities, 'no multi-airport city in the data');
+
+        foreach ($places as $place) {
+            if ((int) $place['is_city'] === 1) {
+                // A city row is never drawn under anything.
+                self::assertSame('', (string) $place['short'], $place['code'] . ' is a city and has a short name');
+
+                continue;
+            }
+
+            if (in_array($place['city_code'], $cities, true)) {
+                self::assertNotSame('', (string) $place['short'], $place['code'] . ' nests with nothing to show');
+                self::assertNotSame('', (string) $place['label'], $place['code'] . ' lost its full name');
+            }
+        }
+    }
+
+    /**
+     * Every major airport in a city that has more than one of them.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function inMultiAirportCities(): array
+    {
+        $rows = $this->connection()->fetchAll(
+            'SELECT a.code, a.title, a.short_title, a.city FROM airports a'
+            . ' WHERE a.enabled = 1 AND a.is_major = 1'
+            . ' AND (SELECT COUNT(*) FROM airports p'
+            . '  WHERE p.city_code = a.city_code AND p.enabled = 1 AND p.is_major = 1) > 1'
+            . ' ORDER BY a.code',
+        );
+
+        self::assertNotEmpty($rows, 'no multi-airport city in the data');
+
+        return $rows;
+    }
+
 }

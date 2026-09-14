@@ -842,16 +842,25 @@
                         : 'combo__icon combo__icon--airport';
                     icon.setAttribute('aria-hidden', 'true');
 
+                    const underItsCity = !option.hasAttribute('data-city')
+                        && citiesShown.has(option.dataset.inCity);
+
                     const name = document.createElement('span');
                     name.className = 'combo__name';
-                    name.textContent = option.textContent.trim();
+                    // Under its own city, the airport's short name: "Gatwick"
+                    // beneath London, not "London Gatwick Airport", which
+                    // repeats the heading it is indented under. Decided here
+                    // rather than in the query because whether the city is
+                    // alongside depends on what has been typed -- "gatwick"
+                    // finds the airport and not the city, and then the full
+                    // name is the only thing saying where it is.
+                    name.textContent = underItsCity && option.dataset.nested
+                        ? option.dataset.nested
+                        : option.textContent.trim();
 
                     const code = document.createElement('span');
                     code.className = 'combo__code';
                     code.textContent = option.value;
-
-                    const underItsCity = !option.hasAttribute('data-city')
-                        && citiesShown.has(option.dataset.inCity);
 
                     li.classList.add('combo__option--stacked');
                     if (option.hasAttribute('data-city')) { li.classList.add('combo__option--city'); }
