@@ -43,9 +43,10 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  *
  * This fixture is the failing case made deterministic: a route where the only
  * connecting itinerary has two waits, so the shortest wait on the route is not
- * a reachable ceiling, plus a direct flight to trip the old branch. The dates
- * are in 2027, past anything `flights:add` generates, so these four rows are
- * the whole candidate set.
+ * a reachable ceiling, plus a direct flight to trip the old branch. The date
+ * is past `flights:add`'s window, so these four rows are the whole candidate
+ * set -- see `IntegrationTestCase::dateBeyondGeneratedFlights()`, which moves
+ * with the window rather than holding a literal that drifts inside it.
  */
 final class LayoverRangeWithADirectFlightTest extends IntegrationTestCase
 {

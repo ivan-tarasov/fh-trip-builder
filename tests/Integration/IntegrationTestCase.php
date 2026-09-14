@@ -52,6 +52,16 @@ abstract class IntegrationTestCase extends TestCase
      * a date beyond it today is inside it a year from now. So this is derived
      * from the same constant the generator fills up to, and moves with it.
      *
+     * **Only for a test that calls `FlightRepository` directly.** A test that
+     * goes through a real page -- `SearchController`, `SearchUrl` -- cannot use
+     * this: `SearchUrl::withinHorizon()` refuses to build a search past
+     * `Horizon::last()` at all, so a date from here makes that kind of test
+     * search nothing rather than search safely. `SavedFlightCabinTest` found
+     * this the hard way. A page-level test has no way to be both searchable and
+     * guaranteed empty, and has to live with the shared corpus instead --
+     * which is fine as long as its assertions check presence or a relation
+     * rather than an exact count.
+     *
      * @param int $plusDays days past the horizon, to give tests dates of their own
      */
     protected static function dateBeyondGeneratedFlights(int $plusDays = 1): string
