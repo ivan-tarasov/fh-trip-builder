@@ -28,6 +28,12 @@ use TripBuilder\View\TwigRenderer;
  * places and reads the same whenever you arrive; an airport is a set of
  * departures, and what it is doing today is the thing somebody standing in it
  * wants to know.
+ *
+ * @phpstan-import-type AirportRowWithTraffic from AirportRepository
+ * @phpstan-import-type AirportRowNearby from AirportRepository
+ * @phpstan-import-type ScheduleRow from AirportRepository
+ * @phpstan-import-type CheapestDestinationRow from FlightRepository
+ * @phpstan-import-type SearchedRouteRow from RouteRepository
  */
 class AirportController extends AbstractController
 {
@@ -183,8 +189,8 @@ class AirportController extends AbstractController
                 static fn(array $fare): array => $fare + [
                     'search' => new SearchUrl(
                         from: $code,
-                        to: (string) $fare['to_city_code'],
-                        depart: substr((string) $fare['departure_time'], 0, 10),
+                        to: $fare['to_city_code'],
+                        depart: substr($fare['departure_time'], 0, 10),
                         return: null,
                     )->path(),
                 ],
@@ -204,7 +210,7 @@ class AirportController extends AbstractController
      * United Kingdom. The city page's trail stops at three because a city's
      * parent is its country; this adds the level below it.
      *
-     * @param array<string, mixed> $airport
+     * @param AirportRowWithTraffic $airport
      * @return list<array{label: string, url: string|null, current: bool}>
      */
     private static function trailFor(array $airport): array
@@ -213,32 +219,29 @@ class AirportController extends AbstractController
             ['label' => (string) Config::get('breadcrumbs.home', 'Home'), 'url' => '/', 'current' => false],
             [
                 'label' => (string) $airport['country'],
-                'url' => '/country/' . Helper::placeSlug(
-                    (string) $airport['country'],
-                    (string) $airport['country_code'],
-                ),
+                'url' => '/country/' . Helper::placeSlug((string) $airport['country'], $airport['country_code']),
                 'current' => false,
             ],
             [
-                'label' => (string) $airport['city'],
-                'url' => '/city/' . Helper::placeSlug((string) $airport['city'], (string) $airport['city_code']),
+                'label' => $airport['city'],
+                'url' => '/city/' . Helper::placeSlug($airport['city'], $airport['city_code']),
                 'current' => false,
             ],
-            ['label' => (string) $airport['title'], 'url' => null, 'current' => true],
+            ['label' => $airport['title'], 'url' => null, 'current' => true],
         ];
     }
 
     /**
      * Give each airport the address it is reached at.
      *
-     * @param list<array<string, mixed>> $airports
+     * @param list<AirportRowNearby> $airports
      * @return list<array<string, mixed>>
      */
     private static function addressable(array $airports): array
     {
         return array_map(
             static fn(array $airport): array => $airport + [
-                'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
+                'url' => Helper::airportUrl($airport['title'], $airport['code']),
             ],
             $airports,
         );
@@ -256,14 +259,14 @@ class AirportController extends AbstractController
      * Heathrow". The routes into a city are listed on the city's own page,
      * which is the one called "Flights to".
      *
-     * @param list<array<string, mixed>> $routes
+     * @param list<SearchedRouteRow> $routes
      * @return list<array<string, mixed>>
      */
     private static function addressableRoutes(array $routes): array
     {
         return array_map(
             static fn(array $route): array => $route + [
-                'url' => RouteAddress::path((string) $route['from_name'], (string) $route['to_name']),
+                'url' => RouteAddress::path($route['from_name'], $route['to_name']),
             ],
             $routes,
         );
