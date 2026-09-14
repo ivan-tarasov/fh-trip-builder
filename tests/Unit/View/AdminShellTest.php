@@ -28,6 +28,8 @@ final class AdminShellTest extends TestCase
     private const array PAGES = [
         'templates/admin/overview.html.twig',
         'templates/admin/content.html.twig',
+        'templates/admin/bookings.html.twig',
+        'templates/admin/booking.html.twig',
         'templates/admin/article.html.twig',
         'templates/admin/category.html.twig',
         'templates/admin/login.html.twig',
@@ -228,6 +230,31 @@ final class AdminShellTest extends TestCase
         self::assertSame(1, $found, $token . ' is not declared as a colour');
 
         return strtoupper($match[1]);
+    }
+
+    /**
+     * The booking list carries nothing that identifies a person.
+     *
+     * A decision, not an omission. `bookings` holds an email, a phone number, a
+     * name, a date of birth and a gender -- PIPEDA scope, which is why
+     * `db:prune` sweeps it at all. A list is for finding the right booking;
+     * everything that names somebody is on the page for the one booking an
+     * operator opened, where looking was a deliberate act (A3.8, #233).
+     *
+     * Worth a test because the cheapest way to make a list more useful is to
+     * add a column, and the cheapest column to add is a name.
+     */
+    public function testTheBookingListNamesNobody(): void
+    {
+        $list = self::stripComments(self::read('templates/admin/bookings.html.twig'));
+
+        foreach (['contact_email', 'contact_phone', 'passenger_first', 'passenger_last', 'dob', 'card_last4'] as $personal) {
+            self::assertStringNotContainsString(
+                $personal,
+                $list,
+                $personal . ' is on the list, where finding a booking does not need it',
+            );
+        }
     }
 
     private static function read(string $path): string

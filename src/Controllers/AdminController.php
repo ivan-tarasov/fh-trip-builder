@@ -14,9 +14,12 @@ use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
+use TripBuilder\Repository\BookingPassengerRepository;
+use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\DashboardRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Schedule;
+use TripBuilder\View\BookingPresenter;
 use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
 use Twig\Error\Error;
@@ -52,6 +55,9 @@ class AdminController extends AbstractController
 
     /** A slug is lower case, digits and hyphens, like every other one here. */
     private const string SLUG = '/^[a-z0-9][a-z0-9-]{0,63}$/';
+
+    /** Bookings to a page. Enough to scan, few enough to read. */
+    private const int PER_PAGE = 25;
 
     /**
      * The dashboard.
@@ -217,6 +223,95 @@ class AdminController extends AbstractController
         }
 
         $this->categoryForm($category);
+    }
+
+    /**
+     * Every booking, newest first.
+     *
+     * **What the list shows is a decision, not an omission.** `bookings` holds
+     * an email, a phone number, a name, a date of birth and a gender -- PIPEDA
+     * scope, which is why `db:prune` sweeps it at all. A list is for finding
+     * the right booking, so it carries the reference, when it was made, when it
+     * leaves, its state, the party size and the total. Everything that
+     * identifies a person is on the page for the one booking somebody opened,
+     * where looking at it was a deliberate act (A3.8, #233).
+     *
+     * @throws Exception|Error
+     */
+    public function bookings(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $bookings = new BookingRepository($this->connection());
+        $page = max(1, (int) $this->request->query->str('page', '1'));
+        $rows = $bookings->recent(self::PER_PAGE, ($page - 1) * self::PER_PAGE);
+
+        $counts = $rows === []
+            ? []
+            : new BookingPassengerRepository($this->connection())
+                ->countsFor(array_map(static fn(array $row): int => (int) $row['id'], $rows));
+
+        echo new TwigRenderer()->render('admin/bookings.html.twig', [
+            'bookings' => array_map(
+                fn(array $row): array => $this->listed($row, $counts[(int) $row['id']] ?? 1),
+                $rows,
+            ),
+            'total' => $bookings->countAll(),
+            'page' => $page,
+            'per_page' => self::PER_PAGE,
+        ]);
+    }
+
+    /**
+     * One booking, in full.
+     *
+     * Shaped by `BookingPresenter`, which is what the traveller's own booking
+     * page uses -- so the itinerary, the money at its stored rate and the state
+     * cannot disagree with what the customer is looking at while they are on
+     * the phone. Only the *drawing* differs: the search card's styling lives in
+     * `main.css`, which the panel does not load, and an operator wants the
+     * flight numbers that card keeps behind a click.
+     *
+     * @throws Exception|Error
+     */
+    public function booking(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $parts = explode('/', trim($this->request->path(), '/'));
+        $id = (int) end($parts);
+
+        $row = new BookingRepository($this->connection())->find($id);
+
+        if ($row === null) {
+            $this->notFound();
+
+            return;
+        }
+
+        $passengers = new BookingPassengerRepository($this->connection())->forBooking($id);
+        $booking = new BookingPresenter()->booking($row, $passengers);
+
+        echo new TwigRenderer()->render('admin/booking.html.twig', [
+            'booking' => $booking,
+            // Only what the presenter does not already give. No card number is
+            // stored anywhere on this site -- a brand and four digits is all
+            // there has ever been, which is what a receipt shows.
+            'extra' => [
+                'id' => (int) $row['id'],
+                'card_last4' => (string) $row['card_last4'],
+                // Which browser made it. Not identifying on its own, and it is
+                // how every other read of this table finds a booking, so an
+                // operator chasing a duplicate can see they came from one
+                // person rather than two.
+                'session' => (string) $row['session_id'],
+            ],
+            'passengers' => $passengers,
+        ]);
     }
 
     /**
@@ -577,6 +672,60 @@ class AdminController extends AbstractController
         }
 
         return $orphans;
+    }
+
+    /**
+     * One booking as the list shows it.
+     *
+     * Through `BookingPresenter`, the same shaper the traveller's own booking
+     * page uses, so a reference, a route and a total read identically on both
+     * sides -- which matters when the two are being compared down a phone.
+     *
+     * **A booking whose flights will not build is not dropped.** The presenter
+     * returns null for one, because a traveller should not be shown a booking
+     * with no flights in it; an operator should, because that row is exactly
+     * the one somebody is calling about. So the list falls back to the columns.
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function listed(array $row, int $travellers): array
+    {
+        $shaped = new BookingPresenter()->booking($row, [], $travellers);
+
+        if ($shaped === null) {
+            return [
+                'id' => (int) $row['id'],
+                'reference' => trim((string) $row['reference']),
+                'created' => (string) $row['created'],
+                'status_label' => (string) $row['status'],
+                'is_cancelled' => (string) $row['status'] === 'cancelled',
+                'from' => null,
+                'to' => null,
+                'travellers' => $travellers,
+                'price_total' => null,
+                'broken' => true,
+            ];
+        }
+
+        // Off the itinerary itself rather than off `rebook`, which carries a
+        // from and a to for building a fresh search link. These are the
+        // airports this booking actually flies between.
+        $outbound = $shaped['outbound'];
+
+        return [
+            'id' => (int) $row['id'],
+            'reference' => $shaped['reference'],
+            'created' => $shaped['created'],
+            'status_label' => $shaped['status_label'],
+            'is_cancelled' => $shaped['is_cancelled'],
+            'from' => $outbound['depart_code'] ?? null,
+            'to' => $outbound['arrive_code'] ?? null,
+            'departs' => $shaped['starts_at'],
+            'travellers' => $travellers,
+            'price_total' => $shaped['price_total'],
+            'broken' => false,
+        ];
     }
 
     /**

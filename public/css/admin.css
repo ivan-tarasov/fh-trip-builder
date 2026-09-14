@@ -493,6 +493,28 @@ a:hover { text-decoration: underline; }
 }
 
 .pill--good { border-color: var(--good-edge); background: var(--good-soft); color: var(--good); }
+
+/* A label column in a two-column sheet: the field name, not data. */
+.sheet__key { width: 9rem; color: var(--ink-quiet); }
+
+/* A caption is a heading for the table under it, so it sits above the head row
+   rather than reading as one. */
+.sheet__caption {
+  padding: .4rem .75rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-quiet);
+  font-size: .75rem;
+  text-align: left;
+}
+
+/* Two facts to a cell, the second quieter: a code and a time, then the date. */
+.sheet td .sheet__quiet { display: block; font-size: .75rem; }
+
+/* An itinerary card inside a group, which is not a row. */
+.sheet__block { padding: .75rem; }
+.sheet__block--next { border-top: 1px solid var(--rule); }
+
+.pager { display: flex; align-items: center; gap: 1rem; font-size: .8125rem; }
 .pill--bad { border-color: var(--bad-edge); background: var(--bad-soft); color: var(--bad); }
 
 /*

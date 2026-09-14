@@ -70,6 +70,7 @@ class Routes
         // The content list moved off `/admin` when the dashboard took it
         // (A3.6, #231). One address per section, so the rail can name them.
         '/admin/content' => 'Admin@content',
+        '/admin/bookings' => 'Admin@bookings',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in
@@ -190,6 +191,11 @@ class Routes
         // help pages use, because it is the same slug (A3.3, #101).
         '#^/admin/article(?:/[a-z0-9-]+)?$#' => 'Admin@article',
         '#^/admin/category(?:/[a-z0-9-]+)?$#' => 'Admin@category',
+        // By id and not by reference. A reference is the code a traveller
+        // quotes and it is unique, but it is empty on a row written before
+        // checkout finished -- and those are exactly the bookings an operator
+        // most wants to look at (A3.8, #233).
+        '#^/admin/bookings/\d+$#' => 'Admin@booking',
     ];
 
     public const array EXCLUDE_HEADER_FOOTER = [

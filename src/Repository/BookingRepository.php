@@ -150,6 +150,56 @@ final readonly class BookingRepository
     }
 
     /**
+     * The most recent bookings, newest first, for the panel.
+     *
+     * **The first read here that is not scoped to one session**, and that is
+     * the whole of what makes it new. Every other read answers "what has this
+     * browser bought", because that is all the public site ever needs to know;
+     * an operator looking one up is a different question and a different
+     * responsibility (A3.8, #233).
+     *
+     * `created` and not `departure_time`: the panel is asked about bookings in
+     * the order they were made, where the traveller's own list is about the
+     * order they will be flown.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function recent(int $limit, int $offset = 0): array
+    {
+        return $this->connection->fetchAll(
+            'SELECT * FROM ' . Table::Bookings->value
+            // Id second, so two bookings made in the same second come back in a
+            // fixed order rather than whichever the engine offers.
+            . ' ORDER BY created DESC, id DESC'
+            . ' LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset),
+        );
+    }
+
+    /** How many there are, so the panel can page through them. */
+    public function countAll(): int
+    {
+        return (int) $this->connection->fetchValue('SELECT COUNT(*) FROM ' . Table::Bookings->value);
+    }
+
+    /**
+     * One booking, whoever made it.
+     *
+     * The unscoped twin of `findForSession()`. Kept apart rather than made a
+     * nullable argument on that one, deliberately: an optional session is one
+     * forgotten argument away from serving somebody else's booking to a
+     * stranger, and this is only reachable from behind the panel's guard.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function find(int $bookingId): ?array
+    {
+        return $this->connection->fetchOne(
+            'SELECT * FROM ' . Table::Bookings->value . ' WHERE id = ?',
+            [$bookingId],
+        );
+    }
+
+    /**
      * Bookings whose flight left before the cutoff, oldest first.
      *
      * Read before deleting so the sweep can say what it is about to remove.

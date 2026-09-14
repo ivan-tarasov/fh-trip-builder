@@ -1,0 +1,87 @@
+{% extends 'admin/layout.html.twig' %}
+{% import 'partials/money.html.twig' as money %}
+
+{% set admin_section = 'bookings' %}
+
+{% block title %}Bookings{% endblock %}
+
+{% block tools %}<span class="stamp">{{ total }} in all</span>{% endblock %}
+
+{# What this list shows is a decision, not an omission. `bookings` holds an
+   email, a phone number, a name, a date of birth and a gender -- PIPEDA scope,
+   which is why `db:prune` sweeps it at all. A list is for finding the right
+   booking, so it carries the reference, the route, the dates, the state, the
+   party size and the total. Everything that identifies a person is on the page
+   for the one booking somebody opened, where looking was a deliberate act
+   (A3.8, #233). #}
+{% block content %}
+    <div class="group">
+        <table class="sheet">
+            <thead>
+                <tr>
+                    <th scope="col">Reference</th>
+                    <th scope="col">Route</th>
+                    <th scope="col">Departs</th>
+                    <th scope="col">Made</th>
+                    <th scope="col">Party</th>
+                    <th scope="col">Total</th>
+                    <th scope="col">State</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                    <tr>
+                        <td>
+                            <a class="mono" href="/admin/bookings/{{ booking.id }}">
+                                {{ booking.reference ?: 'no reference' }}
+                            </a>
+                        </td>
+                        <td class="mono">
+                            {% if booking.from %}
+                                {{ booking.from }} &rarr; {{ booking.to }}
+                            {% else %}
+                                {# The presenter refuses to draw a booking whose
+                                   flights will not build. A traveller should not
+                                   see one; an operator should, because it is the
+                                   row somebody is calling about. #}
+                                <span class="sheet__quiet">will not build</span>
+                            {% endif %}
+                        </td>
+                        {# A DateTimeImmutable off the presenter, not a string. #}
+                        <td class="mono sheet__quiet">
+                            {% if booking.departs %}{{ booking.departs|date('j M Y') }}{% else %}&mdash;{% endif %}
+                        </td>
+                        <td class="mono sheet__quiet">{{ booking.created|date('j M Y') }}</td>
+                        <td class="mono sheet__quiet">{{ booking.travellers }}</td>
+                        <td class="mono">
+                            {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}&mdash;{% endif %}
+                        </td>
+                        <td>
+                            <span class="pill{{ booking.is_cancelled ? ' pill--bad' : ' pill--good' }}">
+                                {{ booking.status_label }}
+                            </span>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7" class="sheet__quiet">Nobody has booked anything yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total > per_page %}
+        <div class="pager">
+            {% if page > 1 %}
+                <a class="button" href="/admin/bookings?page={{ page - 1 }}">Newer</a>
+            {% endif %}
+
+            <span class="sheet__quiet">
+                {{ (page - 1) * per_page + 1 }}&ndash;{{ min(page * per_page, total) }} of {{ total }}
+            </span>
+
+            {% if page * per_page < total %}
+                <a class="button" href="/admin/bookings?page={{ page + 1 }}">Older</a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}
