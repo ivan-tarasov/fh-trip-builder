@@ -45,8 +45,10 @@ return [
     | dates across sessions.
     |
     | `reference` is a lookup on the confirmation page and is also counted up to
-    | twenty times while allocating a new one. It cannot be UNIQUE: the rows
-    | written before checkout issued references all hold the empty string.
+    | twenty times while allocating a new one. It is UNIQUE, for the reason
+    | spelled out on the index itself below -- this paragraph used to say the
+    | opposite, from before the constraint was added, which is a worse thing for
+    | a comment to do than say nothing.
     */
     'indexes' => [
         ['name' => 'session_departure', 'columns' => ['session_id', 'departure_time']],

@@ -162,10 +162,11 @@ final class RoutesTest extends TestCase
     {
         self::assertSame('Admin@index', Routes::resolve('/admin'));
         self::assertSame('Admin@content', Routes::resolve('/admin/content'));
+        self::assertSame('Admin@bookings', Routes::resolve('/admin/bookings'));
         self::assertSame('Admin@login', Routes::resolve('/admin/login'));
         self::assertSame('Admin@logout', Routes::resolve('/admin/logout'));
 
-        foreach (['/admin', '/admin/content', '/admin/login', '/admin/logout'] as $path) {
+        foreach (['/admin', '/admin/content', '/admin/bookings', '/admin/login', '/admin/logout'] as $path) {
             self::assertFalse(Routes::isPublic($path), $path . ' is being advertised');
         }
 
@@ -191,6 +192,20 @@ final class RoutesTest extends TestCase
         // A slug is the shape the help pages use, because it is the same slug.
         self::assertNull(Routes::resolve('/admin/article/Not A Slug'));
         self::assertNull(Routes::resolve('/admin/article/one/two'));
+    }
+
+    /**
+     * A booking is addressed by id and not by reference.
+     *
+     * A reference is the code a traveller quotes and it is unique -- but it is
+     * empty on a row written before checkout finished, and those are exactly
+     * the bookings an operator most wants to look at (A3.8, #233).
+     */
+    public function testABookingIsAddressedByItsId(): void
+    {
+        self::assertSame('Admin@booking', Routes::resolve('/admin/bookings/100001'));
+        self::assertNull(Routes::resolve('/admin/bookings/3AU6CE'));
+        self::assertNull(Routes::resolve('/admin/bookings/'));
     }
 
     /**

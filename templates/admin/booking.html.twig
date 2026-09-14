@@ -1,0 +1,150 @@
+{% extends 'admin/layout.html.twig' %}
+{% import 'partials/money.html.twig' as money %}
+
+{% set admin_section = 'bookings' %}
+
+{% block title %}{{ booking.reference|default('Booking') }}{% endblock %}
+
+{% block tools %}<a class="button" href="/admin/bookings">Back</a>{% endblock %}
+
+{# Drawn through `BookingPresenter`, the same shaper the traveller's own booking
+   page uses -- so the itinerary, the money at its stored rate and the state read
+   identically on both sides, which matters when the two are being compared down
+   a phone (A3.8, #233). #}
+{% block content %}
+    {% if not booking %}
+        <p class="notice notice--bad">
+            This booking's flights will not build, so there is nothing to draw.
+            The columns are still there; the legs it was folded from are gone.
+        </p>
+    {% else %}
+        <div class="pair">
+            <div class="tile tile--plain">
+                <p class="tile__label">Reference</p>
+                <p class="tile__value mono">{{ booking.reference ?: 'none issued' }}</p>
+                <p class="tile__note">made {{ booking.created|date('j M Y, H:i') }}</p>
+            </div>
+
+            <div class="tile tile--plain">
+                <p class="tile__label">State</p>
+                <p class="tile__value">{{ booking.status_label }}</p>
+                <p class="tile__note">
+                    {% if booking.is_past %}already flown{% else %}{{ booking.departs_in }}{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <p class="band">Who to contact</p>
+
+        <div class="group">
+            <table class="sheet">
+                <tbody>
+                    <tr><td class="sheet__key">Email</td><td class="mono">{{ booking.contact_email ?: '—' }}</td></tr>
+                    <tr><td class="sheet__key">Phone</td><td class="mono">{{ booking.contact_phone ?: '—' }}</td></tr>
+                    {# Not identifying on its own, and it is how every other read
+                       of this table finds a booking -- so an operator chasing a
+                       duplicate can see they came from one person, not two. #}
+                    <tr><td class="sheet__key">Session</td><td class="mono sheet__quiet">{{ extra.session ?: '—' }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="band">Travelling</p>
+
+        <div class="group">
+            <table class="sheet">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Born</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for passenger in booking.passengers %}
+                        <tr>
+                            <td>{{ passenger.name }}</td>
+                            <td class="sheet__quiet">{{ passenger.type }}</td>
+                            <td class="mono sheet__quiet">{{ passenger.dob }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="3" class="sheet__quiet">{{ booking.passenger_summary }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {# The legs, one per row, rather than the card the search page draws.
+       The *shaping* is still `BookingPresenter`'s, so nothing here can disagree
+       with what the traveller is looking at -- but the card's drawing lives in
+       `main.css`, which the panel does not load, and an operator on a phone
+       wants the flight numbers the card keeps behind a click anyway. #}
+    {% macro legs(direction, label) %}
+        <div class="group">
+            <table class="sheet">
+                <caption class="sheet__caption">{{ label }} &middot; {{ direction.duration }} in transit &middot; {{ direction.stops_label|lower }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Flight</th>
+                        <th scope="col">From</th>
+                        <th scope="col">To</th>
+                        <th scope="col">Cabin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leg in direction.segments %}
+                        <tr>
+                            <td>
+                                <span class="mono">{{ leg.flight_number }}</span>
+                                <span class="sheet__quiet">{{ leg.carrier_name }}</span>
+                            </td>
+                            <td>
+                                <span class="mono">{{ leg.depart_code }} {{ leg.depart_time }}</span>
+                                <span class="sheet__quiet">{{ leg.depart_date }}</span>
+                            </td>
+                            <td>
+                                <span class="mono">{{ leg.arrive_code }} {{ leg.arrive_time }}</span>
+                                <span class="sheet__quiet">{{ leg.arrive_date }}</span>
+                            </td>
+                            <td class="sheet__quiet">{{ leg.cabin ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endmacro %}
+
+    {% import _self as trip %}
+
+        <p class="band">The trip</p>
+
+        {{ trip.legs(booking.outbound, 'Outbound') }}
+        {% if booking.return %}{{ trip.legs(booking.return, 'Return') }}{% endif %}
+
+        <p class="band">What was paid</p>
+
+        <div class="group">
+            <table class="sheet">
+                <tbody>
+                    <tr>
+                        <td class="sheet__key">Total</td>
+                        <td class="mono">{% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}—{% endif %}</td>
+                    </tr>
+                    <tr><td class="sheet__key">Fare</td><td>{{ booking.fare_brand ?: '—' }}</td></tr>
+                    <tr>
+                        <td class="sheet__key">Card</td>
+                        {# Every digit this site has ever held. No card number is
+                           stored anywhere, which is what a receipt shows too. #}
+                        <td class="mono">
+                            {% if extra.card_last4 %}
+                                {{ booking.card_brand }} &middot;&middot;&middot;&middot; {{ extra.card_last4 }}
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}
