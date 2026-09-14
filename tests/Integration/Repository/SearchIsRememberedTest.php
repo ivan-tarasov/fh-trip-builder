@@ -24,7 +24,20 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  */
 final class SearchIsRememberedTest extends IntegrationTestCase
 {
-    private const string DEPART_DATE = '2027-03-11';
+    /**
+     * Past the horizon, so no generated flight can share this day.
+     *
+     * A date of the test's own, so nothing else is in the answer it stores.
+     *
+     * Memoised, so a run that crosses midnight cannot insert on one date and
+     * search on the next.
+     */
+    private static ?string $departDate = null;
+
+    private static function departDate(): string
+    {
+        return self::$departDate ??= self::dateBeyondGeneratedFlights(28);
+    }
 
     /** @var list<int> */
     private array $flights = [];
@@ -113,7 +126,7 @@ final class SearchIsRememberedTest extends IntegrationTestCase
         return new FlightRepository($this->connection())->searchDirection(
             'YUL',
             'YYZ',
-            self::DEPART_DATE,
+            self::departDate(),
             $sort,
             $offset,
             2,
@@ -133,8 +146,8 @@ final class SearchIsRememberedTest extends IntegrationTestCase
             . ' arrival_airport, arrival_time, distance, duration, cabins, price_base, price_tax, rating)'
             . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
-                $airline, 100, 'YUL', self::DEPART_DATE . ' ' . $departure,
-                'YYZ', self::DEPART_DATE . ' ' . $arrival, 504, 75, 1, 20.00, 3.00, 4.10,
+                $airline, 100, 'YUL', self::departDate() . ' ' . $departure,
+                'YYZ', self::departDate() . ' ' . $arrival, 504, 75, 1, 20.00, 3.00, 4.10,
             ],
         );
     }

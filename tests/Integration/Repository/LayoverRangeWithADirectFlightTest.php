@@ -59,7 +59,21 @@ final class LayoverRangeWithADirectFlightTest extends IntegrationTestCase
     private const VIA_TWO = 'ADD';
     private const TO = 'ABJ';
 
-    private const DATE = '2027-03-15';
+    /**
+     * Past the horizon, so no generated flight can share this day.
+     *
+     * The fixture has to be the only thing on this route, which every bound here
+     * is measured against.
+     *
+     * Memoised, so a run that crosses midnight cannot insert on one date and
+     * search on the next.
+     */
+    private static ?string $date = null;
+
+    private static function date(): string
+    {
+        return self::$date ??= self::dateBeyondGeneratedFlights(21);
+    }
 
     // Both inside the 45-360 minute connection window, and far enough apart
     // that `min` and the lowest usable ceiling cannot coincide.
@@ -220,7 +234,7 @@ final class LayoverRangeWithADirectFlightTest extends IntegrationTestCase
     private function search(?FlightFilters $filters = null): array
     {
         return new FlightRepository($this->connection())
-            ->searchDirection(self::FROM, self::TO, self::DATE, SortMethod::Price, 0, 10, CabinClass::Economy, $filters);
+            ->searchDirection(self::FROM, self::TO, self::date(), SortMethod::Price, 0, 10, CabinClass::Economy, $filters);
     }
 
     private function insertFlight(string $from, string $departure, string $to, string $arrival): void
@@ -229,7 +243,7 @@ final class LayoverRangeWithADirectFlightTest extends IntegrationTestCase
             'INSERT INTO flights (airline, number, departure_airport, departure_time,'
             . ' arrival_airport, arrival_time, distance, duration, price_base, price_tax, rating)'
             . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            ['AC', 100, $from, self::DATE . ' ' . $departure, $to, self::DATE . ' ' . $arrival, 300, 60, 20.00, 3.00, 4.10],
+            ['AC', 100, $from, self::date() . ' ' . $departure, $to, self::date() . ' ' . $arrival, 300, 60, 20.00, 3.00, 4.10],
         );
     }
 }

@@ -22,7 +22,22 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  */
 final class SearchEmissionsTest extends IntegrationTestCase
 {
-    private const string DEPART_DATE = '2027-04-14';
+    /**
+     * Past the horizon, so no generated flight can share this day.
+     *
+     * Four aircraft on one route on one day, and the day has to be the test's
+     * alone: the search counts what the route offered, so one generated flight
+     * on the same date would change what "the middle" is.
+     *
+     * Memoised, so a run that crosses midnight cannot insert on one date and
+     * search on the next.
+     */
+    private static ?string $departDate = null;
+
+    private static function departDate(): string
+    {
+        return self::$departDate ??= self::dateBeyondGeneratedFlights(14);
+    }
 
     // Enough for every type here to be in range, and long enough that the
     // climb allowance is not what decides the ordering.
@@ -180,7 +195,7 @@ final class SearchEmissionsTest extends IntegrationTestCase
         return new FlightRepository($this->connection())->searchDirection(
             'YUL',
             'LHR',
-            self::DEPART_DATE,
+            self::departDate(),
             $sort,
             0,
             20,
@@ -196,8 +211,8 @@ final class SearchEmissionsTest extends IntegrationTestCase
             . ' arrival_airport, arrival_time, distance, duration, cabins, price_base, price_tax, rating)'
             . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
-                $airline, 100, $aircraft, 'YUL', self::DEPART_DATE . ' ' . $departure,
-                'LHR', self::DEPART_DATE . ' ' . $arrival, self::DISTANCE_KM, 450, 1, 20.00, 3.00, 4.10,
+                $airline, 100, $aircraft, 'YUL', self::departDate() . ' ' . $departure,
+                'LHR', self::departDate() . ' ' . $arrival, self::DISTANCE_KM, 450, 1, 20.00, 3.00, 4.10,
             ],
         );
     }

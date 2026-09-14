@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
 use TripBuilder\Database\Connection;
+use TripBuilder\Horizon;
 
 /**
  * Base for tests that need a live MySQL database.
@@ -31,6 +32,34 @@ abstract class IntegrationTestCase extends TestCase
         }
 
         return $connection;
+    }
+
+    /**
+     * A departure date no generated flight can ever occupy.
+     *
+     * `flights:add` draws its days from tomorrow to `Horizon::DAYS`, so a test
+     * that fixes a literal date inside that window is asserting about its own
+     * rows *and* about whatever the generator happened to put on the same route
+     * that day. The generator is random and CI rebuilds the corpus on every
+     * run, so such a test passes or fails by luck.
+     *
+     * Measured on one generated corpus: `YUL -> LHR` appeared on 18 of the 365
+     * days, so a fixed date inside the window collided about one run in twenty.
+     * That is exactly how `SearchEmissionsTest` failed on a pull request that
+     * touched neither flights nor emissions.
+     *
+     * A literal cannot be right for long either way, because the window rolls:
+     * a date beyond it today is inside it a year from now. So this is derived
+     * from the same constant the generator fills up to, and moves with it.
+     *
+     * @param int $plusDays days past the horizon, to give tests dates of their own
+     */
+    protected static function dateBeyondGeneratedFlights(int $plusDays = 1): string
+    {
+        return date(
+            'Y-m-d',
+            (int) strtotime(sprintf('%s +%d days', Horizon::last(), max(1, $plusDays))),
+        );
     }
 
     /**
