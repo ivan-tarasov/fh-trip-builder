@@ -30,6 +30,36 @@ use TripBuilder\View\TwigRenderer;
 
 /**
  * @phpstan-import-type ResponseSearch from FlightFinder
+ *
+ * `hash`, `depart`, `return`, `depart_itin`, `return_itin`, `current` and
+ * `sort` are absent-means-absent (`Input::nullableStr()`), so they stay
+ * `string|null` for as long as the property lives. `from` and `to` are
+ * never null -- `Input::str()` always returns a string, and `identity()`
+ * only ever narrows them further. `triptype` is normalised to a real
+ * `TripType`'s value inside `setGet()` itself before the property is ever
+ * written, so it is the one key the property declares non-nullable even
+ * though the raw value handed to `setGet()` can be null. `class` stays
+ * nullable rather than normalised the same way, because every reader of it
+ * already calls `CabinClass::fromRequest()`, which takes `?string` and
+ * supplies its own default -- normalising here would just be a second
+ * place that default could drift from.
+ *
+ * @phpstan-type SearchGet array{
+ *     hash: string|null, from: string, to: string,
+ *     depart: string|null, return: string|null,
+ *     triptype: string, class: string|null, shown: int,
+ *     depart_itin: string|null, return_itin: string|null,
+ *     current: string|null, sort: string|null,
+ *     ...
+ * }
+ * @phpstan-type SearchGetRaw array{
+ *     hash: string|null, from: string, to: string,
+ *     depart: string|null, return: string|null,
+ *     triptype: string|null, class: string|null, shown: int,
+ *     depart_itin: string|null, return_itin: string|null,
+ *     current: string|null, sort: string|null,
+ *     ...
+ * }
  */
 class SearchController extends AbstractController
 {
@@ -89,6 +119,7 @@ class SearchController extends AbstractController
     // The three that earn a tab of their own; the rest sit in the dropdown.
     private const array PRIMARY_SORTS = ['recommended', 'price', 'duration'];
 
+    /** @var SearchGet */
     private array $get;
 
     /** @var ResponseSearch|null */
@@ -106,7 +137,7 @@ class SearchController extends AbstractController
             $query = $this->request->query;
 
             // Handle GET data
-            $this->setGet([
+            $known = [
                 self::GET_HASH => $query->nullableStr((string) Config::get('search.form.input.hash')),
                 self::GET_FROM => strtoupper($query->str((string) Config::get('search.form.input.depart_place'))),
                 self::GET_TO => strtoupper($query->str((string) Config::get('search.form.input.arrive_place'))),
@@ -131,8 +162,16 @@ class SearchController extends AbstractController
                 // free.
                 self::GET_CURRENT => $query->nullableStr(self::GET_CURRENT),
                 self::GET_SORT => $query->nullableStr(self::GET_SORT),
-                ...$this->filterQuery(),
-            ]);
+            ];
+
+            // Merged as its own step rather than inside the literal above --
+            // spreading filterQuery()'s generically-typed return into that
+            // literal would widen the whole thing to a generic array and lose
+            // the shape phpstan just built.
+            /** @var SearchGetRaw $get */
+            $get = [...$known, ...$this->filterQuery()];
+
+            $this->setGet($get);
 
             // Convert search hash to url and redirect
             if ($this->checkHash()) {
@@ -175,7 +214,7 @@ class SearchController extends AbstractController
                 return;
             }
 
-            $shown = (int) $this->get[self::GET_SHOWN];
+            $shown = $this->get[self::GET_SHOWN];
             // A fragment request already holds everything above `from`, so it
             // asks only for the part it is missing.
             $from = $this->fragmentFrom($shown);
@@ -186,7 +225,7 @@ class SearchController extends AbstractController
                 sort: $this->sort(),
                 from: $this->get[self::GET_FROM],
                 to: $this->get[self::GET_TO],
-                departDate: $this->get[self::GET_DEPART],
+                departDate: $this->get[self::GET_DEPART] ?? '',
                 returnDate: $this->get[self::GET_RETURN] ?? '',
                 party: $this->searchUrl()->party(),
                 departSpan: $this->searchUrl()->departSpan,
@@ -385,21 +424,17 @@ class SearchController extends AbstractController
             // `?hash=` link already out there -- the row holds components, so
             // there is no old URL to rewrite.
             $searchUrl = new SearchUrl(
-                from: (string) $search[self::GET_FROM . '_code'],
-                to: (string) $search[self::GET_TO . '_code'],
-                depart: (string) $search[self::GET_DEPART],
-                return: ($search[self::GET_RETURN] ?? null) === null
-                    ? null
-                    : (string) $search[self::GET_RETURN],
+                from: $search[self::GET_FROM . '_code'],
+                to: $search[self::GET_TO . '_code'],
+                depart: $search[self::GET_DEPART],
+                return: $search[self::GET_RETURN],
                 // Rows recorded before the column existed default to economy,
                 // which is the cabin they were all searched in.
-                cabin: CabinClass::fromRequest(
-                    is_string($search[self::GET_CLASS] ?? null) ? $search[self::GET_CLASS] : null,
-                ),
+                cabin: CabinClass::fromRequest($search[self::GET_CLASS]),
                 // Rows written before flexible dates have no span columns to
                 // read, so they rebuild as the single-date searches they were.
-                departSpan: max(1, (int) ($search['depart_span'] ?? 1)),
-                returnSpan: max(1, (int) ($search['return_span'] ?? 1)),
+                departSpan: max(1, $search['depart_span']),
+                returnSpan: max(1, $search['return_span']),
             );
 
             echo new TwigRenderer()->render('search/redirect.html.twig', [
@@ -436,7 +471,7 @@ class SearchController extends AbstractController
         $hash = SearchRepository::hashFor(
             $this->get[self::GET_FROM],
             $this->get[self::GET_TO],
-            $this->get[self::GET_DEPART],
+            $this->get[self::GET_DEPART] ?? '',
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
@@ -456,7 +491,7 @@ class SearchController extends AbstractController
             trim(preg_replace('/\([^)]+\)/', '', $this->data()['depart']) ?? $this->data()['depart']),
             $this->get[self::GET_TO],
             trim(preg_replace('/\([^)]+\)/', '', $this->data()['arrive']) ?? $this->data()['arrive']),
-            $this->get[self::GET_DEPART],
+            $this->get[self::GET_DEPART] ?? '',
             $this->get[self::GET_RETURN],
             $this->get[self::GET_TRIPTYPE],
             $cabin,
@@ -815,7 +850,10 @@ class SearchController extends AbstractController
      * rest of the page -- the form, the template, the stat row -- keeps reading
      * them from one place.
      *
-     * @return array<string, string|null>
+     * @return array{
+     *     from: string, to: string, depart: string, return: string|null,
+     *     triptype: string, class: string,
+     * }
      */
     private function identity(): array
     {
@@ -848,7 +886,9 @@ class SearchController extends AbstractController
         // The first slice is what you get without asking, so saying so adds
         // nothing but noise to a canonical URL. A larger one is a real
         // instruction and stays.
-        if ((int) ($params[self::GET_SHOWN] ?? 0) === self::FIRST_SLICE) {
+        $shown = $params[self::GET_SHOWN] ?? null;
+
+        if (is_int($shown) && $shown === self::FIRST_SLICE) {
             unset($params[self::GET_SHOWN]);
         }
 
@@ -865,13 +905,20 @@ class SearchController extends AbstractController
      */
     private function carried(array $without): array
     {
+        // Dropped by unset rather than left to the $drop check below: `shown`
+        // is the one key in $this->get that is not string|list<string>, and
+        // only unset lets phpstan see it is gone rather than merely possibly
+        // filtered.
+        $get = $this->get;
+        unset($get[self::GET_SHOWN]);
+
         // The identity keys are in the form's action path now. Leaving them as
         // hidden inputs would put them back in the query string on every Apply,
         // and the request would redirect straight back here.
-        $drop = [self::GET_SHOWN, self::GET_HASH, ...self::PATH_KEYS, ...$without];
+        $drop = [self::GET_HASH, ...self::PATH_KEYS, ...$without];
 
         return array_filter(
-            $this->get,
+            $get,
             static fn(mixed $v, string $k): bool => $v !== null && $v !== '' && $v !== []
                 && !in_array($k, $drop, true),
             ARRAY_FILTER_USE_BOTH,
@@ -1005,6 +1052,10 @@ class SearchController extends AbstractController
         $carried = [];
 
         foreach ($this->allFilterKeys() as $key) {
+            // A query string parses into nothing but string or nested array
+            // -- never an object or a resource -- so this is the real type
+            // behind Input::raw()'s deliberately wider `mixed`, here.
+            /** @var string|array<array-key, string|array<array-key, mixed>> $value */
             $value = $this->request->query->raw($key);
 
             // A checkbox group arrives as an array, a shared link as a string.
@@ -1013,12 +1064,24 @@ class SearchController extends AbstractController
             // word "Array".
             $carried[$key] = match (true) {
                 is_string($value) && $value !== '' => $value,
-                is_array($value) && $value !== [] => array_values(array_map(strval(...), $value)),
+                is_array($value) && $value !== [] => array_values(array_map(self::stringify(...), $value)),
                 default => null,
             };
         }
 
         return $carried;
+    }
+
+    /**
+     * A checkbox-group entry, flattened. Only ever string or nested array --
+     * a query string parses into nothing else -- so a further-nested array
+     * prints as the word "Array", same as `strval()` on one would.
+     *
+     * @param string|array<array-key, mixed> $value
+     */
+    private static function stringify(string|array $value): string
+    {
+        return is_array($value) ? 'Array' : $value;
     }
 
     /**
@@ -1065,6 +1128,9 @@ class SearchController extends AbstractController
         return $this->searchUrl ?? throw new RuntimeException('The search URL has not been resolved yet.');
     }
 
+    /**
+     * @param SearchGetRaw $get
+     */
     private function setGet(array $get): void
     {
         // Normalise the trip type, defaulting to one-way for invalid input.

@@ -6,6 +6,7 @@ namespace TripBuilder\Api\Flights;
 
 use TripBuilder\Config;
 use TripBuilder\Party;
+use TripBuilder\Repository\FlightRepository;
 
 /**
  * The filters a visitor has applied to a search, and the rules for deciding
@@ -20,6 +21,15 @@ use TripBuilder\Party;
  * built from: the options worth offering for a dimension are the values found
  * among the itineraries that pass every *other* filter, so choosing an airline
  * narrows the layover airports on offer without hiding the other airlines.
+ *
+ * `predicates()`'s dimension closures are named methods, not closures -- a
+ * closure's own parameter type is what phpstan checks its body against, and
+ * no docblock placed above a closure literal changes that (verified with
+ * isolated test cases; see `FlightRepository`, which hit the same wall).
+ * Every predicate takes `Candidate` and nothing narrower, even the ones that
+ * read only one or two of its columns, so they share one callable shape.
+ *
+ * @phpstan-import-type Candidate from FlightRepository
  */
 final readonly class FlightFilters
 {
@@ -383,7 +393,7 @@ final readonly class FlightFilters
     /**
      * Does this candidate itinerary survive every filter but `$except`?
      *
-     * @param array<string, mixed> $candidate a row from candidateSql, plus
+     * @param Candidate $candidate a row from candidateSql, plus
      *        `stop_countries` / `origin_country` / `destination_country` when
      *        a country-aware filter is active
      */
@@ -402,110 +412,177 @@ final readonly class FlightFilters
      * One predicate per dimension. Each returns true when the filter is off, so
      * an unset filter never excludes anything.
      *
-     * @return array<string, callable(array<string, mixed>): bool>
+     * @return array<string, callable(Candidate): bool>
      */
     private function predicates(): array
     {
         return [
-            self::DIM_STOPS => fn(array $c): bool => $this->stops === []
-                || in_array((int) $c['stops'], $this->stops, true),
-
+            self::DIM_STOPS => $this->matchesStops(...),
             // Flying a leg is enough. Requiring every leg reads better in
             // principle — pick an airline, fly that airline — but almost no
             // generated itinerary is single-carrier, so it left the filter
             // offering nothing on most searches. Use the "All flights with one
             // airline" toggle alongside it to demand the whole trip.
-            self::DIM_AIRLINES => fn(array $c): bool => $this->airlines === []
-                || array_intersect($this->listOf($c, 'carriers'), $this->airlines) !== [],
-
-            self::DIM_SINGLE_CARRIER => fn(array $c): bool => !$this->singleCarrier
-                || count(array_unique($this->listOf($c, 'carriers'))) <= 1,
-
+            self::DIM_AIRLINES => $this->matchesAirlines(...),
+            self::DIM_SINGLE_CARRIER => $this->matchesSingleCarrier(...),
             // `price_offset` is whatever the other half of a round trip adds
             // before this row is shown; without it a limit set against the
             // displayed total would be compared to one leg's share of it.
             // Scaled for the party, because that is the number on the card and
             // the number the slider is labelled with. Base and tax carry
             // different shares, so they are scaled apart and added after.
-            self::DIM_PRICE => function (array $c): bool {
-                if ($this->maxPrice === null) {
-                    return true;
-                }
-
-                $priced = $this->party->apply(
-                    (float) $c['price_base'] + (float) ($c['price_offset'] ?? 0),
-                    (float) $c['price_tax'],
-                );
-
-                return $priced['base'] + $priced['tax'] <= $this->maxPrice;
-            },
-
-            self::DIM_DURATION => fn(array $c): bool => $this->maxDuration === null
-                || (int) $c['duration'] <= $this->maxDuration,
-
-            self::DIM_DEPART_TIME => fn(array $c): bool => $this->inTimeOfDay(
-                (string) $c['depart_time'],
-                $this->departWindow,
-                $this->departBuckets,
-            ),
-
-            self::DIM_ARRIVE_TIME => fn(array $c): bool => $this->inTimeOfDay(
-                (string) $c['arrive_time'],
-                $this->arriveWindow,
-                $this->arriveBuckets,
-            ),
-
-            self::DIM_ARRIVE_DATE => fn(array $c): bool => $this->arriveDates === []
-                || in_array(date('Y-m-d', (int) strtotime((string) $c['arrive_time'])), $this->arriveDates, true),
-
+            self::DIM_PRICE => $this->matchesPrice(...),
+            self::DIM_DURATION => $this->matchesDuration(...),
+            self::DIM_DEPART_TIME => $this->matchesDepartTime(...),
+            self::DIM_ARRIVE_TIME => $this->matchesArriveTime(...),
+            self::DIM_ARRIVE_DATE => $this->matchesArriveDate(...),
             // Connecting anywhere chosen is enough. Requiring *every*
             // connection to be chosen is the stricter reading, and it made the
             // filter almost unusable: on a route served mostly by two-stop
             // itineraries no single airport could unlock anything, so the list
             // offered one airport out of eleven on the cards. A direct flight
             // connects nowhere, so it is not "a trip through Hong Kong".
-            self::DIM_LAYOVER_AIRPORTS => fn(array $c): bool => $this->layoverAirports === []
-                || array_intersect($this->listOf($c, 'stops_at'), $this->layoverAirports) !== [],
-
+            self::DIM_LAYOVER_AIRPORTS => $this->matchesLayoverAirports(...),
             // Each wait separately, not their total: the point is to rule out a
             // connection too tight to make or too long to sit through, and a
             // sum hides both. A direct flight has no connection to fall foul
             // of the range, so it passes.
-            self::DIM_LAYOVER_RANGE => fn(array $c): bool => $this->layoverRange === null
-                || $this->waitsWithin($c, $this->layoverRange),
-
-            self::DIM_DEPART_AIRPORTS => fn(array $c): bool => $this->departAirports === []
-                || in_array((string) $c['dep_airport'], $this->departAirports, true),
-
-            self::DIM_ARRIVE_AIRPORTS => fn(array $c): bool => $this->arriveAirports === []
-                || in_array((string) $c['arr_airport'], $this->arriveAirports, true),
-
+            self::DIM_LAYOVER_RANGE => $this->matchesLayoverRange(...),
+            self::DIM_DEPART_AIRPORTS => $this->matchesDepartAirports(...),
+            self::DIM_ARRIVE_AIRPORTS => $this->matchesArriveAirports(...),
             // Any leg on a chosen type is enough — you are picking a plane you
             // want to fly on, not demanding the whole trip use one.
-            self::DIM_AIRCRAFT => fn(array $c): bool => $this->aircraft === []
-                || array_intersect($this->listOf($c, 'aircraft'), $this->aircraft) !== [],
-
-            self::DIM_NO_NIGHT => fn(array $c): bool => !$this->noNightLayover
-                || !$this->hasNightLayover($c),
-
-            self::DIM_NO_GULF => fn(array $c): bool => !$this->noGulfLayover
-                || array_intersect(
-                    $this->listOf($c, 'stop_countries'),
-                    (array) Config::get('search.filters.gulf_countries', []),
-                ) === [],
-
-            self::DIM_NO_VISA => fn(array $c): bool => !$this->noVisaLayover
-                || $this->transitCountries($c) === [],
-
+            self::DIM_AIRCRAFT => $this->matchesAircraft(...),
+            self::DIM_NO_NIGHT => $this->matchesNoNight(...),
+            self::DIM_NO_GULF => $this->matchesNoGulf(...),
+            self::DIM_NO_VISA => $this->matchesNoVisa(...),
             // `co2_typical` is worked out by the repository across every
             // itinerary the route offered, before any of these filters run, so
             // "typical" stays the route's middle rather than the middle of
             // whatever is left after choosing an airline. Null -- no published
             // burn for a type on board -- is not lower than typical; it is
             // unknown, and this hides it (C5, #154).
-            self::DIM_LOWER_CO2 => fn(array $c): bool => !$this->lowerCo2
-                || ($c['co2_typical'] ?? false) === true,
+            self::DIM_LOWER_CO2 => $this->matchesLowerCo2(...),
         ];
+    }
+
+    /** @param Candidate $c */
+    private function matchesStops(array $c): bool
+    {
+        return $this->stops === [] || in_array($c['stops'], $this->stops, true);
+    }
+
+    /** @param Candidate $c */
+    private function matchesAirlines(array $c): bool
+    {
+        return $this->airlines === []
+            || array_intersect($this->listOf($c, 'carriers'), $this->airlines) !== [];
+    }
+
+    /** @param Candidate $c */
+    private function matchesSingleCarrier(array $c): bool
+    {
+        return !$this->singleCarrier || count(array_unique($this->listOf($c, 'carriers'))) <= 1;
+    }
+
+    /** @param Candidate $c */
+    private function matchesPrice(array $c): bool
+    {
+        if ($this->maxPrice === null) {
+            return true;
+        }
+
+        $priced = $this->party->apply(
+            (float) $c['price_base'] + (float) ($c['price_offset'] ?? 0),
+            (float) $c['price_tax'],
+        );
+
+        return $priced['base'] + $priced['tax'] <= $this->maxPrice;
+    }
+
+    /** @param Candidate $c */
+    private function matchesDuration(array $c): bool
+    {
+        return $this->maxDuration === null || $c['duration'] <= $this->maxDuration;
+    }
+
+    /** @param Candidate $c */
+    private function matchesDepartTime(array $c): bool
+    {
+        return $this->inTimeOfDay($c['depart_time'], $this->departWindow, $this->departBuckets);
+    }
+
+    /** @param Candidate $c */
+    private function matchesArriveTime(array $c): bool
+    {
+        return $this->inTimeOfDay($c['arrive_time'], $this->arriveWindow, $this->arriveBuckets);
+    }
+
+    /** @param Candidate $c */
+    private function matchesArriveDate(array $c): bool
+    {
+        return $this->arriveDates === []
+            || in_array(date('Y-m-d', (int) strtotime($c['arrive_time'])), $this->arriveDates, true);
+    }
+
+    /** @param Candidate $c */
+    private function matchesLayoverAirports(array $c): bool
+    {
+        return $this->layoverAirports === []
+            || array_intersect($this->listOf($c, 'stops_at'), $this->layoverAirports) !== [];
+    }
+
+    /** @param Candidate $c */
+    private function matchesLayoverRange(array $c): bool
+    {
+        return $this->layoverRange === null || $this->waitsWithin($c, $this->layoverRange);
+    }
+
+    /** @param Candidate $c */
+    private function matchesDepartAirports(array $c): bool
+    {
+        return $this->departAirports === [] || in_array($c['dep_airport'], $this->departAirports, true);
+    }
+
+    /** @param Candidate $c */
+    private function matchesArriveAirports(array $c): bool
+    {
+        return $this->arriveAirports === [] || in_array($c['arr_airport'], $this->arriveAirports, true);
+    }
+
+    /** @param Candidate $c */
+    private function matchesAircraft(array $c): bool
+    {
+        return $this->aircraft === []
+            || array_intersect($this->listOf($c, 'aircraft'), $this->aircraft) !== [];
+    }
+
+    /** @param Candidate $c */
+    private function matchesNoNight(array $c): bool
+    {
+        return !$this->noNightLayover || !$this->hasNightLayover($c);
+    }
+
+    /** @param Candidate $c */
+    private function matchesNoGulf(array $c): bool
+    {
+        return !$this->noGulfLayover
+            || array_intersect(
+                $this->listOf($c, 'stop_countries'),
+                (array) Config::get('search.filters.gulf_countries', []),
+            ) === [];
+    }
+
+    /** @param Candidate $c */
+    private function matchesNoVisa(array $c): bool
+    {
+        return !$this->noVisaLayover || $this->transitCountries($c) === [];
+    }
+
+    /** @param Candidate $c */
+    private function matchesLowerCo2(array $c): bool
+    {
+        return !$this->lowerCo2 || ($c['co2_typical'] ?? false) === true;
     }
 
     /**
@@ -543,22 +620,23 @@ final readonly class FlightFilters
     /**
      * Every wait on this itinerary, in minutes.
      *
-     * @param array<string, mixed> $candidate
+     * @param Candidate $candidate
      * @return list<int>
      */
     public static function waits(array $candidate): array
     {
         $waits = [];
 
-        foreach ([['stop1_in', 'stop1_out'], ['stop2_in', 'stop2_out']] as [$in, $out]) {
-            if (($candidate[$in] ?? null) === null || ($candidate[$out] ?? null) === null) {
+        foreach ([
+            [$candidate['stop1_in'], $candidate['stop1_out']],
+            [$candidate['stop2_in'], $candidate['stop2_out']],
+        ] as [$in, $out]) {
+            if ($in === null || $out === null) {
                 continue;
             }
 
             // A wait happens at one airport, so its local stamps subtract safely.
-            $waits[] = (int) round(
-                (strtotime((string) $candidate[$out]) - strtotime((string) $candidate[$in])) / 60,
-            );
+            $waits[] = (int) round((strtotime($out) - strtotime($in)) / 60);
         }
 
         return $waits;
@@ -568,7 +646,7 @@ final readonly class FlightFilters
      * `0: int|null`, because a bare ceiling has no floor under it -- which the
      * body below reads twice and the shape used to deny.
      *
-     * @param array<string, mixed> $candidate
+     * @param Candidate $candidate
      * @param array{0: int|null, 1: int} $range
      */
     private function waitsWithin(array $candidate, array $range): bool
@@ -631,16 +709,19 @@ final readonly class FlightFilters
      * Whether any connection on this itinerary is spent waiting through the
      * night. The wait is at one airport, so its local stamps compare directly.
      *
-     * @param array<string, mixed> $candidate
+     * @param Candidate $candidate
      */
     private function hasNightLayover(array $candidate): bool
     {
-        foreach ([['stop1_in', 'stop1_out'], ['stop2_in', 'stop2_out']] as [$in, $out]) {
-            if (($candidate[$in] ?? null) === null || ($candidate[$out] ?? null) === null) {
+        foreach ([
+            [$candidate['stop1_in'], $candidate['stop1_out']],
+            [$candidate['stop2_in'], $candidate['stop2_out']],
+        ] as [$in, $out]) {
+            if ($in === null || $out === null) {
                 continue;
             }
 
-            if ($this->spansNight((string) $candidate[$in], (string) $candidate[$out])) {
+            if ($this->spansNight($in, $out)) {
                 return true;
             }
         }
@@ -673,14 +754,14 @@ final readonly class FlightFilters
      * Layover countries that are neither the origin's nor the destination's —
      * the ones a traveller may need a transit visa for.
      *
-     * @param array<string, mixed> $candidate
+     * @param Candidate $candidate
      * @return list<string>
      */
     private function transitCountries(array $candidate): array
     {
         $endpoints = array_filter([
-            $candidate['origin_country'] ?? null,
-            $candidate['destination_country'] ?? null,
+            $candidate['origin_country'],
+            $candidate['destination_country'],
         ]);
 
         return array_values(array_diff($this->listOf($candidate, 'stop_countries'), $endpoints));
@@ -689,8 +770,12 @@ final readonly class FlightFilters
     /**
      * A comma-joined candidate column as a list. The repository builds these
      * with CONCAT_WS, which drops NULLs, so a direct itinerary yields [].
+     * `$column` is read dynamically, so this is `mixed` regardless of
+     * `Candidate` -- but every column this is ever called with is either that
+     * CONCAT_WS'd string or (`stop_countries`) the one column that is already
+     * a `list<string>`, which is what the `is_array()` branch is for.
      *
-     * @param array<string, mixed> $candidate
+     * @param Candidate $candidate
      * @return list<string>
      */
     private function listOf(array $candidate, string $column): array
@@ -698,6 +783,7 @@ final readonly class FlightFilters
         $raw = $candidate[$column] ?? null;
 
         if (is_array($raw)) {
+            /** @var list<string> $raw */
             return array_values(array_filter(array_map(strval(...), $raw), static fn(string $v): bool => $v !== ''));
         }
 
