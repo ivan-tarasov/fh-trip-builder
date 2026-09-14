@@ -177,8 +177,11 @@ final readonly class AirportRepository
     {
         $cities = CityRepository::namesSql();
 
-        $sql = 'SELECT code, label, sub, city, city_code, is_city FROM ('
-            . ' SELECT a.city_code AS code, cn.name AS label, MIN(c.title) AS sub, cn.name AS city,'
+        $sql = 'SELECT code, label, short, sub, city, city_code, is_city FROM ('
+            // A city row is never drawn under anything, so it has no second
+            // name to have. The column is here because a UNION wants the same
+            // shape on both sides.
+            . ' SELECT a.city_code AS code, cn.name AS label, \'\' AS short, MIN(c.title) AS sub, cn.name AS city,'
             . '  a.city_code AS city_code, 1 AS is_city, cn.name AS in_city, 0 AS depth'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' JOIN (' . $cities . ') cn ON cn.code = a.city_code'
@@ -196,7 +199,11 @@ final readonly class AirportRepository
             // New York, United States" is how every flight search presents
             // it, the airport's title already says Newark, and it is what
             // makes typing "New York" reach it.
-            . ' SELECT a.code, a.title, CONCAT(cn.name, \', \', c.title), cn.name,'
+            // `title` and `short_title` both, because the browser decides
+            // between them per render: an airport is drawn under its city only
+            // when the city is among the rows currently shown, which depends on
+            // what has been typed (C2.5, #106).
+            . ' SELECT a.code, a.title, COALESCE(a.short_title, \'\'), CONCAT(cn.name, \', \', c.title), cn.name,'
             . '  a.city_code, 0, cn.name, 1'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' JOIN (' . $cities . ') cn ON cn.code = a.city_code'

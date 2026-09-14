@@ -49,6 +49,40 @@ final class PlacePickerGroupingTest extends TestCase
         );
     }
 
+    /**
+     * The short name only reaches the row that is nested.
+     *
+     * Three files again, and the same failure mode: any one of them can be
+     * removed and the list simply goes back to printing "London Gatwick
+     * Airport" under "London", which nothing else here would notice
+     * (C2.5, #106).
+     */
+    public function testTheTemplateCarriesTheShortNameSeparately(): void
+    {
+        $form = $this->read('templates/search/form.html.twig');
+
+        self::assertStringContainsString(
+            'data-nested="{{ row.short }}"',
+            $form,
+            'the short name never reaches the browser',
+        );
+
+        self::assertStringContainsString(
+            '>{{ row.label }}</option>',
+            $form,
+            "the option's text must stay the full name: it is what the list is searched and ranked on",
+        );
+    }
+
+    public function testTheComboboxUsesItOnlyUnderTheCity(): void
+    {
+        self::assertMatchesRegularExpression(
+            '/underItsCity && option\.dataset\.nested\s*\?\s*option\.dataset\.nested/',
+            $this->read('public/js/global.js'),
+            'the short name is either unused or used everywhere, and both are wrong',
+        );
+    }
+
     public function testTheStylesheetIndentsWhatWasMarked(): void
     {
         self::assertMatchesRegularExpression(

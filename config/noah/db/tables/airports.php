@@ -34,6 +34,31 @@ return [
             'comment' => false,
         ],
         [
+            // What to call this airport when its city is already named on the
+            // line above it: "Gatwick" under London, not "London Gatwick
+            // Airport". Empty everywhere it would say nothing -- an airport
+            // that is the only one in its city is never drawn under a heading,
+            // so it has no second name to have (C2.5, #106).
+            //
+            // Not derivable, measured: stripping the city and a trailing
+            // "Airport" turns both `Brussels Airport` and `Istanbul Airport`
+            // into "Airport", and leaves `Berlin-Schoenefeld` alone where
+            // `Berlin Brandenburg` becomes "Brandenburg". These are written by
+            // hand, and there are 41 of them rather than the 254 first feared,
+            // because only a city with more than one airport ever nests.
+            //
+            // Nullable, because the seeder reads an empty cell as NULL -- which
+            // is the honest reading: a CSV cannot write "no value" any other
+            // way, and 1,050 of these rows have no value.
+            'name' => 'short_title',
+            'type' => 'varchar',
+            'length' => 100,
+            'default' => false,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => 'Name to show under its own city, where repeating the city says nothing',
+        ],
+        [
             'name' => 'country_code',
             'type' => 'char',
             'length' => 2,
