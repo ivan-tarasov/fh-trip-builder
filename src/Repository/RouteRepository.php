@@ -30,6 +30,15 @@ use TripBuilder\Database\Table;
  * each is for: a calendar has to price every day, connections included, and
  * that takes seconds; a strip of the cheapest dates does not have to fill a day
  * it has no answer for. See cheapestDates().
+ *
+ * `summary()`'s raw row, live-verified: `COUNT()`/`COUNT(DISTINCT ...)` are
+ * `int`, and so -- new here -- is `MIN()` over a plain `int` column
+ * (`distance`): unlike `SUM()`/`AVG()`, `MIN()` does not upcast a non-decimal
+ * column. `ROUND(AVG(duration))` over that same kind of column still comes
+ * back `string`, and `MIN(fare())` over the DECIMAL price columns does too --
+ * both consistent with every aggregate this initiative has checked live.
+ *
+ * @phpstan-type RouteSummaryRow array{flights: int, carriers: int, typical: string, km: int, cheapest: string}
  */
 final readonly class RouteRepository
 {
@@ -137,11 +146,12 @@ final readonly class RouteRepository
      * you can fly it nonstop, and a row in `flights` is what nonstop means.
      * That is the filter `searchedWithAPage()` has to apply by hand.
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{from_code: string, to_code: string, ...}>
      */
     private function mostFlown(int $candidates): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<array{from_code: string, to_code: string, ...}> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT o.city_code AS from_code, MIN(o.city) AS from_name,'
             . ' d.city_code AS to_code, MIN(d.city) AS to_name, COUNT(*) AS flights'
             . ' FROM ' . Table::Flights->value . ' f'
@@ -156,6 +166,8 @@ final readonly class RouteRepository
             . ' ORDER BY flights DESC, from_code, to_code'
             . ' LIMIT ' . max(1, $candidates),
         );
+
+        return $rows;
     }
 
     /**
@@ -232,11 +244,12 @@ final readonly class RouteRepository
      * of the two column names this class passes it -- never anything that came
      * from a request.
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{from_code: string, to_code: string, ...}>
      */
     private function searchedWithAPage(?int $candidates, ?string $endColumn = null, string $city = ''): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<array{from_code: string, to_code: string, ...}> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT p.from_code, MIN(o.city) AS from_name,'
             . ' p.to_code, MIN(d.city) AS to_name, p.searches'
             . ' FROM ('
@@ -274,6 +287,8 @@ final readonly class RouteRepository
             . ' ORDER BY p.searches DESC, from_name ASC, to_name ASC',
             $endColumn === null ? [] : [$city],
         );
+
+        return $rows;
     }
 
     /**
@@ -283,8 +298,12 @@ final readonly class RouteRepository
      * not something a GROUP BY expresses without sorting the two codes into a
      * key, and the rows are already ranked and few.
      *
-     * @param list<array<string, mixed>> $rows
-     * @return list<array<string, mixed>>
+     * Both callers' rows carry `from_code`/`to_code` as plain `varchar`
+     * columns -- the only two keys this reads -- so the shape below is open
+     * (`...`) rather than naming every column each caller happens to select.
+     *
+     * @param list<array{from_code: string, to_code: string, ...}> $rows
+     * @return list<array{from_code: string, to_code: string, ...}>
      */
     private static function oneDirectionPerPair(array $rows): array
     {
@@ -321,7 +340,7 @@ final readonly class RouteRepository
      *
      * @param list<string> $from
      * @param list<string> $to
-     * @return array<string, mixed>|null
+     * @return RouteSummaryRow|null
      */
     public function summary(array $from, array $to, CabinClass $cabin): ?array
     {
@@ -329,6 +348,7 @@ final readonly class RouteRepository
             return null;
         }
 
+        /** @var RouteSummaryRow|null $row */
         $row = $this->connection->fetchOne(
             'SELECT COUNT(*) AS flights,'
             . ' COUNT(DISTINCT f.airline) AS carriers,'
