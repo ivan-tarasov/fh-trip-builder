@@ -36,6 +36,12 @@ use TripBuilder\View\TwigRenderer;
  * sharply: easyJet is 44% widebody with turboprops at the top, Qantas 86% with
  * A350s and A380s. See AirlineRepository::aircraft(), which also says why the
  * block counts flights and never airframes.
+ *
+ * @phpstan-import-type AirlineDetailRow from AirlineRepository
+ * @phpstan-import-type AircraftTypeRow from AirlineRepository
+ * @phpstan-import-type AirlinePeerRow from AirlineRepository
+ * @phpstan-import-type AirportRow from AirportRepository
+ * @phpstan-import-type CheapestDestinationRow from FlightRepository
  */
 class AirlineController extends AbstractController
 {
@@ -77,10 +83,10 @@ class AirlineController extends AbstractController
 
             // One airline, one address -- the same rule the other three place
             // pages follow. 301, because this is how the page is spelled.
-            $canonical = Helper::placeSlug((string) $airline['name'], (string) $airline['code']);
+            $canonical = Helper::placeSlug($airline['name'], $airline['code']);
 
             if ($slug !== $canonical) {
-                $this->bounce(Helper::airlineUrl((string) $airline['name'], (string) $airline['code']), HttpStatus::MovedPermanently);
+                $this->bounce(Helper::airlineUrl($airline['name'], $airline['code']), HttpStatus::MovedPermanently);
 
                 return;
             }
@@ -98,7 +104,7 @@ class AirlineController extends AbstractController
                         // somewhere else, so it is built where the other
                         // addresses on this page are.
                         'country_url' => $airline['country'] === null ? null : '/country/' . Helper::placeSlug(
-                            (string) $airline['country'],
+                            $airline['country'],
                             (string) $airline['country_code'],
                         ),
                     ]
@@ -130,7 +136,7 @@ class AirlineController extends AbstractController
      * origin for a page about the airline: it is where its network starts.
      *
      * @param list<string> $hubs
-     * @return list<array<string, mixed>>
+     * @return list<CheapestDestinationRow>
      */
     private function reached(string $code, array $hubs): array
     {
@@ -155,7 +161,7 @@ class AirlineController extends AbstractController
      * the query answers for every city the hubs reach -- 231 of them for Delta
      * -- and the rest of that list is a search, not a row of cards.
      *
-     * @param list<array<string, mixed>> $reached
+     * @param list<CheapestDestinationRow> $reached
      * @return list<array<string, mixed>>
      */
     private static function strip(array $reached): array
@@ -170,9 +176,9 @@ class AirlineController extends AbstractController
             'fares' => array_map(
                 static fn(array $fare): array => $fare + [
                     'search' => new SearchUrl(
-                        from: (string) $fare['from_city_code'],
-                        to: (string) $fare['to_city_code'],
-                        depart: substr((string) $fare['departure_time'], 0, 10),
+                        from: $fare['from_city_code'],
+                        to: $fare['to_city_code'],
+                        depart: substr($fare['departure_time'], 0, 10),
                         return: null,
                     )->path(),
                 ],
@@ -189,7 +195,7 @@ class AirlineController extends AbstractController
      * through the directory that lists every airline, which is the shape the
      * country page uses for the same reason.
      *
-     * @param array<string, mixed> $airline
+     * @param AirlineDetailRow $airline
      * @return list<array{label: string, url: string|null, current: bool}>
      */
     private static function trailFor(array $airline): array
@@ -200,21 +206,21 @@ class AirlineController extends AbstractController
         return [
             ['label' => (string) Config::get('breadcrumbs.home', 'Home'), 'url' => '/', 'current' => false],
             ['label' => $pages['/airlines'] ?? 'Airlines', 'url' => '/airlines', 'current' => false],
-            ['label' => (string) $airline['name'], 'url' => null, 'current' => true],
+            ['label' => $airline['name'], 'url' => null, 'current' => true],
         ];
     }
 
     /**
      * Give each of the other airlines the address of its own page.
      *
-     * @param list<array<string, mixed>> $airlines
+     * @param list<AirlinePeerRow> $airlines
      * @return list<array<string, mixed>>
      */
     private static function addressableAirlines(array $airlines): array
     {
         return array_map(
             static fn(array $airline): array => $airline + [
-                'url' => Helper::airlineUrl((string) $airline['name'], (string) $airline['code']),
+                'url' => Helper::airlineUrl($airline['name'], $airline['code']),
             ],
             $airlines,
         );
@@ -223,14 +229,14 @@ class AirlineController extends AbstractController
     /**
      * Give each hub the address of its own page.
      *
-     * @param list<array<string, mixed>> $airports
+     * @param list<AirportRow> $airports
      * @return list<array<string, mixed>>
      */
     private static function addressable(array $airports): array
     {
         return array_map(
             static fn(array $airport): array => $airport + [
-                'url' => Helper::airportUrl((string) $airport['title'], (string) $airport['code']),
+                'url' => Helper::airportUrl($airport['title'], $airport['code']),
             ],
             $airports,
         );

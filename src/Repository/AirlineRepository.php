@@ -22,6 +22,12 @@ use TripBuilder\Database\Table;
  * distinction ArticleVoteRepository and PostVoteRepository verified.
  *
  * @phpstan-type NetworkRow array{flights: int, days: int, widebody: ?string}
+ * @phpstan-type AirlineDetailRow array{
+ *     code: string, name: string, url: ?string, phone: ?string, hubs: ?string,
+ *     country_code: ?string, country: ?string,
+ * }
+ * @phpstan-type AircraftTypeRow array{title: string, manufacturer: ?string, is_widebody: int, flights: int}
+ * @phpstan-type AirlinePeerRow array{code: string, name: string, flights: int}
  */
 final readonly class AirlineRepository
 {
@@ -69,11 +75,12 @@ final readonly class AirlineRepository
      * sell have one -- a null there should cost a page its "based in" tile, not
      * the whole page.
      *
-     * @return array<string, mixed>|null
+     * @return AirlineDetailRow|null
      */
     public function byCode(string $code): ?array
     {
-        return $this->connection->fetchOne(
+        /** @var AirlineDetailRow|null $row */
+        $row = $this->connection->fetchOne(
             'SELECT al.code, al.title AS name, al.url, al.phone, al.hubs,'
             . ' al.country AS country_code, c.title AS country'
             . ' FROM ' . Table::Airlines->value . ' al'
@@ -81,6 +88,8 @@ final readonly class AirlineRepository
             . ' WHERE' . self::ONLY_SELLABLE . ' AND al.code = ?',
             [strtoupper($code)],
         );
+
+        return $row;
     }
 
     /**
@@ -160,11 +169,12 @@ final readonly class AirlineRepository
      * anything an airline owns. Departures in the next WINDOW_DAYS days, which
      * the block prints so the count has a period.
      *
-     * @return list<array<string, mixed>>
+     * @return list<AircraftTypeRow>
      */
     public function aircraft(string $code, int $limit): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<AircraftTypeRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT ac.title, ac.manufacturer, ac.is_widebody, COUNT(*) AS flights'
             . ' FROM ' . Table::Flights->value . ' f'
             . ' JOIN ' . Table::Aircraft->value . ' ac ON ac.code = f.aircraft'
@@ -175,6 +185,8 @@ final readonly class AirlineRepository
             . ' LIMIT ' . max(1, $limit),
             [strtoupper($code)],
         );
+
+        return $rows;
     }
 
     /**
@@ -194,7 +206,7 @@ final readonly class AirlineRepository
      * same reason.
      *
      * @param list<string> $hubs
-     * @return list<array<string, mixed>>
+     * @return list<AirlinePeerRow>
      */
     public function peers(string $code, array $hubs, int $limit): array
     {
@@ -202,7 +214,8 @@ final readonly class AirlineRepository
             return [];
         }
 
-        return $this->connection->fetchAll(
+        /** @var list<AirlinePeerRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT al.code, al.title AS name, COUNT(*) AS flights'
             . ' FROM ' . Table::Flights->value . ' f'
             . ' JOIN ' . Table::Airlines->value . ' al ON al.code = f.airline AND' . self::ONLY_SELLABLE
@@ -215,6 +228,8 @@ final readonly class AirlineRepository
             . ' LIMIT ' . max(1, $limit),
             [...$hubs, strtoupper($code)],
         );
+
+        return $rows;
     }
 
     /** @param list<string> $values */
