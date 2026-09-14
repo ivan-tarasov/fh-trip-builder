@@ -22,6 +22,46 @@ use TripBuilder\Database\Table;
  * what lets MIN() stand in for "the city's country" below. If a city ever
  * straddles a border -- Basel is the classic -- this is the assumption that
  * breaks, and it breaks quietly.
+ *
+ * Every shape below is verified against a live fetch, and the aggregates in
+ * this file refine what `AirportRepository` learned about computed values --
+ * "computed" was not fine-grained enough. `MIN()` over a DECIMAL or VARCHAR
+ * column comes back `string`, same as the column itself. `AVG()` over a
+ * DECIMAL column *also* comes back `string` -- MySQL's own type system keeps
+ * an average of a DECIMAL column DECIMAL-typed, so PDO hands it back the same
+ * way it hands back the column. `SUM()` over an INT or SMALLINT column comes
+ * back `string` too, which is the one that would have been guessed wrong:
+ * MySQL widens an integer SUM to a type PDO does not map to PHP `int`.
+ * `COUNT(*)` is the one aggregate here that is reliably `int`. Only a
+ * genuinely non-decimal computation -- `AirportRepository::nearby()`'s
+ * `ST_Distance_Sphere(...) / 1000`, a spatial function returning DOUBLE --
+ * comes back a real `float`. The rule is not "computed vs. stored"; it is
+ * "what SQL type does this expression actually evaluate to", and every one
+ * of these was checked rather than inferred from the others.
+ *
+ * @phpstan-type CityRow array{
+ *     code: string, name: string, country_code: string, country: string|null,
+ *     timezone: string, timezone_name: string, airports: int,
+ *     latitude: string, longitude: string,
+ * }
+ * @phpstan-type CityRowNearby array{
+ *     code: string, name: string, country_code: string, country: string|null,
+ *     latitude: string, longitude: string, km: float,
+ * }
+ * @phpstan-type CityAirportRow array{
+ *     code: string, title: string, city: string, latitude: string,
+ *     longitude: string, traffic_weight: int,
+ * }
+ * @phpstan-type CitySummaryRow array{
+ *     code: string, name: string, country_code: string, country: string|null,
+ *     airports: int,
+ * }
+ * @phpstan-type CityRowInCountry array{
+ *     code: string, name: string, airports: int, weight: string,
+ * }
+ * @phpstan-type CityRowMostSearched array{code: string, name: string, hits: string}
+ * @phpstan-type CityWeightRow array{code: string, weight: string, name: string}
+ * @phpstan-type CityNameRow array{code: string, name: string}
  */
 final readonly class CityRepository
 {
@@ -37,11 +77,12 @@ final readonly class CityRepository
     /**
      * One city, by its IATA code.
      *
-     * @return array<string, mixed>|null
+     * @return CityRow|null
      */
     public function byCode(string $code): ?array
     {
-        return $this->connection->fetchOne(
+        /** @var CityRow|null $row */
+        $row = $this->connection->fetchOne(
             'SELECT a.city_code AS code, MIN(a.city) AS name,'
             . ' MIN(a.country_code) AS country_code, MIN(c.title) AS country,'
             . ' MIN(a.timezone) AS timezone, MIN(a.timezone_name) AS timezone_name,'
@@ -57,22 +98,27 @@ final readonly class CityRepository
             . ' GROUP BY a.city_code',
             [strtoupper($code)],
         );
+
+        return $row;
     }
 
     /**
      * The airports of one city, largest first.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CityAirportRow>
      */
     public function airports(string $code): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<CityAirportRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT a.code, a.title, a.city, a.latitude, a.longitude, a.traffic_weight'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' WHERE' . self::ONLY_SELLABLE . ' AND a.city_code = ?'
             . ' ORDER BY a.traffic_weight DESC, a.title ASC',
             [strtoupper($code)],
         );
+
+        return $rows;
     }
 
     /**
@@ -90,7 +136,7 @@ final readonly class CityRepository
      * Manchester, Brussels and Paris for London; nothing at all for Honolulu,
      * which is the truth.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CityRowNearby>
      */
     public function nearby(string $code, int $limit, int $maxKm): array
     {
@@ -103,7 +149,8 @@ final readonly class CityRepository
         // ST_Distance_Sphere answers in metres and takes POINT(longitude,
         // latitude) -- that order, which is the opposite of how coordinates are
         // written everywhere else in this codebase.
-        return $this->connection->fetchAll(
+        /** @var list<CityRowNearby> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT city.*, ST_Distance_Sphere(POINT(?, ?), POINT(city.longitude, city.latitude)) / 1000 AS km'
             . ' FROM (' . $this->centroids() . ') city'
             . ' WHERE city.code <> ?'
@@ -120,6 +167,8 @@ final readonly class CityRepository
                 $maxKm,
             ],
         );
+
+        return $rows;
     }
 
     /**
@@ -134,11 +183,12 @@ final readonly class CityRepository
      * grouping is a view concern. It was grouped by country here first, which
      * pushed a decision about how the page reads into the query.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CitySummaryRow>
      */
     public function all(): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<CitySummaryRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT a.city_code AS code, MIN(a.city) AS name,'
             . ' MIN(a.country_code) AS country_code, MIN(c.title) AS country,'
             . ' COUNT(*) AS airports'
@@ -148,6 +198,8 @@ final readonly class CityRepository
             . ' GROUP BY a.city_code'
             . ' ORDER BY name ASC',
         );
+
+        return $rows;
     }
 
     /** Counts what all() lists, so the grouping into cities has to be repeated. */
@@ -167,11 +219,12 @@ final readonly class CityRepository
      * the honest answer leads with Toronto. The airport count comes along so a
      * city with more than one can say so without a second query per row.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CityRowInCountry>
      */
     public function inCountry(string $countryCode): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<CityRowInCountry> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT a.city_code AS code, MIN(a.city) AS name,'
             . ' COUNT(*) AS airports, SUM(a.traffic_weight) AS weight'
             . ' FROM ' . Table::Airports->value . ' a'
@@ -180,6 +233,8 @@ final readonly class CityRepository
             . ' ORDER BY weight DESC, name ASC',
             [strtoupper($countryCode)],
         );
+
+        return $rows;
     }
 
     /**
@@ -195,11 +250,12 @@ final readonly class CityRepository
      * Measured at 0.8ms, which is what makes it affordable in a footer that is
      * on every page.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CityRowMostSearched>
      */
     public function mostSearched(int $limit): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<CityRowMostSearched> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT a.city_code AS code, MIN(a.city) AS name, SUM(a.search_count) AS hits'
             . ' FROM ' . Table::Airports->value . ' a'
             . ' WHERE' . self::ONLY_SELLABLE
@@ -209,6 +265,8 @@ final readonly class CityRepository
             . ' ORDER BY hits DESC, name ASC'
             . ' LIMIT ' . max(1, $limit),
         );
+
+        return $rows;
     }
 
     /**
@@ -236,6 +294,7 @@ final readonly class CityRepository
         bool $domestic,
         int $cityLimit,
     ): array {
+        /** @var list<CityWeightRow> $cities */
         $cities = $this->connection->fetchAll(
             'SELECT a.city_code AS code, SUM(a.traffic_weight) AS weight, MIN(a.city) AS name'
             . ' FROM ' . Table::Airports->value . ' a'
@@ -254,15 +313,15 @@ final readonly class CityRepository
 
         $codes = array_column($cities, 'code');
 
-        return array_column(
-            $this->connection->fetchAll(
-                'SELECT a.code FROM ' . Table::Airports->value . ' a'
-                . ' WHERE' . self::ONLY_SELLABLE
-                . ' AND a.city_code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')',
-                $codes,
-            ),
-            'code',
+        /** @var list<array{code: string}> $airportRows */
+        $airportRows = $this->connection->fetchAll(
+            'SELECT a.code FROM ' . Table::Airports->value . ' a'
+            . ' WHERE' . self::ONLY_SELLABLE
+            . ' AND a.city_code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')',
+            $codes,
         );
+
+        return array_column($airportRows, 'code');
     }
 
     /**
@@ -318,8 +377,11 @@ final readonly class CityRepository
     {
         $names = [];
 
-        foreach ($this->connection->fetchAll(self::namesSql()) as $row) {
-            $names[(string) $row['code']] = (string) $row['name'];
+        /** @var list<CityNameRow> $rows */
+        $rows = $this->connection->fetchAll(self::namesSql());
+
+        foreach ($rows as $row) {
+            $names[$row['code']] = $row['name'];
         }
 
         return $names;
