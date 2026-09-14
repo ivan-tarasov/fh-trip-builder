@@ -20,6 +20,8 @@ use TripBuilder\Database\Table;
  * same reason the rate-limit check fails open: this table records what happened
  * and is not the thing that happens. A checkout that rolled back because the
  * log was unavailable would turn a note into an outage.
+ *
+ * @phpstan-type BookingEventRow array{event: string, actor: string, note: ?string, at: string}
  */
 final readonly class BookingEventRepository
 {
@@ -55,6 +57,7 @@ final readonly class BookingEventRepository
      */
     public function forBooking(int $bookingId): array
     {
+        /** @var list<BookingEventRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT event, actor, note, at FROM ' . Table::BookingEvents->value
             // Id second: two events in the same second are ordered by the order
