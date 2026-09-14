@@ -115,6 +115,16 @@ use TripBuilder\Party;
  *     depart_time: string, arrive_time: string, rating: float,
  *     co2_kg: float|null, co2_typical: bool|null,
  * }
+ *
+ * `cheapestPerDestinationCity()`'s own shape, live-verified: `duration` is a
+ * plain `int` column, `total` (`price_base + price_tax`) is DECIMAL
+ * arithmetic and stays `string`, `rn` (the window function) is `int`.
+ *
+ * @phpstan-type CheapestDestinationRow array{
+ *     to_city_code: string, to_city: string, from_city_code: string, from_city: string,
+ *     airline: string, departure_airport: string, arrival_airport: string,
+ *     departure_time: string, arrival_time: string, duration: int, total: string, rn: int,
+ * }
  */
 final readonly class FlightRepository
 {
@@ -1433,7 +1443,7 @@ final readonly class FlightRepository
      *
      * @param list<string> $fromAirports
      * @param list<string> $toAirports
-     * @return list<array<string, mixed>>
+     * @return list<CheapestDestinationRow>
      */
     public function cheapestPerDestinationCity(
         array $fromAirports,
@@ -1448,7 +1458,8 @@ final readonly class FlightRepository
         $from = implode(',', array_fill(0, count($fromAirports), '?'));
         $to = implode(',', array_fill(0, count($toAirports), '?'));
 
-        return $this->connection->fetchAll(
+        /** @var list<CheapestDestinationRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT x.* FROM ('
             . ' SELECT d.city_code AS to_city_code, dc.name AS to_city,'
             . '  o.city_code AS from_city_code, oc.name AS from_city,'
@@ -1479,6 +1490,8 @@ final readonly class FlightRepository
                 $cabin->bit(),
             ],
         );
+
+        return $rows;
     }
 
     /**
