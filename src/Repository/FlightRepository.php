@@ -135,6 +135,18 @@ use TripBuilder\Party;
  *     airline: string, departure_airport: string, arrival_airport: string,
  *     departure_time: string, arrival_time: string, duration: int, total: string, rn: int,
  * }
+ *
+ * Four more live-verified memoised/lookup shapes: `airports.code`,
+ * `airports.country_code`, `aircraft.code` and `aircraft_cabins.aircraft` /
+ * `cabin` are all non-nullable `char` columns; `aircraft_cabins.seats` is a
+ * plain `smallint` and stays `int`; `aircraft.fuel_burn_kg_per_km` is
+ * DECIMAL and stringifies like every other DECIMAL column in this file.
+ *
+ * @phpstan-type AirportCountryRow array{code: string, country_code: string}
+ * @phpstan-type AircraftBurnRow array{code: string, fuel_burn_kg_per_km: string}
+ * @phpstan-type AircraftCabinRow array{aircraft: string, cabin: string, seats: int}
+ * @phpstan-type AirportCodeRow array{code: string}
+ * @phpstan-type FareBrandRow array{id: int, fare_brand: string|null}
  */
 final readonly class FlightRepository
 {
@@ -393,12 +405,17 @@ final readonly class FlightRepository
         }
 
         // A toggle is worth offering only if switching it on leaves something.
+        //
+        // Named methods, not closures -- a closure's own parameter type is
+        // what PHPStan checks its body against, and a docblock placed above
+        // a closure literal does not change that, verified with isolated
+        // test cases the way the stdClass narrowing question was.
         foreach ([
-            FlightFilters::DIM_SINGLE_CARRIER => static fn(array $c): bool => count(array_unique(explode(',', (string) $c['carriers']))) <= 1,
-            FlightFilters::DIM_NO_NIGHT => static fn(array $c): bool => new FlightFilters(noNightLayover: true)->matches($c),
-            FlightFilters::DIM_NO_GULF => static fn(array $c): bool => new FlightFilters(noGulfLayover: true)->matches($c),
-            FlightFilters::DIM_NO_VISA => static fn(array $c): bool => new FlightFilters(noVisaLayover: true)->matches($c),
-            FlightFilters::DIM_LOWER_CO2 => static fn(array $c): bool => new FlightFilters(lowerCo2: true)->matches($c),
+            FlightFilters::DIM_SINGLE_CARRIER => self::singleCarrier(...),
+            FlightFilters::DIM_NO_NIGHT => self::noNightLayover(...),
+            FlightFilters::DIM_NO_GULF => self::noGulfLayover(...),
+            FlightFilters::DIM_NO_VISA => self::noVisaLayover(...),
+            FlightFilters::DIM_LOWER_CO2 => self::lowerCo2(...),
         ] as $dimension => $wouldKeep) {
             $available[$dimension] = false;
             $cheapest = null;
@@ -420,6 +437,46 @@ final readonly class FlightRepository
     }
 
     /**
+     * @param Candidate $candidate
+     */
+    private static function singleCarrier(array $candidate): bool
+    {
+        return count(array_unique(explode(',', $candidate['carriers']))) <= 1;
+    }
+
+    /**
+     * @param Candidate $candidate
+     */
+    private static function noNightLayover(array $candidate): bool
+    {
+        return new FlightFilters(noNightLayover: true)->matches($candidate);
+    }
+
+    /**
+     * @param Candidate $candidate
+     */
+    private static function noGulfLayover(array $candidate): bool
+    {
+        return new FlightFilters(noGulfLayover: true)->matches($candidate);
+    }
+
+    /**
+     * @param Candidate $candidate
+     */
+    private static function noVisaLayover(array $candidate): bool
+    {
+        return new FlightFilters(noVisaLayover: true)->matches($candidate);
+    }
+
+    /**
+     * @param Candidate $candidate
+     */
+    private static function lowerCo2(array $candidate): bool
+    {
+        return new FlightFilters(lowerCo2: true)->matches($candidate);
+    }
+
+    /**
      * What each sort option would put at the top: its price and travel time.
      *
      * Sorting is a trade — cheapest is rarely quickest — and the choice is
@@ -436,25 +493,26 @@ final readonly class FlightRepository
         }
 
         $scores = $this->valueScores($candidates);
-        $total = static function (array $c) use ($party): float {
-            $priced = $party->apply((float) $c['price_base'], (float) $c['price_tax']);
 
-            return $priced['base'] + $priced['tax'];
-        };
-
+        // Named methods, not closures, for the same reason availability()'s
+        // toggle map uses them -- a closure's body is checked against its own
+        // parameter type, which a docblock above the literal cannot change.
+        // Every ranker takes the same four arguments so they share one array
+        // shape, even though most ignore $i, $scores or $party.
+        //
         // How each option decides which itinerary wins. Lower is better in all
         // of them except rating, which is negated to keep one comparison.
         $rank = [
-            SortMethod::Recommended->value => static fn(array $c, int $i): float => $scores[$i],
-            SortMethod::Price->value => static fn(array $c, int $i): float => $total($c),
-            SortMethod::Duration->value => static fn(array $c, int $i): float => (float) $c['duration'],
-            SortMethod::LayoverShort->value => static fn(array $c, int $i): float => (float) $c['layover_minutes'],
-            SortMethod::Rating->value => static fn(array $c, int $i): float => -(float) $c['rating'],
-            SortMethod::Depart->value => static fn(array $c, int $i): float => (float) strtotime((string) $c['depart_time']),
-            SortMethod::Arrive->value => static fn(array $c, int $i): float => (float) strtotime((string) $c['arrive_time']),
+            SortMethod::Recommended->value => $this->rankRecommended(...),
+            SortMethod::Price->value => $this->rankPrice(...),
+            SortMethod::Duration->value => $this->rankDuration(...),
+            SortMethod::LayoverShort->value => $this->rankLayoverShort(...),
+            SortMethod::Rating->value => $this->rankRating(...),
+            SortMethod::Depart->value => $this->rankDepart(...),
+            SortMethod::Arrive->value => $this->rankArrive(...),
             // Unknown sorts last here too, so the tab never advertises an
             // itinerary the sort would not put first.
-            SortMethod::Emissions->value => static fn(array $c, int $i): float => (float) ($c['co2_kg'] ?? INF),
+            SortMethod::Emissions->value => $this->rankEmissions(...),
         ];
 
         $highlights = [];
@@ -466,7 +524,7 @@ final readonly class FlightRepository
             foreach ($candidates as $i => $candidate) {
                 // Same tie-break as the SQL ordering, or a sort with many equal
                 // rows would advertise a different one than it returns.
-                $value = [$key($candidate, $i), $total($candidate), (int) $candidate['seg1']];
+                $value = [$key($candidate, $i, $scores, $party), $this->highlightTotal($candidate, $party), (int) $candidate['seg1']];
 
                 if ($best === null || $value < $best) {
                     $best = $value;
@@ -476,13 +534,95 @@ final readonly class FlightRepository
 
             if ($winner !== null) {
                 $highlights[$sort] = [
-                    'price' => $total($winner),
+                    'price' => $this->highlightTotal($winner, $party),
                     'duration' => (int) $winner['duration'],
                 ];
             }
         }
 
         return $highlights;
+    }
+
+    /**
+     * @param Candidate $candidate
+     */
+    private function highlightTotal(array $candidate, Party $party): float
+    {
+        $priced = $party->apply((float) $candidate['price_base'], (float) $candidate['price_tax']);
+
+        return $priced['base'] + $priced['tax'];
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankRecommended(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return $scores[$i];
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankPrice(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return $this->highlightTotal($candidate, $party);
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankDuration(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return (float) $candidate['duration'];
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankLayoverShort(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return (float) $candidate['layover_minutes'];
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankRating(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return -(float) $candidate['rating'];
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankDepart(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return (float) strtotime($candidate['depart_time']);
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankArrive(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return (float) strtotime($candidate['arrive_time']);
+    }
+
+    /**
+     * @param Candidate $candidate
+     * @param list<float> $scores
+     */
+    private function rankEmissions(array $candidate, int $i, array $scores, Party $party): float
+    {
+        return (float) ($candidate['co2_kg'] ?? INF);
     }
 
     /**
@@ -837,6 +977,7 @@ final readonly class FlightRepository
         // Static rather than an instance field because the repository is
         // readonly, and per-process rather than per-call because a round trip
         // searches twice and the airport list does not move between them.
+        /** @var array<string, string>|null $map */
         static $map = null;
 
         if ($map !== null) {
@@ -845,8 +986,11 @@ final readonly class FlightRepository
 
         $map = [];
 
-        foreach ($this->connection->fetchAll('SELECT code, country_code FROM ' . Table::Airports->value) as $row) {
-            $map[(string) $row['code']] = (string) $row['country_code'];
+        /** @var list<AirportCountryRow> $rows */
+        $rows = $this->connection->fetchAll('SELECT code, country_code FROM ' . Table::Airports->value);
+
+        foreach ($rows as $row) {
+            $map[$row['code']] = $row['country_code'];
         }
 
         return $map;
@@ -969,6 +1113,7 @@ final readonly class FlightRepository
      */
     private function aircraftBurn(): array
     {
+        /** @var array<string, float>|null $map */
         static $map = null;
 
         if ($map !== null) {
@@ -977,8 +1122,11 @@ final readonly class FlightRepository
 
         $map = [];
 
-        foreach ($this->connection->fetchAll('SELECT code, fuel_burn_kg_per_km FROM ' . Table::Aircraft->value) as $row) {
-            $map[(string) $row['code']] = (float) $row['fuel_burn_kg_per_km'];
+        /** @var list<AircraftBurnRow> $rows */
+        $rows = $this->connection->fetchAll('SELECT code, fuel_burn_kg_per_km FROM ' . Table::Aircraft->value);
+
+        foreach ($rows as $row) {
+            $map[$row['code']] = (float) $row['fuel_burn_kg_per_km'];
         }
 
         return $map;
@@ -991,6 +1139,7 @@ final readonly class FlightRepository
      */
     private function aircraftSeats(): array
     {
+        /** @var array<string, array<string, int>>|null $map */
         static $map = null;
 
         if ($map !== null) {
@@ -999,8 +1148,11 @@ final readonly class FlightRepository
 
         $map = [];
 
-        foreach ($this->connection->fetchAll('SELECT aircraft, cabin, seats FROM ' . Table::AircraftCabins->value) as $row) {
-            $map[(string) $row['aircraft']][(string) $row['cabin']] = (int) $row['seats'];
+        /** @var list<AircraftCabinRow> $rows */
+        $rows = $this->connection->fetchAll('SELECT aircraft, cabin, seats FROM ' . Table::AircraftCabins->value);
+
+        foreach ($rows as $row) {
+            $map[$row['aircraft']][$row['cabin']] = $row['seats'];
         }
 
         return $map;
@@ -1141,6 +1293,7 @@ final readonly class FlightRepository
             return [];
         }
 
+        /** @var list<FareBrandRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT id, fare_brand FROM ' . Table::Flights->value
             . ' WHERE id IN (' . implode(', ', array_fill(0, count($ids), '?')) . ')',
@@ -1150,7 +1303,7 @@ final readonly class FlightRepository
         $byId = [];
 
         foreach ($rows as $row) {
-            $byId[(int) $row['id']] = $row['fare_brand'] === null ? null : (string) $row['fare_brand'];
+            $byId[$row['id']] = $row['fare_brand'];
         }
 
         $ordered = [];
@@ -1569,6 +1722,10 @@ final readonly class FlightRepository
      */
     private function minTotal(string $sql, array $params): ?float
     {
+        // DECIMAL arithmetic stringifies, same as every other price_base +
+        // price_tax expression in this file -- MIN() over it does not change
+        // that.
+        /** @var string|null $value */
         $value = $this->connection->fetchValue(
             'SELECT MIN(price_base + price_tax) FROM (' . $sql . ') candidates',
             $params,
@@ -1826,13 +1983,22 @@ final readonly class FlightRepository
         // Only airports the network actually serves: one that carries no traffic
         // can never match a flight, and carrying it in the IN list turns an
         // index lookup into a range scan on the connection joins.
+        /** @var list<AirportCodeRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT code FROM ' . Table::Airports->value
             . ' WHERE (code = ? OR city_code = ?) AND enabled = 1 AND traffic_weight > 0',
             [$codeOrCity, $codeOrCity],
         );
 
-        return array_map(static fn(array $row): string => (string) $row['code'], $rows);
+        return array_map(self::airportCode(...), $rows);
+    }
+
+    /**
+     * @param AirportCodeRow $row
+     */
+    private static function airportCode(array $row): string
+    {
+        return $row['code'];
     }
 
     /**
@@ -1877,6 +2043,11 @@ final readonly class FlightRepository
     {
         $airports = Table::Airports->value;
 
+        // ST_Distance_Sphere(...) / 1000 is a genuine DOUBLE expression, not
+        // DECIMAL arithmetic, and live-verified MAX() over it stays float --
+        // unlike the price_base + price_tax DECIMAL sums elsewhere in this
+        // file, it does not stringify.
+        /** @var float|null $span */
         $span = $this->connection->fetchValue(
             sprintf(
                 'SELECT MAX(ST_Distance_Sphere(POINT(a.longitude, a.latitude),'
@@ -1890,7 +2061,7 @@ final readonly class FlightRepository
             [...$fromCodes, ...$toCodes],
         );
 
-        return $span === null ? null : (int) round((float) $span);
+        return $span === null ? null : (int) round($span);
     }
 
     /**
