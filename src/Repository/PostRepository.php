@@ -43,6 +43,7 @@ final readonly class PostRepository
      */
     public function find(string $slug, string $locale = self::DEFAULT_LOCALE): ?array
     {
+        /** @var array{author: string, hero: string|null, published_at: string, title: string, summary: string, hero_alt: string|null, body: string, updated_at: string}|null $row */
         $row = $this->connection->fetchOne(
             'SELECT p.author, p.hero, p.published_at,'
             . ' t.title, t.summary, t.hero_alt, t.body, t.updated_at'
@@ -83,6 +84,7 @@ final readonly class PostRepository
      */
     public function all(string $locale = self::DEFAULT_LOCALE): array
     {
+        /** @var list<array{slug: string, author: string, hero: string|null, published_at: string, title: string, summary: string, hero_alt: string|null}> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT p.slug, p.author, p.hero, p.published_at, t.title, t.summary, t.hero_alt'
             . ' FROM ' . Table::Posts->value . ' p'
@@ -105,7 +107,8 @@ final readonly class PostRepository
      */
     public function taggedWith(string $tag, string $locale = self::DEFAULT_LOCALE): array
     {
-        return self::hydrate($this->connection->fetchAll(
+        /** @var list<array{slug: string, author: string, hero: string|null, published_at: string, title: string, summary: string, hero_alt: string|null}> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT p.slug, p.author, p.hero, p.published_at, t.title, t.summary, t.hero_alt'
             . ' FROM ' . Table::Posts->value . ' p'
             . ' JOIN ' . Table::PostTranslations->value . ' t ON t.slug = p.slug'
@@ -113,7 +116,9 @@ final readonly class PostRepository
             . ' WHERE m.tag = ? AND p.enabled = 1 AND t.locale = ?'
             . ' ORDER BY p.published_at DESC, p.slug',
             [$tag, $locale],
-        ));
+        );
+
+        return self::hydrate($rows);
     }
 
     /**
@@ -134,7 +139,8 @@ final readonly class PostRepository
             return [];
         }
 
-        return self::hydrate($this->connection->fetchAll(
+        /** @var list<array{slug: string, author: string, hero: string|null, published_at: string, title: string, summary: string, hero_alt: string|null}> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT DISTINCT p.slug, p.author, p.hero, p.published_at, t.title, t.summary, t.hero_alt'
             . ' FROM ' . Table::PostTagMap->value . ' mine'
             . ' JOIN ' . Table::PostTagMap->value . ' theirs'
@@ -145,7 +151,9 @@ final readonly class PostRepository
             . ' ORDER BY p.published_at DESC, p.slug'
             . ' LIMIT ' . $limit,
             [$slug, $locale],
-        ));
+        );
+
+        return self::hydrate($rows);
     }
 
     /**
@@ -171,14 +179,17 @@ final readonly class PostRepository
             return [];
         }
 
-        $found = self::hydrate($this->connection->fetchAll(
+        /** @var list<array{slug: string, author: string, hero: string|null, published_at: string, title: string, summary: string, hero_alt: string|null}> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT p.slug, p.author, p.hero, p.published_at, t.title, t.summary, t.hero_alt'
             . ' FROM ' . Table::Posts->value . ' p'
             . ' JOIN ' . Table::PostTranslations->value . ' t ON t.slug = p.slug'
             . ' WHERE p.enabled = 1 AND t.locale = ?'
             . ' AND p.slug IN (' . implode(', ', array_fill(0, count($slugs), '?')) . ')',
             [$locale, ...$slugs],
-        ));
+        );
+
+        $found = self::hydrate($rows);
 
         $ordered = [];
 
@@ -196,7 +207,7 @@ final readonly class PostRepository
     /**
      * One row shape, written once.
      *
-     * @param list<array<string, mixed>> $rows
+     * @param list<array{slug: string, author: string, hero: string|null, published_at: string, title: string, summary: string, hero_alt: string|null}> $rows
      * @return array<string, array{title: string, summary: string, author: string, hero: ?string, hero_alt: ?string, published_at: string}>
      */
     private static function hydrate(array $rows): array
@@ -229,10 +240,10 @@ final readonly class PostRepository
      */
     public function slugs(): array
     {
-        return array_map(
-            static fn(array $row): string => (string) $row['slug'],
-            $this->connection->fetchAll('SELECT slug FROM ' . Table::Posts->value),
-        );
+        /** @var list<array{slug: string}> $rows */
+        $rows = $this->connection->fetchAll('SELECT slug FROM ' . Table::Posts->value);
+
+        return array_column($rows, 'slug');
     }
 
     /**
@@ -259,6 +270,7 @@ final readonly class PostRepository
         array $translation,
         string $locale = self::DEFAULT_LOCALE,
     ): bool {
+        /** @var array{title: string, summary: string, hero_alt: string|null, body: string}|null $stored */
         $stored = $this->connection->fetchOne(
             'SELECT title, summary, hero_alt, body FROM ' . Table::PostTranslations->value
             . ' WHERE slug = ? AND locale = ?',
