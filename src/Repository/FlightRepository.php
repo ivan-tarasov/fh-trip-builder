@@ -125,6 +125,16 @@ use TripBuilder\Party;
  *     airline: string, departure_airport: string, arrival_airport: string,
  *     departure_time: string, arrival_time: string, duration: int, total: string, rn: int,
  * }
+ *
+ * `cheapestDirectPerOrigin()`'s shape is the same columns minus the
+ * destination-city pair -- the caller already knows which city that is --
+ * so the same live-verified types apply.
+ *
+ * @phpstan-type CheapestOriginRow array{
+ *     from_city_code: string, from_city: string,
+ *     airline: string, departure_airport: string, arrival_airport: string,
+ *     departure_time: string, arrival_time: string, duration: int, total: string, rn: int,
+ * }
  */
 final readonly class FlightRepository
 {
@@ -1380,7 +1390,7 @@ final readonly class FlightRepository
      *
      * @param list<string> $fromAirports
      * @param list<string> $toAirports
-     * @return list<array<string, mixed>>
+     * @return list<CheapestOriginRow>
      */
     public function cheapestDirectPerOrigin(array $fromAirports, array $toAirports, CabinClass $cabin): array
     {
@@ -1391,7 +1401,8 @@ final readonly class FlightRepository
         $from = implode(',', array_fill(0, count($fromAirports), '?'));
         $to = implode(',', array_fill(0, count($toAirports), '?'));
 
-        return $this->connection->fetchAll(
+        /** @var list<CheapestOriginRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT x.* FROM ('
             . ' SELECT o.city_code AS from_city_code, oc.name AS from_city,'
             . '  f.airline, f.departure_airport, f.arrival_airport,'
@@ -1415,6 +1426,8 @@ final readonly class FlightRepository
             . ') x WHERE x.rn = 1 ORDER BY x.total ASC',
             [...$fromAirports, ...$toAirports, $cabin->bit()],
         );
+
+        return $rows;
     }
 
     /**
