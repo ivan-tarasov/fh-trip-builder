@@ -6101,6 +6101,42 @@ body:has(main.article) .breadcrumbs__list {
   font-size: .75rem;
 }
 
+/* The rate line, under the sentence that says whose rates these are. */
+.currency__history { margin: .4rem 0 0; }
+
+/* Stretched to the panel's width rather than drawn at its own: the shape is
+   the point and 220 units of viewBox are not 220 pixels of anybody's panel. */
+.currency__spark {
+  display: block;
+  width: 100%;
+  height: 36px;
+}
+
+.currency__spark polyline {
+  fill: none;
+  stroke: var(--ink-muted);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* The stroke is scaled with the box by preserveAspectRatio="none", which
+     would otherwise make a wide panel draw a hairline. */
+  vector-effect: non-scaling-stroke;
+}
+
+.currency__history-note {
+  color: var(--ink-muted);
+  font-size: .6875rem;
+  line-height: 1.4;
+}
+
+/* Up is the chosen currency buying more per dollar, which is good news for a
+   Canadian traveller -- so green is the honest colour for it here. The word
+   and the sign say it too, because a percentage read out on its own is no
+   worse for having no colour. */
+.currency__change--up { color: var(--brand-success); }
+.currency__change--down { color: var(--brand-danger); }
+.currency__change--flat { color: var(--ink-muted); }
+
 /* Hidden while the panel is shut, so the filter and thirty buttons are not in
    the tab order of every page on the site. */
 .currency__option[hidden] { display: none; }

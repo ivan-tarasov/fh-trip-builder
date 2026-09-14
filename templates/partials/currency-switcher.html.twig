@@ -85,5 +85,31 @@
                 Built-in reference rates
             {% endif %}
         </p>
+
+        {# Which way the chosen currency has been going, under the line that
+           says whose rates these are -- which is where a reader is already
+           asking how much to trust the prices on the page.
+
+           Absent for the base currency, which is 1.00 against itself every day,
+           and for a table nobody has backfilled, where one day is a point and
+           not a line. Both read as no chart rather than as an empty one. #}
+        {% set history = rates_history() %}
+        {% if history %}
+            <figure class="currency__history">
+                <svg class="currency__spark" viewBox="0 0 220 36" width="220" height="36"
+                     role="img" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+                    <polyline points="{{ history.points }}" />
+                </svg>
+                {# The line has no axes on purpose, so the caption carries every
+                   number: where it started, where it is now, and over what. #}
+                <figcaption class="currency__history-note">
+                    {{ history.code }} per CAD, {{ history.from }} to {{ history.to }} over
+                    {{ history.days }} trading days
+                    <span class="currency__change currency__change--{{ history.change > 0 ? 'up' : (history.change < 0 ? 'down' : 'flat') }}">
+                        {{ history.change > 0 ? '+' : '' }}{{ history.change }}%
+                    </span>
+                </figcaption>
+            </figure>
+        {% endif %}
     </div>
 </div>

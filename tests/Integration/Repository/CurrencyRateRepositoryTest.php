@@ -36,8 +36,8 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
         }
 
         $this->connection()->execute(
-            'DELETE FROM currency_rates WHERE code = ?',
-            [self::TEST_CODE],
+            'DELETE FROM currency_rates WHERE code IN (?, ?)',
+            [self::TEST_CODE, 'ZZQ'],
         );
     }
 
@@ -124,6 +124,111 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
         self::assertArrayHasKey('CAD', $rates);
         self::assertSame(1.0, $rates['CAD'], 'the base currency must sit at parity');
         self::assertNotNull($this->repository()->latestDate());
+    }
+
+    /**
+     * A backfill is many days at once, and it is a history when it lands.
+     *
+     * What B2.1 (#104) was for: one date is a point, and a point is not a
+     * chart.
+     */
+    public function testASpanOfDaysIsWrittenAsASpanOfRows(): void
+    {
+        $written = $this->repository()->storeMany([
+            self::OLDER => [self::TEST_CODE => 2.5],
+            self::NEWER => [self::TEST_CODE => 3.5],
+        ]);
+
+        self::assertSame(2, $written);
+        self::assertSame(
+            [self::OLDER => 2.5, self::NEWER => 3.5],
+            $this->history(),
+        );
+    }
+
+    /**
+     * Running the same span twice reports the nothing it changed.
+     *
+     * A backfill is the command somebody runs when they are not sure whether
+     * they have run it, so it has to be safe to run again and honest about
+     * having done nothing.
+     */
+    public function testTheSameSpanTwiceChangesNothing(): void
+    {
+        $days = [self::OLDER => [self::TEST_CODE => 2.5], self::NEWER => [self::TEST_CODE => 3.5]];
+
+        self::assertSame(2, $this->repository()->storeMany($days));
+        self::assertSame(0, $this->repository()->storeMany($days));
+        self::assertCount(2, $this->history());
+    }
+
+    /**
+     * A day already held is corrected rather than duplicated.
+     */
+    public function testARewrittenDayIsCorrected(): void
+    {
+        $this->repository()->storeMany([self::OLDER => [self::TEST_CODE => 2.5]]);
+        $this->repository()->storeMany([self::OLDER => [self::TEST_CODE => 2.75]]);
+
+        self::assertSame([self::OLDER => 2.75], $this->history());
+    }
+
+    /**
+     * The read the graph is drawn from: one currency, oldest first.
+     */
+    public function testAHistoryComesBackOldestFirst(): void
+    {
+        $this->repository()->storeMany([
+            self::NEWER => [self::TEST_CODE => 3.5],
+            self::OLDER => [self::TEST_CODE => 2.5],
+        ]);
+
+        self::assertSame(
+            [self::OLDER => 2.5, self::NEWER => 3.5],
+            $this->repository()->history(self::TEST_CODE, 90),
+        );
+    }
+
+    /**
+     * Bounded by the most recent days, not the oldest.
+     *
+     * A chart of the last ninety days that quietly drew the first ninety this
+     * table ever held would be wrong in a way nobody would notice.
+     */
+    public function testAHistoryKeepsTheNewestDays(): void
+    {
+        $this->repository()->storeMany([
+            '1999-01-04' => [self::TEST_CODE => 1.0],
+            '1999-01-05' => [self::TEST_CODE => 2.0],
+            '1999-01-06' => [self::TEST_CODE => 3.0],
+        ]);
+
+        self::assertSame(
+            ['1999-01-05' => 2.0, '1999-01-06' => 3.0],
+            $this->repository()->history(self::TEST_CODE, 2),
+        );
+    }
+
+    public function testAHistoryForACurrencyNobodyStoredIsEmpty(): void
+    {
+        self::assertSame([], $this->repository()->history('ZZQ', 90));
+    }
+
+    /** @return array<string, float> rate_date => rate */
+    private function history(): array
+    {
+        $rows = $this->connection()->fetchAll(
+            'SELECT rate_date, rate FROM currency_rates WHERE code = ? ORDER BY rate_date',
+            [self::TEST_CODE],
+        );
+
+        $history = [];
+
+        foreach ($rows as $row) {
+            $history[(string) $row['rate_date']] = (float) $row['rate'];
+        }
+
+        return $history;
     }
 
     private function repository(): CurrencyRateRepository

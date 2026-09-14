@@ -65,6 +65,34 @@ final readonly class CurrencyRateRepository
     }
 
     /**
+     * What one currency has done lately, oldest first.
+     *
+     * The table has always been a history and until B2.1 (#104) it held one
+     * day, so this is the first read that asks it for more than "now". Bounded
+     * by a count of days rather than by a date, because the source publishes on
+     * working days only: ninety calendar days is about sixty-four rows, and a
+     * chart wants its points, not its calendar.
+     *
+     * @return array<string, float> rate_date => units per 1 CAD, oldest first
+     */
+    public function history(string $code, int $days): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT rate_date, rate FROM ' . Table::CurrencyRates->value
+            . ' WHERE code = ? ORDER BY rate_date DESC LIMIT ' . max(1, $days),
+            [$code],
+        );
+
+        $history = [];
+
+        foreach (array_reverse($rows) as $row) {
+            $history[(string) $row['rate_date']] = (float) $row['rate'];
+        }
+
+        return $history;
+    }
+
+    /**
      * Write a day's rates.
      *
      * Upserted rather than inserted, so running the command twice on one
@@ -86,6 +114,30 @@ final readonly class CurrencyRateRepository
                 . ' ON DUPLICATE KEY UPDATE rate = VALUES(rate), fetched_at = NOW()',
                 [$code, $rateDate, $rate],
             ) > 0 ? 1 : 0;
+        }
+
+        return $written;
+    }
+
+    /**
+     * Write many days' rates.
+     *
+     * A loop over `store()` rather than one large statement: a backfill of a
+     * year is 7,650 upserts and takes about a second, which is nothing for a
+     * command somebody runs once, and it keeps one definition of how a rate is
+     * written. Counted the same way too, so a re-run of the same span reports
+     * the nothing it changed rather than claiming it wrote a year again
+     * (B2.1, #104).
+     *
+     * @param array<string, array<string, float>> $days rate_date => code => units per 1 CAD
+     * @return int rows written
+     */
+    public function storeMany(array $days): int
+    {
+        $written = 0;
+
+        foreach ($days as $rateDate => $rates) {
+            $written += $this->store($rates, $rateDate);
         }
 
         return $written;

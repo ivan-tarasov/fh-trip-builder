@@ -139,4 +139,144 @@ final class CurrencyRatesTest extends TestCase
         yield 'unusable date' => ['{"amount":1.0,"base":"CAD","date":"yesterday","rates":{"USD":0.7,"EUR":0.6,"JPY":111.0}}'];
         yield 'a rate sent as a string' => ['{"amount":1.0,"base":"CAD","date":"2026-09-09","rates":{"USD":"0.7263","EUR":0.6,"JPY":111.0}}'];
     }
+
+    /**
+     * A real range response, cut to the codes above.
+     *
+     * Two publication dates and a weekend between them, which is what the
+     * source actually sends: it publishes on working days, so a span of
+     * calendar days comes back with holes in it.
+     */
+    private const string SPAN = '{"amount":1.0,"base":"CAD","start_date":"2026-09-04","end_date":"2026-09-07",'
+        . '"rates":{"2026-09-04":{"USD":0.7263,"EUR":0.62332,"JPY":111.32},'
+        . '"2026-09-07":{"USD":0.7271,"EUR":0.62410,"JPY":111.05}}}';
+
+    public function testASpanIsReadDayByDay(): void
+    {
+        $parsed = Rates::parseRange(self::SPAN, self::WANTED);
+
+        self::assertSame('2026-09-04', $parsed['start']);
+        self::assertSame('2026-09-07', $parsed['end']);
+        self::assertSame(['2026-09-04', '2026-09-07'], array_keys($parsed['days']));
+        self::assertSame(
+            ['CAD' => 1.0, 'USD' => 0.7263, 'EUR' => 0.62332, 'JPY' => 111.32],
+            $parsed['days']['2026-09-04'],
+        );
+        self::assertSame([], $parsed['missing']);
+    }
+
+    /**
+     * The one place a range is deliberately more forgiving than a day.
+     *
+     * A truncated *daily* response has to be refused, because it would leave
+     * currencies on an older figure while claiming all of them were confirmed.
+     * A historic day the ECB published nothing for is a fact about history --
+     * it really did suspend some currencies for years -- and throwing a year of
+     * thirty currencies away over one gap in one of them would be worse.
+     */
+    public function testADayMissingACurrencyIsRecordedAndKept(): void
+    {
+        $gap = '{"amount":1.0,"base":"CAD","start_date":"2026-09-04","end_date":"2026-09-07",'
+            . '"rates":{"2026-09-04":{"USD":0.7263,"EUR":0.62332},'
+            . '"2026-09-07":{"USD":0.7271,"EUR":0.62410,"JPY":111.05}}}';
+
+        $parsed = Rates::parseRange($gap, self::WANTED);
+
+        self::assertCount(2, $parsed['days']);
+        self::assertArrayNotHasKey('JPY', $parsed['days']['2026-09-04']);
+        self::assertSame(111.05, $parsed['days']['2026-09-07']['JPY']);
+        self::assertSame(['JPY' => 1], $parsed['missing']);
+    }
+
+    /**
+     * A day holding nothing but the base is not a day the source published.
+     */
+    public function testADayWithNothingInItIsDropped(): void
+    {
+        $empty = '{"amount":1.0,"base":"CAD","start_date":"2026-09-04","end_date":"2026-09-07",'
+            . '"rates":{"2026-09-04":{},"2026-09-07":{"USD":0.7271,"EUR":0.62410,"JPY":111.05}}}';
+
+        $parsed = Rates::parseRange($empty, self::WANTED);
+
+        self::assertSame(['2026-09-07'], array_keys($parsed['days']));
+        self::assertSame(3, $parsed['missing']['USD'] + $parsed['missing']['EUR'] + $parsed['missing']['JPY']);
+    }
+
+    /**
+     * The bounds fall back to the days that actually came back.
+     *
+     * The source returns the last publication on or before the start, so its
+     * own `start_date` and the first date in the payload can differ -- but if
+     * it sends neither, the days are the only honest answer.
+     */
+    public function testTheBoundsFallBackToTheDaysThemselves(): void
+    {
+        $bare = '{"amount":1.0,"base":"CAD",'
+            . '"rates":{"2026-09-07":{"USD":0.7271,"EUR":0.6,"JPY":111.0},'
+            . '"2026-09-04":{"USD":0.7263,"EUR":0.6,"JPY":111.3}}}';
+
+        $parsed = Rates::parseRange($bare, self::WANTED);
+
+        self::assertSame('2026-09-04', $parsed['start']);
+        self::assertSame('2026-09-07', $parsed['end']);
+    }
+
+    #[DataProvider('unusableSpans')]
+    public function testAnUnusableSpanBodyIsRefused(string $body): void
+    {
+        $this->expectException(RuntimeException::class);
+
+        Rates::parseRange($body, self::WANTED);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unusableSpans(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'not json' => ['<html>502 Bad Gateway</html>'];
+        yield 'the wrong base' => ['{"amount":1.0,"base":"EUR","rates":{"2026-09-07":{"USD":0.7}}}'];
+        yield 'no rates key' => ['{"amount":1.0,"base":"CAD","start_date":"2026-09-04"}'];
+        yield 'empty rates' => ['{"amount":1.0,"base":"CAD","rates":{}}'];
+        yield 'filed under something that is not a date' => ['{"amount":1.0,"base":"CAD","rates":{"friday":{"USD":0.7}}}'];
+        yield 'a day that is not an object' => ['{"amount":1.0,"base":"CAD","rates":{"2026-09-07":0.7}}'];
+        yield 'every day empty' => ['{"amount":1.0,"base":"CAD","rates":{"2026-09-07":{},"2026-09-04":{}}}'];
+    }
+
+    /**
+     * The span reaches a request path, so it is checked rather than trusted.
+     */
+    public function testASpanIsRewrittenInTheSourcesOwnSyntax(): void
+    {
+        self::assertSame('2025-09-13..2026-03-01', Rates::readSpan('2025-09-13..2026-03-01'));
+        // A bare date means "from then until the latest", which is the common
+        // ask and the source's own open-ended form.
+        self::assertSame('2025-09-13..', Rates::readSpan('2025-09-13'));
+        self::assertSame('2025-09-13..', Rates::readSpan('2025-09-13..'));
+    }
+
+    #[DataProvider('unusableSpanArguments')]
+    public function testAnUnusableSpanArgumentIsRefused(string $span): void
+    {
+        $this->expectException(RuntimeException::class);
+
+        Rates::readSpan($span);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unusableSpanArguments(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'words' => ['last year'];
+        yield 'a shape that is close' => ['2025-9-13'];
+        // Matches the shape and is not a day, which is the reason the shape is
+        // not the whole check.
+        yield 'the thirtieth of February' => ['2025-02-30'];
+        yield 'backwards' => ['2026-03-01..2025-09-13'];
+        yield 'the future' => ['2099-01-01'];
+        // The span is written into a URL, so anything that could leave the
+        // path it was meant for has to be refused by shape.
+        yield 'a second path segment' => ['2025-09-13/../../admin'];
+        yield 'a query of its own' => ['2025-09-13?base=USD'];
+        yield 'another host' => ['https://example.test/v1/latest'];
+    }
 }
