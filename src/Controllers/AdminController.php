@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace TripBuilder\Controllers;
 
+use DateTimeImmutable;
 use Exception;
+use Throwable;
 use TripBuilder\Admin;
 use TripBuilder\Csrf;
+use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
+use TripBuilder\Repository\DashboardRepository;
+use TripBuilder\Repository\ScheduleRunRepository;
+use TripBuilder\Schedule;
 use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
 use Twig\Error\Error;
@@ -48,7 +54,67 @@ class AdminController extends AbstractController
     private const string SLUG = '/^[a-z0-9][a-z0-9-]{0,63}$/';
 
     /**
-     * The panel: every category, and the articles filed under each.
+     * The dashboard.
+     *
+     * An operations page and not a business one, which was measured rather than
+     * chosen -- `DashboardRepository` opens with the counting that decided it
+     * (A3.6, #231).
+     *
+     * @throws Exception|Error
+     */
+    public function index(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $dashboard = new DashboardRepository($this->connection());
+        $schedule = $this->schedule();
+
+        echo new TwigRenderer()->render('admin/overview.html.twig', [
+            'states' => $dashboard->states($schedule['health']),
+            'counts' => $dashboard->counts(),
+            'schedule' => $dashboard->schedule($schedule['health'], $schedule['tasks']),
+            'content' => $dashboard->content(),
+            'searches' => $dashboard->topSearches(5),
+            // What the research calls freshness transparency, and what this
+            // page needs because none of it is cached: every figure was read
+            // when the page was drawn, and saying so is what lets somebody
+            // trust a green tile.
+            'read_at' => date('j M, H:i'),
+        ]);
+    }
+
+    /**
+     * How the scheduled commands are doing, and what they are.
+     *
+     * `Schedule` already knows how to age a run against its own cron, and
+     * `HealthController` already asks it this way -- a second opinion here
+     * would be a second thing to keep in step.
+     *
+     * @return array{health: array<string, array{age: string, stale: bool}>, tasks: list<array{command: string, cron: \TripBuilder\Cron}>}
+     */
+    private function schedule(): array
+    {
+        try {
+            $schedule = Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php');
+
+            return [
+                'health' => $schedule->health(
+                    new DateTimeImmutable(),
+                    new ScheduleRunRepository($this->connection())->all(),
+                ),
+                'tasks' => $schedule->tasks(),
+            ];
+        } catch (Throwable) {
+            // A dashboard that 500s because it could not read a config file
+            // would be reporting on itself. The strip says "unknown".
+            return ['health' => [], 'tasks' => []];
+        }
+    }
+
+    /**
+     * Every category, and the articles filed under each.
      *
      * Also takes the small POSTs the list itself makes -- move up, move down,
      * show, hide. They are forms rather than links because each one changes
@@ -57,7 +123,7 @@ class AdminController extends AbstractController
      *
      * @throws Exception|Error
      */
-    public function index(): void
+    public function content(): void
     {
         if (!$this->guard()) {
             return;
@@ -76,7 +142,7 @@ class AdminController extends AbstractController
             $grouped[$article['category']][] = $article;
         }
 
-        echo new TwigRenderer()->render('admin/index.html.twig', [
+        echo new TwigRenderer()->render('admin/content.html.twig', [
             'idle_minutes' => Admin::IDLE_MINUTES,
             'categories' => new ArticleCategoryRepository($this->connection())->forPanel(),
             'articles' => $grouped,
@@ -249,13 +315,13 @@ class AdminController extends AbstractController
      * The list's own buttons: move, show, hide.
      *
      * One handler and one address, so the list has four small forms rather
-     * than four routes. Everything ends in a redirect back to `/admin`, which
+     * than four routes. Everything ends in a redirect back to the list, which
      * is what stops a refresh repeating the last move.
      */
     private function act(): void
     {
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
-            $this->bounce('/admin');
+            $this->bounce('/admin/content');
 
             return;
         }
@@ -265,7 +331,7 @@ class AdminController extends AbstractController
         $action = $this->request->body->str('action');
 
         if (preg_match(self::SLUG, $slug) !== 1 || !in_array($kind, ['article', 'category'], true)) {
-            $this->bounce('/admin');
+            $this->bounce('/admin/content');
 
             return;
         }
@@ -291,7 +357,7 @@ class AdminController extends AbstractController
             };
         }
 
-        $this->bounce('/admin');
+        $this->bounce('/admin/content');
     }
 
     /**
@@ -358,7 +424,7 @@ class AdminController extends AbstractController
         // decision is made, so it makes it here.
         $articles->setEnabled($posted['slug'], $posted['enabled']);
 
-        $this->bounce('/admin');
+        $this->bounce('/admin/content');
     }
 
     /**
@@ -402,7 +468,7 @@ class AdminController extends AbstractController
 
         $categories->setEnabled($posted['slug'], $posted['enabled']);
 
-        $this->bounce('/admin');
+        $this->bounce('/admin/content');
     }
 
     /**
