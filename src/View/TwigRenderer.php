@@ -140,6 +140,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('footer_links', $this->layout->footerLinks(...)));
         $this->twig->addFunction(new TwigFunction('footer_more', $this->layout->footerMore(...)));
         $this->twig->addFunction(new TwigFunction('rates_date', $this->layout->ratesDate(...)));
+        $this->twig->addFunction(new TwigFunction('rates_history', $this->layout->ratesHistory(...)));
     }
 
     /**

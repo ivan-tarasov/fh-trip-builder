@@ -9,6 +9,7 @@ use Throwable;
 use TripBuilder\ArticleRating;
 use TripBuilder\Config;
 use TripBuilder\Csrf;
+use TripBuilder\Currency;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\Helper;
@@ -37,6 +38,27 @@ final class LayoutData
 
     /** '' once asked and found nothing, so the query runs once either way. */
     private ?string $ratesDate = null;
+
+    /**
+     * The active currency's recent rates, once asked for.
+     *
+     * `false` once asked and found nothing worth drawing, for the same reason
+     * `$ratesDate` uses '': null has to mean "not asked yet" or the query runs
+     * on every call that finds nothing.
+     *
+     * @var array{code: string, points: string, from: string, to: string, days: int, change: float}|false|null
+     */
+    private array|false|null $ratesHistory = null;
+
+    /**
+     * How far back the line in the currency panel reaches.
+     *
+     * Publication days, not calendar days: the source publishes on working days
+     * only, so this is about four months of wall clock. Long enough to show a
+     * trend and short enough that ninety points across 220 pixels are still
+     * more than two pixels apart.
+     */
+    private const int RATES_HISTORY_DAYS = 90;
 
     /** Below this, the estimate is close enough to print as it comes. */
     private const int COUNT_ROUND_ABOVE = 10000;
@@ -351,6 +373,80 @@ final class LayoutData
         $this->ratesDate = $date ?? '';
 
         return $date;
+    }
+
+    /**
+     * The active currency's recent rates, shaped for the panel's sparkline.
+     *
+     * Lazy and memoised like `ratesDate()` beside it, and for the same reason:
+     * one query for one line that most visitors never open.
+     *
+     * Null for three cases that are all "there is no line here", and the panel
+     * treats them the same. The base currency, which is 1.00 against itself
+     * every day and would draw a flat line saying nothing. A table that has not
+     * been backfilled, which holds one day and one day is a point. And a
+     * database that would not answer.
+     *
+     * @return array{code: string, points: string, from: string, to: string, days: int, change: float}|null
+     */
+    public function ratesHistory(): ?array
+    {
+        if ($this->ratesHistory !== null) {
+            return $this->ratesHistory === false ? null : $this->ratesHistory;
+        }
+
+        $this->ratesHistory = false;
+        $active = Currency::active();
+
+        if ($active->code === Currency::base()->code) {
+            return null;
+        }
+
+        try {
+            $history = new CurrencyRateRepository($this->connection())
+                ->history($active->code, self::RATES_HISTORY_DAYS);
+        } catch (Throwable) {
+            return null;
+        }
+
+        $values = array_values($history);
+        $points = Sparkline::points($values);
+
+        if ($points === null) {
+            return null;
+        }
+
+        $first = $values[0];
+        $last = $values[count($values) - 1];
+
+        $this->ratesHistory = [
+            'code' => $active->code,
+            'points' => $points,
+            'from' => self::rateLabel($first),
+            'to' => self::rateLabel($last),
+            'days' => count($values),
+            // Against where it started, which is what "over ninety days" means.
+            'change' => $first > 0 ? round(($last - $first) / $first * 100, 1) : 0.0,
+        ];
+
+        return $this->ratesHistory;
+    }
+
+    /**
+     * A rate written to a useful number of places.
+     *
+     * One rule will not do: the same column holds 0.62332 euros and 12,700
+     * rupiah to the dollar, and four decimal places on the second is digits of
+     * noise while two on the first is not a rate at all.
+     *
+     * Rounding further than this was tried and taken back out. The caption
+     * prints both ends *and* the percentage between them, so a reader can check
+     * one against the other -- and at no decimal places the yen read "115 to
+     * 111, -3.3%", which is arithmetic anybody can see is wrong.
+     */
+    private static function rateLabel(float $rate): string
+    {
+        return $rate >= 1 ? number_format($rate, 2) : number_format($rate, 4);
     }
 
     /**
