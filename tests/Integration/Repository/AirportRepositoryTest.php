@@ -8,6 +8,9 @@ use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
+/**
+ * @phpstan-import-type PickableRow from AirportRepository
+ */
 final class AirportRepositoryTest extends IntegrationTestCase
 {
     private const EXPECTED_COLUMNS = [
@@ -55,13 +58,12 @@ final class AirportRepositoryTest extends IntegrationTestCase
 
         self::assertNotEmpty($places);
 
-        $served = array_column(
-            $this->connection()->fetchAll(
-                'SELECT code FROM airports WHERE enabled = 1 AND is_major = 1'
-                . ' UNION SELECT DISTINCT city_code FROM airports WHERE enabled = 1 AND is_major = 1',
-            ),
-            'code',
+        /** @var list<array{code: string}> $servedRows */
+        $servedRows = $this->connection()->fetchAll(
+            'SELECT code FROM airports WHERE enabled = 1 AND is_major = 1'
+            . ' UNION SELECT DISTINCT city_code FROM airports WHERE enabled = 1 AND is_major = 1',
         );
+        $served = array_column($servedRows, 'code');
 
         self::assertEmpty(array_diff(array_column($places, 'code'), $served));
     }
@@ -417,7 +419,7 @@ final class AirportRepositoryTest extends IntegrationTestCase
     /**
      * The picker's airport rows, without the city rows above them.
      *
-     * @return list<array<string, mixed>>
+     * @return list<PickableRow>
      */
     private function airportRows(): array
     {
@@ -428,7 +430,7 @@ final class AirportRepositoryTest extends IntegrationTestCase
     }
 
     /**
-     * @param list<array<string, mixed>> $places
+     * @param list<PickableRow> $places
      * @return array{code: string, city_code: string}
      */
     private function anAirportInAMultiAirportCity(array $places): array
@@ -486,16 +488,14 @@ final class AirportRepositoryTest extends IntegrationTestCase
      */
     private function airportsOffered(string $cityCode): array
     {
-        $codes = array_column(
-            $this->connection()->fetchAll(
-                'SELECT code FROM airports WHERE city_code = ? AND enabled = 1 AND is_major = 1'
-                . ' AND code <> city_code ORDER BY code',
-                [$cityCode],
-            ),
-            'code',
+        /** @var list<array{code: string}> $rows */
+        $rows = $this->connection()->fetchAll(
+            'SELECT code FROM airports WHERE city_code = ? AND enabled = 1 AND is_major = 1'
+            . ' AND code <> city_code ORDER BY code',
+            [$cityCode],
         );
 
-        return array_map(strval(...), $codes);
+        return array_column($rows, 'code');
     }
 
     private function repository(): AirportRepository
@@ -585,6 +585,7 @@ final class AirportRepositoryTest extends IntegrationTestCase
     {
         $nestable = array_column($this->inMultiAirportCities(), 'code');
 
+        /** @var list<array{code: string, short_title: string}> $rows */
         $rows = $this->connection()->fetchAll(
             'SELECT code, short_title FROM airports WHERE short_title IS NOT NULL AND short_title <> ?',
             [''],
@@ -650,10 +651,11 @@ final class AirportRepositoryTest extends IntegrationTestCase
     /**
      * Every major airport in a city that has more than one of them.
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{code: string, title: string, short_title: string|null, city: string}>
      */
     private function inMultiAirportCities(): array
     {
+        /** @var list<array{code: string, title: string, short_title: string|null, city: string}> */
         $rows = $this->connection()->fetchAll(
             'SELECT a.code, a.title, a.short_title, a.city FROM airports a'
             . ' WHERE a.enabled = 1 AND a.is_major = 1'
