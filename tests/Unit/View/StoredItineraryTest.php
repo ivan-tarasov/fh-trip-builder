@@ -6,7 +6,6 @@ namespace TripBuilder\Tests\Unit\View;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use stdClass;
 use TripBuilder\View\StoredItinerary;
 
 final class StoredItineraryTest extends TestCase
@@ -56,32 +55,31 @@ final class StoredItineraryTest extends TestCase
         ]));
 
         self::assertNotNull($itinerary);
-        self::assertSame(1, $itinerary->stops);
-        self::assertCount(1, $itinerary->layovers);
+        self::assertSame(1, $itinerary['stops']);
+        self::assertCount(1, $itinerary['layovers']);
         // 90 + 420 flying, plus the 90-minute wait between them. Never a
         // subtraction of the two outer stamps, which are in different zones.
-        self::assertSame(600, $itinerary->total_duration);
-        self::assertSame([], $itinerary->badges);
+        self::assertSame(600, $itinerary['total_duration']);
+        self::assertSame([], $itinerary['badges']);
     }
 
-    public function testLayoversAreObjectsThePresenterCanReadThrough(): void
+    public function testLayoversAreRowsThePresenterCanReadThrough(): void
     {
         $itinerary = StoredItinerary::fromJson(self::json([
             self::segment('YUL', 'YYZ', '2026-09-08 07:00', '2026-09-08 08:30', 90),
             self::segment('YYZ', 'LHR', '2026-09-08 10:00', '2026-09-08 21:00', 420),
         ]));
 
-        self::assertInstanceOf(stdClass::class, $itinerary, 'these segments should read back');
+        self::assertNotNull($itinerary, 'these segments should read back');
 
-        $layover = $itinerary->layovers[0];
+        $layover = $itinerary['layovers'][0];
 
-        // Arrays would survive this class and fail at render: the presenter
-        // reads these with -> and Twig would never see them.
-        self::assertInstanceOf(stdClass::class, $layover);
-        self::assertSame('YYZ', $layover->airport_code);
-        self::assertSame('YYZ City', $layover->airport_city);
-        self::assertSame('YYZ International', $layover->airport_name);
-        self::assertSame(90, $layover->wait_minutes);
+        // Arrays, matching FlightFinder's own ResponseItinerary/ResponseLayover
+        // shape -- the presenter reads these with [] like every other itinerary.
+        self::assertSame('YYZ', $layover['airport_code']);
+        self::assertSame('YYZ City', $layover['airport_city']);
+        self::assertSame('YYZ International', $layover['airport_name']);
+        self::assertSame(90, $layover['wait_minutes']);
     }
 
     public function testASingleSegmentIsDirectWithNothingToWaitFor(): void
@@ -90,10 +88,10 @@ final class StoredItineraryTest extends TestCase
             self::segment('YUL', 'LHR', '2026-09-08 07:00', '2026-09-08 19:00', 420),
         ]));
 
-        self::assertInstanceOf(stdClass::class, $itinerary, 'a direct flight should read back');
-        self::assertSame(0, $itinerary->stops);
-        self::assertSame([], $itinerary->layovers);
-        self::assertSame(420, $itinerary->total_duration);
+        self::assertNotNull($itinerary, 'a direct flight should read back');
+        self::assertSame(0, $itinerary['stops']);
+        self::assertSame([], $itinerary['layovers']);
+        self::assertSame(420, $itinerary['total_duration']);
     }
 
     public function testALegacySegmentWithNoAircraftDataStillBuilds(): void
@@ -106,7 +104,7 @@ final class StoredItineraryTest extends TestCase
         $itinerary = StoredItinerary::fromJson(self::json([$segment]));
 
         self::assertNotNull($itinerary);
-        self::assertCount(1, $itinerary->segments);
+        self::assertCount(1, $itinerary['segments']);
     }
 
     public function testASingleStoredObjectIsReadAsOneSegment(): void
@@ -116,7 +114,7 @@ final class StoredItineraryTest extends TestCase
         );
 
         self::assertNotNull($itinerary);
-        self::assertSame(0, $itinerary->stops);
+        self::assertSame(0, $itinerary['stops']);
     }
 
     /**

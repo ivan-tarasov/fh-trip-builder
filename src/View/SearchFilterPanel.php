@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace TripBuilder\View;
 
 use Closure;
-use stdClass;
 use TripBuilder\Api\Flights\FlightFilters;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
@@ -13,6 +12,7 @@ use TripBuilder\Helper;
 use TripBuilder\Repository\AircraftRepository;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Service\FlightFinder;
 
 /**
  * The search sidebar: every filter control, with the codes turned into names.
@@ -29,6 +29,8 @@ use TripBuilder\Repository\AirportRepository;
  * `sliderOption` and `rangeOption`, where an off-by-one shows up as a filter
  * that silently excludes the cheapest flight -- can be reached by a test
  * directly instead of by running a whole search.
+ *
+ * @phpstan-import-type ResponseSearch from FlightFinder
  */
 final readonly class SearchFilterPanel
 {
@@ -63,6 +65,7 @@ final readonly class SearchFilterPanel
     private array $optionPrices;
 
     /**
+     * @param ResponseSearch $data
      * @param array<string, mixed> $get the query as it arrived
      * @param Closure(array<string, mixed>): string $link this search with the
      *        given query applied, from the first page. Paging belongs to the
@@ -71,18 +74,15 @@ final readonly class SearchFilterPanel
      *        nobody had scrolled to.
      */
     public function __construct(
-        private stdClass $data,
+        private array $data,
         private array $get,
         private Connection $connection,
         private ItineraryPresenter $presenter,
         private Closure $link,
     ) {
-        $this->prefix = FlightFilters::prefixFor($this->data->step ?? null);
+        $this->prefix = FlightFilters::prefixFor($this->data['step']);
         $this->chosen = $this->legFilterQuery($this->prefix);
-        $this->optionPrices = (array) json_decode(
-            (string) json_encode($this->data->option_prices ?? []),
-            true,
-        );
+        $this->optionPrices = $this->data['option_prices'];
     }
 
     /**
@@ -98,11 +98,8 @@ final readonly class SearchFilterPanel
      */
     public function build(): array
     {
-        $available = (array) $this->data->available;
-        // The response reaches here through json_decode's object mode, so a map
-        // of maps arrives as nested stdClass. Availability is a map of lists and
-        // survives the cast; bounds needs the round trip.
-        $bounds = (array) json_decode((string) json_encode($this->data->bounds), true);
+        $available = $this->data['available'];
+        $bounds = $this->data['bounds'];
 
         // array_values, because these index the options as offered and a map
         // with holes in it is not the list the builders below take.
@@ -214,11 +211,11 @@ final readonly class SearchFilterPanel
             // the ones the search was typed with.
             'leg' => [
                 'from' => $this->prefix === FlightFilters::RETURN_PREFIX
-                    ? (string) $this->data->arrive_city_name
-                    : (string) $this->data->depart_city_name,
+                    ? $this->data['arrive_city_name']
+                    : $this->data['depart_city_name'],
                 'to' => $this->prefix === FlightFilters::RETURN_PREFIX
-                    ? (string) $this->data->depart_city_name
-                    : (string) $this->data->arrive_city_name,
+                    ? $this->data['depart_city_name']
+                    : $this->data['arrive_city_name'],
             ],
             // What the leg you are not looking at is filtered by.
             'other_leg' => $this->otherLegNote($this->prefix),
@@ -684,7 +681,7 @@ final readonly class SearchFilterPanel
      */
     private function otherLegNote(string $prefix): ?array
     {
-        $step = $this->data->step;
+        $step = $this->data['step'];
 
         // Only a round trip mid-choice has another leg to speak of: a one-way
         // search has none, and step 3 lists nothing to filter.

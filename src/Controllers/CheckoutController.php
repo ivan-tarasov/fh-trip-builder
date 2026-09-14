@@ -6,7 +6,6 @@ namespace TripBuilder\Controllers;
 
 use DateTimeImmutable;
 use Exception;
-use stdClass;
 use Throwable;
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
@@ -257,8 +256,8 @@ class CheckoutController extends AbstractController
         $priceTax = $priced['tax'];
 
         return [
-            'outbound' => $presenter->direction($this->asObject($outbound['itinerary'])),
-            'return' => $return === null ? null : $presenter->direction($this->asObject($return['itinerary'])),
+            'outbound' => $presenter->direction($outbound['itinerary']),
+            'return' => $return === null ? null : $presenter->direction($return['itinerary']),
             'price_base' => $presenter->priceParts($priceBase),
             'price_tax' => $presenter->priceParts($priceTax),
             'price_total' => $presenter->priceParts($priceBase + $priceTax),
@@ -269,27 +268,6 @@ class CheckoutController extends AbstractController
             'raw_tax' => $priceTax,
             'rules' => $this->rules($outboundIds, $returnIds, $cabin),
         ];
-    }
-
-    /**
-     * The finder speaks in arrays and the presenter in objects.
-     *
-     * The search page bridges the two by round-tripping its whole payload
-     * through JSON; this does the same for one itinerary rather than teach the
-     * presenter a second input shape.
-     *
-     * @param array<string, mixed> $itinerary
-     * @throws Exception
-     */
-    private function asObject(array $itinerary): stdClass
-    {
-        $object = json_decode((string) json_encode($itinerary), false);
-
-        if (!$object instanceof stdClass) {
-            throw new Exception('Could not shape the itinerary for rendering');
-        }
-
-        return $object;
     }
 
     /**

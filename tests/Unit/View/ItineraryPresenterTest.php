@@ -6,8 +6,8 @@ namespace TripBuilder\Tests\Unit\View;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use stdClass;
 use TripBuilder\Config;
+use TripBuilder\Service\FlightFinder;
 use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\StoredItinerary;
 
@@ -25,11 +25,13 @@ use TripBuilder\View\StoredItinerary;
  * are left to the render tests that already read them off a page.
  *
  * Fixtures go through `StoredItinerary::fromJson()` rather than being built as
- * `stdClass` by hand. That is the saved-flights page's own path and it derives
- * `layovers`, `stops` and `total_duration` from the segment stamps, so a wait
- * in one of these tests follows from the times either side of it, the way it
- * does in production. Nothing here needs a database or a currency:
- * `direction()` never reaches for a price.
+ * a `ResponseItinerary` array by hand. That is the saved-flights page's own
+ * path and it derives `layovers`, `stops` and `total_duration` from the
+ * segment stamps, so a wait in one of these tests follows from the times
+ * either side of it, the way it does in production. Nothing here needs a
+ * database or a currency: `direction()` never reaches for a price.
+ *
+ * @phpstan-import-type ResponseItinerary from FlightFinder
  */
 final class ItineraryPresenterTest extends TestCase
 {
@@ -469,8 +471,10 @@ final class ItineraryPresenterTest extends TestCase
      *
      * 690 minutes in the air each way and a 60-minute wait, which is 1440 --
      * and the stamps say the same, so the fixture is not lying about itself.
+     *
+     * @return ResponseItinerary
      */
-    private function longTrip(int $extraMinutes): stdClass
+    private function longTrip(int $extraMinutes): array
     {
         return $this->itinerary([
             $this->segment(from: 'YUL', to: 'YYZ', depart: '06:00', arrive: '17:30', duration: 690),
@@ -488,8 +492,9 @@ final class ItineraryPresenterTest extends TestCase
 
     /**
      * @param list<array<string, mixed>> $segments
+     * @return ResponseItinerary
      */
-    private function itinerary(array $segments): stdClass
+    private function itinerary(array $segments): array
     {
         $itinerary = StoredItinerary::fromJson((string) json_encode($segments));
 
@@ -499,9 +504,10 @@ final class ItineraryPresenterTest extends TestCase
     }
 
     /**
+     * @param ResponseItinerary $itinerary
      * @return array<string, mixed>
      */
-    private function direction(stdClass $itinerary): array
+    private function direction(array $itinerary): array
     {
         return new ItineraryPresenter()->direction($itinerary)['direction'];
     }
