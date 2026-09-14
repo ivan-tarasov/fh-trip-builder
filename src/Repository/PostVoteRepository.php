@@ -19,6 +19,13 @@ use TripBuilder\Database\Table;
  * do not. It is also the one place the difference between these two families
  * shows: an article's votes order a footer column that always renders, and a
  * post's order a block that does not render at all until somebody has voted.
+ *
+ * Same row types as ArticleVoteRepository, for the same reasons: `helpful` is
+ * a non-null `tinyint`, so `liked()`'s grouped `SUM()` never comes back null,
+ * and `tallyFor()`'s ungrouped one can, over a slug with zero votes.
+ *
+ * @phpstan-type PostVoteTallyRow array{votes: string, helpful: ?string}
+ * @phpstan-type PostVoteLikedRow array{slug: string, votes: string, helpful: string}
  */
 final readonly class PostVoteRepository
 {
@@ -62,6 +69,10 @@ final readonly class PostVoteRepository
      */
     public function tallyFor(string $slug): array
     {
+        // An aggregate query with no GROUP BY always returns exactly one row,
+        // even over zero matching votes -- never the null fetchOne()'s own
+        // signature allows for.
+        /** @var PostVoteTallyRow $row */
         $row = $this->connection->fetchOne(
             'SELECT COUNT(*) AS votes, SUM(helpful) AS helpful'
             . ' FROM ' . Table::PostVotes->value . ' WHERE slug = ?',
@@ -114,6 +125,7 @@ final readonly class PostVoteRepository
             return [];
         }
 
+        /** @var list<PostVoteLikedRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT slug, COUNT(*) AS votes, SUM(helpful) AS helpful'
             . ' FROM ' . Table::PostVotes->value
