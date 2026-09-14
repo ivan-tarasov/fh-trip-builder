@@ -6,6 +6,7 @@ namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
+use TripBuilder\Noah\Flights\FarePricing;
 use TripBuilder\Party;
 use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -19,6 +20,26 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * argued with -- MySQL drives it from a full scan of the flights table, and
  * pinning the other join order made it slower still. So it is built once and
  * read back, and what these cover is that the building and the reading agree.
+ *
+ * **These flights are this test's own.** They used to read whatever
+ * `flights:add` happened to generate, and the generator is random: the network
+ * is sparse on any one route -- `YUL -> LHR` had fourteen direct flights across
+ * sixty days when this was written -- so on some runs a route had nothing in
+ * the window and a "this route has flights" guard failed. It failed on MySQL
+ * while MariaDB passed the same commit, on a branch that touched the admin
+ * panel and nothing else, and a re-run of the failed job passed. A test that
+ * fails one run in N on data nobody chose is a test that gets ignored.
+ *
+ * Priced far below anything the generator can make, which is not a guess:
+ * `FarePricing` starts at `FIXED_DOLLARS` and varies from 90%, so no generated
+ * fare is below $27. `testTheFixturesOutpriceAnythingGenerated` pins that, so
+ * the day the pricing floor moves this file says so rather than going quietly
+ * flaky again.
+ *
+ * The route is still a real one, so the shape checks below run over generated
+ * days as well as the fixtures. That they no longer *depend* on them was
+ * measured rather than assumed: pointed at `YOW -> ABJ`, a pair the generator
+ * connects with nothing at all, every case here still passes.
  */
 final class RoutePriceRepositoryTest extends IntegrationTestCase
 {
@@ -26,9 +47,44 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
     private const string TO = 'LHR';
     private const CabinClass CABIN = CabinClass::Economy;
 
+    /**
+     * Days into the window the fixtures sit on.
+     *
+     * Inside the sixty days these tests build, and spread so that each one can
+     * be named in an assertion rather than reached through
+     * `array_key_first()` -- which used to mean the assertion was about
+     * whichever day the generator happened to fill.
+     */
+    private const int PLAIN_DAY = 3;
+    private const int PREMIUM_DAY = 5;
+    private const int CITY_DAY = 7;
+
+    /**
+     * Roughly Montreal to London, and the distance matters here: the cabin
+     * uplift scales with haul, so a figure worth asserting needs a leg long
+     * enough to carry most of it.
+     */
+    private const int FIXTURE_KM = 5220;
+
+    /**
+     * Cheap enough that nothing generated can undercut them.
+     *
+     * See `testTheFixturesOutpriceAnythingGenerated`, which is what stops this
+     * being an assumption.
+     */
+    private const float FIXTURE_BASE = 5.00;
+    private const float FIXTURE_TAX = 1.00;
+
+    /** The one that sells business, and is dearer in economy than the plain one. */
+    private const float PREMIUM_BASE = 6.00;
+    private const float PREMIUM_TAX = 1.00;
+
     private RoutePriceRepository $prices;
     private string $since;
     private string $until;
+
+    /** @var list<int> */
+    private array $flights = [];
 
     protected function setUp(): void
     {
@@ -37,6 +93,30 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         $this->prices = new RoutePriceRepository($this->connection());
         $this->since = date('Y-m-d');
         $this->until = date('Y-m-d', strtotime('+60 day'));
+
+        if ($this->connectionOrNull() === null) {
+            return;
+        }
+
+        // A plain day: one flight, economy only.
+        $this->flights[] = $this->insertFlight(self::FROM, self::TO, self::PLAIN_DAY, CabinClass::Economy->bit());
+
+        // And a day holding both, which is what makes the cabin test say
+        // something: the cheapest economy seat and the cheapest business seat
+        // are on two different aeroplanes.
+        $this->flights[] = $this->insertFlight(self::FROM, self::TO, self::PREMIUM_DAY, CabinClass::Economy->bit());
+        $this->flights[] = $this->insertFlight(
+            self::FROM,
+            self::TO,
+            self::PREMIUM_DAY,
+            CabinClass::Economy->bit() | CabinClass::Business->bit(),
+            self::PREMIUM_BASE,
+            self::PREMIUM_TAX,
+        );
+
+        // One London airport to one New York airport, for the city test: LON
+        // and NYC both expand to include this pair.
+        $this->flights[] = $this->insertFlight('LHR', 'JFK', self::CITY_DAY, CabinClass::Economy->bit());
     }
 
     /**
@@ -60,6 +140,30 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         foreach ([[self::FROM, self::TO], ['ZZZ', 'ZZY'], ['LON', 'NYC'], ['LHR', 'JFK']] as [$from, $to]) {
             $this->forget($from, $to);
         }
+
+        foreach ($this->flights as $id) {
+            $this->connection()->execute('DELETE FROM flights WHERE id = ?', [$id]);
+        }
+    }
+
+    /**
+     * The assumption every other case here rests on, made a test.
+     *
+     * The fixtures are only the cheapest itinerary of their day because nothing
+     * the generator writes can go below `FIXED_DOLLARS` less the bottom of its
+     * variance. Move that floor and this fails here, rather than turning four
+     * other cases into assertions about somebody else's flights.
+     */
+    public function testTheFixturesOutpriceAnythingGenerated(): void
+    {
+        $floor = FarePricing::FIXED_DOLLARS * min(FarePricing::VARIANCE_PERCENT) / 100;
+
+        self::assertGreaterThan(
+            self::PREMIUM_BASE + self::PREMIUM_TAX,
+            $floor,
+            'a generated fare can now undercut the fixtures, so these tests are measuring the generator again',
+        );
+        self::assertGreaterThan(self::FIXTURE_BASE + self::FIXTURE_TAX, self::PREMIUM_BASE + self::PREMIUM_TAX);
     }
 
     public function testARouteIsUnbuiltUntilItIsBuilt(): void
@@ -87,7 +191,15 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
         $prices = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
 
-        self::assertNotSame([], $prices, 'this route has flights, so it should have fares');
+        // Named, not merely non-empty: this route has a flight on this day
+        // because this test put one there.
+        self::assertArrayHasKey(self::day(self::PLAIN_DAY), $prices);
+        self::assertEqualsWithDelta(
+            self::FIXTURE_BASE + self::FIXTURE_TAX,
+            self::total($prices[self::day(self::PLAIN_DAY)]),
+            0.01,
+            'something undercut the fixture, so this is pricing the generated network',
+        );
 
         foreach ($prices as $date => $price) {
             self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', $date);
@@ -104,8 +216,13 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
     {
         $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
 
-        $narrow = date('Y-m-d', strtotime('+10 day'));
+        $narrow = self::day(self::PLAIN_DAY + 1);
         $prices = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $narrow);
+
+        // A day inside the narrow window and a day outside it, so the loop
+        // below is proving something rather than running zero times.
+        self::assertArrayHasKey(self::day(self::PLAIN_DAY), $prices);
+        self::assertArrayNotHasKey(self::day(self::PREMIUM_DAY), $prices);
 
         foreach (array_keys($prices) as $date) {
             self::assertLessThan($narrow, $date);
@@ -122,6 +239,7 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
         $second = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
 
+        self::assertNotSame([], $first, 'nothing was built, so this compares two empty answers');
         self::assertSame($first, $second);
     }
 
@@ -135,7 +253,10 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         $this->prices->build('LHR', 'JFK', self::CABIN, $this->since, $this->until);
         $single = $this->prices->read('LHR', 'JFK', self::CABIN, $this->since, $this->until);
 
-        self::assertNotSame([], $city);
+        // The fixture is a flight this test put on LHR -> JFK, so the pair has
+        // a day and the city has to have it too.
+        self::assertArrayHasKey(self::day(self::CITY_DAY), $single);
+        self::assertArrayHasKey(self::day(self::CITY_DAY), $city);
 
         // Every day the single pair can offer, the city can offer at least as
         // cheaply -- it is choosing from a superset of the same flights.
@@ -153,19 +274,45 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
     {
         // The whole reason cabin is in the key. Business carries an uplift that
         // scales with haul, and not every flight sells it, so its cheapest day
-        // is a different number from economy's -- and on some days a different
-        // day entirely.
+        // is a different number from economy's.
+        //
+        // Which is what the fixtures make true rather than hope for: on
+        // PREMIUM_DAY there are two flights, and the cheaper one does not sell
+        // business at all. The economy figure is therefore one aeroplane's and
+        // the business figure is the other's.
         $this->prices->build(self::FROM, self::TO, CabinClass::Economy, $this->since, $this->until);
         $this->prices->build(self::FROM, self::TO, CabinClass::Business, $this->since, $this->until);
 
         $economy = $this->prices->read(self::FROM, self::TO, CabinClass::Economy, $this->since, $this->until);
         $business = $this->prices->read(self::FROM, self::TO, CabinClass::Business, $this->since, $this->until);
 
-        self::assertNotSame([], $economy);
-        self::assertNotSame([], $business);
+        $day = self::day(self::PREMIUM_DAY);
+
+        self::assertArrayHasKey($day, $economy);
+        self::assertArrayHasKey($day, $business);
         self::assertNotEquals($economy, $business, 'business should not be priced as economy');
 
+        // The cheaper aeroplane, which sells no business seat.
+        self::assertEqualsWithDelta(self::FIXTURE_BASE + self::FIXTURE_TAX, self::total($economy[$day]), 0.01);
+
+        // The dearer one, at the multiplier CabinClass works out in PHP. The
+        // SQL builds its own copy of that arithmetic, so this is where the two
+        // would be caught disagreeing.
+        self::assertEqualsWithDelta(
+            (self::PREMIUM_BASE + self::PREMIUM_TAX) * CabinClass::Business->priceMultiplier(self::FIXTURE_KM),
+            self::total($business[$day]),
+            0.01,
+            'the cached business fare is not the PHP multiplier over the same flight',
+        );
+
+        // And a day whose only flight sells economy alone is priced in economy
+        // and left out of business -- "not every flight sells it", stated.
+        self::assertArrayHasKey(self::day(self::PLAIN_DAY), $economy);
+
         // Every day business is sold on, it costs more than the economy seat.
+        // True of any data, generated or not: the cheapest economy fare is at
+        // worst the economy fare of the flight the business figure came from,
+        // and the multiplier is above one.
         foreach ($business as $date => $price) {
             self::assertArrayHasKey($date, $economy, $date . ' has business but no economy fare');
             self::assertGreaterThan(
@@ -195,9 +342,12 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         // the same figure.
         $this->prices->build(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
         $prices = $this->prices->read(self::FROM, self::TO, self::CABIN, $this->since, $this->until);
-        self::assertNotSame([], $prices, 'the build should have written days to read');
 
-        $day = $prices[array_key_first($prices)];
+        // A day this test put a flight on, rather than whichever day came
+        // first out of the network.
+        self::assertArrayHasKey(self::day(self::PLAIN_DAY), $prices);
+
+        $day = $prices[self::day(self::PLAIN_DAY)];
 
         $alone = new Party(adults: 1);
         $family = new Party(adults: 2, children: 1, infants: 1);
@@ -217,6 +367,40 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
     private static function total(array $price): float
     {
         return $price['base'] + $price['tax'];
+    }
+
+    /** A day inside the window, as the table spells it. */
+    private static function day(int $days): string
+    {
+        return date('Y-m-d', (int) strtotime('+' . $days . ' day'));
+    }
+
+    /**
+     * One flight this test owns, cheap enough to be its day's own answer.
+     *
+     * Departing mid-morning and arriving the same day, so the date the price is
+     * filed under is the date this asked for -- `cheapestPerDay()` groups on
+     * `DATE(departure_time)`.
+     */
+    private function insertFlight(
+        string $from,
+        string $to,
+        int $days,
+        int $cabins,
+        float $base = self::FIXTURE_BASE,
+        float $tax = self::FIXTURE_TAX,
+    ): int {
+        $date = self::day($days);
+
+        return $this->connection()->insert(
+            'INSERT INTO flights (airline, number, aircraft, departure_airport, departure_time,'
+            . ' arrival_airport, arrival_time, distance, duration, cabins, price_base, price_tax, rating)'
+            . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                'AC', 100, '789', $from, $date . ' 09:00:00',
+                $to, $date . ' 20:30:00', self::FIXTURE_KM, 450, $cabins, $base, $tax, 4.10,
+            ],
+        );
     }
 
     private function forget(string $from, string $to): void
