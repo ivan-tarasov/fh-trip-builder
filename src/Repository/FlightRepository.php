@@ -83,6 +83,38 @@ use TripBuilder\Party;
  *     co2_typical: bool|null,
  *     price_offset?: float,
  * }
+ *
+ * One hydrated flight (see legColumns()) and one assembled itinerary, both
+ * verified the same way: `aircraft_name`, `aircraft_widebody`, `seat_layout`,
+ * `seat_pitch`, `seat_width`, `seat_flat_bed`, `aircraft_seats`, `dep_country`
+ * and `arr_country` are nullable because their joins are LEFT on purpose --
+ * an aircraft type this data does not carry a name for, or has not fitted a
+ * cabin on, still returns a leg, just without that half of it. This data
+ * happens not to exercise every one of those gaps today, which is why the
+ * nullability comes from reading the joins rather than from a row that
+ * proved it -- `FlightRepositoryTest`'s own `DANGLING_AIRPORT` /
+ * `DANGLING_COUNTRY` fixtures exist because this has bitten before.
+ *
+ * @phpstan-type LegRow array{
+ *     id: int, carrier: string, carrier_name: string, number: int,
+ *     dep_code: string, dep_name: string, dep_country: string|null,
+ *     dep_city: string, dep_datetime: string,
+ *     arr_code: string, arr_name: string, arr_country: string|null,
+ *     arr_city: string, arr_datetime: string,
+ *     aircraft_code: string, aircraft_name: string|null,
+ *     aircraft_widebody: int|null,
+ *     seat_layout: string|null, seat_pitch: int|null,
+ *     seat_width: string|null, seat_flat_bed: int|null,
+ *     aircraft_seats: string|null,
+ *     distance: int, duration: int,
+ *     price_base: string, price_tax: string, rating: string,
+ * }
+ * @phpstan-type Itinerary array{
+ *     legs: list<LegRow>, badges: list<string>, stops: int,
+ *     price_base: float, price_tax: float, duration: int,
+ *     depart_time: string, arrive_time: string, rating: float,
+ *     co2_kg: float|null, co2_typical: bool|null,
+ * }
  */
 final readonly class FlightRepository
 {
@@ -134,7 +166,7 @@ final readonly class FlightRepository
      * `highlights` says what each sort option would put first — the price and
      * the travel time you would get by choosing it.
      *
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<Itinerary>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     public function searchDirection(
         string $from,
@@ -884,7 +916,7 @@ final readonly class FlightRepository
      * list it was picked out of. There is no `co2_typical` to go with it: one
      * itinerary is not a route to be typical of.
      *
-     * @param list<array<string, mixed>> $legs
+     * @param list<LegRow> $legs
      */
     private function legsEmissions(array $legs, CabinClass $cabin): ?float
     {
@@ -1008,7 +1040,7 @@ final readonly class FlightRepository
      * would quote a total nobody was shown.
      *
      * @param list<int> $ids
-     * @return array<string, mixed>|null
+     * @return Itinerary|null
      */
     public function itineraryByIds(array $ids, CabinClass $cabin): ?array
     {
@@ -1066,7 +1098,7 @@ final readonly class FlightRepository
     /**
      * A single flight leg by id (hydrated), or null. Used by the booking flow.
      *
-     * @return array<string, mixed>|null
+     * @return LegRow|null
      */
     public function findById(int $flightId, CabinClass $cabin): ?array
     {
@@ -1116,7 +1148,7 @@ final readonly class FlightRepository
      * Hydrated legs for an ordered id list, preserving order (booking flow).
      *
      * @param list<int> $ids
-     * @return list<array<string, mixed>>
+     * @return list<LegRow>
      */
     public function legsByIds(array $ids, CabinClass $cabin): array
     {
@@ -1551,7 +1583,7 @@ final readonly class FlightRepository
      * Fetch display rows for the given leg ids, keyed by id.
      *
      * @param list<int> $ids
-     * @return array<int, array<string, mixed>>
+     * @return array<int, LegRow>
      */
     private function hydrateLegs(array $ids, CabinClass $cabin): array
     {
@@ -1597,8 +1629,14 @@ final readonly class FlightRepository
 
         $byId = [];
 
-        foreach ($this->connection->fetchAll($sql, $ids) as $row) {
-            $byId[(int) $row['id']] = $row;
+        // The one place legColumns()'s SELECT list is named as a row shape --
+        // Connection::fetchAll() stays generic, the same reason searchDirection()
+        // narrows its own raw fetch locally rather than in Connection.
+        /** @var list<LegRow> $rows */
+        $rows = $this->connection->fetchAll($sql, $ids);
+
+        foreach ($rows as $row) {
+            $byId[$row['id']] = $row;
         }
 
         return $byId;
@@ -1630,9 +1668,9 @@ final readonly class FlightRepository
      * the pre-aggregated totals).
      *
      * @param Candidate $candidate
-     * @param array<int, array<string, mixed>> $legs
+     * @param array<int, LegRow> $legs
      * @param array<string, list<string>> $badges
-     * @return array<string, mixed>|null null when a leg could not be built
+     * @return Itinerary|null null when a leg could not be built
      */
     private function assembleItinerary(array $candidate, array $legs, array $badges = []): ?array
     {

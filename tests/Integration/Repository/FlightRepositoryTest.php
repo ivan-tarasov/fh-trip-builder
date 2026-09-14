@@ -10,6 +10,10 @@ use TripBuilder\CabinClass;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
+/**
+ * @phpstan-import-type Itinerary from FlightRepository
+ * @phpstan-import-type LegRow from FlightRepository
+ */
 final class FlightRepositoryTest extends IntegrationTestCase
 {
     private const DEPART_DATE = '2026-09-15';
@@ -573,7 +577,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
     /**
      * An itinerary's leg ids, which is what identifies it.
      *
-     * @param array<string, mixed> $row
+     * @param Itinerary $row
      */
     private static function keyOf(array $row): string
     {
@@ -581,7 +585,7 @@ final class FlightRepositoryTest extends IntegrationTestCase
     }
 
     /**
-     * @param array<string, mixed> $itin
+     * @param Itinerary $itin
      */
     private function assertValidItinerary(array $itin): void
     {
