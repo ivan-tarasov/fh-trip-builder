@@ -15,6 +15,13 @@ use TripBuilder\Database\Table;
  * its phone number. What the flights table can add to that has to be chosen
  * carefully -- see network(), which is as much about the figures left out as
  * the ones kept.
+ *
+ * `network()`'s raw row: `COUNT(*)`/`COUNT(DISTINCT ...)` are `int`,
+ * `SUM(ac.is_widebody)` over the non-null `tinyint` comes back `string` --
+ * nullable only because the query has no GROUP BY, the same aggregate-shape
+ * distinction ArticleVoteRepository and PostVoteRepository verified.
+ *
+ * @phpstan-type NetworkRow array{flights: int, days: int, widebody: ?string}
  */
 final readonly class AirlineRepository
 {
@@ -111,6 +118,7 @@ final readonly class AirlineRepository
             return null;
         }
 
+        /** @var NetworkRow|null $row */
         $row = $this->connection->fetchOne(
             'SELECT COUNT(*) AS flights,'
             . ' COUNT(DISTINCT DATE(f.departure_time)) AS days,'
