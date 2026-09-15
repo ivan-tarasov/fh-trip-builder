@@ -37,5 +37,7 @@ enum Table: string
     case ScheduleRuns = 'schedule_runs';
     case Search = 'search';
     case SearchCandidates = 'search_candidates';
+    case Settings = 'settings';
+    case SettingChanges = 'setting_changes';
     case Subscribers = 'subscribers';
 }

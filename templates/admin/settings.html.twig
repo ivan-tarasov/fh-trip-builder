@@ -1,0 +1,91 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% set admin_section = 'settings' %}
+
+{% block title %}Settings{% endblock %}
+
+{# Every field here survived #232's own scope call: most of config/common is
+   a decision coupled to code, not a preference, and this names only what is
+   left -- real business rules, recoverable when wrong, and three lines of
+   site copy. `site.poi` (the homepage cards) reads as content rather than a
+   setting and is left out on purpose, the way articles were before it.
+
+   One form, one save: all twelve fields are validated together and written
+   only if every one of them is fine, since a form half saved would be
+   lying about which values are actually in effect. "Reset to default" is
+   its own button per field -- it posts only its own name, so clicking it
+   does not also save whatever else is sitting unsaved in the form. #}
+{% block content %}
+    <form method="post" class="form" action="/admin/settings">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+
+        {% for group, fields in groups %}
+            <section class="group">
+                <div class="row row--head">
+                    <span class="row__name">{{ group }}</span>
+                </div>
+
+                {% for field in fields %}
+                    <div class="field{{ field.error ? ' field--bad' : '' }}">
+                        <label for="{{ field.key }}">{{ field.label }}</label>
+
+                        {% if field.is_list %}
+                            <textarea id="{{ field.key }}" name="settings[{{ field.key }}]" rows="4"
+                                      autocapitalize="off" spellcheck="false">{{ field.value }}</textarea>
+                        {% else %}
+                            <input id="{{ field.key }}" name="settings[{{ field.key }}]" type="text"
+                                   value="{{ field.value }}" autocapitalize="off" spellcheck="false">
+                        {% endif %}
+
+                        {% if field.error %}
+                            <p class="field__hint field__hint--bad" role="alert">{{ field.error }}</p>
+                        {% endif %}
+
+                        <p class="field__hint">{{ field.reason }}</p>
+
+                        {% if field.overridden %}
+                            <span class="flag flag--owned">Overridden</span>
+                            <button type="submit" name="reset_key" value="{{ field.key }}"
+                                    class="button button--tiny">Reset to default</button>
+                        {% else %}
+                            <span class="sheet__quiet">Using the config default</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </section>
+        {% endfor %}
+
+        <div class="actions">
+            <button type="submit" class="button button--go">Save changes</button>
+        </div>
+    </form>
+
+    {% if history is not empty %}
+        <section class="group">
+            <div class="row row--head">
+                <span class="row__name">Recent changes</span>
+            </div>
+
+            <table class="sheet">
+                <thead>
+                    <tr>
+                        <th scope="col">Setting</th>
+                        <th scope="col">From</th>
+                        <th scope="col">To</th>
+                        <th scope="col">When</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in history %}
+                        <tr>
+                            <td class="mono">{{ change.key }}</td>
+                            <td class="mono sheet__quiet">{{ change.from }}</td>
+                            <td class="mono">{{ change.to }}</td>
+                            <td class="mono sheet__quiet">{{ change.changed_at|date('j M Y, H:i') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    {% endif %}
+{% endblock %}

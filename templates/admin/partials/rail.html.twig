@@ -1,9 +1,7 @@
-{# The sections, and the ones that are not built yet.
-
-   Listing what is coming is unusual in a panel and right in this one: there is
-   one operator, they are the person who decides what gets built next, and a
-   rail that showed a single entry would say less than the truth. Nothing here
-   is a dead link -- what does not exist is not clickable.
+{# Every section A3 named is built: overview, content, bookings, fare alerts,
+   settings (A3.7, #232). Nothing here is a dead link -- what does not exist
+   is not clickable, which is why the rail used to carry a second, unclickable
+   "Not built yet" list until settings was the last thing on it.
 
    Fixed, permanent, and the same surface as the content beside it -- Orchid's
    own sidebar, not a separate dark band. `admin.js`'s `railToggle()` drives
@@ -37,7 +35,8 @@
                 { 'href': '/admin', 'label': 'Overview', 'icon': 'speedometer2', 'match': 'overview' },
                 { 'href': '/admin/content', 'label': 'Help content', 'icon': 'journal-text', 'match': 'content' },
                 { 'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings' },
-                { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'match': 'subscribers' }
+                { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'match': 'subscribers' },
+                { 'href': '/admin/settings', 'label': 'Settings', 'icon': 'gear', 'match': 'settings' }
             ] %}
                 {% set current = admin_section|default('') == item.match %}
                 <li>
@@ -46,18 +45,6 @@
                         <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
                         <span>{{ item.label }}</span>
                     </a>
-                </li>
-            {% endfor %}
-        </ul>
-
-        <p class="rail__soon-label">Not built yet</p>
-        <ul class="rail__list">
-            {% for label in ['Settings'] %}
-                <li>
-                    <span class="rail__item rail__item--soon">
-                        <i class="bi bi-gear" aria-hidden="true"></i>
-                        <span>{{ label }}</span>
-                    </span>
                 </li>
             {% endfor %}
         </ul>
