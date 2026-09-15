@@ -325,6 +325,72 @@ a:hover { text-decoration: underline; }
   background: var(--brand-gradient);
 }
 
+/*
+|------------------------------------------------------------------------------
+| A rail item with children
+|------------------------------------------------------------------------------
+|
+| Orchid's own pattern for "Dashboard" expanding into Default/Analytics/CRM/...
+| (G2.6, #299): Bootstrap's stock Collapse component, already loaded and
+| unused elsewhere in this panel -- `data-bs-toggle="collapse"` on the parent
+| link, a `.collapse` list as its target, no bespoke JS. The chevron rotates
+| off `aria-expanded`, which Bootstrap keeps in sync with the collapse state
+| on its own; the server sets the *initial* value (and `.show`) from
+| `admin_section`, the same way a plain item's `.is-current` already is.
+| Clicking the parent only ever toggles -- `data-bs-toggle` intercepts the
+| click before the `href` is followed -- so the `href` is a no-JS fallback,
+| not the way this link is normally used.
+|
+*/
+
+.rail__item[aria-expanded] { cursor: pointer; }
+
+.rail__chevron {
+  margin-left: auto;
+  font-size: .75rem;
+  transition: transform 220ms ease;
+}
+
+.rail__item[aria-expanded="true"] .rail__chevron { transform: rotate(180deg); }
+
+.rail__sub {
+  margin: .25rem 0 .25rem 1.65rem;
+  padding: .125rem 0 .125rem .75rem;
+  border-left: 1px solid var(--rule);
+  list-style: none;
+}
+
+.rail__sublink {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .4rem .625rem;
+  border-radius: var(--radius);
+  color: var(--ink-quiet);
+  font-size: .8125rem;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.rail__sublink:hover { background: var(--sunken); color: var(--ink); text-decoration: none; }
+
+.rail__sublink::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rule-strong);
+  flex-shrink: 0;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.rail__sublink.is-current { color: var(--signal); font-weight: 600; }
+.rail__sublink.is-current::before { background: var(--signal); transform: scale(1.4); }
+
+@media (min-width: 992px) {
+  html[data-rail-collapsed] .rail__chevron,
+  html[data-rail-collapsed] .rail__sub { display: none; }
+}
+
 .rail__out { margin: auto 0 0; padding-top: 1rem; border-top: 1px solid var(--rule); }
 
 .well { display: flex; flex-direction: column; min-width: 0; }
