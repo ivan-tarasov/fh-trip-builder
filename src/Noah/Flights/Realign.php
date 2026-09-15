@@ -48,6 +48,18 @@ use TripBuilder\Noah\AbstractCommand;
  *
  * Fares are left alone: FarePricing keys off distance, which does not change.
  * Runs in id batches so the whole table is never locked at once.
+ *
+ * Live-verified: `MIN`/`MAX`/`COUNT(*)` over `flights.id` all stay `int`,
+ * same as `Cabins`. `reportShape()`'s `SUM(... = 1)` and `SUM(... IS NULL)`
+ * are `SUM()` over a boolean comparison and stringify the same way
+ * `Cabins`'s cabin totals do.
+ *
+ * @phpstan-type FlightBoundsRow array{lo: int, hi: int, total: int}
+ * @phpstan-type RealignReadRow array{
+ *     id: int, distance: int, departure_time: string,
+ *     depart_tz: string, arrive_tz: string,
+ * }
+ * @phpstan-type ShapeBandRow array{legs: int, wide: string, none: string}
  */
 #[AsCommand(
     name: 'flights:realign',
@@ -97,7 +109,8 @@ class Realign extends AbstractCommand
         $this->formatOutput('Longest flyable nonstop', number_format($maxLegKm) . ' km', 'info');
         $this->reportShape($flights, 'Before');
 
-        $overCap = (int) $this->connection()->fetchValue(
+        /** @var int $overCap */
+        $overCap = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM ' . $flights . ' WHERE distance > ?',
             [$maxLegKm],
         );
@@ -188,24 +201,26 @@ class Realign extends AbstractCommand
         $write = 'UPDATE ' . $flights
             . ' SET aircraft = ?, duration = ?, arrival_time = ?, cabins = ? WHERE id = ?';
 
+        /** @var FlightBoundsRow|null $bounds */
         $bounds = $this->connection()->fetchAll(
             'SELECT MIN(id) AS lo, MAX(id) AS hi, COUNT(*) AS total FROM ' . $flights,
         )[0] ?? null;
 
-        if ($bounds === null || (int) $bounds['total'] === 0) {
+        if ($bounds === null || $bounds['total'] === 0) {
             $this->io->warning('No flights to realign.');
 
             return 0;
         }
 
-        $progress = $this->io->createProgressBar((int) $bounds['total']);
+        $progress = $this->io->createProgressBar($bounds['total']);
         $progress->start();
 
         $written = 0;
         $connection = $this->connection();
 
         try {
-            for ($lo = (int) $bounds['lo']; $lo <= (int) $bounds['hi']; $lo += self::BATCH_SIZE) {
+            for ($lo = $bounds['lo']; $lo <= $bounds['hi']; $lo += self::BATCH_SIZE) {
+                /** @var list<RealignReadRow> $rows */
                 $rows = $connection->fetchAll($read, [$lo, $lo + self::BATCH_SIZE - 1]);
 
                 if ($rows === []) {
@@ -218,15 +233,15 @@ class Realign extends AbstractCommand
 
                 try {
                     foreach ($rows as $row) {
-                        $leg = $legs->assign((int) $row['distance']);
+                        $leg = $legs->assign($row['distance']);
 
                         $connection->execute($write, [
                             $leg->aircraft,
                             $leg->duration,
                             LegBuilder::arrivalTime(
-                                (string) $row['departure_time'],
-                                (string) $row['depart_tz'],
-                                (string) $row['arrive_tz'],
+                                $row['departure_time'],
+                                $row['depart_tz'],
+                                $row['arrive_tz'],
                                 $leg->duration,
                             ),
                             $leg->cabins,
@@ -273,6 +288,7 @@ class Realign extends AbstractCommand
         ];
 
         foreach ($bands as $i => [$name, $lo, $hi]) {
+            /** @var ShapeBandRow|null $row */
             $row = $this->connection()->fetchAll(sprintf(
                 'SELECT COUNT(*) AS legs, SUM(a.is_widebody = 1) AS wide, SUM(f.aircraft IS NULL) AS none'
                 . ' FROM %s f LEFT JOIN %s a ON f.aircraft = a.code'
@@ -287,7 +303,7 @@ class Realign extends AbstractCommand
                 continue;
             }
 
-            $count = (int) ($row['legs'] ?? 0);
+            $count = $row['legs'];
 
             if ($count === 0) {
                 continue;

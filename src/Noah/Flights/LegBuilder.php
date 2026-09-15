@@ -24,6 +24,11 @@ use TripBuilder\Helper;
  *
  * The fleet and its cabins are read once into memory. There are 28 types, so a
  * per-leg query would be 695,000 lookups of the same 28 rows.
+ *
+ * @phpstan-type FleetTypeRow array{
+ *     code: string, max_range_km: int, cruise_speed_kmh: int, is_widebody: int,
+ * }
+ * @phpstan-type AircraftCabinCodeRow array{aircraft: string, cabin: string}
  */
 final class LegBuilder
 {
@@ -75,7 +80,7 @@ final class LegBuilder
     private const int FALLBACK_CRUISE_KMH = 850;
 
     /**
-     * @param list<array<string, mixed>> $fleet
+     * @param list<FleetTypeRow> $fleet
      * @param array<string, int> $cabinMask cabins bitmask per aircraft code
      */
     private function __construct(
@@ -90,6 +95,7 @@ final class LegBuilder
      */
     public static function fromConnection(Connection $connection): self
     {
+        /** @var list<FleetTypeRow> $fleet */
         $fleet = $connection->fetchAll(
             'SELECT code, max_range_km, cruise_speed_kmh, is_widebody FROM ' . Table::Aircraft->value
             . ' WHERE max_range_km > 0 ORDER BY max_range_km ASC',
@@ -103,10 +109,11 @@ final class LegBuilder
         // once, rather than the same fold repeated for every leg.
         $fitted = [];
 
-        foreach ($connection->fetchAll(
-            'SELECT aircraft, cabin FROM ' . Table::AircraftCabins->value,
-        ) as $row) {
-            $fitted[(string) $row['aircraft']][] = (string) $row['cabin'];
+        /** @var list<AircraftCabinCodeRow> $cabinRows */
+        $cabinRows = $connection->fetchAll('SELECT aircraft, cabin FROM ' . Table::AircraftCabins->value);
+
+        foreach ($cabinRows as $row) {
+            $fitted[$row['aircraft']][] = $row['cabin'];
         }
 
         return new self($fleet, array_map(CabinAvailability::bits(...), $fitted));
@@ -141,13 +148,13 @@ final class LegBuilder
         $type = $this->pickType($distance);
 
         return new LegAssignment(
-            aircraft: $type === null ? null : (string) $type['code'],
+            aircraft: $type === null ? null : $type['code'],
             duration: $this->duration($distance, $type),
             // No type means no cabin rows to read: a leg nothing in the fleet
             // can fly still sells economy.
             cabins: $type === null
                 ? CabinClass::Economy->bit()
-                : $this->cabinMask[(string) $type['code']] ?? CabinClass::Economy->bit(),
+                : $this->cabinMask[$type['code']] ?? CabinClass::Economy->bit(),
         );
     }
 
@@ -209,7 +216,7 @@ final class LegBuilder
      * Utilisation is measured against usable range, not the published figure,
      * so the two body types are compared on what each is really flown over.
      *
-     * @return array<string, mixed>|null the chosen type's row
+     * @return FleetTypeRow|null the chosen type's row
      */
     private function pickType(int $distance): ?array
     {
@@ -248,7 +255,7 @@ final class LegBuilder
      * draw, so a turboprop no longer crosses a leg as fast as a 787: an ATR 72
      * cruises at 510 km/h against the 917 km/h of a 747.
      *
-     * @param array<string, mixed>|null $type
+     * @param FleetTypeRow|null $type
      */
     private function duration(int $distance, ?array $type): int
     {
@@ -256,7 +263,7 @@ final class LegBuilder
             return 0;
         }
 
-        $speed = $type === null ? self::FALLBACK_CRUISE_KMH : (int) $type['cruise_speed_kmh'];
+        $speed = $type === null ? self::FALLBACK_CRUISE_KMH : $type['cruise_speed_kmh'];
 
         if ($speed <= 0) {
             throw new RuntimeException('Flight speed must be greater than zero.');
@@ -268,11 +275,11 @@ final class LegBuilder
     /**
      * The range a type is actually scheduled over, in km.
      *
-     * @param array<string, mixed> $type
+     * @param FleetTypeRow $type
      */
     private static function usableRange(array $type): int
     {
-        $range = (int) $type['max_range_km'];
+        $range = $type['max_range_km'];
 
         return (bool) $type['is_widebody']
             ? $range
