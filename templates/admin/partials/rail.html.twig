@@ -1,9 +1,7 @@
-{# The sections, and the ones that are not built yet.
-
-   Listing what is coming is unusual in a panel and right in this one: there is
-   one operator, they are the person who decides what gets built next, and a
-   rail that showed a single entry would say less than the truth. Nothing here
-   is a dead link -- what does not exist is not clickable. #}
+{# Every section A3 named is built: overview, content, bookings, fare alerts,
+   settings (A3.7, #232). Nothing here is a dead link -- what does not exist
+   is not clickable, which is why the rail used to carry a second, unclickable
+   "Not built yet" list until this was the last thing on it. #}
 <nav class="rail" aria-label="Sections">
     <a class="rail__mark" href="/" title="Back to the site">
         <span class="rail__mark-name">{{ config('app.name') }}</span>
@@ -15,20 +13,14 @@
             { 'href': '/admin', 'label': 'Overview', 'match': 'overview' },
             { 'href': '/admin/content', 'label': 'Help content', 'match': 'content' },
             { 'href': '/admin/bookings', 'label': 'Bookings', 'match': 'bookings' },
-            { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'match': 'subscribers' }
+            { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'match': 'subscribers' },
+            { 'href': '/admin/settings', 'label': 'Settings', 'match': 'settings' }
         ] %}
             {% set current = admin_section|default('') == item.match %}
             <li>
                 <a class="rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
                    {{ current ? 'aria-current="page"' : '' }}>{{ item.label }}</a>
             </li>
-        {% endfor %}
-    </ul>
-
-    <p class="rail__soon-label">Not built yet</p>
-    <ul class="rail__list rail__list--soon">
-        {% for label in ['Settings'] %}
-            <li><span class="rail__item rail__item--soon">{{ label }}</span></li>
         {% endfor %}
     </ul>
 

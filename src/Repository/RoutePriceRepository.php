@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace TripBuilder\Repository;
 
 use TripBuilder\CabinClass;
-use TripBuilder\Config;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
+use TripBuilder\Settings;
 
 /**
  * The cheapest fare on each day of a route, for the calendar to print under
@@ -169,10 +169,10 @@ final readonly class RoutePriceRepository
         $fromIn = $this->placeholders($fromCodes);
         $toIn = $this->placeholders($toCodes);
 
-        /** @var array{min_connect_minutes: int, max_connect_minutes: int} $connections */
-        $connections = (array) Config::get('search.connections');
-        $minConnect = (int) $connections['min_connect_minutes'];
-        $maxConnect = (int) $connections['max_connect_minutes'];
+        /** @var int $minConnect */
+        $minConnect = Settings::get('search.connections.min_connect_minutes', 45);
+        /** @var int $maxConnect */
+        $maxConnect = Settings::get('search.connections.max_connect_minutes', 360);
 
         // The cheapest itinerary of each day, and its own two parts -- not the
         // smallest base beside the smallest tax, which would belong to two

@@ -72,6 +72,7 @@ class Routes
         '/admin/content' => 'Admin@content',
         '/admin/bookings' => 'Admin@bookings',
         '/admin/subscribers' => 'Admin@subscribers',
+        '/admin/settings' => 'Admin@settings',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in
