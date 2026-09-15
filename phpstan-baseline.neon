@@ -48,11 +48,6 @@ parameters:
 			count: 1
 			path: src/Helper.php
 
-		-
-			message: '#^Method TripBuilder\\Noah\\AbstractCommand\:\:getAllDatabaseTables\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Noah/AbstractCommand.php
 
 		-
 			message: '#^PHPDoc tag @return with type float\|int is not subtype of native type float\.$#'

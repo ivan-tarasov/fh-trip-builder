@@ -66,7 +66,8 @@ class Password extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $password = (string) $helper->ask($input, $output, self::hidden('Password: '));
+        /** @var string $password */
+        $password = $helper->ask($input, $output, self::hidden('Password: '));
 
         if (mb_strlen($password) < self::MINIMUM_LENGTH) {
             $this->io->error(sprintf('At least %d characters, please.', self::MINIMUM_LENGTH));
@@ -77,7 +78,10 @@ class Password extends AbstractCommand
         // Typed twice because it is never shown and cannot be recovered: the
         // failure this catches is a typo that locks the owner out of their own
         // panel until they notice and run this again.
-        if ($password !== (string) $helper->ask($input, $output, self::hidden('Again: '))) {
+        /** @var string $confirmation */
+        $confirmation = $helper->ask($input, $output, self::hidden('Again: '));
+
+        if ($password !== $confirmation) {
             $this->io->error('Those did not match.');
 
             return Command::FAILURE;
