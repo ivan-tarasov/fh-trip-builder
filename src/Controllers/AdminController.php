@@ -95,6 +95,7 @@ class AdminController extends AbstractController
             'schedule' => $dashboard->schedule($schedule['health'], $schedule['tasks']),
             'content' => $dashboard->content(),
             'searches' => $dashboard->topSearches(5),
+            'rate_trend' => $dashboard->rateTrend(),
             // What the research calls freshness transparency, and what this
             // page needs because none of it is cached: every figure was read
             // when the page was drawn, and saying so is what lets somebody

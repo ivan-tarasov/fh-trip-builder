@@ -172,6 +172,10 @@ a:hover { text-decoration: underline; }
   border: 0;
 }
 
+/* Bootstrap ships no such utility, and a flex item with a long value still
+   needs one to keep from pushing its row wide. */
+.min-w-0 { min-width: 0; }
+
 /*
 |------------------------------------------------------------------------------
 | The shell: a rail and a well
@@ -456,7 +460,15 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 
-.row {
+/* Renamed from `.row` (G2.2, #288). Bootstrap's grid does not just style
+   `.row` -- it has a universal-child rule, `.row > * { width: 100%; ... }`,
+   built to be overridden per column by a more specific `.col-*` class. This
+   component's children (`.flag`, `.row__acts`) carried no such override, so
+   scoping only the row itself under `.group` was not enough: Bootstrap's
+   selector matches on the literal class name regardless of ancestor, and
+   still forced every child to `width: 100%` the moment a page also used the
+   real Bootstrap grid. Renaming the block is what actually escapes it. */
+.list-row {
   display: flex;
   align-items: center;
   gap: .75rem;
@@ -465,14 +477,14 @@ a:hover { text-decoration: underline; }
   border-top: 1px solid var(--rule);
 }
 
-.row:first-child { border-top: 0; }
-.row--head { background: var(--sunken); font-weight: 600; }
-.row--child { padding-left: 2rem; }
+.list-row:first-child { border-top: 0; }
+.list-row--head { background: var(--sunken); font-weight: 600; }
+.list-row--child { padding-left: 2rem; }
 
-.row__name { flex: 1; color: inherit; min-width: 0; }
-.row__name:hover { color: var(--signal); }
+.list-row__name { flex: 1; color: inherit; min-width: 0; }
+.list-row__name:hover { color: var(--signal); }
 
-.row__slug {
+.list-row__slug {
   color: var(--ink-quiet);
   font-family: var(--mono);
   font-size: .75rem;
@@ -494,8 +506,8 @@ a:hover { text-decoration: underline; }
 
 .flag--owned { border-color: var(--good-edge); background: var(--good-soft); color: var(--good); }
 
-.row__acts { display: flex; gap: .25rem; }
-.row__act { margin: 0; }
+.list-row__acts { display: flex; gap: .25rem; }
+.list-row__act { margin: 0; }
 
 .group__empty {
   margin: 0;
@@ -576,6 +588,54 @@ a:hover { text-decoration: underline; }
 
 /* The counts and the two summaries below carry no opinion at all. */
 .tile--plain { background: var(--sunken); border-color: transparent; }
+
+/*
+|------------------------------------------------------------------------------
+| Orchid stat cards
+|------------------------------------------------------------------------------
+|
+| The overview dashboard's own cards (G2.2, #288) -- Orchid's own
+| `.orchid-card`/`.orchid-stat-card` shape, not the `.tile` grid above, which
+| `booking.html.twig` still uses and this task does not touch.
+|
+*/
+
+.orchid-card {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 1px 2px #0f122010;
+}
+
+.stat-card__label { margin: 0 0 .25rem; font-size: .8125rem; color: var(--ink-quiet); }
+.stat-card__value { margin: 0; font-size: 1.375rem; font-weight: 700; letter-spacing: -.01em; }
+.stat-card__value--none { font-weight: 400; color: var(--ink-faint); }
+.stat-card__note { margin: .375rem 0 0; font-size: .75rem; color: var(--ink-quiet); }
+
+.stat-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.625rem;
+  height: 2.625rem;
+  border-radius: var(--radius);
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  background: var(--sunken);
+  color: var(--ink-quiet);
+}
+
+/* The tones. Colour is emphasis here and never the whole message -- every
+   card prints its state in words too, so none of this is load-bearing. */
+.stat-card--good .stat-card__icon { background: var(--good-soft); color: var(--good); }
+.stat-card--warn .stat-card__icon { background: var(--signal-soft); color: var(--signal); }
+.stat-card--bad .stat-card__icon { background: var(--bad-soft); color: var(--bad); }
+
+.stat-card__spark { position: relative; height: 4.5rem; margin-top: .5rem; }
+.stat-card__spark canvas { width: 100% !important; height: 100% !important; display: block; }
+
+.orchid-chart-wrap { position: relative; width: 100%; }
+.orchid-chart-wrap--md { height: 12rem; }
 
 .sheet { width: 100%; border-collapse: collapse; font-size: .8125rem; }
 

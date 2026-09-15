@@ -29,7 +29,7 @@
                             <td>{{ subscriber.email }}</td>
                             <td class="mono sheet__quiet">{{ subscriber.subscribed_at|date('j M Y') }}</td>
                             <td>
-                                <form method="post" action="/admin/subscribers" class="row__act">
+                                <form method="post" action="/admin/subscribers" class="list-row__act">
                                     <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
                                     <input type="hidden" name="id" value="{{ subscriber.id }}">
                                     <button type="submit" class="button button--tiny">Remove</button>

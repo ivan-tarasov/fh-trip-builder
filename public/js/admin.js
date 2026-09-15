@@ -250,8 +250,118 @@
         });
     };
 
+    /*
+    | The dashboard's two real charts -- a sparkline on the Rates card and a
+    | ranking of the five most-searched routes. Only `Chart` global exists at
+    | all on the one page that loads `chart.umd.min.js`, so every other page
+    | hits the guard and returns (G2.2, #288).
+    |
+    | Colours read from the page's own tokens rather than being written here
+    | a second time, so a chart drawn in the dark palette does not need its
+    | own copy kept in step with `admin.css`.
+    */
+    var charts = function () {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        var canvases = document.querySelectorAll('.js-chart');
+
+        if (canvases.length === 0) {
+            return;
+        }
+
+        var style = getComputedStyle(document.documentElement);
+        var signal = style.getPropertyValue('--signal').trim();
+        var quiet = style.getPropertyValue('--ink-quiet').trim();
+        var rule = style.getPropertyValue('--rule').trim();
+
+        canvases.forEach(function (canvas) {
+            if (canvas.dataset.chart === 'sparkline') {
+                sparkline(canvas, signal);
+            } else if (canvas.dataset.chart === 'searches') {
+                searchesChart(canvas, signal, quiet, rule);
+            }
+        });
+    };
+
+    /*
+    | A line with nothing else on it: no axis, no grid, no legend, no points
+    | -- the shape is the whole message, the way Orchid's own
+    | `.orchid-stat-card__spark` is used.
+    */
+    var sparkline = function (canvas, colour) {
+        var points = JSON.parse(canvas.dataset.points || '{}');
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: Object.keys(points),
+                datasets: [{
+                    data: Object.values(points),
+                    borderColor: colour,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: .3,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    };
+
+    /*
+    | Five real counts, ranked -- not a trend, which `search` cannot answer
+    | (see `DashboardRepository::topSearches()`). Horizontal, so a route code
+    | reads left to right the way it is written.
+    */
+    var searchesChart = function (canvas, colour, mutedColour, gridColour) {
+        var rows = JSON.parse(canvas.dataset.rows || '[]');
+
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: rows.map(function (row) { return row.from + ' → ' + row.to; }),
+                datasets: [{
+                    data: rows.map(function (row) { return row.count; }),
+                    backgroundColor: colour,
+                    borderRadius: 4,
+                    maxBarThickness: 22
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { color: mutedColour, precision: 0 },
+                        grid: { color: gridColour }
+                    },
+                    y: {
+                        ticks: { color: mutedColour },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    };
+
     markdownPreview();
     confirmFirst();
     themeToggle();
     railToggle();
+    charts();
 }());
