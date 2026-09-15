@@ -112,10 +112,11 @@ final class BookingPanelTest extends IntegrationTestCase
         $this->insert('ZZB006');
 
         self::assertSame($before + 1, $this->bookings()->countAll());
-        self::assertSame(
-            (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM bookings'),
-            $this->bookings()->countAll(),
-        );
+
+        /** @var int $count */
+        $count = $this->connection()->fetchValue('SELECT COUNT(*) FROM bookings');
+
+        self::assertSame($count, $this->bookings()->countAll());
     }
 
     private function insert(string $reference, string $created = '2020-06-01 12:00:00'): int

@@ -26,7 +26,10 @@ final class EnvTest extends TestCase
     protected function setUp(): void
     {
         $this->exported = getenv(self::KEY->value);
-        $this->loaded = isset($_ENV[self::KEY->value]) ? (string) $_ENV[self::KEY->value] : null;
+
+        /** @var string|null $loaded */
+        $loaded = $_ENV[self::KEY->value] ?? null;
+        $this->loaded = $loaded;
 
         putenv(self::KEY->value);
         unset($_ENV[self::KEY->value]);

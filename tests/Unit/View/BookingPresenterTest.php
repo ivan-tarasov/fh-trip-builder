@@ -17,6 +17,7 @@ use TripBuilder\View\BookingPresenter;
  * @phpstan-import-type BookingRow from BookingRepository
  * @phpstan-import-type BookingPassengerRow from BookingPassengerRepository
  * @phpstan-import-type Presented from BookingPresenter
+ * @phpstan-import-type PriceParts from BookingPresenter
  */
 final class BookingPresenterTest extends TestCase
 {
@@ -132,6 +133,12 @@ final class BookingPresenterTest extends TestCase
         return $booking;
     }
 
+    /** @param PriceParts $part */
+    private static function wholeUnits(array $part): int
+    {
+        return (int) str_replace(',', '', $part['whole']);
+    }
+
     /**
      * A booking reads in the currency it was made in, whatever the visitor has
      * chosen since.
@@ -233,11 +240,9 @@ final class BookingPresenterTest extends TestCase
 
         self::assertNotNull($booking['price_total']);
 
-        $whole = static fn(array $part): int => (int) str_replace(',', '', $part['whole']);
-
         self::assertSame(
-            $whole($booking['price_total']),
-            $whole($booking['price_base']) + $whole($booking['price_tax']),
+            self::wholeUnits($booking['price_total']),
+            self::wholeUnits($booking['price_base']) + self::wholeUnits($booking['price_tax']),
         );
     }
 
@@ -336,7 +341,10 @@ final class BookingPresenterTest extends TestCase
             self::assertArrayHasKey($key, $booking['outbound']);
         }
 
-        self::assertSame('Business', $booking['outbound']['segments'][0]['cabin']);
+        /** @var array{segments: list<array{cabin: ?string, ...}>, ...} $outbound */
+        $outbound = $booking['outbound'];
+
+        self::assertSame('Business', $outbound['segments'][0]['cabin']);
     }
 
     public function testTheSummaryNamesTheLeadAndCountsTheRest(): void

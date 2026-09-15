@@ -73,25 +73,48 @@ final class PostRepositoryTest extends IntegrationTestCase
     {
         $slug = self::SENTINEL . '-' . $suffix;
 
-        $field = static fn(string $name, mixed $default): mixed
-            => array_key_exists($name, $overrides) ? $overrides[$name] : $default;
-
         $this->repository()->store(
             $slug,
             [
-                'published_at' => $field('published_at', '2026-03-01 09:00:00'),
-                'author' => $field('author', 'A Writer'),
-                'hero' => $field('hero', 'img/airside/one.jpg'),
+                'published_at' => self::field($overrides, 'published_at', '2026-03-01 09:00:00'),
+                'author' => self::field($overrides, 'author', 'A Writer'),
+                'hero' => self::nullableField($overrides, 'hero', 'img/airside/one.jpg'),
             ],
             [
-                'title' => $field('title', 'A post'),
-                'summary' => $field('summary', 'One sentence about travel.'),
-                'hero_alt' => $field('hero_alt', 'A window seat at altitude'),
-                'body' => $field('body', "## A heading\n\nSome prose.\n"),
+                'title' => self::field($overrides, 'title', 'A post'),
+                'summary' => self::field($overrides, 'summary', 'One sentence about travel.'),
+                'hero_alt' => self::nullableField($overrides, 'hero_alt', 'A window seat at altitude'),
+                'body' => self::field($overrides, 'body', "## A heading\n\nSome prose.\n"),
             ],
         );
 
         return $slug;
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private static function field(array $overrides, string $name, string $default): string
+    {
+        if (!array_key_exists($name, $overrides)) {
+            return $default;
+        }
+
+        /** @var string $value */
+        $value = $overrides[$name];
+
+        return $value;
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private static function nullableField(array $overrides, string $name, ?string $default): ?string
+    {
+        if (!array_key_exists($name, $overrides)) {
+            return $default;
+        }
+
+        /** @var string|null $value */
+        $value = $overrides[$name];
+
+        return $value;
     }
 
     public function testAPostReadsBackTheWayItWasWritten(): void

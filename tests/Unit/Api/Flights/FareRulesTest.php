@@ -8,6 +8,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Api\Flights\FareRules;
 
+/**
+ * @phpstan-import-type FareRuleFields from FareRules
+ */
 final class FareRulesTest extends TestCase
 {
     private static function basic(): FareRules
@@ -151,9 +154,9 @@ final class FareRulesTest extends TestCase
         ];
 
         foreach ($cases as $label => $sold) {
-            $restored = FareRules::fromRow(
-                json_decode((string) json_encode($sold->toArray()), true),
-            );
+            /** @var FareRuleFields $row */
+            $row = json_decode((string) json_encode($sold->toArray()), true);
+            $restored = FareRules::fromRow($row);
 
             self::assertEquals($sold, $restored, $label);
             self::assertSame($sold->lines(), $restored->lines(), $label);

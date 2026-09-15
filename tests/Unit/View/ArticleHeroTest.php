@@ -295,7 +295,7 @@ final class ArticleHeroTest extends TestCase
      * a database it does not need. The slugs are real because the prose is
      * still a template per slug and `/help/baggage` has to render one.
      *
-     * @return array<string, array<string, mixed>>
+     * @return array<string, array{title: string, short: ?string, icon: string, summary: string}>
      */
     private static function articles(): array
     {
@@ -397,7 +397,7 @@ final class ArticleHeroTest extends TestCase
             }
 
             return ['help/view.html.twig', [
-                'breadcrumbs' => Breadcrumbs::trail($path, (string) $articles[$slug]['title']),
+                'breadcrumbs' => Breadcrumbs::trail($path, $articles[$slug]['title']),
                 'article' => $articles[$slug] + ['slug' => $slug],
                 // The prose arrives converted now; this test is about the band
                 // above it, so any well-formed body will do.
@@ -408,7 +408,7 @@ final class ArticleHeroTest extends TestCase
         }
 
         $slug = ltrim($path, '/');
-        /** @var array<string, array<string, mixed>> $documents */
+        /** @var array<string, array{title: string, icon: string, summary: string}> $documents */
         $documents = Config::get('legal.documents', []);
         $more = [];
 
@@ -417,7 +417,7 @@ final class ArticleHeroTest extends TestCase
         }
 
         return ['legal/view.html.twig', [
-            'breadcrumbs' => Breadcrumbs::trail($path, (string) $documents[$slug]['title']),
+            'breadcrumbs' => Breadcrumbs::trail($path, $documents[$slug]['title']),
             'document' => $documents[$slug] + ['slug' => $slug],
             'more' => $more,
         ]];

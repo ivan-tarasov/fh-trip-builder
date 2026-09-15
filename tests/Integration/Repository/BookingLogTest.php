@@ -18,6 +18,8 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * The rows here carry a made-up session and references no allocator will issue,
  * and they are removed afterwards: this table holds real personal data on any
  * install that has taken a booking (A3.8, #233).
+ *
+ * @phpstan-import-type BookingRow from BookingRepository
  */
 final class BookingLogTest extends IntegrationTestCase
 {
@@ -146,13 +148,14 @@ final class BookingLogTest extends IntegrationTestCase
             ['type' => 'C', 'first_name' => 'Zzchild', 'last_name' => 'Zzsurname', 'dob' => '2015-05-05', 'gender' => 'M'],
         ]);
 
-        $found = static fn(array $rows): bool => in_array($id, array_map(
-            static fn(array $row): int => (int) $row['id'],
-            $rows,
-        ), true);
-
-        self::assertTrue($found($this->bookings()->search('Zzchild Zzsurname', 50)), 'the child did not find it');
-        self::assertTrue($found($this->bookings()->search('ZZL005', 50)), 'the reference did not find it');
+        self::assertTrue(
+            self::containsId($this->bookings()->search('Zzchild Zzsurname', 50), $id),
+            'the child did not find it',
+        );
+        self::assertTrue(
+            self::containsId($this->bookings()->search('ZZL005', 50), $id),
+            'the reference did not find it',
+        );
         self::assertGreaterThan(0, $this->bookings()->countMatching('ZZL005'));
     }
 
@@ -219,6 +222,12 @@ final class BookingLogTest extends IntegrationTestCase
     private function bookings(): BookingRepository
     {
         return new BookingRepository($this->connection());
+    }
+
+    /** @param list<BookingRow> $rows */
+    private static function containsId(array $rows, int $id): bool
+    {
+        return in_array($id, array_map(static fn(array $row): int => $row['id'], $rows), true);
     }
 
     private function insert(string $reference): int

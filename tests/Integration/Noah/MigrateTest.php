@@ -56,11 +56,14 @@ final class MigrateTest extends IntegrationTestCase
 
     private function ledgerExists(): bool
     {
-        return (int) $this->connection()->fetchValue(
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM information_schema.tables'
             . ' WHERE table_schema = DATABASE() AND table_name = ?',
             [self::TABLE],
-        ) > 0;
+        );
+
+        return $count > 0;
     }
 
     public function testTheLedgerExistsOnceMigrateHasRun(): void
@@ -113,10 +116,13 @@ final class MigrateTest extends IntegrationTestCase
 
     private function timesRecorded(string $version): int
     {
-        return (int) $this->connection()->fetchValue(
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM ' . self::TABLE . ' WHERE version = ?',
             [$version],
         );
+
+        return $count;
     }
 
     public function testAMigrationRunsAndIsRecorded(): void
@@ -165,10 +171,13 @@ final class MigrateTest extends IntegrationTestCase
 
     private function tableExists(string $table): bool
     {
-        return (int) $this->connection()->fetchValue(
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM information_schema.tables'
             . ' WHERE table_schema = DATABASE() AND table_name = ?',
             [$table],
-        ) > 0;
+        );
+
+        return $count > 0;
     }
 }

@@ -37,6 +37,9 @@ foreach (['DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB
     // how somebody says "connect over TCP, not the socket `.env` names" -- and
     // filling it back in from `.env` would undo that.
     if (getenv($key) === false && isset($_ENV[$key])) {
-        putenv($key . '=' . (string) $_ENV[$key]);
+        /** @var string $value */
+        $value = $_ENV[$key];
+
+        putenv($key . '=' . $value);
     }
 }

@@ -52,10 +52,10 @@ final class InstallSeedTest extends IntegrationTestCase
         $this->connection()->execute($sql, [self::PROBE, 'Probe', '', '', 'XX', 'XXX', 0, 0]);
         $this->connection()->execute($sql, [self::PROBE, 'Probe Renamed', '', '', 'XX', 'XXX', 0, 0]);
 
-        self::assertSame(
-            1,
-            (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM airlines WHERE code = ?', [self::PROBE]),
-        );
+        /** @var int $count */
+        $count = $this->connection()->fetchValue('SELECT COUNT(*) FROM airlines WHERE code = ?', [self::PROBE]);
+
+        self::assertSame(1, $count);
         self::assertSame(
             'Probe Renamed',
             $this->connection()->fetchValue('SELECT title FROM airlines WHERE code = ?', [self::PROBE]),
@@ -64,7 +64,8 @@ final class InstallSeedTest extends IntegrationTestCase
 
     public function testRowAliasIsOnlyUsedWhereItExists(): void
     {
-        $version = (string) $this->connection()->pdo()->getAttribute(PDO::ATTR_SERVER_VERSION);
+        /** @var string $version */
+        $version = $this->connection()->pdo()->getAttribute(PDO::ATTR_SERVER_VERSION);
         $sql = $this->seedStatement('airlines', self::COLUMNS);
 
         $expected = !str_contains(strtolower($version), 'mariadb')
@@ -86,6 +87,9 @@ final class InstallSeedTest extends IntegrationTestCase
 
         $method = $class->getMethod('seedStatement');
 
-        return $method->invoke($command, $table, $columns);
+        /** @var string $sql */
+        $sql = $method->invoke($command, $table, $columns);
+
+        return $sql;
     }
 }

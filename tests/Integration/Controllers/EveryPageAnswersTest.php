@@ -201,6 +201,7 @@ final class EveryPageAnswersTest extends IntegrationTestCase
     {
         // Memoised: both tests want the table and building it renders the
         // sitemap, which is a real query against every place this site sells.
+        /** @var array<string, array{string, string, HttpStatus}>|null $addresses */
         static $addresses = null;
 
         if ($addresses !== null) {

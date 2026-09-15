@@ -184,9 +184,12 @@ final class ArticlePruneTest extends IntegrationTestCase
 
     private function countIn(string $table, string $slug): int
     {
-        return (int) $this->connection()->fetchValue(
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM ' . $table . ' WHERE slug = ?',
             [$slug],
         );
+
+        return $count;
     }
 }

@@ -8,7 +8,10 @@ final class ConnectionIntegrationTest extends IntegrationTestCase
 {
     public function testFetchValueRunsAScalarQuery(): void
     {
-        self::assertSame(2, (int) $this->connection()->fetchValue('SELECT 1 + 1'));
+        /** @var int $result */
+        $result = $this->connection()->fetchValue('SELECT 1 + 1');
+
+        self::assertSame(2, $result);
     }
 
     public function testFetchOneReturnsAnAssociativeRow(): void
@@ -29,7 +32,8 @@ final class ConnectionIntegrationTest extends IntegrationTestCase
 
     public function testSeededReferenceDataIsPresent(): void
     {
-        $countries = (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM countries');
+        /** @var int $countries */
+        $countries = $this->connection()->fetchValue('SELECT COUNT(*) FROM countries');
 
         self::assertGreaterThan(0, $countries, 'app:install should have seeded countries');
     }
