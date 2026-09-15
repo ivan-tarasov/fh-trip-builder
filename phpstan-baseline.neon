@@ -60,8 +60,3 @@ parameters:
 			count: 1
 			path: src/Noah/Flights/Generate.php
 
-		-
-			message: '#^Property TripBuilder\\Noah\\Flights\\Generate\:\:\$count type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Noah/Flights/Generate.php
