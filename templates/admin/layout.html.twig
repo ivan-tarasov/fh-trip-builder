@@ -8,6 +8,14 @@
    before this existed: 48KB of HTML and eighteen link/script tags, for one
    password field. None of it is for the person running the site (A3.5, #230).
 
+   **Bootstrap came back in A10.1 (#287)**, on purpose and scoped to the panel:
+   growing panel functionality changed the tradeoff A3.5 made, and a licensed
+   dashboard template gives tables, forms, cards and charts already built.
+   What did not come back is the CDN -- Bootstrap and its icon font are
+   vendored into `public/` from the official npm packages, the same way the
+   typeface already is, so the panel still fetches nothing from off this
+   server.
+
    `Routes::EXCLUDE_HEADER_FOOTER` looks like the lever for this and is not: it
    means "emits its own payload", for JSON. This is a different document, not
    the absence of one -- and `Kernel::wrapped()` lets it through untouched
@@ -28,7 +36,10 @@
        header gives: a stylesheet cannot read localStorage and a script at the
        foot runs after the paint, so a dark reader would see the light palette
        flash on every navigation. The same key as the public side, so choosing
-       dark out there means dark in here. #}
+       dark out there means dark in here. `data-bs-theme` is set alongside
+       `data-theme` so Bootstrap's own component colours never disagree with
+       ours -- the same pairing `global.js`'s toggle already keeps in step on
+       the public site. #}
     <script>
         (function () {
             try {
@@ -36,11 +47,13 @@
 
                 if (choice === 'light' || choice === 'dark') {
                     document.documentElement.setAttribute('data-theme', choice);
+                    document.documentElement.setAttribute('data-bs-theme', choice);
                 }
             } catch (e) {}
         }());
     </script>
 
+    <link href="{{ asset(config('site.directory.css') ~ '/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset(config('site.directory.css') ~ '/admin.css') }}" rel="stylesheet">
 </head>
 <body class="shell{% block shell_class %}{% endblock %}">
@@ -53,8 +66,22 @@
 
     <div class="well">
         <header class="well__top">
-            <h1 class="well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
-            <div class="well__tools">{% block tools %}{% endblock %}</div>
+            <div class="well__lead">
+                <button type="button" class="btn btn-icon d-lg-none well__toggle" data-bs-toggle="offcanvas"
+                        data-bs-target="#adminRail" aria-controls="adminRail" aria-label="Toggle navigation">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <h1 class="well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
+            </div>
+
+            <div class="well__tools">
+                {% block tools %}{% endblock %}
+
+                <button type="button" class="btn btn-icon js-theme well__theme" aria-pressed="false" aria-label="Toggle dark theme">
+                    <i class="bi bi-sun-fill well__theme-icon well__theme-icon--sun" aria-hidden="true"></i>
+                    <i class="bi bi-moon-stars-fill well__theme-icon well__theme-icon--moon" aria-hidden="true"></i>
+                </button>
+            </div>
         </header>
 
         {# `tabindex="-1"` so the skip link can put focus here, the same reason
@@ -65,6 +92,7 @@
     </div>
 {% endblock %}
 
+<script src="{{ asset(config('site.directory.js') ~ '/bootstrap.bundle.min.js') }}" defer></script>
 <script src="{{ asset(config('site.directory.js') ~ '/admin.js') }}" defer></script>
 </body>
 </html>

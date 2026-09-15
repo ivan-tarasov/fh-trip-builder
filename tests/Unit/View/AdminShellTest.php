@@ -17,8 +17,13 @@ use TripBuilder\Helper;
  * of it inherited from a layout built to sell flights. Afterwards: 1.5KB and
  * two tags, both its own (A3.5, #230).
  *
- * That is one `{% extends %}` away from coming back, and nothing else here
- * would notice. So this reads the templates.
+ * **Bootstrap came back in A10.1 (#287)**, deliberately and scoped to the
+ * panel -- what this file still guards is the shape of the decision, not the
+ * exact count: nothing loaded from a CDN, no jQuery, no Font Awesome, no
+ * accidental fourth or fifth tag nobody meant to add.
+ *
+ * That is one `{% extends %}` away from bringing all of it back, and nothing
+ * else here would notice. So this reads the templates.
  */
 final class AdminShellTest extends TestCase
 {
@@ -47,18 +52,27 @@ final class AdminShellTest extends TestCase
     }
 
     /**
-     * The panel loads its own two files and nothing else.
+     * The panel loads its own files, one vendored pair, and nothing else.
      *
      * Not a style rule. Every one of these is a request an operator pays for
      * on a page that cannot use it, and the list only ever grows by accident.
+     *
+     * **Bootstrap is back as of A10.1 (#287)**, on purpose and scoped to the
+     * panel -- what stays banned is a CDN. Bootstrap and Bootstrap Icons are
+     * vendored into `public/` from the official npm packages, the same way
+     * the typeface already is, so this still fetches nothing from off this
+     * server. jQuery, Font Awesome, sweetalert, a range slider and Mapbox stay
+     * out: nothing here uses them, and Bootstrap 5 needs none of them.
      */
     public function testThePanelLoadsNothingItDoesNotOwn(): void
     {
         // Without the comments: this file names every one of them, in the
-        // paragraph explaining that they are gone.
+        // paragraph explaining what changed and why.
         $layout = self::stripComments(self::read(self::LAYOUT));
 
+        self::assertStringContainsString("/bootstrap.min.css'", $layout);
         self::assertStringContainsString("/admin.css'", $layout);
+        self::assertStringContainsString("/bootstrap.bundle.min.js'", $layout);
         self::assertStringContainsString("/admin.js'", $layout);
 
         // Nothing is fetched from anywhere but this server. Every CDN link in
@@ -67,7 +81,7 @@ final class AdminShellTest extends TestCase
         // self-hosted, so it arrives through `admin.css` rather than as a tag.
         self::assertStringNotContainsString('//', $layout, 'the panel is fetching something from off this server');
 
-        foreach (['jquery', 'bootstrap', 'fontawesome', 'font-awesome', 'sweetalert', 'rangeslider', 'mapbox', 'cdnjs', 'jsdelivr'] as $stranger) {
+        foreach (['jquery', 'fontawesome', 'font-awesome', 'sweetalert', 'rangeslider', 'mapbox', 'cdnjs', 'jsdelivr'] as $stranger) {
             self::assertStringNotContainsString(
                 $stranger,
                 strtolower($layout),
@@ -75,9 +89,9 @@ final class AdminShellTest extends TestCase
             );
         }
 
-        // Two, and no more: the count is the assertion.
-        self::assertSame(1, substr_count($layout, 'rel="stylesheet"'));
-        self::assertSame(1, substr_count($layout, '<script src='));
+        // Four, and no more: a vendored pair plus our own pair.
+        self::assertSame(2, substr_count($layout, 'rel="stylesheet"'));
+        self::assertSame(2, substr_count($layout, '<script src='));
     }
 
     /**

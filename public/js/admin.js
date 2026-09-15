@@ -3,13 +3,12 @@
 | The panel
 |------------------------------------------------------------------------------
 |
-| Its own file, and the only script the panel loads. What it replaced was
-| fourteen external assets inherited from the site's layout -- jQuery,
-| Bootstrap, Font Awesome, sweetalert, a range slider, a datepicker -- none of
-| which an operator page uses (A3.5, #230).
-|
-| No framework and no jQuery on purpose: what is here is one fetch, one timer
-| and one confirm.
+| The panel's own script, sitting beside the vendored Bootstrap bundle rather
+| than replacing it (A10.1, #287). Still no jQuery, Font Awesome, sweetalert,
+| a range slider or a datepicker -- none of which an operator page uses
+| (A3.5, #230) -- and everything below is here because Bootstrap's own bundle
+| does not do it: a markdown preview, a confirm before a destructive action,
+| and the dark/light toggle.
 |
 | One function per piece, because the first one written was inline and bailed
 | out with a `return` when its element was missing -- which on every page but
@@ -102,6 +101,69 @@
         });
     };
 
+    /*
+    | Dark or light, the same `.js-theme` pattern `global.js` already proved on
+    | the public site -- `aria-pressed` is the whole of the visual state, so
+    | there is one source for "is it dark" rather than a class kept in step
+    | with an attribute. The layout's own inline script already set
+    | `data-theme`/`data-bs-theme` from storage before the first paint; this is
+    | only what runs after a click.
+    |
+    | No page carries more than one `.js-theme` button -- the topbar's and the
+    | sign-in page's replace each other, never coexist -- so there is nothing
+    | here to delegate.
+    */
+    var themeToggle = function () {
+        var button = document.querySelector('.js-theme');
+
+        if (!button) {
+            return;
+        }
+
+        var media = window.matchMedia('(prefers-color-scheme: dark)');
+
+        var stored = function () {
+            try {
+                var choice = window.localStorage.getItem('tb-theme');
+
+                return choice === 'light' || choice === 'dark' ? choice : null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        var effective = function () {
+            return stored() || (media.matches ? 'dark' : 'light');
+        };
+
+        var show = function (mode) {
+            button.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
+        };
+
+        button.addEventListener('click', function () {
+            var next = effective() === 'dark' ? 'light' : 'dark';
+            var root = document.documentElement;
+
+            root.setAttribute('data-theme', next);
+            root.setAttribute('data-bs-theme', next);
+
+            try {
+                window.localStorage.setItem('tb-theme', next);
+            } catch (e) {}
+
+            show(next);
+        });
+
+        media.addEventListener('change', function () {
+            if (stored() === null) {
+                show(effective());
+            }
+        });
+
+        show(effective());
+    };
+
     markdownPreview();
     confirmFirst();
+    themeToggle();
 }());

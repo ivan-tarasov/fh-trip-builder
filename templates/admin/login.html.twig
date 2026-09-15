@@ -3,42 +3,55 @@
 {% block title %}Sign in{% endblock %}
 
 {# No rail: there is nothing to navigate until somebody is signed in, and
-   showing the panel's shape to a stranger tells them what is worth attacking. #}
+   showing the panel's shape to a stranger tells them what is worth attacking.
+   Orchid's own sign-in page is a two-column marketing layout -- a feature
+   list, a testimonial, three social-login buttons -- built for a multi-tenant
+   product this is not: one operator, one password, no accounts. What is taken
+   here is the card, the shadow and the Bootstrap form controls; not the hero
+   half, which would show a stranger more than the old page did, not less
+   (A10.1, #287). #}
 {% block shell_class %} shell--gate{% endblock %}
 
 {% block shell %}
 <main class="gate" id="main" tabindex="-1">
-    <p class="gate__mark">{{ config('app.name') }} admin</p>
-    <h1 class="gate__title">Sign in</h1>
+    <button type="button" class="btn btn-icon js-theme gate__theme" aria-pressed="false" aria-label="Toggle dark theme">
+        <i class="bi bi-sun-fill well__theme-icon well__theme-icon--sun" aria-hidden="true"></i>
+        <i class="bi bi-moon-stars-fill well__theme-icon well__theme-icon--moon" aria-hidden="true"></i>
+    </button>
 
-    {% if not configured %}
-        {# Said on the page where the person who can fix it is standing. The
-           alternative is a correct password refused with no explanation. #}
-        <p class="notice" role="status">
-            No password is set on this server. Run <code>php noah admin:password</code>
-            and put the line it prints in <code>.env</code>.
-        </p>
-    {% endif %}
+    <div class="gate__card">
+        <p class="gate__mark">{{ config('app.name') }} admin</p>
+        <h1 class="gate__title">Sign in</h1>
 
-    {% if error %}
-        {# `assertive`, not `polite`: the field is about to be retyped, and a
-           message read out after the typing has started is read out too late. #}
-        <p class="notice notice--bad" role="alert" aria-live="assertive">{{ error }}</p>
-    {% endif %}
+        {% if not configured %}
+            {# Said on the page where the person who can fix it is standing. The
+               alternative is a correct password refused with no explanation. #}
+            <p class="notice" role="status">
+                No password is set on this server. Run <code>php noah admin:password</code>
+                and put the line it prints in <code>.env</code>.
+            </p>
+        {% endif %}
 
-    <form method="post" action="/admin/login">
-        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        {% if error %}
+            {# `assertive`, not `polite`: the field is about to be retyped, and a
+               message read out after the typing has started is read out too late. #}
+            <p class="notice notice--bad" role="alert" aria-live="assertive">{{ error }}</p>
+        {% endif %}
 
-        <div class="field">
-            <label for="admin-password">Password</label>
-            {# `current-password` so a password manager offers the right entry,
-               and autofocus because this page has one thing on it. #}
-            <input id="admin-password" name="password" type="password"
-                   autocomplete="current-password" autocapitalize="off" spellcheck="false"
-                   required autofocus>
-        </div>
+        <form method="post" action="/admin/login">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
 
-        <button type="submit" class="button button--go button--block">Sign in</button>
-    </form>
+            <div class="field">
+                <label for="admin-password" class="form-label">Password</label>
+                {# `current-password` so a password manager offers the right entry,
+                   and autofocus because this page has one thing on it. #}
+                <input id="admin-password" name="password" type="password" class="form-control"
+                       autocomplete="current-password" autocapitalize="off" spellcheck="false"
+                       required autofocus>
+            </div>
+
+            <button type="submit" class="button button--go button--block">Sign in</button>
+        </form>
+    </div>
 </main>
 {% endblock %}

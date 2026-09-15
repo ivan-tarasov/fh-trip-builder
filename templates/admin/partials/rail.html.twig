@@ -3,37 +3,60 @@
    Listing what is coming is unusual in a panel and right in this one: there is
    one operator, they are the person who decides what gets built next, and a
    rail that showed a single entry would say less than the truth. Nothing here
-   is a dead link -- what does not exist is not clickable. #}
-<nav class="rail" aria-label="Sections">
-    <a class="rail__mark" href="/" title="Back to the site">
-        <span class="rail__mark-name">{{ config('app.name') }}</span>
-        <span class="rail__mark-role">admin</span>
-    </a>
+   is a dead link -- what does not exist is not clickable.
 
-    <ul class="rail__list">
-        {% for item in [
-            { 'href': '/admin', 'label': 'Overview', 'match': 'overview' },
-            { 'href': '/admin/content', 'label': 'Help content', 'match': 'content' },
-            { 'href': '/admin/bookings', 'label': 'Bookings', 'match': 'bookings' },
-            { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'match': 'subscribers' }
-        ] %}
-            {% set current = admin_section|default('') == item.match %}
-            <li>
-                <a class="rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
-                   {{ current ? 'aria-current="page"' : '' }}>{{ item.label }}</a>
-            </li>
-        {% endfor %}
-    </ul>
+   `offcanvas-lg`: a normal sidebar at `lg` and wider, a slide-in panel with its
+   own backdrop and focus trap below it -- Bootstrap's own behaviour, so the
+   rail carries no JavaScript of its own for this (A10.1, #287). #}
+<div class="offcanvas-lg offcanvas-start rail" tabindex="-1" id="adminRail" aria-labelledby="adminRailLabel">
+    {# Not `.offcanvas-header`: Bootstrap hides that class at `lg` and up,
+       built for a toggle that only makes sense while collapsed. The brand
+       mark stays visible at every width, so it gets a plain class instead. #}
+    <div class="rail__top">
+        <a class="rail__mark" href="/" title="Back to the site" id="adminRailLabel">
+            <span class="rail__mark-name">{{ config('app.name') }}</span>
+            <span class="rail__mark-role">admin</span>
+        </a>
+        <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas"
+                data-bs-target="#adminRail" aria-label="Close"></button>
+    </div>
 
-    <p class="rail__soon-label">Not built yet</p>
-    <ul class="rail__list rail__list--soon">
-        {% for label in ['Settings'] %}
-            <li><span class="rail__item rail__item--soon">{{ label }}</span></li>
-        {% endfor %}
-    </ul>
+    <div class="offcanvas-body rail__body">
+        <ul class="rail__list nav flex-column">
+            {% for item in [
+                { 'href': '/admin', 'label': 'Overview', 'icon': 'speedometer2', 'match': 'overview' },
+                { 'href': '/admin/content', 'label': 'Help content', 'icon': 'journal-text', 'match': 'content' },
+                { 'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings' },
+                { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'match': 'subscribers' }
+            ] %}
+                {% set current = admin_section|default('') == item.match %}
+                <li class="nav-item">
+                    <a class="nav-link rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
+                       {{ current ? 'aria-current="page"' : '' }}>
+                        <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
+                        <span>{{ item.label }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
 
-    <form method="post" action="/admin/logout" class="rail__out">
-        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
-        <button type="submit" class="button button--quiet button--block">Sign out</button>
-    </form>
-</nav>
+        <p class="rail__soon-label">Not built yet</p>
+        <ul class="rail__list rail__list--soon nav flex-column">
+            {% for label in ['Settings'] %}
+                <li class="nav-item">
+                    <span class="nav-link rail__item rail__item--soon">
+                        <i class="bi bi-gear" aria-hidden="true"></i>
+                        <span>{{ label }}</span>
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <form method="post" action="/admin/logout" class="rail__out">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <button type="submit" class="button button--quiet button--block">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+            </button>
+        </form>
+    </div>
+</div>

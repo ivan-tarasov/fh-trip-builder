@@ -186,23 +186,36 @@ a:hover { text-decoration: underline; }
 |------------------------------------------------------------------------------
 */
 
-.shell {
-  display: grid;
-  grid-template-columns: 13rem 1fr;
-  min-height: 100vh;
+.shell { display: flex; min-height: 100vh; }
+
+/*
+| `.rail` is Bootstrap's own `.offcanvas.offcanvas-start.offcanvas-lg`: fixed,
+| translated off-screen and dismissible below `lg`; a plain static element --
+| no position, no transform -- at `lg` and up, which is what makes it sit
+| beside `.well` rather than over it once there is room. Bootstrap resets its
+| background to transparent at that width with its own `!important` (built
+| for a translucent drawer, not a permanent one), so ours answers in kind
+| rather than losing quietly to source order.
+*/
+.rail {
+  --bs-offcanvas-width: 16rem;
+  --bs-offcanvas-bg: var(--rail);
+  color: var(--rail-ink);
 }
 
-.rail {
+@media (min-width: 992px) {
+  .rail { flex: 0 0 13rem; width: 13rem; background: var(--rail) !important; }
+}
+
+.rail__top {
   display: flex;
-  flex-direction: column;
-  padding: 1rem .75rem;
-  background: var(--rail);
-  color: var(--rail-ink);
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem .75rem .5rem;
 }
 
 .rail__mark {
   display: block;
-  margin-bottom: 1.5rem;
   padding: 0 .5rem;
   color: var(--rail-ink);
 }
@@ -220,10 +233,13 @@ a:hover { text-decoration: underline; }
   color: var(--rail-signal);
 }
 
-.rail__list { margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.rail__body { display: flex; flex-direction: column; flex: 1; padding: .5rem .75rem 1rem; }
+.rail__list { display: flex; flex-direction: column; margin: 0 0 1.25rem; padding: 0; list-style: none; }
 
 .rail__item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
   padding: 0 .5rem;
   line-height: var(--row);
   border-radius: var(--radius);
@@ -231,7 +247,8 @@ a:hover { text-decoration: underline; }
   font-size: .8125rem;
 }
 
-.rail__item:hover { background: #ffffff14; text-decoration: none; }
+.rail__item:hover { background: #ffffff14; color: var(--rail-ink); text-decoration: none; }
+.rail__item .bi { font-size: 1rem; color: var(--rail-quiet); }
 
 /* The current section carries the signal and a bar, so it reads without
    colour as well as with it. */
@@ -240,6 +257,8 @@ a:hover { text-decoration: underline; }
   box-shadow: inset 2px 0 0 var(--rail-signal);
   color: var(--rail-signal);
 }
+
+.rail__item.is-current .bi { color: inherit; }
 
 .rail__soon-label {
   margin: 0 0 .25rem;
@@ -253,10 +272,11 @@ a:hover { text-decoration: underline; }
 /* Not links, because they do not exist. Saying so is more use to the one
    person who decides what gets built next than an empty rail would be. */
 .rail__item--soon { color: var(--rail-quiet); cursor: default; }
+.rail__item--soon .bi { color: var(--rail-quiet); }
 
 .rail__out { margin: auto 0 0; padding-top: 1rem; border-top: 1px solid var(--rail-rule); }
 
-.well { display: flex; flex-direction: column; min-width: 0; }
+.well { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
 .well__top {
   display: flex;
@@ -271,9 +291,41 @@ a:hover { text-decoration: underline; }
   background: var(--surface);
 }
 
+.well__lead { display: flex; align-items: center; gap: .75rem; min-width: 0; }
 .well__title { margin: 0; font-size: 1.0625rem; font-weight: 600; }
 .well__tools { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .well__body { padding: 1.5rem; min-width: 0; }
+
+/*
+| One icon button shape, shared by the mobile nav toggle and the theme
+| switch. Bootstrap's own `--bs-btn-*` variables shrink `.btn` to a square
+| rather than a new set of rules.
+*/
+.btn-icon {
+  --bs-btn-padding-x: .5rem;
+  --bs-btn-padding-y: .375rem;
+  --bs-btn-color: var(--ink-quiet);
+  --bs-btn-hover-color: var(--ink);
+  --bs-btn-hover-bg: var(--sunken);
+  --bs-btn-active-color: var(--ink);
+  --bs-btn-active-bg: var(--sunken);
+  --bs-btn-border-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border-radius: var(--radius);
+}
+
+.rail__top .btn-icon { --bs-btn-color: var(--rail-ink); --bs-btn-hover-bg: #ffffff14; --bs-btn-hover-color: var(--rail-ink); }
+
+/* One glyph shown at a time, the same `aria-pressed`-reads-the-icon pattern
+   `theme-switcher.html.twig` uses on the public site -- the button's state is
+   the one source of truth, not a class kept in step with it. Sun by default
+   (pressing it goes dark); the button flips both when it is pressed. */
+.well__theme-icon--moon { display: none; }
+[aria-pressed="true"] .well__theme-icon--sun { display: none; }
+[aria-pressed="true"] .well__theme-icon--moon { display: inline-block; }
 
 /*
 |------------------------------------------------------------------------------
@@ -660,12 +712,18 @@ a:hover { text-decoration: underline; }
 |
 */
 
-.shell--gate { display: block; }
+.shell--gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 
-.gate {
-  max-width: 20rem;
-  margin: 15vh auto 0;
-  padding: 0 1rem;
+.gate { position: relative; width: 100%; max-width: 22rem; padding: 0 1rem; }
+
+.gate__theme { position: absolute; top: -3rem; right: 1rem; }
+
+.gate__card {
+  padding: 2rem 1.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 1px 3px #00000014, 0 1px 2px #0000000f;
 }
 
 .gate__mark {
@@ -680,15 +738,6 @@ a:hover { text-decoration: underline; }
 .gate__title { margin: 0 0 1rem; font-size: 1.25rem; }
 
 @media (max-width: 60em) {
-  .shell { grid-template-columns: 1fr; }
-
-  /* The rail becomes a strip across the top, because a sidebar on a phone is
-     a sidebar in the way. */
-  .rail { flex-direction: row; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .5rem .75rem; }
-  .rail__mark { margin: 0 auto 0 0; }
-  .rail__list { display: flex; gap: .25rem; margin: 0; }
-  .rail__soon-label, .rail__list--soon { display: none; }
-  .rail__out { margin: 0; padding: 0; border: 0; }
   .editor, .pair { grid-template-columns: 1fr; }
   .well__body { padding: 1rem; }
 }
