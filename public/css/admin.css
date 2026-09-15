@@ -638,36 +638,48 @@ a:hover { text-decoration: underline; }
 .orchid-chart-wrap { position: relative; width: 100%; }
 .orchid-chart-wrap--md { height: 12rem; }
 
-/*
-|------------------------------------------------------------------------------
-| Orchid tables
-|------------------------------------------------------------------------------
-|
-| `.orchid-table` names a look, not just a hook: a small-caps header row like
-| Orchid's own list pages carry, a quiet hover, borders that read as rules
-| rather than a grid. First used on the help-content list (G2.3, #289) and the
-| bookings/subscribers tables (G2.4, #290) -- every `table.orchid-table` in the
-| panel picks it up, including the ones G2.5 has not touched yet.
-|
-*/
-
-.orchid-table > thead th {
-  font-size: .6875rem;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--ink-quiet);
+/* A small icon tile wherever a card header wants one that is not a stat --
+   same recipe as `.stat-card__icon`, kept separate because the two
+   components should not have to evolve together (G2.3, #289). */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  flex-shrink: 0;
   background: var(--sunken);
-  border-bottom-color: var(--rule);
+  color: var(--ink-quiet);
 }
 
-.orchid-table > tbody td { border-color: var(--rule); }
-.orchid-table > tbody tr:hover > td { background: var(--sunken); }
+.icon-badge--sm { width: 2rem; height: 2rem; font-size: 1rem; }
+.icon-badge--warn { background: var(--signal-soft); color: var(--signal); }
+
+/* Orchid's own table dressing: a quiet, uppercase head and consistent row
+   padding, layered onto Bootstrap's `.table` rather than replacing it. */
+.orchid-table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: var(--sunken);
+  --bs-table-color: var(--ink);
+}
+
+.orchid-table thead th {
+  padding: .625rem .75rem;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-quiet);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.orchid-table tbody td { padding: .875rem .75rem; border-bottom: 1px solid var(--rule); }
+.orchid-table tbody tr:last-child td { border-bottom: 0; }
 
 /* A row that sums the ones above it -- the booking payment breakdown's
    Total, so it reads as heavier than Base fare and Taxes & fees without a
-   second table component. */
-.orchid-table tr.is-total > td { font-weight: 700; background: var(--signal-soft); }
+   second table component (G2.4, #290). */
+.orchid-table tr.is-total td { font-weight: 700; background: var(--signal-soft); }
 
 /* Icon + label + tone, for anything that used to be a bare Bootstrap
    `.badge`: a booking's state in a list row, a flight leg's stop count. Tone
