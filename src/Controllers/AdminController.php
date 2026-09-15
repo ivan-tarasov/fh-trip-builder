@@ -1068,6 +1068,7 @@ class AdminController extends AbstractController
                 'is_cancelled' => $row['status'] === 'cancelled',
                 'from' => null,
                 'to' => null,
+                'departs' => null,
                 'travellers' => $travellers,
                 'price_total' => null,
                 'broken' => true,
