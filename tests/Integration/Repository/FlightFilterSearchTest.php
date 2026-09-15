@@ -16,6 +16,8 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * The contract that matters: an option the sidebar offers must return
  * something when chosen. Getting that wrong is worse than having no
  * availability at all — the control looks usable and empties the page.
+ *
+ * @phpstan-import-type Itinerary from FlightRepository
  */
 final class FlightFilterSearchTest extends IntegrationTestCase
 {
@@ -44,7 +46,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     private const PROBE_LIMIT = 2;
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<Itinerary>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function search(?FlightFilters $filters = null): array
     {
@@ -52,7 +54,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     }
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<Itinerary>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function searchRoute(string $from, string $to, string $date, ?FlightFilters $filters = null): array
     {
@@ -61,7 +63,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
     }
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<Itinerary>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function requireResults(): array
     {
@@ -141,7 +143,7 @@ final class FlightFilterSearchTest extends IntegrationTestCase
             // toggle is for.
             foreach ($result['rows'] as $row) {
                 $carriers = array_map(
-                    static fn(array $leg): string => (string) $leg['carrier'],
+                    static fn(array $leg): string => $leg['carrier'],
                     $row['legs'],
                 );
 

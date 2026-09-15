@@ -48,12 +48,12 @@ final class DashboardTest extends IntegrationTestCase
      */
     public function testACountNobodyHasYetIsNotZero(): void
     {
-        $bookings = $this->connection()->fetchValue('SELECT COUNT(*) FROM bookings');
+        $bookings = $this->sqlCount('SELECT COUNT(*) FROM bookings');
         $counts = $this->byLabel($this->dashboard()->counts());
 
         self::assertArrayHasKey('Bookings', $counts);
 
-        if ((int) $bookings === 0) {
+        if ($bookings === 0) {
             self::assertNull($counts['Bookings']['value'], 'an empty table should read as nothing, not as 0');
         } else {
             self::assertNotNull($counts['Bookings']['value']);
@@ -69,7 +69,7 @@ final class DashboardTest extends IntegrationTestCase
      */
     public function testTheFlightsFigureIsTheRealCount(): void
     {
-        $held = (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM flights');
+        $held = $this->sqlCount('SELECT COUNT(*) FROM flights');
         $counts = $this->byLabel($this->dashboard()->counts());
 
         self::assertArrayHasKey('Flights held', $counts);
@@ -157,15 +157,15 @@ final class DashboardTest extends IntegrationTestCase
         $content = $this->dashboard()->content();
 
         self::assertSame(
-            (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM articles'),
+            $this->sqlCount('SELECT COUNT(*) FROM articles'),
             $content['articles'],
         );
         self::assertSame(
-            (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM article_categories'),
+            $this->sqlCount('SELECT COUNT(*) FROM article_categories'),
             $content['categories'],
         );
         self::assertSame(
-            (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM articles WHERE edited_at IS NOT NULL'),
+            $this->sqlCount('SELECT COUNT(*) FROM articles WHERE edited_at IS NOT NULL'),
             $content['owned'],
         );
         self::assertLessThanOrEqual($content['articles'], $content['hidden']);
@@ -229,5 +229,13 @@ final class DashboardTest extends IntegrationTestCase
     private function dashboard(): DashboardRepository
     {
         return new DashboardRepository($this->connection());
+    }
+
+    private function sqlCount(string $sql): int
+    {
+        /** @var int $count */
+        $count = $this->connection()->fetchValue($sql);
+
+        return $count;
     }
 }

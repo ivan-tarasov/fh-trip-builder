@@ -29,6 +29,11 @@ use TripBuilder\View\TwigRenderer;
  * searches are recorded by use, not by seeding -- so the routes column is
  * missing there by design. Asserting all six are present was asserting that
  * somebody had used the site.
+ *
+ * @phpstan-type FooterColumn array{
+ *     title: string, source: string, count: int,
+ *     more?: array{text: string, url: string, total?: string},
+ * }
  */
 final class FooterColumnsTest extends IntegrationTestCase
 {
@@ -36,6 +41,15 @@ final class FooterColumnsTest extends IntegrationTestCase
     {
         new Config('common');
         $_SESSION = [];
+    }
+
+    /** @return list<FooterColumn> */
+    private static function footerColumns(): array
+    {
+        /** @var list<FooterColumn> $columns */
+        $columns = Config::get('site.footer-columns');
+
+        return $columns;
     }
 
     /**
@@ -209,8 +223,10 @@ final class FooterColumnsTest extends IntegrationTestCase
         $html = $this->footerText();
         $drawn = 0;
 
-        foreach (Config::get('site.footer-columns') as $column) {
-            if (!isset($column['more'])) {
+        foreach (self::footerColumns() as $column) {
+            $more = $column['more'] ?? null;
+
+            if ($more === null) {
                 continue;
             }
 
@@ -222,7 +238,7 @@ final class FooterColumnsTest extends IntegrationTestCase
             $drawn++;
             // The configured text is a format string -- "All %s airlines" --
             // so what the page shows is what footerMore() makes of it.
-            $text = new LayoutData()->footerMore($column['more'])['text'];
+            $text = new LayoutData()->footerMore($more)['text'];
             self::assertStringContainsString('>' . $text . '</a>', $html);
         }
 

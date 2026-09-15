@@ -56,10 +56,7 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
 
         self::assertSame(
             2,
-            (int) $this->connection()->fetchValue(
-                'SELECT COUNT(*) FROM currency_rates WHERE code = ?',
-                [self::TEST_CODE],
-            ),
+            $this->countRates(),
             'the older day should still be on the table',
         );
 
@@ -80,13 +77,7 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
         $repository->store([self::TEST_CODE => 2.5], self::OLDER);
         $repository->store([self::TEST_CODE => 9.75], self::OLDER);
 
-        self::assertSame(
-            1,
-            (int) $this->connection()->fetchValue(
-                'SELECT COUNT(*) FROM currency_rates WHERE code = ?',
-                [self::TEST_CODE],
-            ),
-        );
+        self::assertSame(1, $this->countRates());
 
         self::assertSame(9.75, $repository->latest()[self::TEST_CODE]);
     }
@@ -217,6 +208,7 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
     /** @return array<string, float> rate_date => rate */
     private function history(): array
     {
+        /** @var list<array{rate_date: string, rate: string}> $rows */
         $rows = $this->connection()->fetchAll(
             'SELECT rate_date, rate FROM currency_rates WHERE code = ? ORDER BY rate_date',
             [self::TEST_CODE],
@@ -225,7 +217,7 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
         $history = [];
 
         foreach ($rows as $row) {
-            $history[(string) $row['rate_date']] = (float) $row['rate'];
+            $history[$row['rate_date']] = (float) $row['rate'];
         }
 
         return $history;
@@ -234,5 +226,16 @@ final class CurrencyRateRepositoryTest extends IntegrationTestCase
     private function repository(): CurrencyRateRepository
     {
         return new CurrencyRateRepository($this->connection());
+    }
+
+    private function countRates(): int
+    {
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
+            'SELECT COUNT(*) FROM currency_rates WHERE code = ?',
+            [self::TEST_CODE],
+        );
+
+        return $count;
     }
 }
