@@ -4,7 +4,7 @@
 
 {% block title %}{{ article ? 'Edit article' : 'New article' }}{% endblock %}
 
-{% block tools %}<a class="button" href="/admin/content">Back</a>{% endblock %}
+{% block tools %}<a class="btn btn-outline-secondary btn-sm" href="/admin/content">Back</a>{% endblock %}
 
 {% block content %}
     {% if error %}
@@ -21,102 +21,109 @@
         <p class="notice">The files still own this. Saving takes it over, and imports will stop rewriting it.</p>
     {% endif %}
 
-    <form method="post" class="form"
-          action="/admin/article{{ article and article.slug ? '/' ~ article.slug : '' }}">
+    <form method="post" action="/admin/article{{ article and article.slug ? '/' ~ article.slug : '' }}">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
 
-        <div class="field">
-            <label for="slug">Slug</label>
-            {# An existing article keeps its slug: renaming one orphans every
-               link to it, and nothing here would move them. #}
-            {% if article and article.slug %}
-                <input id="slug" name="slug" type="text" value="{{ article.slug }}" disabled>
-                <p class="field__hint">A slug cannot change &mdash; every link to this page is built from it.</p>
-            {% else %}
-                <input id="slug" name="slug" type="text" required
-                       pattern="[a-z0-9][a-z0-9-]*" maxlength="64"
-                       value="{{ article.slug|default('') }}"
-                       autocapitalize="off" spellcheck="false">
-                <p class="field__hint">Lower case letters, digits and hyphens. This becomes the address.</p>
-            {% endif %}
-        </div>
+        <div class="card orchid-card mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="slug" class="form-label">Slug</label>
+                        {# An existing article keeps its slug: renaming one orphans every
+                           link to it, and nothing here would move them. #}
+                        {% if article and article.slug %}
+                            <input id="slug" name="slug" type="text" class="form-control" value="{{ article.slug }}" disabled>
+                            <p class="field__hint">A slug cannot change &mdash; every link to this page is built from it.</p>
+                        {% else %}
+                            <input id="slug" name="slug" type="text" class="form-control" required
+                                   pattern="[a-z0-9][a-z0-9-]*" maxlength="64"
+                                   value="{{ article.slug|default('') }}"
+                                   autocapitalize="off" spellcheck="false">
+                            <p class="field__hint">Lower case letters, digits and hyphens. This becomes the address.</p>
+                        {% endif %}
+                    </div>
 
-        <div class="field">
-            <label for="title">Title</label>
-            <input id="title" name="title" type="text" required maxlength="255"
-                   value="{{ article.title|default('') }}">
-        </div>
+                    <div class="col-12 col-md-6">
+                        <label for="category" class="form-label">Category</label>
+                        <select id="category" name="category" class="form-select" required>
+                            {% for category in categories %}
+                                <option value="{{ category.slug }}"{{ article and article.category == category.slug ? ' selected' : '' }}>
+                                    {{ category.title }}{{ category.enabled ? '' : ' (hidden)' }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <div class="field">
-            <label for="short">Short name</label>
-            <input id="short" name="short" type="text" maxlength="255"
-                   value="{{ article.short|default('') }}">
-            <p class="field__hint">For lists where the full title is too long. Left empty, the title is used.</p>
-        </div>
+                    <div class="col-12 col-md-6">
+                        <label for="title" class="form-label">Title</label>
+                        <input id="title" name="title" type="text" class="form-control" required maxlength="255"
+                               value="{{ article.title|default('') }}">
+                    </div>
 
-        <div class="field">
-            <label for="category">Category</label>
-            <select id="category" name="category" required>
-                {% for category in categories %}
-                    <option value="{{ category.slug }}"{{ article and article.category == category.slug ? ' selected' : '' }}>
-                        {{ category.title }}{{ category.enabled ? '' : ' (hidden)' }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+                    <div class="col-12 col-md-6">
+                        <label for="short" class="form-label">Short name</label>
+                        <input id="short" name="short" type="text" class="form-control" maxlength="255"
+                               value="{{ article.short|default('') }}">
+                        <p class="field__hint">For lists where the full title is too long. Left empty, the title is used.</p>
+                    </div>
 
-        <div class="pair">
-            <div class="field">
-                <label for="icon">Icon</label>
-                <input id="icon" name="icon" type="text" maxlength="64"
-                       value="{{ article.icon|default('') }}" autocapitalize="off" spellcheck="false">
-                <p class="field__hint">A Font Awesome name, like <code>fa-suitcase</code>.</p>
-            </div>
+                    <div class="col-6 col-md-3">
+                        <label for="icon" class="form-label">Icon</label>
+                        <input id="icon" name="icon" type="text" class="form-control" maxlength="64"
+                               value="{{ article.icon|default('') }}" autocapitalize="off" spellcheck="false">
+                        <p class="field__hint">A Font Awesome name, like <code>fa-suitcase</code>.</p>
+                    </div>
 
-            <div class="field">
-                <label for="position">Position</label>
-                <input id="position" name="position" type="number" min="0" step="1"
-                       value="{{ article.position|default(0) }}">
-                <p class="field__hint">Lowest first, within the category.</p>
-            </div>
-        </div>
+                    <div class="col-6 col-md-3">
+                        <label for="position" class="form-label">Position</label>
+                        <input id="position" name="position" type="number" class="form-control" min="0" step="1"
+                               value="{{ article.position|default(0) }}">
+                        <p class="field__hint">Lowest first, within the category.</p>
+                    </div>
 
-        <div class="field">
-            <label for="summary">Summary</label>
-            <textarea id="summary" name="summary" rows="3" required>{{ article.summary|default('') }}</textarea>
-            <p class="field__hint">One or two sentences. Shown on the hub and in the page description.</p>
-        </div>
+                    <div class="col-12 col-md-6">
+                        <label for="summary" class="form-label">Summary</label>
+                        <textarea id="summary" name="summary" class="form-control" rows="3" required>{{ article.summary|default('') }}</textarea>
+                        <p class="field__hint">One or two sentences. Shown on the hub and in the page description.</p>
+                    </div>
 
-        <div class="field">
-            <label for="body">Body</label>
-
-            {# The preview is rendered by the server, by the same converter the
-               help page uses. A second implementation in the browser would
-               agree with this one right up until it did not. #}
-            <div class="editor">
-                <textarea id="body" name="body" rows="22" class="editor__input js-markdown-source"
-                          data-preview-url="/admin/preview" data-csrf="{{ csrf_token() }}"
-                          spellcheck="true">{{ article.body|default('') }}</textarea>
-
-                <div>
-                    <p class="editor__label">Preview</p>
-                    <div class="editor__pane js-markdown-preview" aria-live="polite"></div>
+                    <div class="col-12 col-md-6 d-flex align-items-end">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="enabled" name="enabled" value="1"
+                                   {{ article is null or article.enabled ? 'checked' : '' }}>
+                            <label class="form-check-label" for="enabled">Show this article on the site</label>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <p class="field__hint">Markdown.</p>
         </div>
 
-        <div class="field field--check">
-            <label>
-                <input type="checkbox" name="enabled" value="1"
-                       {{ article is null or article.enabled ? 'checked' : '' }}>
-                Show this article on the site
-            </label>
+        <div class="card orchid-card mb-3">
+            <div class="card-body">
+                <label for="body" class="form-label">Body</label>
+
+                {# The preview is rendered by the server, by the same converter the
+                   help page uses. A second implementation in the browser would
+                   agree with this one right up until it did not. #}
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <textarea id="body" name="body" rows="22" class="form-control mono js-markdown-source"
+                                  data-preview-url="/admin/preview" data-csrf="{{ csrf_token() }}"
+                                  spellcheck="true">{{ article.body|default('') }}</textarea>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        <p class="field__hint mb-1">Preview</p>
+                        <div class="border rounded p-3 h-100 js-markdown-preview" aria-live="polite"></div>
+                    </div>
+                </div>
+
+                <p class="field__hint">Markdown.</p>
+            </div>
         </div>
 
-        <div class="actions">
-            <button type="submit" class="button button--go">Save</button>
+        <div class="d-flex align-items-center gap-3">
+            <button type="submit" class="btn btn-primary">Save</button>
             {% if article and article.slug %}
                 <a href="/help/{{ article.slug }}">View the page</a>
             {% endif %}

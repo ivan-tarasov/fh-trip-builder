@@ -5,80 +5,104 @@
 {% block title %}Help content{% endblock %}
 
 {# Everything that changes something is a form posting back here, so a refresh
-   does not repeat the last move (A3.3, #101). #}
+   does not repeat the last move (G1.3, #101). #}
 {% macro act(label, kind, slug, action, disabled) %}
-    <form method="post" action="/admin/content" class="list-row__act">
+    <form method="post" action="/admin/content" class="d-inline">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
         <input type="hidden" name="kind" value="{{ kind }}">
         <input type="hidden" name="slug" value="{{ slug }}">
         <input type="hidden" name="action" value="{{ action }}">
-        <button type="submit" class="button button--tiny"{{ disabled|default(false) ? ' disabled' : '' }}>{{ label }}</button>
+        <button type="submit" class="btn btn-sm btn-outline-secondary"{{ disabled|default(false) ? ' disabled' : '' }}>{{ label }}</button>
     </form>
 {% endmacro %}
 
 {% import _self as do %}
 
 {% block tools %}
-    <a class="button" href="/admin/category">New category</a>
-    <a class="button button--go" href="/admin/article">New article</a>
+    <a class="btn btn-outline-secondary btn-sm" href="/admin/category"><i class="bi bi-folder-plus" aria-hidden="true"></i> New category</a>
+    <a class="btn btn-primary btn-sm" href="/admin/article"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> New article</a>
 {% endblock %}
 
 {% block content %}
+    {# One card per category -- Bootstrap's table has no clean spanning header
+       row for a group, so the category's own head (title, flags, its own
+       actions) is the card header rather than a table row; the table inside
+       is only ever articles (G2.3, #289). #}
     {% for category in categories %}
-        <section class="group">
-            <div class="list-row list-row--head">
-                <a class="list-row__name" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
-                <span class="list-row__slug">{{ category.slug }}</span>
+        <div class="card orchid-card mb-3">
+            <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                <a class="fw-semibold text-decoration-none flex-grow-1" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
+                <span class="mono text-body-secondary small">{{ category.slug }}</span>
 
-                {% if not category.enabled %}<span class="flag">Hidden</span>{% endif %}
+                {% if not category.enabled %}<span class="badge text-bg-secondary">Hidden</span>{% endif %}
 
                 {# Whose row this is. Edited here, the next `articles:import`
                    leaves it alone; untouched, the files still own it and an
-                   import will rewrite it (A3.4, #102). #}
-                {% if category.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
+                   import will rewrite it (G1.4, #102). #}
+                {% if category.edited %}<span class="badge text-bg-success">Edited here</span>{% endif %}
 
-                <span class="list-row__acts">
+                <span class="d-flex gap-1">
                     {{ do.act('Up', 'category', category.slug, 'up', loop.first) }}
                     {{ do.act('Down', 'category', category.slug, 'down', loop.last) }}
                     {{ do.act(category.enabled ? 'Hide' : 'Show', 'category', category.slug, category.enabled ? 'hide' : 'show', false) }}
                 </span>
             </div>
 
-            {% for article in articles[category.slug]|default([]) %}
-                <div class="list-row list-row--child">
-                    <a class="list-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="list-row__slug">{{ article.slug }}</span>
-
-                    {% if not article.enabled %}<span class="flag">Hidden</span>{% endif %}
-                    {% if article.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
-
-                    <span class="list-row__acts">
-                        {{ do.act('Up', 'article', article.slug, 'up', loop.first) }}
-                        {{ do.act('Down', 'article', article.slug, 'down', loop.last) }}
-                        {{ do.act(article.enabled ? 'Hide' : 'Show', 'article', article.slug, article.enabled ? 'hide' : 'show', false) }}
-                    </span>
+            {% set rows = articles[category.slug]|default([]) %}
+            {% if rows %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <tbody>
+                            {% for article in rows %}
+                                <tr>
+                                    <td>
+                                        <a class="text-decoration-none" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                                        <span class="mono text-body-secondary small d-block">{{ article.slug }}</span>
+                                    </td>
+                                    <td class="text-end" style="width: 1%; white-space: nowrap;">
+                                        {% if not article.enabled %}<span class="badge text-bg-secondary">Hidden</span>{% endif %}
+                                        {% if article.edited %}<span class="badge text-bg-success">Edited here</span>{% endif %}
+                                    </td>
+                                    <td class="text-end" style="width: 1%; white-space: nowrap;">
+                                        <span class="d-flex gap-1 justify-content-end">
+                                            {{ do.act('Up', 'article', article.slug, 'up', loop.first) }}
+                                            {{ do.act('Down', 'article', article.slug, 'down', loop.last) }}
+                                            {{ do.act(article.enabled ? 'Hide' : 'Show', 'article', article.slug, article.enabled ? 'hide' : 'show', false) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             {% else %}
-                <p class="group__empty">No articles in this category.</p>
-            {% endfor %}
-        </section>
+                <p class="card-body mb-0 text-body-secondary">No articles in this category.</p>
+            {% endif %}
+        </div>
     {% endfor %}
 
     {# An article whose category names no row. ArticleRepository::all() says why
        one is kept rather than dropped; this is where it gets fixed. #}
     {% if orphans %}
-        <section class="group">
-            <div class="list-row list-row--head">
-                <span class="list-row__name">Filed under a category that does not exist</span>
+        <div class="card orchid-card mb-3">
+            <div class="card-header">
+                <span class="fw-semibold">Filed under a category that does not exist</span>
             </div>
-
-            {% for article in orphans %}
-                <div class="list-row list-row--child">
-                    <a class="list-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="list-row__slug">{{ article.slug }} &mdash; {{ article.category }}</span>
-                </div>
-            {% endfor %}
-        </section>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <tbody>
+                        {% for article in orphans %}
+                            <tr>
+                                <td>
+                                    <a class="text-decoration-none" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                                    <span class="mono text-body-secondary small d-block">{{ article.slug }} &mdash; {{ article.category }}</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     {% endif %}
 
     <p class="field__hint">This session ends after {{ idle_minutes }} minutes without a page here.</p>
