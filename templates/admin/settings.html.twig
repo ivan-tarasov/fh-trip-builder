@@ -1,8 +1,8 @@
 {% extends 'admin/layout.html.twig' %}
 
-{% set admin_section = 'settings' %}
+{% set admin_section = 'settings-' ~ group_slug %}
 
-{% block title %}Settings{% endblock %}
+{% block title %}{{ group }}{% endblock %}
 
 {# One icon per group name, presentation only -- `PanelSetting::group()` has
    no reason to know what glyph its own name wears (same call as the
@@ -20,64 +20,66 @@
    site copy. `site.poi` (the homepage cards) reads as content rather than a
    setting and is left out on purpose, the way articles were before it.
 
-   One form, one save: all twelve fields are validated together and written
-   only if every one of them is fine, since a form half saved would be
-   lying about which values are actually in effect. "Reset to default" is
-   its own button per field -- it posts only its own name, so clicking it
-   does not also save whatever else is sitting unsaved in the form. #}
+   One page, one group, one save: `$group`'s fields validate and save
+   together, independently of the other two groups -- three pages instead of
+   one since G2.6 (#299), so a typo in Search rules no longer blocks a Site
+   identity save. "Reset to default" is its own button per field -- it posts
+   only its own name, so clicking it does not also save whatever else is
+   sitting unsaved in the form. #}
 {% block content %}
-    <form method="post" action="/admin/settings">
+    <form method="post" action="{{ path }}">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
 
-        {% for group, fields in groups %}
-            <div class="card orchid-card mb-3">
-                <div class="card-header d-flex align-items-center gap-2">
-                    <span class="icon-badge icon-badge--sm" aria-hidden="true"><i class="bi bi-{{ icons[group]|default('gear') }}"></i></span>
-                    <span class="fw-semibold">{{ group }}</span>
-                </div>
+        <div class="card orchid-card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <span class="icon-badge icon-badge--sm" aria-hidden="true"><i class="bi bi-{{ icons[group]|default('gear') }}"></i></span>
+                <span class="fw-semibold">{{ group }}</span>
+            </div>
 
-                <div class="card-body">
-                    <div class="row g-3">
-                        {% for field in fields %}
-                            <div class="col-12 col-md-6">
-                                <label for="{{ field.key }}" class="form-label">{{ field.label }}</label>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for field in fields %}
+                        <div class="col-12 col-md-6">
+                            <label for="{{ field.key }}" class="form-label">{{ field.label }}</label>
 
-                                {% if field.is_list %}
-                                    <textarea id="{{ field.key }}" name="settings[{{ field.key }}]" rows="4"
-                                              class="form-control mono{{ field.error ? ' is-invalid' : '' }}"
-                                              autocapitalize="off" spellcheck="false">{{ field.value }}</textarea>
-                                {% else %}
-                                    <input id="{{ field.key }}" name="settings[{{ field.key }}]" type="text"
-                                           class="form-control mono{{ field.error ? ' is-invalid' : '' }}"
-                                           value="{{ field.value }}" autocapitalize="off" spellcheck="false">
-                                {% endif %}
+                            {% if field.is_list %}
+                                <textarea id="{{ field.key }}" name="settings[{{ field.key }}]" rows="4"
+                                          class="form-control mono{{ field.error ? ' is-invalid' : '' }}"
+                                          autocapitalize="off" spellcheck="false">{{ field.value }}</textarea>
+                            {% else %}
+                                <input id="{{ field.key }}" name="settings[{{ field.key }}]" type="text"
+                                       class="form-control mono{{ field.error ? ' is-invalid' : '' }}"
+                                       value="{{ field.value }}" autocapitalize="off" spellcheck="false">
+                            {% endif %}
 
-                                {% if field.error %}
-                                    <p class="field__hint field__hint--bad" role="alert">{{ field.error }}</p>
-                                {% endif %}
+                            {% if field.error %}
+                                <p class="field__hint field__hint--bad" role="alert">{{ field.error }}</p>
+                            {% endif %}
 
-                                <p class="field__hint">{{ field.reason }}</p>
+                            <p class="field__hint">{{ field.reason }}</p>
 
-                                {% if field.overridden %}
-                                    <p class="mt-1 mb-0">
-                                        <span class="flag flag--owned">Overridden</span>
-                                        <button type="submit" name="reset_key" value="{{ field.key }}"
-                                                class="btn btn-sm btn-outline-secondary">Reset to default</button>
-                                    </p>
-                                {% else %}
-                                    <p class="field__hint mb-0">Using the config default</p>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                    </div>
+                            {% if field.overridden %}
+                                <p class="mt-1 mb-0">
+                                    <span class="flag flag--owned">Overridden</span>
+                                    <button type="submit" name="reset_key" value="{{ field.key }}"
+                                            class="btn btn-sm btn-outline-secondary">Reset to default</button>
+                                </p>
+                            {% else %}
+                                <p class="field__hint mb-0">Using the config default</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
-        {% endfor %}
+        </div>
 
         <button type="submit" class="btn btn-primary">Save changes</button>
     </form>
 
     {% if history is not empty %}
+        {# Every group's changes, not just this one's -- a change to Map is
+           still worth seeing while looking at Search rules, and filtering
+           this by group would need a fourth column nobody asked for. #}
         <p class="band mt-4">Recent changes</p>
 
         <div class="card orchid-card">

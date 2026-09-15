@@ -72,7 +72,13 @@ class Routes
         '/admin/content' => 'Admin@content',
         '/admin/bookings' => 'Admin@bookings',
         '/admin/subscribers' => 'Admin@subscribers',
+        // Settings is a rail parent with two more children below it, each
+        // its own address the same way -- Search rules kept `/admin/settings`
+        // itself, the same idiom Orchid's own expandable parent link uses
+        // (its href is its first child) (G2.6, #299).
         '/admin/settings' => 'Admin@settings',
+        '/admin/settings/site-identity' => 'Admin@settingsSiteIdentity',
+        '/admin/settings/map' => 'Admin@settingsMap',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in

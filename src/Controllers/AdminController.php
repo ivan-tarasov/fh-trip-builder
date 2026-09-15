@@ -486,33 +486,73 @@ class AdminController extends AbstractController
     }
 
     /**
+     * `PanelSetting::group()`'s three labels, and the URL/slug each answers
+     * to -- a routing concern, kept off the enum itself the same way
+     * `overview.html.twig`'s icon map keeps a domain enum from knowing what
+     * glyph it wears (G2.2, #288; G2.6, #299).
+     *
+     * @var array<string, array{slug: string, path: string}>
+     */
+    private const array SETTINGS_GROUPS = [
+        'Search rules' => ['slug' => 'search-rules', 'path' => '/admin/settings'],
+        'Site identity' => ['slug' => 'site-identity', 'path' => '/admin/settings/site-identity'],
+        'Map' => ['slug' => 'map', 'path' => '/admin/settings/map'],
+    ];
+
+    /**
      * The settings a config file no longer has the last word on.
      *
      * @throws Exception|Error
      */
     public function settings(): void
     {
+        $this->settingsGroup('Search rules');
+    }
+
+    /** @throws Exception|Error */
+    public function settingsSiteIdentity(): void
+    {
+        $this->settingsGroup('Site identity');
+    }
+
+    /** @throws Exception|Error */
+    public function settingsMap(): void
+    {
+        $this->settingsGroup('Map');
+    }
+
+    /**
+     * One rail child, one page, one save -- three sub-pages instead of the
+     * single form all twelve fields once shared (G2.6, #299). Everything
+     * below only ever sees the fields belonging to `$group`.
+     *
+     * @throws Exception|Error
+     */
+    private function settingsGroup(string $group): void
+    {
         if (!$this->guard()) {
             return;
         }
 
         if ($this->request->isPost()) {
-            $this->postSettings();
+            $this->postSettings($group);
 
             return;
         }
 
-        $this->settingsForm();
+        $this->settingsForm($group);
     }
 
     /**
      * One POST, two things it might mean: reset a single field (its own
      * button posts only its own name), or save whatever the form is holding.
      */
-    private function postSettings(): void
+    private function postSettings(string $group): void
     {
+        $path = self::SETTINGS_GROUPS[$group]['path'];
+
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
-            $this->bounce('/admin/settings');
+            $this->bounce($path);
 
             return;
         }
@@ -525,31 +565,33 @@ class AdminController extends AbstractController
                 Settings::forget();
             }
 
-            $this->bounce('/admin/settings');
+            $this->bounce($path);
 
             return;
         }
 
-        $errors = $this->saveSettings();
+        $errors = $this->saveSettings($group);
 
         if ($errors !== []) {
-            $this->settingsForm($errors);
+            $this->settingsForm($group, $errors);
 
             return;
         }
 
         Settings::forget();
-        $this->bounce('/admin/settings');
+        $this->bounce($path);
     }
 
     /**
-     * All twelve fields, validated together and written only if every one of
-     * them is fine -- a form half saved is a form that lied about which
-     * values are actually in effect.
+     * Every field in `$group`, validated together and written only if every
+     * one of them is fine -- a form half saved is a form that lied about
+     * which values are actually in effect. Independent of the other two
+     * groups since G2.6 (#299): a typo in Search rules no longer blocks a
+     * Site identity save.
      *
      * @return array<string, string> the key of each invalid field, and why
      */
-    private function saveSettings(): array
+    private function saveSettings(string $group): array
     {
         $posted = $this->request->body->raw('settings');
         $posted = is_array($posted) ? $posted : [];
@@ -558,6 +600,10 @@ class AdminController extends AbstractController
         $parsed = [];
 
         foreach (PanelSetting::cases() as $setting) {
+            if ($setting->group() !== $group) {
+                continue;
+            }
+
             $raw = $posted[$setting->value] ?? '';
             $value = $setting->parse(is_string($raw) ? $raw : '');
             $error = $setting->invalidBecause($value);
@@ -588,20 +634,24 @@ class AdminController extends AbstractController
      * @param array<string, string> $errors keyed by the field that failed
      * @throws Exception|Error
      */
-    private function settingsForm(array $errors = []): void
+    private function settingsForm(string $group, array $errors = []): void
     {
         /** @var array<string, mixed> $overrides */
         $overrides = new SettingsRepository($this->connection())->all();
         $posted = $errors === [] ? null : $this->request->body->raw('settings');
         $posted = is_array($posted) ? $posted : [];
 
-        $groups = [];
+        $fields = [];
 
         foreach (PanelSetting::cases() as $setting) {
+            if ($setting->group() !== $group) {
+                continue;
+            }
+
             $key = $setting->value;
             $raw = $posted[$key] ?? null;
 
-            $groups[$setting->group()][] = [
+            $fields[] = [
                 'key' => $key,
                 'label' => $setting->label(),
                 'reason' => $setting->reason(),
@@ -614,13 +664,19 @@ class AdminController extends AbstractController
             ];
         }
 
+        // Shared across all three pages rather than filtered per group: a
+        // change to Map is still worth seeing while looking at Search
+        // rules, and filtering would need a fourth column nobody asked for.
         $history = array_map(
             self::historyLine(...),
             new SettingsRepository($this->connection())->history(20),
         );
 
         echo new TwigRenderer()->render('admin/settings.html.twig', [
-            'groups' => $groups,
+            'group' => $group,
+            'group_slug' => self::SETTINGS_GROUPS[$group]['slug'],
+            'path' => self::SETTINGS_GROUPS[$group]['path'],
+            'fields' => $fields,
             'history' => $history,
         ]);
     }
