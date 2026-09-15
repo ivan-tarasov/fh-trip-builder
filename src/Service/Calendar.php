@@ -9,6 +9,7 @@ use DateTimeZone;
 use Throwable;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
+use TripBuilder\Repository\BookingRepository;
 use TripBuilder\View\StoredItinerary;
 
 /**
@@ -22,6 +23,9 @@ use TripBuilder\View\StoredItinerary;
  * price, so reading it does not thaw the snapshot the booking froze.
  *
  * @phpstan-import-type ResponseSegment from FlightFinder
+ * @phpstan-import-type BookingRow from BookingRepository
+ *
+ * @phpstan-type AirportZoneRow array{code: string, timezone_name: string}
  */
 final readonly class Calendar
 {
@@ -32,19 +36,19 @@ final readonly class Calendar
     /**
      * Null when the stored flights will not rebuild.
      *
-     * @param array<string, mixed> $row a bookings row
+     * @param BookingRow $row a bookings row
      */
     public function forBooking(array $row): ?string
     {
-        $outbound = StoredItinerary::fromJson($row['flight_outbound'] ?? null);
+        $outbound = StoredItinerary::fromJson($row['flight_outbound']);
 
         if ($outbound === null) {
             return null;
         }
 
-        $return = StoredItinerary::fromJson($row['flight_return'] ?? null);
+        $return = StoredItinerary::fromJson($row['flight_return']);
         $segments = array_values([...$outbound['segments'], ...($return['segments'] ?? [])]);
-        $reference = trim((string) ($row['reference'] ?? ''));
+        $reference = trim($row['reference']);
         $zones = $this->timezones($segments);
 
         $lines = [
@@ -56,7 +60,7 @@ final readonly class Calendar
         ];
 
         foreach ($segments as $i => $segment) {
-            $lines = [...$lines, ...$this->event($segment, $zones, (int) $row['id'], $i, $reference)];
+            $lines = [...$lines, ...$this->event($segment, $zones, $row['id'], $i, $reference)];
         }
 
         $lines[] = 'END:VCALENDAR';
@@ -164,6 +168,7 @@ final readonly class Calendar
             return [];
         }
 
+        /** @var list<AirportZoneRow> $rows */
         $rows = $this->connection->fetchAll(
             'SELECT code, timezone_name FROM ' . Table::Airports->value
             . ' WHERE code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')',
@@ -173,8 +178,8 @@ final readonly class Calendar
         $zones = [];
 
         foreach ($rows as $row) {
-            if (trim((string) $row['timezone_name']) !== '') {
-                $zones[(string) $row['code']] = (string) $row['timezone_name'];
+            if (trim($row['timezone_name']) !== '') {
+                $zones[$row['code']] = $row['timezone_name'];
             }
         }
 
