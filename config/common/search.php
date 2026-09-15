@@ -180,9 +180,7 @@ return [
     |
     | Bounds for assembling connecting itineraries at search time. A valid
     | layover departs between min/max minutes after the previous leg arrives;
-    | max_stops caps how many connections are explored (0 = direct only);
-    | roundtrip_topk caps the cheapest candidates kept per direction before
-    | pairing, so round-trip pairing stays bounded.
+    | max_stops caps how many connections are explored (0 = direct only).
     |
     | The detour bounds cap how far an itinerary may fly against the direct
     | distance between the two cities. Layover windows alone do not bound this:
@@ -236,7 +234,6 @@ return [
         // costs ~250-700ms, where across 50 it was ~2s and could time out. If
         // the network is ever narrowed again, re-measure before leaving this at 2.
         'max_stops' => 2,
-        'roundtrip_topk' => 50,
         // Furthest an itinerary may fly, as a multiple of the direct distance.
         'max_detour_ratio' => 1.6,
         // Floor for that cap, so short trips can still connect at all.
