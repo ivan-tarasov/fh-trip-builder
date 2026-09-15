@@ -10,6 +10,7 @@ use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Money;
 use TripBuilder\Service\FlightFinder;
+use TripBuilder\Settings;
 
 /**
  * Turns an itinerary (an ordered list of flight segments plus its layovers)
@@ -385,8 +386,8 @@ class ItineraryPresenter
         $end = (int) strtotime($to);
         // Shared with the "no night layovers" filter, so the notice and the
         // filter cannot drift apart.
-        $fromHour = (int) Config::get('search.filters.night_from_hour', 23);
-        $toHour = (int) Config::get('search.filters.night_to_hour', 6);
+        $fromHour = (int) Settings::get('search.filters.night_from_hour', 23);
+        $toHour = (int) Settings::get('search.filters.night_to_hour', 6);
 
         for ($day = strtotime('midnight', $start) - 86400; $day <= $end; $day += 86400) {
             $nightStart = $day + $fromHour * 3600;

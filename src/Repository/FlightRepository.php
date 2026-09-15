@@ -12,6 +12,7 @@ use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\Emissions;
 use TripBuilder\Party;
+use TripBuilder\Settings;
 
 /**
  * Flight search: cheapest-itinerary search over direct and connecting flights.
@@ -1363,9 +1364,9 @@ final readonly class FlightRepository
         int $span = 1,
     ): array {
         $flights = Table::Flights->value;
-        $minc = (int) Config::get('search.connections.min_connect_minutes', 45);
-        $maxc = (int) Config::get('search.connections.max_connect_minutes', 360);
-        $maxStops = (int) Config::get('search.connections.max_stops', 2);
+        $minc = (int) Settings::get('search.connections.min_connect_minutes', 45);
+        $maxc = (int) Settings::get('search.connections.max_connect_minutes', 360);
+        $maxStops = (int) Settings::get('search.connections.max_stops', 2);
         // The outbound leg may now leave on any of `span` days, and every
         // predicate here was already a half-open range rather than an equality
         // -- so a window is the same single index seek on route_departure_time
@@ -2022,8 +2023,8 @@ final readonly class FlightRepository
             return null;
         }
 
-        $ratio = (float) Config::get('search.connections.max_detour_ratio', 1.6);
-        $floor = (int) Config::get('search.connections.min_detour_km', 2000);
+        $ratio = (float) Settings::get('search.connections.max_detour_ratio', 1.6);
+        $floor = (int) Settings::get('search.connections.min_detour_km', 2000);
 
         return max($floor, (int) ceil($span * $ratio));
     }

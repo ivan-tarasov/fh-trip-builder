@@ -7,6 +7,7 @@ namespace TripBuilder\Api\Flights;
 use TripBuilder\Config;
 use TripBuilder\Party;
 use TripBuilder\Repository\FlightRepository;
+use TripBuilder\Settings;
 
 /**
  * The filters a visitor has applied to a search, and the rules for deciding
@@ -569,7 +570,7 @@ final readonly class FlightFilters
         return !$this->noGulfLayover
             || array_intersect(
                 $this->listOf($c, 'stop_countries'),
-                (array) Config::get('search.filters.gulf_countries', []),
+                (array) Settings::get('search.filters.gulf_countries', []),
             ) === [];
     }
 
@@ -737,8 +738,8 @@ final readonly class FlightFilters
     {
         $start = (int) strtotime($from);
         $end = (int) strtotime($to);
-        $nightFrom = (int) Config::get('search.filters.night_from_hour', 23);
-        $nightTo = (int) Config::get('search.filters.night_to_hour', 6);
+        $nightFrom = (int) Settings::get('search.filters.night_from_hour', 23);
+        $nightTo = (int) Settings::get('search.filters.night_to_hour', 6);
         $day = 86400;
 
         for ($midnight = (int) strtotime('midnight', $start) - $day; $midnight <= $end; $midnight += $day) {

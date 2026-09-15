@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace TripBuilder\View;
 
-use TripBuilder\Config;
 use TripBuilder\Env;
 use TripBuilder\EnvKey;
 use TripBuilder\Polyline;
+use TripBuilder\Settings;
 
 /**
  * The map on a page, in the two forms a page needs it.
@@ -239,7 +239,10 @@ final class MapView
 
     private static function setting(string $key, mixed $default): mixed
     {
-        return Config::get('maps.static.' . $key, $default);
+        // Only 'style' is ever actually overridden (PanelSetting::MapStyle,
+        // A3.7 #232) -- Settings::get() falls back to Config::get() for
+        // every other key this is called with, so nothing else here changes.
+        return Settings::get('maps.static.' . $key, $default);
     }
 
     /**

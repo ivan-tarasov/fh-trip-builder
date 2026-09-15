@@ -15,6 +15,7 @@ use TripBuilder\Csrf;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
+use TripBuilder\PanelSetting;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\BookingEventRepository;
@@ -22,8 +23,10 @@ use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\DashboardRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
+use TripBuilder\Repository\SettingsRepository;
 use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Schedule;
+use TripBuilder\Settings;
 use TripBuilder\View\BookingPresenter;
 use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
@@ -47,6 +50,7 @@ use Twig\Error\Error;
  *
  * @phpstan-import-type BookingRow from BookingRepository
  * @phpstan-import-type Presented from BookingPresenter
+ * @phpstan-import-type SettingChangeRow from SettingsRepository
  */
 class AdminController extends AbstractController
 {
@@ -478,6 +482,181 @@ class AdminController extends AbstractController
         }
 
         $this->bounce('/admin/subscribers');
+    }
+
+    /**
+     * The settings a config file no longer has the last word on.
+     *
+     * @throws Exception|Error
+     */
+    public function settings(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->postSettings();
+
+            return;
+        }
+
+        $this->settingsForm();
+    }
+
+    /**
+     * One POST, two things it might mean: reset a single field (its own
+     * button posts only its own name), or save whatever the form is holding.
+     */
+    private function postSettings(): void
+    {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            $this->bounce('/admin/settings');
+
+            return;
+        }
+
+        $resetKey = $this->request->body->nullableStr('reset_key');
+
+        if ($resetKey !== null) {
+            if (PanelSetting::tryFrom($resetKey) !== null) {
+                new SettingsRepository($this->connection())->remove($resetKey);
+                Settings::forget();
+            }
+
+            $this->bounce('/admin/settings');
+
+            return;
+        }
+
+        $errors = $this->saveSettings();
+
+        if ($errors !== []) {
+            $this->settingsForm($errors);
+
+            return;
+        }
+
+        Settings::forget();
+        $this->bounce('/admin/settings');
+    }
+
+    /**
+     * All twelve fields, validated together and written only if every one of
+     * them is fine -- a form half saved is a form that lied about which
+     * values are actually in effect.
+     *
+     * @return array<string, string> the key of each invalid field, and why
+     */
+    private function saveSettings(): array
+    {
+        $posted = $this->request->body->raw('settings');
+        $posted = is_array($posted) ? $posted : [];
+
+        $errors = [];
+        $parsed = [];
+
+        foreach (PanelSetting::cases() as $setting) {
+            $raw = $posted[$setting->value] ?? '';
+            $value = $setting->parse(is_string($raw) ? $raw : '');
+            $error = $setting->invalidBecause($value);
+
+            if ($error !== null) {
+                $errors[$setting->value] = $error;
+
+                continue;
+            }
+
+            $parsed[$setting->value] = $value;
+        }
+
+        if ($errors !== []) {
+            return $errors;
+        }
+
+        $repository = new SettingsRepository($this->connection());
+
+        foreach ($parsed as $key => $value) {
+            $repository->set($key, $value);
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<string, string> $errors keyed by the field that failed
+     * @throws Exception|Error
+     */
+    private function settingsForm(array $errors = []): void
+    {
+        /** @var array<string, mixed> $overrides */
+        $overrides = new SettingsRepository($this->connection())->all();
+        $posted = $errors === [] ? null : $this->request->body->raw('settings');
+        $posted = is_array($posted) ? $posted : [];
+
+        $groups = [];
+
+        foreach (PanelSetting::cases() as $setting) {
+            $key = $setting->value;
+            $raw = $posted[$key] ?? null;
+
+            $groups[$setting->group()][] = [
+                'key' => $key,
+                'label' => $setting->label(),
+                'reason' => $setting->reason(),
+                'is_list' => $setting->isList(),
+                'overridden' => array_key_exists($key, $overrides),
+                'error' => $errors[$key] ?? null,
+                // The posted text survives a rejected form; everything else
+                // reads the effective value, override or config default.
+                'value' => is_string($raw) ? $raw : $setting->format(Settings::get($key)),
+            ];
+        }
+
+        $history = array_map(
+            self::historyLine(...),
+            new SettingsRepository($this->connection())->history(20),
+        );
+
+        echo new TwigRenderer()->render('admin/settings.html.twig', [
+            'groups' => $groups,
+            'history' => $history,
+        ]);
+    }
+
+    /**
+     * One row of the change log, with `old_value`/`new_value` decoded and
+     * formatted the way the field itself would show them -- not the raw
+     * JSON they are stored as.
+     *
+     * @param SettingChangeRow $change
+     * @return array{key: string, from: string, to: string, changed_at: string}
+     */
+    private static function historyLine(array $change): array
+    {
+        $setting = PanelSetting::tryFrom($change['setting_key']);
+
+        return [
+            'key' => $change['setting_key'],
+            'from' => self::historyValue($setting, $change['old_value']),
+            'to' => self::historyValue($setting, $change['new_value']),
+            'changed_at' => $change['changed_at'],
+        ];
+    }
+
+    /**
+     * `null` reads as "(default)" either side of a change: no override before
+     * it, or none after it. A key later dropped from `PanelSetting` still
+     * shows its raw JSON rather than vanishing from a log that must not edit
+     * itself.
+     */
+    private static function historyValue(?PanelSetting $setting, ?string $encoded): string
+    {
+        if ($encoded === null) {
+            return '(default)';
+        }
+
+        return $setting === null ? $encoded : $setting->format(json_decode($encoded, true));
     }
 
     /**

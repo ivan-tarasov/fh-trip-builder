@@ -13,6 +13,7 @@ use TripBuilder\Repository\AircraftRepository;
 use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Service\FlightFinder;
+use TripBuilder\Settings;
 
 /**
  * The search sidebar: every filter control, with the codes turned into names.
@@ -319,7 +320,7 @@ final readonly class SearchFilterPanel
 
         // Every level the search can produce, so an unreachable one greys out
         // in place instead of disappearing from the list.
-        for ($stops = 0; $stops <= (int) Config::get('search.connections.max_stops', 2); $stops++) {
+        for ($stops = 0; $stops <= (int) Settings::get('search.connections.max_stops', 2); $stops++) {
             $options[] = [
                 'value' => (string) $stops,
                 'label' => $this->presenter->stopsLabel($stops),
