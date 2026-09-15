@@ -6,114 +6,185 @@
 
 {# When every figure was read. Nothing on this page is cached -- a dashboard
    reporting a cached number is reporting on the cache -- so saying when it was
-   read is what lets somebody trust a green tile (A3.6, #231). #}
+   read is what lets somebody trust a green tile (G1.6, #231). #}
 {% block tools %}<span class="stamp">read {{ read_at }}</span>{% endblock %}
+
+{# One icon per label, presentation only -- `DashboardRepository` has no
+   reason to know what glyph its own reading wears (G2.2, #288). #}
+{% set icons = {
+    'Schedule': 'clock-history',
+    'Flights reach': 'calendar-range',
+    'Rates': 'currency-exchange',
+    'Database': 'hdd-network',
+    'Flights held': 'airplane',
+    'Searches': 'search',
+    'Bookings': 'bag-check',
+    'On the fare list': 'bell'
+} %}
 
 {% block content %}
     <p class="band">Is it running</p>
 
-    {# States, not numbers: "is it running" is not a quantity. Every tile prints
-       its state in words as well as wearing a tone, so the colour is emphasis
-       rather than information. #}
-    <div class="tiles">
+    {# States, not numbers: "is it running" is not a quantity. Every card
+       prints its state in words as well as wearing a tone, so the colour is
+       emphasis rather than information -- Orchid's own stat-card shape, no
+       fake trend badge, because there is nothing stored to compare a state
+       against. #}
+    <div class="row g-3 mb-4">
         {% for state in states %}
-            <div class="tile tile--{{ state.tone.value }}">
-                <p class="tile__label">{{ state.label }}</p>
-                <p class="tile__value">{{ state.value }}</p>
-                <p class="tile__note">{{ state.note }}</p>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card orchid-card stat-card stat-card--{{ state.tone.value }} h-100 d-flex flex-column">
+                    <div class="card-body pb-2">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="min-w-0">
+                                <p class="stat-card__label">{{ state.label }}</p>
+                                <h3 class="stat-card__value">{{ state.value }}</h3>
+                            </div>
+                            <span class="stat-card__icon"><i class="bi bi-{{ icons[state.label] }}" aria-hidden="true"></i></span>
+                        </div>
+                        <p class="stat-card__note">{{ state.note }}</p>
+                    </div>
+
+                    {# The one real sparkline on this page: `currency_rates` is
+                       an actual per-day table, unlike everything else here --
+                       see `DashboardRepository::rateTrend()`. #}
+                    {% if state.label == 'Rates' and rate_trend|length > 1 %}
+                        <div class="stat-card__spark">
+                            <canvas class="js-chart" data-chart="sparkline"
+                                    data-points="{{ rate_trend|json_encode }}"></canvas>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         {% endfor %}
     </div>
 
     <p class="band">How much there is</p>
 
-    <div class="tiles">
+    <div class="row g-3 mb-4">
         {% for count in counts %}
-            <div class="tile tile--plain">
-                <p class="tile__label">{{ count.label }}</p>
-                {# `none yet` and not `0`. They read the same to a machine and
-                   differently to a person: one is a measurement, the other is a
-                   site nobody has used. #}
-                <p class="tile__value{{ count.value is null ? ' tile__value--none' : ' mono' }}">
-                    {{ count.value ?? 'none yet' }}
-                </p>
-                <p class="tile__note">{{ count.note }}</p>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card orchid-card stat-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="min-w-0">
+                                <p class="stat-card__label">{{ count.label }}</p>
+                                {# `none yet` and not `0`. They read the same to a machine and
+                                   differently to a person: one is a measurement, the other is a
+                                   site nobody has used. #}
+                                <h3 class="stat-card__value{{ count.value is null ? ' stat-card__value--none' : '' }} mono">
+                                    {{ count.value ?? 'none yet' }}
+                                </h3>
+                            </div>
+                            <span class="stat-card__icon"><i class="bi bi-{{ icons[count.label] }}" aria-hidden="true"></i></span>
+                        </div>
+                        <p class="stat-card__note">{{ count.note }}</p>
+                    </div>
+                </div>
             </div>
         {% endfor %}
     </div>
 
-    <p class="band">What ran, and when</p>
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-6">
+            <p class="band">What ran, and when</p>
 
-    {# The dense surface. The strip above summarises this; this is what an
-       operator actually reads when the summary is not green. #}
-    <div class="group">
-        <table class="sheet">
-            <thead>
-                <tr>
-                    <th scope="col">Command</th>
-                    <th scope="col">Due</th>
-                    <th scope="col">Last success</th>
-                    <th scope="col">Exit</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for task in schedule %}
-                    <tr>
-                        <td class="mono">{{ task.command }}</td>
-                        <td class="mono sheet__quiet">{{ task.due }}</td>
-                        <td class="mono sheet__quiet">{{ task.age }}</td>
-                        <td>
-                            {% if task.exit is null %}
-                                <span class="pill">never</span>
-                            {% elseif task.stale %}
-                                <span class="pill pill--bad">late</span>
-                            {% elseif task.exit == 0 %}
-                                <span class="pill pill--good">ok</span>
+            {# The dense surface. The strip above summarises this; this is what an
+               operator actually reads when the summary is not green. #}
+            <div class="card orchid-card">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Command</th>
+                                <th scope="col">Due</th>
+                                <th scope="col">Last success</th>
+                                <th scope="col">Exit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in schedule %}
+                                <tr>
+                                    <td class="mono">{{ task.command }}</td>
+                                    <td class="mono text-body-secondary">{{ task.due }}</td>
+                                    <td class="mono text-body-secondary">{{ task.age }}</td>
+                                    <td>
+                                        {% if task.exit is null %}
+                                            <span class="badge text-bg-secondary">never</span>
+                                        {% elseif task.stale %}
+                                            <span class="badge text-bg-danger">late</span>
+                                        {% elseif task.exit == 0 %}
+                                            <span class="badge text-bg-success">ok</span>
+                                        {% else %}
+                                            <span class="badge text-bg-danger">exit {{ task.exit }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                             {% else %}
-                                <span class="pill pill--bad">exit {{ task.exit }}</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr><td colspan="4" class="sheet__quiet">The schedule could not be read.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div class="pair">
-        <div class="tile tile--plain">
-            <p class="tile__label">Content</p>
-            {# `article(s)` is the CLI's idiom and it does not belong on a
-               page somebody reads. #}
-            <p class="tile__line">
-                {{ content.articles }} {{ content.articles == 1 ? 'article' : 'articles' }}
-                in {{ content.categories }} {{ content.categories == 1 ? 'category' : 'categories' }}
-            </p>
-            <p class="tile__note">
-                {{ content.hidden }} hidden &middot;
-                {# A3.4's column (#102): how much of the help text the next
-                   `articles:import` will leave alone. #}
-                {{ content.owned }} edited here
-            </p>
+                                <tr><td colspan="4" class="text-body-secondary">The schedule could not be read.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <div class="tile tile--plain">
-            <p class="tile__label">Most searched</p>
-            {% for search in searches %}
-                <p class="tile__line mono">{{ search.from }} &rarr; {{ search.to }}
-                    <span class="sheet__quiet">{{ search.count }}</span></p>
-            {% else %}
-                <p class="tile__note">Nobody has searched yet.</p>
-            {% endfor %}
+        <div class="col-12 col-xl-6">
+            <p class="band">Most searched</p>
+
+            {# The one real chart on this page besides the sparkline: five
+               real counts, ranked -- not a trend, which the data cannot
+               answer (see `DashboardRepository::topSearches()`). #}
+            <div class="card orchid-card">
+                <div class="card-body">
+                    {% if searches|length > 0 %}
+                        <div class="orchid-chart-wrap orchid-chart-wrap--md">
+                            <canvas class="js-chart" data-chart="searches" data-rows="{{ searches|json_encode }}"></canvas>
+                        </div>
+                    {% else %}
+                        <p class="text-body-secondary mb-0">Nobody has searched yet.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
-    {# Said here rather than drawn: `search` is an aggregate -- one row per
-       distinct search with a count -- so it cannot answer "searches per day",
-       and a line that looked like it could would be inventing one. #}
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6">
+            <div class="card orchid-card">
+                <div class="card-body">
+                    <p class="stat-card__label mb-2">Content</p>
+                    {# `article(s)` is the CLI's idiom and it does not belong on a
+                       page somebody reads. #}
+                    <p class="mb-1">
+                        {{ content.articles }} {{ content.articles == 1 ? 'article' : 'articles' }}
+                        in {{ content.categories }} {{ content.categories == 1 ? 'category' : 'categories' }}
+                    </p>
+                    <p class="stat-card__note mb-0">
+                        {{ content.hidden }} hidden &middot;
+                        {# G1.4's column (#102): how much of the help text the next
+                           `articles:import` will leave alone. #}
+                        {{ content.owned }} edited here
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Said here rather than only drawn: the searches chart is a ranking of
+       five real counts, not a trend -- `search` has no per-day history to
+       draw one from, and a line that looked like it could would be
+       inventing it (see `DashboardRepository::topSearches()`). #}
     <p class="field__hint">
-        No charts yet: nothing on this page has a per-day history to draw.
+        One ranking and one real sparkline on this page, and nothing else charted:
+        most of what is above has no stored history to draw a trend from.
         This session ends after {{ idle_minutes|default(60) }} minutes without a page here.
     </p>
+{% endblock %}
+
+{# The library and nothing else -- `admin.js`'s own `charts()` reads the
+   `.js-chart` canvases, the same file every page already loads, so this is
+   the only extra request the one page that needs it pays. #}
+{% block scripts %}
+    <script src="{{ asset(config('site.directory.js') ~ '/chart.umd.min.js') }}" defer></script>
 {% endblock %}

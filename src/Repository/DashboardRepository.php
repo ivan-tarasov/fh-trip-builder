@@ -151,10 +151,11 @@ final readonly class DashboardRepository
      * straight out, the list showed `YUL -> LHR` three times with three
      * different counts, which reads as a bug rather than as data.
      *
-     * That shape is also why there is no chart anywhere on this page: the table
-     * carries a count and a last-seen per search, not a row per search, so it
-     * cannot answer "searches per day". A line that looked like it could would
-     * be inventing one.
+     * That shape is also why this is drawn as a ranking and not a trend (G2.2,
+     * #288): the table carries a count and a last-seen per search, not a row
+     * per search, so it cannot answer "searches per day". A line that looked
+     * like it could would be inventing one -- but five real counts, ranked
+     * against each other, are not that line.
      *
      * @return list<array{from: string, to: string, count: int, last: string}>
      */
@@ -174,6 +175,24 @@ final readonly class DashboardRepository
             'count' => (int) $row['runs'],
             'last' => (string) $row['last'],
         ], $rows);
+    }
+
+    /**
+     * USD against CAD, the last month -- the sparkline on the Rates card.
+     *
+     * One currency and not the full list: a stat card carries one story.
+     * `CurrencyRateRepository::history()` already keeps real daily history
+     * for this and says as much in its own docblock -- "a chart wants its
+     * points, not its calendar" -- it was just never read anywhere (G2.2,
+     * #288).
+     *
+     * @return array<string, float> rate_date => units per 1 CAD, oldest
+     *   first; empty on an install nothing has ever been fetched for,
+     *   not thirty invented points
+     */
+    public function rateTrend(): array
+    {
+        return new CurrencyRateRepository($this->connection)->history('USD', 30);
     }
 
     /**

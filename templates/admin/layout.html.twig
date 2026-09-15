@@ -107,6 +107,15 @@
 {% endblock %}
 
 <script src="{{ asset(config('site.directory.js') ~ '/bootstrap.bundle.min.js') }}" defer></script>
+{# A page's own script, for the one page that needs one -- Chart.js is
+   200KB, and every other page in the panel cannot use it (G2.2, #288). Empty
+   here, so `AdminShellTest`'s count of this file's own tags is unaffected;
+   a page that fills it carries its own tag, in its own template. Before
+   `admin.js`, not after: `admin.js`'s own `charts()` reads the `Chart`
+   global at parse time, and every script here runs `defer` -- in document
+   order, not load order, but order still matters between two deferred
+   scripts that depend on each other. #}
+{% block scripts %}{% endblock %}
 <script src="{{ asset(config('site.directory.js') ~ '/admin.js') }}" defer></script>
 </body>
 </html>
