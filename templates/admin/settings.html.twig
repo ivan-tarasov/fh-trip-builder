@@ -21,8 +21,8 @@
 
         {% for group, fields in groups %}
             <section class="group">
-                <div class="row row--head">
-                    <span class="row__name">{{ group }}</span>
+                <div class="list-row list-row--head">
+                    <span class="list-row__name">{{ group }}</span>
                 </div>
 
                 {% for field in fields %}
@@ -62,8 +62,8 @@
 
     {% if history is not empty %}
         <section class="group">
-            <div class="row row--head">
-                <span class="row__name">Recent changes</span>
+            <div class="list-row list-row--head">
+                <span class="list-row__name">Recent changes</span>
             </div>
 
             <table class="sheet">

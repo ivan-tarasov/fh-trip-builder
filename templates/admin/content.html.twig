@@ -7,7 +7,7 @@
 {# Everything that changes something is a form posting back here, so a refresh
    does not repeat the last move (A3.3, #101). #}
 {% macro act(label, kind, slug, action, disabled) %}
-    <form method="post" action="/admin/content" class="row__act">
+    <form method="post" action="/admin/content" class="list-row__act">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
         <input type="hidden" name="kind" value="{{ kind }}">
         <input type="hidden" name="slug" value="{{ slug }}">
@@ -26,9 +26,9 @@
 {% block content %}
     {% for category in categories %}
         <section class="group">
-            <div class="row row--head">
-                <a class="row__name" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
-                <span class="row__slug">{{ category.slug }}</span>
+            <div class="list-row list-row--head">
+                <a class="list-row__name" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
+                <span class="list-row__slug">{{ category.slug }}</span>
 
                 {% if not category.enabled %}<span class="flag">Hidden</span>{% endif %}
 
@@ -37,7 +37,7 @@
                    import will rewrite it (A3.4, #102). #}
                 {% if category.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
 
-                <span class="row__acts">
+                <span class="list-row__acts">
                     {{ do.act('Up', 'category', category.slug, 'up', loop.first) }}
                     {{ do.act('Down', 'category', category.slug, 'down', loop.last) }}
                     {{ do.act(category.enabled ? 'Hide' : 'Show', 'category', category.slug, category.enabled ? 'hide' : 'show', false) }}
@@ -45,14 +45,14 @@
             </div>
 
             {% for article in articles[category.slug]|default([]) %}
-                <div class="row row--child">
-                    <a class="row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="row__slug">{{ article.slug }}</span>
+                <div class="list-row list-row--child">
+                    <a class="list-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                    <span class="list-row__slug">{{ article.slug }}</span>
 
                     {% if not article.enabled %}<span class="flag">Hidden</span>{% endif %}
                     {% if article.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
 
-                    <span class="row__acts">
+                    <span class="list-row__acts">
                         {{ do.act('Up', 'article', article.slug, 'up', loop.first) }}
                         {{ do.act('Down', 'article', article.slug, 'down', loop.last) }}
                         {{ do.act(article.enabled ? 'Hide' : 'Show', 'article', article.slug, article.enabled ? 'hide' : 'show', false) }}
@@ -68,14 +68,14 @@
        one is kept rather than dropped; this is where it gets fixed. #}
     {% if orphans %}
         <section class="group">
-            <div class="row row--head">
-                <span class="row__name">Filed under a category that does not exist</span>
+            <div class="list-row list-row--head">
+                <span class="list-row__name">Filed under a category that does not exist</span>
             </div>
 
             {% for article in orphans %}
-                <div class="row row--child">
-                    <a class="row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="row__slug">{{ article.slug }} &mdash; {{ article.category }}</span>
+                <div class="list-row list-row--child">
+                    <a class="list-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                    <span class="list-row__slug">{{ article.slug }} &mdash; {{ article.category }}</span>
                 </div>
             {% endfor %}
         </section>

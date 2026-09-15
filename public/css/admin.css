@@ -460,7 +460,15 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
 }
 
-.row {
+/* Renamed from `.row` (G2.2, #288). Bootstrap's grid does not just style
+   `.row` -- it has a universal-child rule, `.row > * { width: 100%; ... }`,
+   built to be overridden per column by a more specific `.col-*` class. This
+   component's children (`.flag`, `.row__acts`) carried no such override, so
+   scoping only the row itself under `.group` was not enough: Bootstrap's
+   selector matches on the literal class name regardless of ancestor, and
+   still forced every child to `width: 100%` the moment a page also used the
+   real Bootstrap grid. Renaming the block is what actually escapes it. */
+.list-row {
   display: flex;
   align-items: center;
   gap: .75rem;
@@ -469,14 +477,14 @@ a:hover { text-decoration: underline; }
   border-top: 1px solid var(--rule);
 }
 
-.row:first-child { border-top: 0; }
-.row--head { background: var(--sunken); font-weight: 600; }
-.row--child { padding-left: 2rem; }
+.list-row:first-child { border-top: 0; }
+.list-row--head { background: var(--sunken); font-weight: 600; }
+.list-row--child { padding-left: 2rem; }
 
-.row__name { flex: 1; color: inherit; min-width: 0; }
-.row__name:hover { color: var(--signal); }
+.list-row__name { flex: 1; color: inherit; min-width: 0; }
+.list-row__name:hover { color: var(--signal); }
 
-.row__slug {
+.list-row__slug {
   color: var(--ink-quiet);
   font-family: var(--mono);
   font-size: .75rem;
@@ -498,8 +506,8 @@ a:hover { text-decoration: underline; }
 
 .flag--owned { border-color: var(--good-edge); background: var(--good-soft); color: var(--good); }
 
-.row__acts { display: flex; gap: .25rem; }
-.row__act { margin: 0; }
+.list-row__acts { display: flex; gap: .25rem; }
+.list-row__act { margin: 0; }
 
 .group__empty {
   margin: 0;
