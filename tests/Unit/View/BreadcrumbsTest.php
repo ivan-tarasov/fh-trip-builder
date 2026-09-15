@@ -9,6 +9,12 @@ use PHPUnit\Framework\TestCase;
 use TripBuilder\Config;
 use TripBuilder\View\Breadcrumbs;
 
+/**
+ * @phpstan-type StructuredData array{
+ *     '@context': string, '@type': string,
+ *     itemListElement: list<array{'@type': string, position: int, name: string, item?: string}>,
+ * }
+ */
 final class BreadcrumbsTest extends TestCase
 {
     protected function setUp(): void
@@ -23,6 +29,15 @@ final class BreadcrumbsTest extends TestCase
     private static function labels(array $trail): array
     {
         return array_column($trail, 'label');
+    }
+
+    /** @return StructuredData */
+    private static function decoded(string $json): array
+    {
+        /** @var StructuredData $data */
+        $data = json_decode($json, true);
+
+        return $data;
     }
 
     public function testANestedPageWalksUpToItsNamedAncestors(): void
@@ -133,7 +148,7 @@ final class BreadcrumbsTest extends TestCase
         $json = Breadcrumbs::structuredData(Breadcrumbs::trail('/my/bookings/100001', 'K7PQ2M'));
 
         self::assertNotNull($json);
-        $data = json_decode($json, true);
+        $data = self::decoded($json);
 
         self::assertSame('https://schema.org', $data['@context']);
         self::assertSame('BreadcrumbList', $data['@type']);
@@ -150,8 +165,9 @@ final class BreadcrumbsTest extends TestCase
     public function testTheCurrentPageCarriesNoItemUrl(): void
     {
         // Its absence is what marks the last entry as the page being viewed.
-        $data = json_decode((string) Breadcrumbs::structuredData(Breadcrumbs::trail('/airlines')), true);
+        $data = self::decoded((string) Breadcrumbs::structuredData(Breadcrumbs::trail('/airlines')));
         $last = end($data['itemListElement']);
+        self::assertNotFalse($last, 'the trail should not be empty');
 
         self::assertSame('Airlines', $last['name']);
         self::assertArrayNotHasKey('item', $last);
@@ -175,6 +191,6 @@ final class BreadcrumbsTest extends TestCase
 
         self::assertStringNotContainsString('</script>', $json);
         // Escaped, not mangled: it still reads back as what was passed in.
-        self::assertSame($hostile, json_decode($json, true)['itemListElement'][1]['name']);
+        self::assertSame($hostile, self::decoded($json)['itemListElement'][1]['name']);
     }
 }

@@ -26,6 +26,13 @@ use TripBuilder\View\TwigRenderer;
  * that spans two files: the dot colours in the stylesheet stand for the pin
  * colours the map is given, and nothing but agreement makes them mean
  * anything.
+ *
+ * @phpstan-type MapConfig array{
+ *     token: string, style: string, zoom: int|null, padding: int,
+ *     markers: list<array{at: array{0: float, 1: float}, colour: string, label: string|null}>,
+ *     paths: list<list<array{0: float, 1: float}>>,
+ *     path: array{colour: string, width: int},
+ * }
  */
 final class RouteMapRenderTest extends TestCase
 {
@@ -112,7 +119,7 @@ final class RouteMapRenderTest extends TestCase
     /**
      * What the browser is handed, out of the attribute it is handed it in.
      *
-     * @return array<string, mixed>
+     * @return MapConfig
      */
     private function payload(): array
     {
@@ -123,7 +130,7 @@ final class RouteMapRenderTest extends TestCase
 
         self::assertArrayHasKey(1, $found, 'the map should carry its configuration');
 
-        /** @var array<string, mixed> $config */
+        /** @var MapConfig $config */
         $config = json_decode(
             html_entity_decode($found[1], ENT_QUOTES | ENT_HTML5),
             true,
