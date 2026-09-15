@@ -19,6 +19,11 @@ use TripBuilder\View\TwigRenderer;
  * is where the parts a visitor and a crawler actually meet live: the landmark,
  * the ordered list, which crumb is a link, and the JSON-LD beside it. A trail
  * can be perfectly correct and reach the page as nothing at all.
+ *
+ * @phpstan-type StructuredData array{
+ *     '@context': string, '@type': string,
+ *     itemListElement: list<array{'@type': string, position: int, name: string, item?: string}>,
+ * }
  */
 final class BreadcrumbsRenderTest extends TestCase
 {
@@ -174,6 +179,7 @@ final class BreadcrumbsRenderTest extends TestCase
 
         self::assertSame(1, count($script));
 
+        /** @var StructuredData $data */
         $data = json_decode((string) $script[0]->textContent, true);
 
         self::assertSame('BreadcrumbList', $data['@type']);

@@ -58,10 +58,12 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
      */
     public function testAChosenCurrencyUsesTheStoredRate(): void
     {
-        $stored = (float) $this->connection()->fetchValue(
+        /** @var string $rate */
+        $rate = $this->connection()->fetchValue(
             'SELECT rate FROM currency_rates WHERE code = ? ORDER BY rate_date DESC LIMIT 1',
             ['JPY'],
         );
+        $stored = (float) $rate;
 
         self::assertGreaterThan(0, $stored, 'JPY should have a seeded rate to test against');
 

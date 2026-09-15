@@ -105,6 +105,9 @@ final class FlightSweepTest extends IntegrationTestCase
             [self::AIRLINE, '9001', 'HNL', 'YUL', $local, $local, $utc, '320', 100, 60, 100.0, 10.0, 1],
         );
 
-        return (int) $this->connection()->fetchValue('SELECT LAST_INSERT_ID()');
+        /** @var int $id */
+        $id = $this->connection()->fetchValue('SELECT LAST_INSERT_ID()');
+
+        return $id;
     }
 }

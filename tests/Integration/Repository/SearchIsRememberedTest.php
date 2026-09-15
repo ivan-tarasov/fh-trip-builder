@@ -136,7 +136,10 @@ final class SearchIsRememberedTest extends IntegrationTestCase
 
     private function stored(): int
     {
-        return (int) $this->connection()->fetchValue('SELECT COUNT(*) FROM search_candidates');
+        /** @var int $count */
+        $count = $this->connection()->fetchValue('SELECT COUNT(*) FROM search_candidates');
+
+        return $count;
     }
 
     private function insertFlight(string $airline, string $departure, string $arrival): int

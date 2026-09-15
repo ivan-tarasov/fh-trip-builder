@@ -101,10 +101,13 @@ final class BookingRetentionTest extends IntegrationTestCase
 
     private function passengerCount(int $bookingId): int
     {
-        return (int) $this->connection()->fetchValue(
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM booking_passengers WHERE booking_id = ?',
             [$bookingId],
         );
+
+        return $count;
     }
 
     public function testTheWindowIsNinetyDays(): void

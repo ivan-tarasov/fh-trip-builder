@@ -47,6 +47,8 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * is past `flights:add`'s window, so these four rows are the whole candidate
  * set -- see `IntegrationTestCase::dateBeyondGeneratedFlights()`, which moves
  * with the window rather than holding a literal that drifts inside it.
+ *
+ * @phpstan-import-type Itinerary from FlightRepository
  */
 final class LayoverRangeWithADirectFlightTest extends IntegrationTestCase
 {
@@ -120,7 +122,7 @@ final class LayoverRangeWithADirectFlightTest extends IntegrationTestCase
 
         // A page row is hydrated and carries its stop count rather than the
         // stamps the bounds are measured from, so the shape is read off that.
-        $stops = array_map(static fn(array $row): int => (int) $row['stops'], $result['rows']);
+        $stops = array_map(static fn(array $row): int => $row['stops'], $result['rows']);
         sort($stops);
 
         self::assertSame([0, 2], $stops, 'one direct, and one itinerary with two waits');
@@ -230,7 +232,7 @@ final class LayoverRangeWithADirectFlightTest extends IntegrationTestCase
     }
 
     /**
-     * @return array{rows: list<array<string, mixed>>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
+     * @return array{rows: list<Itinerary>, total: int, cheapest: float|null, available: array<string, list<string>|list<int>|bool>, option_prices: array<string, array<array-key, float>>, bounds: array<string, array{min: int, max: int, floor_max: int, ceiling_min: int}>, highlights: array<string, array{price: float, duration: int}>}
      */
     private function search(?FlightFilters $filters = null): array
     {

@@ -90,13 +90,13 @@ final class ScheduleRunRepositoryTest extends IntegrationTestCase
         $runs->started(self::COMMAND, '2026-09-12 03:00:00');
         $runs->started(self::COMMAND, '2026-09-13 03:00:00');
 
-        self::assertSame(
-            1,
-            (int) $this->connection()->fetchValue(
-                'SELECT COUNT(*) FROM schedule_runs WHERE command = ?',
-                [self::COMMAND],
-            ),
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
+            'SELECT COUNT(*) FROM schedule_runs WHERE command = ?',
+            [self::COMMAND],
         );
+
+        self::assertSame(1, $count);
         self::assertSame('2026-09-13 03:00:00', $runs->all()[self::COMMAND]['last_run_at']);
     }
 }

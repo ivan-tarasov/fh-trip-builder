@@ -91,13 +91,14 @@ final class AirlineRepositoryTest extends IntegrationTestCase
     {
         self::assertNull($this->repository()->byCode('ZZ'), 'a code that is no airline');
 
+        /** @var array{code: string}|null $unsold */
         $unsold = $this->connection()->fetchOne(
             'SELECT code FROM airlines WHERE is_major = 0 LIMIT 1',
         );
 
         self::assertNotNull($unsold, 'the seed should hold an airline we do not sell');
         self::assertNull(
-            $this->repository()->byCode((string) $unsold['code']),
+            $this->repository()->byCode($unsold['code']),
             'an airline we do not sell should have no page',
         );
     }

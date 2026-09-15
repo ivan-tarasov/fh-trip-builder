@@ -26,7 +26,10 @@ final class ConfigEnvironmentTest extends TestCase
     protected function setUp(): void
     {
         $this->exported = getenv('APP_ENV');
-        $this->loaded = isset($_ENV['APP_ENV']) ? (string) $_ENV['APP_ENV'] : null;
+
+        /** @var string|null $loaded */
+        $loaded = $_ENV['APP_ENV'] ?? null;
+        $this->loaded = $loaded;
     }
 
     protected function tearDown(): void

@@ -45,7 +45,7 @@ final class LegalRenderTest extends TestCase
             );
 
             self::assertStringContainsString(
-                (string) $document['summary'],
+                $document['summary'],
                 self::decoded($html),
                 $slug . ' should lead with its summary',
             );
@@ -119,10 +119,10 @@ final class LegalRenderTest extends TestCase
         }
     }
 
-    /** @return array<string, array<string, mixed>> */
+    /** @return array<string, array{title: string, icon: string, summary: string}> */
     private static function documents(): array
     {
-        /** @var array<string, array<string, mixed>> $documents */
+        /** @var array<string, array{title: string, icon: string, summary: string}> $documents */
         $documents = Config::get('legal.documents', []);
 
         return $documents;

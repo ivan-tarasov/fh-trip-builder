@@ -105,12 +105,13 @@ final class RateLimitRepositoryTest extends IntegrationTestCase
         );
 
         self::assertSame(1, $limits->prune(date('Y-m-d H:i:s', strtotime('-1 day'))));
-        self::assertSame(
-            1,
-            (int) $this->connection()->fetchValue(
-                'SELECT COUNT(*) FROM rate_limits WHERE client LIKE ?',
-                ['198.51.100.%'],
-            ),
+
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
+            'SELECT COUNT(*) FROM rate_limits WHERE client LIKE ?',
+            ['198.51.100.%'],
         );
+
+        self::assertSame(1, $count);
     }
 }

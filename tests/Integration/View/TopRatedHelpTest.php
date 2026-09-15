@@ -181,10 +181,9 @@ final class TopRatedHelpTest extends IntegrationTestCase
      */
     public function testWithNobodyVotingTheColumnIsInPositionOrder(): void
     {
-        $voted = array_map(
-            static fn(array $row): string => (string) $row['slug'],
-            $this->connection()->fetchAll('SELECT DISTINCT slug FROM ' . Table::ArticleVotes->value),
-        );
+        /** @var list<array{slug: string}> $rows */
+        $rows = $this->connection()->fetchAll('SELECT DISTINCT slug FROM ' . Table::ArticleVotes->value);
+        $voted = array_map(static fn(array $row): string => $row['slug'], $rows);
 
         $unvoted = array_values(array_diff(array_keys($this->repository()->all()), $voted));
 

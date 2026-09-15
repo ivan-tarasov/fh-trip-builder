@@ -51,7 +51,8 @@ final class ReadmeTest extends TestCase
         // so the page can be cut short without touching this code.
         $method = new ReflectionMethod(Readme::class, 'slice');
 
-        $sliced = (string) $method->invoke(
+        /** @var string $sliced */
+        $sliced = $method->invoke(
             new Readme(),
             "intro\n<!-- about:start -->\nkept\n<!-- about:end -->\ndropped\n",
         );
