@@ -102,6 +102,23 @@
     };
 
     /*
+    | The one queued message a redirect can carry (G3.1, #304). Bootstrap's
+    | own `.toast`, already loaded and otherwise unused -- it does not show
+    | itself, so this is the one line that does. Shown once: `Flash::take()`
+    | already cleared the session the moment the page that draws it asked,
+    | so a refresh of the same page finds nothing queued and shows nothing.
+    */
+    var toasts = function () {
+        var el = document.querySelector('[data-flash-toast]');
+
+        if (!el || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        new bootstrap.Toast(el).show();
+    };
+
+    /*
     | Dark or light, the same `.js-theme` pattern `global.js` already proved on
     | the public site -- `aria-pressed` is the whole of the visual state, so
     | there is one source for "is it dark" rather than a class kept in step
@@ -361,6 +378,7 @@
 
     markdownPreview();
     confirmFirst();
+    toasts();
     themeToggle();
     railToggle();
     charts();
