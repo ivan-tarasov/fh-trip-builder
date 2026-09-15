@@ -37,6 +37,7 @@ use TripBuilder\TripType;
  * summed before scaling and the other scaled before summing.
  *
  * @phpstan-import-type ResponseItinerary from FlightFinder
+ * @phpstan-import-type Trip from CheckoutController
  */
 final class PartyPriceAgreementTest extends IntegrationTestCase
 {
@@ -273,6 +274,7 @@ final class PartyPriceAgreementTest extends IntegrationTestCase
             uri: '/checkout',
         ));
 
+        /** @var Trip|null $trip */
         $trip = new ReflectionMethod($controller, 'resolveTrip')
             ->invoke($controller, $outbound, $return, CabinClass::Economy);
 
@@ -281,7 +283,7 @@ final class PartyPriceAgreementTest extends IntegrationTestCase
         // raw_base and raw_tax, because those are the numbers that reach the
         // bookings table. The formatted parts beside them are the same money
         // split for display.
-        return (float) $trip['raw_base'] + (float) $trip['raw_tax'];
+        return $trip['raw_base'] + $trip['raw_tax'];
     }
 
     private function query(Party $party): FlightSearchQuery

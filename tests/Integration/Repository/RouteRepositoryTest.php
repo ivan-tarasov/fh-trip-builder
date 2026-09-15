@@ -34,6 +34,8 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * for pairs it has checked can be flown, tearDown() removes them, and the
  * assertions hold whether the database underneath has been used or only
  * installed. Same write-then-clean-up shape SearchRepositoryTest uses.
+ *
+ * @phpstan-import-type SearchedRouteRow from RouteRepository
  */
 final class RouteRepositoryTest extends IntegrationTestCase
 {
@@ -131,6 +133,7 @@ final class RouteRepositoryTest extends IntegrationTestCase
      */
     private function originWithSeveralDestinations(int $sample): array
     {
+        /** @var list<array{from_code: string, from_name: string, to_code: string, to_name: string}> $rows */
         $rows = $this->connection()->fetchAll(
             'SELECT o.city_code AS from_code, MIN(o.city) AS from_name,'
             . ' d.city_code AS to_code, MIN(d.city) AS to_name'
@@ -147,11 +150,11 @@ final class RouteRepositoryTest extends IntegrationTestCase
         $byOrigin = [];
 
         foreach ($rows as $row) {
-            $byOrigin[(string) $row['from_code']][] = [
-                (string) $row['from_code'],
-                (string) $row['from_name'],
-                (string) $row['to_code'],
-                (string) $row['to_name'],
+            $byOrigin[$row['from_code']][] = [
+                $row['from_code'],
+                $row['from_name'],
+                $row['to_code'],
+                $row['to_name'],
             ];
         }
 
@@ -167,6 +170,14 @@ final class RouteRepositoryTest extends IntegrationTestCase
     private function repository(): RouteRepository
     {
         return new RouteRepository($this->connection());
+    }
+
+    private function hasNoFlights(): bool
+    {
+        /** @var int $count */
+        $count = $this->connection()->fetchValue('SELECT COUNT(*) FROM flights');
+
+        return $count === 0;
     }
 
     public function testDepartingNamesTheGivenCityAtTheOriginEnd(): void
@@ -338,7 +349,7 @@ final class RouteRepositoryTest extends IntegrationTestCase
     }
 
     /**
-     * @param list<array<string, mixed>> $routes
+     * @param list<SearchedRouteRow> $routes
      * @return list<string>
      */
     private function keys(array $routes): array
@@ -362,7 +373,7 @@ final class RouteRepositoryTest extends IntegrationTestCase
     {
         $routes = new RouteRepository($this->connection());
 
-        if ((int) $this->connection()->fetchValue('SELECT COUNT(*) FROM flights') === 0) {
+        if ($this->hasNoFlights()) {
             self::markTestSkipped('No flights, so no route has a page to link to.');
         }
 
@@ -392,7 +403,7 @@ final class RouteRepositoryTest extends IntegrationTestCase
      */
     public function testPopularNeverShowsBothDirectionsOfAPair(): void
     {
-        if ((int) $this->connection()->fetchValue('SELECT COUNT(*) FROM flights') === 0) {
+        if ($this->hasNoFlights()) {
             self::markTestSkipped('No flights, so no route has a page to link to.');
         }
 

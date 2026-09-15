@@ -23,6 +23,11 @@ use TripBuilder\View\TwigRenderer;
  *
  * Every case is driven from the article index rather than from a list written
  * here, so a sixth article is covered by existing.
+ *
+ * @phpstan-type HelpArticle array{
+ *     title: string, short: ?string, icon: string, summary: string,
+ *     slug: string, url: string,
+ * }
  */
 final class HelpRenderTest extends TestCase
 {
@@ -60,7 +65,7 @@ final class HelpRenderTest extends TestCase
      * and rates work settled on, and the better shape regardless: a unit test
      * that renders a page should not also be asserting what is written on it.
      *
-     * @return array<string, array<string, mixed>>
+     * @return array<string, array{title: string, short: ?string, icon: string, summary: string}>
      */
     private static function articles(): array
     {
@@ -411,7 +416,7 @@ final class HelpRenderTest extends TestCase
     public function testTheSummaryIsBothTheDescriptionAndTheLead(string $slug): void
     {
         $html = $this->article($slug);
-        $summary = (string) self::articles()[$slug]['summary'];
+        $summary = self::articles()[$slug]['summary'];
 
         preg_match('#<p class="article__lead">(.*?)</p>#s', $html, $lead);
         self::assertNotEmpty($lead, 'the lead should be findable');
@@ -548,7 +553,7 @@ final class HelpRenderTest extends TestCase
             foreach ($group['articles'] as $article) {
                 self::assertStringContainsString('href="' . $article['url'] . '"', $html);
                 self::assertStringContainsString(
-                    htmlspecialchars((string) $article['title'], ENT_QUOTES),
+                    htmlspecialchars($article['title'], ENT_QUOTES),
                     $html,
                 );
             }
@@ -575,7 +580,7 @@ final class HelpRenderTest extends TestCase
         foreach ($groups as $group) {
             foreach ($group['articles'] as $article) {
                 self::assertStringNotContainsString(
-                    htmlspecialchars((string) $article['summary'], ENT_QUOTES),
+                    htmlspecialchars($article['summary'], ENT_QUOTES),
                     $html,
                     $article['slug'] . ' should be a row on the hub, not a card with a sentence',
                 );
@@ -621,7 +626,7 @@ final class HelpRenderTest extends TestCase
      * that only ever renders equal groups would pass with a template that drew
      * the first article of each.
      *
-     * @return list<array{slug: string, title: string, summary: string, icon: string, accent: string, articles: list<array<string, mixed>>}>
+     * @return list<array{slug: string, title: string, summary: string, icon: string, accent: string, articles: list<HelpArticle>}>
      */
     private static function helpGroups(): array
     {

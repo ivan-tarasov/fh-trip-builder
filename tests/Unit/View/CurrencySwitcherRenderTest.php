@@ -20,6 +20,11 @@ use TripBuilder\View\TwigRenderer;
  * something PHP never reads, so clicking it does nothing at all. And a panel
  * that renders without `hidden` puts a filter box and thirty buttons into the
  * tab order of every page on the site.
+ *
+ * @phpstan-type MainMenuItem array{
+ *     text: string, icon: string, enabled: bool,
+ *     spacer?: int, header?: bool, footer?: bool,
+ * }
  */
 final class CurrencySwitcherRenderTest extends TestCase
 {
@@ -29,6 +34,15 @@ final class CurrencySwitcherRenderTest extends TestCase
         $_SESSION = [];
         unset($_COOKIE[Currency::COOKIE]);
         Money::forget();
+    }
+
+    /** @return array<string, MainMenuItem> */
+    private static function mainMenu(): array
+    {
+        /** @var array<string, MainMenuItem> $menu */
+        $menu = Config::get('site.main-menu', []);
+
+        return $menu;
     }
 
     protected function tearDown(): void
@@ -149,10 +163,10 @@ final class CurrencySwitcherRenderTest extends TestCase
      */
     public function testCurrencyIsNotAMenuEntry(): void
     {
-        foreach (array_keys(Config::get('site.main-menu', [])) as $url) {
+        foreach (array_keys(self::mainMenu()) as $url) {
             self::assertStringNotContainsString(
                 'currency',
-                (string) $url,
+                $url,
                 'currency is a control, not a destination -- see partials/currency-switcher.html.twig',
             );
         }
@@ -166,7 +180,7 @@ final class CurrencySwitcherRenderTest extends TestCase
      */
     public function testTheRetiredPlaceholderFlagIsGone(): void
     {
-        foreach (Config::get('site.main-menu', []) as $url => $item) {
+        foreach (self::mainMenu() as $url => $item) {
             self::assertArrayNotHasKey('soon', $item, $url . ' still carries a retired flag');
         }
     }

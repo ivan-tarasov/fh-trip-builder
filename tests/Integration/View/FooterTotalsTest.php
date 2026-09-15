@@ -19,6 +19,11 @@ use TripBuilder\View\LayoutData;
  * error -- the footer simply states something untrue. A count can drift from
  * the listing it describes, and a column can be wired to somebody else's
  * count. One test each.
+ *
+ * @phpstan-type FooterColumn array{
+ *     title: string, source: string, count: int,
+ *     more?: array{text: string, url: string, total?: string},
+ * }
  */
 final class FooterTotalsTest extends IntegrationTestCase
 {
@@ -62,16 +67,17 @@ final class FooterTotalsTest extends IntegrationTestCase
         $layout = new LayoutData();
         $seen = [];
 
-        foreach (Config::get('site.footer-columns') as $column) {
-            $key = $column['more']['total'] ?? null;
+        foreach (self::footerColumns() as $column) {
+            $more = $column['more'] ?? null;
+            $key = $more['total'] ?? null;
 
-            if ($key === null) {
+            if ($more === null || $key === null) {
                 continue;
             }
 
             self::assertArrayHasKey($key, $expected, $key . ' is not a directory this test knows about');
 
-            $text = $layout->footerMore($column['more'])['text'];
+            $text = $layout->footerMore($more)['text'];
 
             self::assertSame(
                 1,
@@ -86,6 +92,15 @@ final class FooterTotalsTest extends IntegrationTestCase
         ksort($seen);
 
         self::assertSame($expected, $seen);
+    }
+
+    /** @return list<FooterColumn> */
+    private static function footerColumns(): array
+    {
+        /** @var list<FooterColumn> $columns */
+        $columns = Config::get('site.footer-columns');
+
+        return $columns;
     }
 
     /**
