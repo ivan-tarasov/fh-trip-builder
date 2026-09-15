@@ -56,6 +56,10 @@
                 if (choice === 'light' || choice === 'dark') {
                     document.documentElement.setAttribute('data-theme', choice);
                     document.documentElement.setAttribute('data-bs-theme', choice);
+                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    /* admin.css already follows prefers-color-scheme on its own tokens;
+                       Bootstrap's tokens only flip under data-bs-theme, so it needs setting here too. */
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
                 }
 
                 if (window.localStorage.getItem('tb-admin-rail-collapsed') === '1') {
