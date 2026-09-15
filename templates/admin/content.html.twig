@@ -5,80 +5,141 @@
 {% block title %}Help content{% endblock %}
 
 {# Everything that changes something is a form posting back here, so a refresh
-   does not repeat the last move (A3.3, #101). #}
-{% macro act(label, kind, slug, action, disabled) %}
-    <form method="post" action="/admin/content" class="list-row__act">
-        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
-        <input type="hidden" name="kind" value="{{ kind }}">
-        <input type="hidden" name="slug" value="{{ slug }}">
-        <input type="hidden" name="action" value="{{ action }}">
-        <button type="submit" class="button button--tiny"{{ disabled|default(false) ? ' disabled' : '' }}>{{ label }}</button>
-    </form>
+   does not repeat the last move (G1.3, #101). One action is one form, because
+   three buttons cannot share a submit -- each a dropdown item rather than a
+   standalone button now that there are three per row (G2.3, #289). `menu()`
+   takes the tuples and loops itself, rather than concatenating three already-
+   rendered macro calls: Twig's autoescaping does not reliably treat a `~`-
+   joined string of safe fragments as still safe. #}
+{% macro act(label, icon, kind, slug, action, disabled) %}
+    <li>
+        <form method="post" action="/admin/content">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="kind" value="{{ kind }}">
+            <input type="hidden" name="slug" value="{{ slug }}">
+            <input type="hidden" name="action" value="{{ action }}">
+            <button type="submit" class="dropdown-item d-flex align-items-center gap-2"{{ disabled ? ' disabled' : '' }}>
+                <i class="bi bi-{{ icon }}" aria-hidden="true"></i> {{ label }}
+            </button>
+        </form>
+    </li>
+{% endmacro %}
+
+{% macro menu(actions) %}
+    <div class="dropdown">
+        <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {% for a in actions %}
+                {{ _self.act(a.label, a.icon, a.kind, a.slug, a.action, a.disabled|default(false)) }}
+            {% endfor %}
+        </ul>
+    </div>
 {% endmacro %}
 
 {% import _self as do %}
 
 {% block tools %}
-    <a class="button" href="/admin/category">New category</a>
-    <a class="button button--go" href="/admin/article">New article</a>
+    <a class="btn btn-outline-secondary btn-sm" href="/admin/category"><i class="bi bi-folder-plus" aria-hidden="true"></i> New category</a>
+    <a class="btn btn-primary btn-sm" href="/admin/article"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i> New article</a>
 {% endblock %}
 
 {% block content %}
+    {# One card per category -- Bootstrap's table has no clean spanning header
+       row for a group, so the category's own head (title, flags, its own
+       actions) is the card header rather than a table row; the table inside
+       is only ever articles (G2.3, #289). #}
     {% for category in categories %}
-        <section class="group">
-            <div class="list-row list-row--head">
-                <a class="list-row__name" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
-                <span class="list-row__slug">{{ category.slug }}</span>
+        {% set rows = articles[category.slug]|default([]) %}
+        <div class="card orchid-card mb-3">
+            <div class="card-header d-flex flex-wrap align-items-center gap-2">
+                <span class="icon-badge icon-badge--sm" aria-hidden="true"><i class="bi bi-folder2"></i></span>
 
-                {% if not category.enabled %}<span class="flag">Hidden</span>{% endif %}
+                <div class="flex-grow-1 min-w-0">
+                    <a class="fw-semibold text-decoration-none" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
+                    <span class="mono text-body-secondary small ms-2">{{ category.slug }}</span>
+                </div>
+
+                <span class="badge text-bg-secondary fw-normal">{{ rows|length }} article{{ rows|length == 1 ? '' : 's' }}</span>
+
+                {% if not category.enabled %}<span class="badge text-bg-secondary">Hidden</span>{% endif %}
 
                 {# Whose row this is. Edited here, the next `articles:import`
                    leaves it alone; untouched, the files still own it and an
-                   import will rewrite it (A3.4, #102). #}
-                {% if category.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
+                   import will rewrite it (G1.4, #102). #}
+                {% if category.edited %}<span class="badge text-bg-success">Edited here</span>{% endif %}
 
-                <span class="list-row__acts">
-                    {{ do.act('Up', 'category', category.slug, 'up', loop.first) }}
-                    {{ do.act('Down', 'category', category.slug, 'down', loop.last) }}
-                    {{ do.act(category.enabled ? 'Hide' : 'Show', 'category', category.slug, category.enabled ? 'hide' : 'show', false) }}
-                </span>
+                {{ do.menu([
+                    { label: 'Move up', icon: 'arrow-up', kind: 'category', slug: category.slug, action: 'up', disabled: loop.first },
+                    { label: 'Move down', icon: 'arrow-down', kind: 'category', slug: category.slug, action: 'down', disabled: loop.last },
+                    { label: category.enabled ? 'Hide' : 'Show', icon: category.enabled ? 'eye-slash' : 'eye', kind: 'category', slug: category.slug, action: category.enabled ? 'hide' : 'show' },
+                ]) }}
             </div>
 
-            {% for article in articles[category.slug]|default([]) %}
-                <div class="list-row list-row--child">
-                    <a class="list-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="list-row__slug">{{ article.slug }}</span>
-
-                    {% if not article.enabled %}<span class="flag">Hidden</span>{% endif %}
-                    {% if article.edited %}<span class="flag flag--owned">Edited here</span>{% endif %}
-
-                    <span class="list-row__acts">
-                        {{ do.act('Up', 'article', article.slug, 'up', loop.first) }}
-                        {{ do.act('Down', 'article', article.slug, 'down', loop.last) }}
-                        {{ do.act(article.enabled ? 'Hide' : 'Show', 'article', article.slug, article.enabled ? 'hide' : 'show', false) }}
-                    </span>
+            {% if rows %}
+                <div class="table-responsive">
+                    <table class="table orchid-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Article</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for article in rows %}
+                                <tr>
+                                    <td>
+                                        <a class="text-decoration-none" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                                        <span class="mono text-body-secondary small d-block">{{ article.slug }}</span>
+                                    </td>
+                                    <td>
+                                        {% if not article.enabled %}<span class="badge text-bg-secondary">Hidden</span>{% endif %}
+                                        {% if article.edited %}<span class="badge text-bg-success">Edited here</span>{% endif %}
+                                        {% if article.enabled and not article.edited %}<span class="text-body-secondary small">Live</span>{% endif %}
+                                    </td>
+                                    <td class="text-end" style="width: 1%;">
+                                        {{ do.menu([
+                                            { label: 'Move up', icon: 'arrow-up', kind: 'article', slug: article.slug, action: 'up', disabled: loop.first },
+                                            { label: 'Move down', icon: 'arrow-down', kind: 'article', slug: article.slug, action: 'down', disabled: loop.last },
+                                            { label: article.enabled ? 'Hide' : 'Show', icon: article.enabled ? 'eye-slash' : 'eye', kind: 'article', slug: article.slug, action: article.enabled ? 'hide' : 'show' },
+                                        ]) }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             {% else %}
-                <p class="group__empty">No articles in this category.</p>
-            {% endfor %}
-        </section>
+                <p class="card-body mb-0 text-body-secondary">No articles in this category.</p>
+            {% endif %}
+        </div>
     {% endfor %}
 
     {# An article whose category names no row. ArticleRepository::all() says why
        one is kept rather than dropped; this is where it gets fixed. #}
     {% if orphans %}
-        <section class="group">
-            <div class="list-row list-row--head">
-                <span class="list-row__name">Filed under a category that does not exist</span>
+        <div class="card orchid-card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <span class="icon-badge icon-badge--sm icon-badge--warn" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+                <span class="fw-semibold">Filed under a category that does not exist</span>
             </div>
-
-            {% for article in orphans %}
-                <div class="list-row list-row--child">
-                    <a class="list-row__name" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
-                    <span class="list-row__slug">{{ article.slug }} &mdash; {{ article.category }}</span>
-                </div>
-            {% endfor %}
-        </section>
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0">
+                    <tbody>
+                        {% for article in orphans %}
+                            <tr>
+                                <td>
+                                    <a class="text-decoration-none" href="/admin/article/{{ article.slug }}">{{ article.title }}</a>
+                                    <span class="mono text-body-secondary small d-block">{{ article.slug }} &mdash; {{ article.category }}</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     {% endif %}
 
     <p class="field__hint">This session ends after {{ idle_minutes }} minutes without a page here.</p>
