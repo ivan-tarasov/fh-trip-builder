@@ -70,6 +70,24 @@
 </head>
 <body class="shell{% block shell_class %}{% endblock %}">
 
+{# Read once, called once: `flash()` clears the queued message the moment
+   it is asked for, so it is captured here into a variable rather than
+   called again anywhere below (G3.1, #304). #}
+{% set flash = flash() %}
+{% if flash %}
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+        <div class="toast align-items-center text-bg-{{ flash.tone.bootstrapClass() }} border-0"
+             role="{{ flash.tone.value == 'error' ? 'alert' : 'status' }}"
+             aria-live="{{ flash.tone.value == 'error' ? 'assertive' : 'polite' }}"
+             aria-atomic="true" data-flash-toast>
+            <div class="d-flex">
+                <div class="toast-body">{{ flash.message }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
 {% block shell %}
     {# One rail, one well, the rail fixed and permanent beside it -- Orchid's
        own layout, not a flag on the public one. #}

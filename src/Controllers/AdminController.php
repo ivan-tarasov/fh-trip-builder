@@ -12,6 +12,8 @@ use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
 use TripBuilder\BookingStatus;
 use TripBuilder\Csrf;
+use TripBuilder\Flash;
+use TripBuilder\FlashTone;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
@@ -407,6 +409,7 @@ class AdminController extends AbstractController
         $back = '/admin/bookings/' . $id;
 
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
             $this->bounce($back);
 
             return;
@@ -417,11 +420,13 @@ class AdminController extends AbstractController
                 'to' => BookingStatus::Cancelled,
                 'from' => BookingStatus::Confirmed,
                 'event' => BookingEvent::Cancelled,
+                'label' => 'Booking cancelled.',
             ],
             'reinstate' => [
                 'to' => BookingStatus::Confirmed,
                 'from' => BookingStatus::Cancelled,
                 'event' => BookingEvent::Reinstated,
+                'label' => 'Booking reinstated.',
             ],
             default => null,
         };
@@ -433,6 +438,13 @@ class AdminController extends AbstractController
                 BookingActor::Operator,
                 'from the panel',
             );
+
+            Flash::set($change['label']);
+        } else {
+            // Either the button posted something this action does not know,
+            // or the row had already moved -- somebody cancelled it in
+            // another tab since this page was opened.
+            Flash::set('Nothing changed. This booking may already be in that state.', FlashTone::Error);
         }
 
         $this->bounce($back);
@@ -480,6 +492,9 @@ class AdminController extends AbstractController
     {
         if (Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
             new SubscriberRepository($this->connection())->remove($this->request->body->int('id'));
+            Flash::set('Removed from the fare-alert list.');
+        } else {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
         }
 
         $this->bounce('/admin/subscribers');
@@ -552,6 +567,7 @@ class AdminController extends AbstractController
         $path = self::SETTINGS_GROUPS[$group]['path'];
 
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
             $this->bounce($path);
 
             return;
@@ -563,6 +579,7 @@ class AdminController extends AbstractController
             if (PanelSetting::tryFrom($resetKey) !== null) {
                 new SettingsRepository($this->connection())->remove($resetKey);
                 Settings::forget();
+                Flash::set('Reset to the config default.');
             }
 
             $this->bounce($path);
@@ -579,6 +596,7 @@ class AdminController extends AbstractController
         }
 
         Settings::forget();
+        Flash::set(ucfirst($group) . ' settings saved.');
         $this->bounce($path);
     }
 
@@ -818,6 +836,7 @@ class AdminController extends AbstractController
     private function act(): void
     {
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
             $this->bounce('/admin/content');
 
             return;
@@ -828,6 +847,7 @@ class AdminController extends AbstractController
         $action = $this->request->body->str('action');
 
         if (preg_match(self::SLUG, $slug) !== 1 || !in_array($kind, ['article', 'category'], true)) {
+            Flash::set('Nothing changed. That was not a real category or article.', FlashTone::Error);
             $this->bounce('/admin/content');
 
             return;
@@ -841,7 +861,10 @@ class AdminController extends AbstractController
             ? $store->forEditing($slug)
             : $store->forEditing($slug);
 
-        if ($current !== null) {
+        $label = ucfirst($kind);
+        $known = in_array($action, ['show', 'hide', 'up', 'down'], true);
+
+        if ($current !== null && $known) {
             match ($action) {
                 'show' => $store->setEnabled($slug, true),
                 'hide' => $store->setEnabled($slug, false),
@@ -850,8 +873,15 @@ class AdminController extends AbstractController
                 // moved nothing and the button looked broken.
                 'up' => $store->move($slug, -1),
                 'down' => $store->move($slug, 1),
-                default => null,
             };
+
+            Flash::set(match ($action) {
+                'show' => "{$label} shown.",
+                'hide' => "{$label} hidden.",
+                default => "{$label} moved.",
+            });
+        } else {
+            Flash::set('Nothing changed.', FlashTone::Error);
         }
 
         $this->bounce('/admin/content');
@@ -921,6 +951,7 @@ class AdminController extends AbstractController
         // decision is made, so it makes it here.
         $articles->setEnabled($posted['slug'], $posted['enabled']);
 
+        Flash::set($slug === null ? 'Article created.' : 'Article saved.');
         $this->bounce('/admin/content');
     }
 
@@ -965,6 +996,7 @@ class AdminController extends AbstractController
 
         $categories->setEnabled($posted['slug'], $posted['enabled']);
 
+        Flash::set($slug === null ? 'Category created.' : 'Category saved.');
         $this->bounce('/admin/content');
     }
 

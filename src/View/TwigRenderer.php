@@ -8,6 +8,7 @@ use Exception;
 use TripBuilder\Cdn;
 use TripBuilder\Consent;
 use TripBuilder\Currency;
+use TripBuilder\Flash;
 use TripBuilder\Helper;
 use TripBuilder\Horizon;
 use TripBuilder\Money;
@@ -135,6 +136,10 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('in_section', $this->layout->inSection(...)));
         $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
         $this->twig->addFunction(new TwigFunction('csrf_field', $this->layout->csrfField(...)));
+        // Read-once: `take()` clears the session the moment it is called, so a
+        // template calls this at most once per render, into a `{% set %}` --
+        // asking twice would find the second ask empty (G3.1, #304).
+        $this->twig->addFunction(new TwigFunction('flash', Flash::take(...)));
         $this->twig->addFunction(new TwigFunction('git_info', $this->layout->gitInfo(...)));
         $this->twig->addFunction(new TwigFunction('git_repo', $this->layout->gitRepo(...)));
         $this->twig->addFunction(new TwigFunction('copyright_years', $this->layout->copyrightYears(...)));
