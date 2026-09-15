@@ -637,6 +637,44 @@ a:hover { text-decoration: underline; }
 .orchid-chart-wrap { position: relative; width: 100%; }
 .orchid-chart-wrap--md { height: 12rem; }
 
+/* A small icon tile wherever a card header wants one that is not a stat --
+   same recipe as `.stat-card__icon`, kept separate because the two
+   components should not have to evolve together (G2.3, #289). */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  background: var(--sunken);
+  color: var(--ink-quiet);
+}
+
+.icon-badge--sm { width: 2rem; height: 2rem; font-size: 1rem; }
+.icon-badge--warn { background: var(--signal-soft); color: var(--signal); }
+
+/* Orchid's own table dressing: a quiet, uppercase head and consistent row
+   padding, layered onto Bootstrap's `.table` rather than replacing it. */
+.orchid-table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: var(--sunken);
+  --bs-table-color: var(--ink);
+}
+
+.orchid-table thead th {
+  padding: .625rem .75rem;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-quiet);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.orchid-table tbody td { padding: .875rem .75rem; border-bottom: 1px solid var(--rule); }
+.orchid-table tbody tr:last-child td { border-bottom: 0; }
+
 .sheet { width: 100%; border-collapse: collapse; font-size: .8125rem; }
 
 .sheet th {
