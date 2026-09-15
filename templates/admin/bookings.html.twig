@@ -9,14 +9,17 @@
     {# A GET and not a POST, so a search can be linked, refreshed and paged.
        The cost is that the term lands in the access log, which is why the box
        is offered for a reference, a name and an address and nothing finer. #}
-    <form class="finder" method="get" action="/admin/bookings" role="search">
+    <form class="d-flex" method="get" action="/admin/bookings" role="search">
         <label class="visually-hidden" for="find">Search bookings</label>
-        <input id="find" type="search" name="q" value="{{ term }}" placeholder="Reference, name or address" autocomplete="off">
-        <button class="button" type="submit">Search</button>
-        {% if term %}<a class="button" href="/admin/bookings">Clear</a>{% endif %}
+        <div class="input-group input-group-sm">
+            <span class="input-group-text bg-transparent"><i class="bi bi-search" aria-hidden="true"></i></span>
+            <input id="find" type="search" class="form-control" name="q" value="{{ term }}" placeholder="Reference, name or address" autocomplete="off">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+            {% if term %}<a class="btn btn-outline-secondary" href="/admin/bookings">Clear</a>{% endif %}
+        </div>
     </form>
 
-    <span class="stamp">{{ total }} {{ term ? 'found' : 'in all' }}</span>
+    <span class="text-body-secondary small">{{ total }} {{ term ? 'found' : 'in all' }}</span>
 {% endblock %}
 
 {# What this list shows is a decision, and it has been taken twice.
@@ -33,7 +36,7 @@
 
    So: names yes, and everything else still no. No address, no phone, no date of
    birth, no card. Those stay on the page for the one booking somebody opened,
-   where looking at them was a deliberate act (A3.8, #233). #}
+   where looking at them was a deliberate act (G1.8, #233). #}
 {% block content %}
     {% if term and bookings is empty %}
         <p class="notice">
@@ -42,84 +45,86 @@
             made from.
         </p>
     {% else %}
-        <div class="group">
-            <table class="sheet">
-                <thead>
-                    <tr>
-                        <th scope="col">#</th>
-                        <th scope="col">Reference</th>
-                        <th scope="col">Travelling</th>
-                        <th scope="col">Route</th>
-                        <th scope="col">Departs</th>
-                        <th scope="col">Made</th>
-                        <th scope="col">Total</th>
-                        <th scope="col">State</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for booking in bookings %}
+        <div class="card orchid-card">
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0">
+                    <thead>
                         <tr>
-                            {# The row's own id. What the address is built from, what
-                               a log line quotes, and the one thing about a booking
-                               that is never blank -- a reference is issued at the end
-                               of checkout and a row that did not get there has none. #}
-                            <td class="mono sheet__quiet">{{ booking.id }}</td>
-                            <td>
-                                <a class="mono" href="/admin/bookings/{{ booking.id }}">
-                                    {{ booking.reference ?: 'no reference' }}
-                                </a>
-                            </td>
-                            <td>
-                                {{ booking.lead ?: '—' }}
-                                {% if booking.others is not empty %}
-                                    <span class="pill">+{{ booking.others|length }}</span>
-                                    {# Named rather than counted only: an operator
-                                       looking for the child on a family booking is
-                                       looking for a name that is not the lead's. #}
-                                    <span class="sheet__quiet">
-                                        {% if booking.others|length > 2 %}
-                                            with {{ booking.others|slice(0, 2)|join(', ') }} and {{ booking.others|length - 2 }} more
-                                        {% else %}
-                                            with {{ booking.others|join(', ') }}
-                                        {% endif %}
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td class="mono">
-                                {% if booking.from %}
-                                    {{ booking.from }} &rarr; {{ booking.to }}
-                                {% else %}
-                                    {# The presenter refuses to draw a booking whose
-                                       flights will not build. A traveller should not
-                                       see one; an operator should, because it is the
-                                       row somebody is calling about. #}
-                                    <span class="sheet__quiet">will not build</span>
-                                {% endif %}
-                            </td>
-                            {# A DateTimeImmutable off the presenter, not a string. #}
-                            <td class="mono sheet__quiet">
-                                {% if booking.departs %}{{ booking.departs|date('j M Y') }}{% else %}&mdash;{% endif %}
-                            </td>
-                            <td class="mono">
-                                {{ booking.created|date('j M Y') }}
-                                {# The date says when, this says how long. Scanning a
-                                   list, the second is the question being asked. #}
-                                <span class="sheet__quiet">{{ booking.made_ago }}</span>
-                            </td>
-                            <td class="mono">
-                                {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}&mdash;{% endif %}
-                            </td>
-                            <td>
-                                <span class="pill{{ booking.is_cancelled ? ' pill--bad' : ' pill--good' }}">
-                                    {{ booking.status_label }}
-                                </span>
-                            </td>
+                            <th scope="col">#</th>
+                            <th scope="col">Reference</th>
+                            <th scope="col">Travelling</th>
+                            <th scope="col">Route</th>
+                            <th scope="col">Departs</th>
+                            <th scope="col">Made</th>
+                            <th scope="col">Total</th>
+                            <th scope="col">State</th>
                         </tr>
-                    {% else %}
-                        <tr><td colspan="8" class="sheet__quiet">Nobody has booked anything yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for booking in bookings %}
+                            <tr>
+                                {# The row's own id. What the address is built from, what
+                                   a log line quotes, and the one thing about a booking
+                                   that is never blank -- a reference is issued at the end
+                                   of checkout and a row that did not get there has none. #}
+                                <td class="mono text-body-secondary">{{ booking.id }}</td>
+                                <td>
+                                    <a class="mono text-decoration-none" href="/admin/bookings/{{ booking.id }}">
+                                        {{ booking.reference ?: 'no reference' }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {{ booking.lead ?: '—' }}
+                                    {% if booking.others is not empty %}
+                                        <span class="badge text-bg-secondary fw-normal">+{{ booking.others|length }}</span>
+                                        {# Named rather than counted only: an operator
+                                           looking for the child on a family booking is
+                                           looking for a name that is not the lead's. #}
+                                        <span class="text-body-secondary small d-block">
+                                            {% if booking.others|length > 2 %}
+                                                with {{ booking.others|slice(0, 2)|join(', ') }} and {{ booking.others|length - 2 }} more
+                                            {% else %}
+                                                with {{ booking.others|join(', ') }}
+                                            {% endif %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="mono">
+                                    {% if booking.from %}
+                                        {{ booking.from }} &rarr; {{ booking.to }}
+                                    {% else %}
+                                        {# The presenter refuses to draw a booking whose
+                                           flights will not build. A traveller should not
+                                           see one; an operator should, because it is the
+                                           row somebody is calling about. #}
+                                        <span class="text-body-secondary">will not build</span>
+                                    {% endif %}
+                                </td>
+                                {# A DateTimeImmutable off the presenter, not a string. #}
+                                <td class="mono text-body-secondary">
+                                    {% if booking.departs %}{{ booking.departs|date('j M Y') }}{% else %}&mdash;{% endif %}
+                                </td>
+                                <td class="mono">
+                                    {{ booking.created|date('j M Y') }}
+                                    {# The date says when, this says how long. Scanning a
+                                       list, the second is the question being asked. #}
+                                    <span class="text-body-secondary small d-block">{{ booking.made_ago }}</span>
+                                </td>
+                                <td class="mono">
+                                    {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}&mdash;{% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge{{ booking.is_cancelled ? ' text-bg-danger' : ' text-bg-success' }}">
+                                        {{ booking.status_label }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="8" class="text-body-secondary">Nobody has booked anything yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         {% if total > per_page %}
@@ -127,18 +132,25 @@
                everything and the operator loses what they typed. #}
             {% set carry = term ? '&q=' ~ term|url_encode : '' %}
 
-            <div class="pager">
-                {% if page > 1 %}
-                    <a class="button" href="/admin/bookings?page={{ page - 1 }}{{ carry }}">Newer</a>
-                {% endif %}
-
-                <span class="sheet__quiet">
+            <div class="d-flex align-items-center justify-content-between mt-3">
+                <span class="text-body-secondary small">
                     {{ (page - 1) * per_page + 1 }}&ndash;{{ min(page * per_page, total) }} of {{ total }}
                 </span>
 
-                {% if page * per_page < total %}
-                    <a class="button" href="/admin/bookings?page={{ page + 1 }}{{ carry }}">Older</a>
-                {% endif %}
+                <nav aria-label="Booking pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item{{ page > 1 ? '' : ' disabled' }}">
+                            <a class="page-link" href="/admin/bookings?page={{ page - 1 }}{{ carry }}"{{ page > 1 ? '' : ' tabindex="-1" aria-disabled="true"' }}>
+                                <i class="bi bi-chevron-left" aria-hidden="true"></i> Newer
+                            </a>
+                        </li>
+                        <li class="page-item{{ page * per_page < total ? '' : ' disabled' }}">
+                            <a class="page-link" href="/admin/bookings?page={{ page + 1 }}{{ carry }}"{{ page * per_page < total ? '' : ' tabindex="-1" aria-disabled="true"' }}>
+                                Older <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         {% endif %}
     {% endif %}
