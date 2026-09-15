@@ -80,7 +80,15 @@
         {# Every group's changes, not just this one's -- a change to Map is
            still worth seeing while looking at Search rules, and filtering
            this by group would need a fourth column nobody asked for. #}
-        <p class="band mt-4">Recent changes</p>
+        <div class="d-flex align-items-center justify-content-between mt-4">
+            <p class="band mb-0">Recent changes</p>
+
+            {# The export reads the full log, not the twenty rows below --
+               an audit trail capped at twenty isn't one (G3.5, #308). #}
+            <a class="btn btn-sm btn-outline-secondary" href="/admin/settings/export">
+                <i class="bi bi-download" aria-hidden="true"></i> Export CSV
+            </a>
+        </div>
 
         <div class="card orchid-card">
             <div class="table-responsive">

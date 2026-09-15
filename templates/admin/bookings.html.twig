@@ -20,6 +20,13 @@
     </form>
 
     <span class="text-body-secondary small">{{ total }} {{ term ? 'found' : 'in all' }}</span>
+
+    {# The search term carries over -- exporting page two of a search should
+       not quietly become exporting everything (G3.5, #308). Pagination does
+       not: this is every matching row, not just the current page. #}
+    <a class="btn btn-sm btn-outline-secondary" href="/admin/bookings/export{{ term ? '?q=' ~ term|url_encode : '' }}">
+        <i class="bi bi-download" aria-hidden="true"></i> Export CSV
+    </a>
 {% endblock %}
 
 {# What this list shows is a decision, and it has been taken twice.

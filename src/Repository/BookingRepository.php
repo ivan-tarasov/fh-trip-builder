@@ -316,6 +316,52 @@ final readonly class BookingRepository
     }
 
     /**
+     * Every booking, newest first, for an export with no search term.
+     *
+     * `recent()` without the page: an export defeats its own point if it
+     * only ever hands back one page at a time (G3.5, #308).
+     *
+     * @return list<BookingRow>
+     */
+    public function exportAll(): array
+    {
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT * FROM ' . Table::Bookings->value . ' ORDER BY created DESC, id DESC',
+        );
+
+        return $rows;
+    }
+
+    /**
+     * Every booking a search matches, newest first, for an export.
+     *
+     * `search()` without the page, same reasoning as {@see exportAll()}.
+     *
+     * @return list<BookingRow>
+     */
+    public function exportMatching(string $term): array
+    {
+        $like = self::like($term);
+
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT b.* FROM ' . Table::Bookings->value . ' b'
+            . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
+            . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
+            . '  OR EXISTS ('
+            . '   SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
+            . '   WHERE p.booking_id = b.id'
+            . '    AND CONCAT(p.first_name, \' \', p.last_name) LIKE ?'
+            . '  )'
+            . ' ORDER BY b.created DESC, b.id DESC',
+            [$like, $like, $like, $like],
+        );
+
+        return $rows;
+    }
+
+    /**
      * A search term as a `LIKE` pattern, with its wildcards as characters.
      *
      * `%` and `_` mean something to `LIKE`, and somebody searching for a

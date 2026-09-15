@@ -61,6 +61,25 @@ final readonly class SubscriberRepository
         return $rows;
     }
 
+    /**
+     * Every address on the list, newest first, for an export.
+     *
+     * `all()` without the page, same reasoning as
+     * {@see BookingRepository::exportAll()} (G3.5, #308).
+     *
+     * @return list<SubscriberRow>
+     */
+    public function exportAll(): array
+    {
+        /** @var list<SubscriberRow> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT id, email, subscribed_at FROM ' . Table::Subscribers->value
+            . ' ORDER BY subscribed_at DESC, id DESC',
+        );
+
+        return $rows;
+    }
+
     public function countAll(): int
     {
         /** @var int $count */
