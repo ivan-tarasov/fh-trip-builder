@@ -17,6 +17,27 @@ use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
+/**
+ * Live against every file in `config/noah/db/tables/*.php`: a column
+ * always declares `name`, `type`, `length`, `default`, `nullable`,
+ * `auto_inc` and `comment` -- `length` is `false` for a type with none,
+ * an `int` for a simple one and a `"precision,scale"` string for a
+ * DECIMAL; `comment` is `false` for none and a string otherwise.
+ * `charset` is the one column key genuinely absent rather than falsy
+ * where it does not apply. A table's `indexes` and `auto_increment`, and
+ * an index's `unique`, are the same -- present only where they apply.
+ *
+ * @phpstan-type ColumnDef array{
+ *     name: string, type: string, length: int|string|bool|null,
+ *     charset?: string, default: bool|int|float|string|array{0: int|string}|null,
+ *     nullable: bool, comment: string|bool, auto_inc: bool,
+ * }
+ * @phpstan-type IndexDef array{name: string, columns: list<string>, unique?: bool}
+ * @phpstan-type TableSchema array{
+ *     columns: list<ColumnDef>, indexes?: list<IndexDef>, primary: string,
+ *     engine: string, charset: string, auto_increment?: int,
+ * }
+ */
 #[AsCommand(
     name: 'app:install',
     description: 'Installing necessary database tables and seeding it with data.',
@@ -116,8 +137,11 @@ class Install extends AbstractCommand
     {
         new Config(self::CONFIG_DIR_TABLES);
 
+        /** @var array<string, TableSchema> $tables */
+        $tables = Config::get();
+
         // Creating DB tables
-        foreach (Config::get() as $table => $data) {
+        foreach ($tables as $table => $data) {
             $action = sprintf(self::MESSAGE_CREATING_TABLE, $table);
 
             if ($this->tableExists($table)) {
@@ -137,10 +161,7 @@ class Install extends AbstractCommand
             $query = sprintf(
                 'CREATE TABLE %s (%s, PRIMARY KEY (%s)%s) ENGINE=%s DEFAULT CHARSET=%s%s;',
                 $table,
-                implode(', ', array_map(
-                    fn(array $column): string => $this->columnDefinition($column),
-                    $data['columns'],
-                )),
+                implode(', ', array_map($this->columnDefinition(...), $data['columns'])),
                 $data['primary'],
                 $this->indexClause($data['indexes'] ?? []),
                 $data['engine'],
@@ -167,7 +188,7 @@ class Install extends AbstractCommand
     /**
      * One column's DDL, shared by CREATE TABLE and ADD COLUMN.
      *
-     * @param array<string, mixed> $column
+     * @param ColumnDef $column
      */
     private function columnDefinition(array $column): string
     {
@@ -206,7 +227,7 @@ class Install extends AbstractCommand
      * three columns whose config asked for a default of 0 were created without
      * one and any insert omitting them failed with 1364.
      *
-     * @param array<string, mixed> $column
+     * @param ColumnDef $column
      */
     private function defaultClause(array $column): ?string
     {
@@ -237,7 +258,7 @@ class Install extends AbstractCommand
      * one lands in its declared position, so a table built by this path column
      * by column ends up shaped like one created in a single statement.
      *
-     * @param list<array<string, mixed>> $columns
+     * @param list<ColumnDef> $columns
      */
     private function addMissingColumns(string $table, array $columns): void
     {
@@ -259,7 +280,7 @@ class Install extends AbstractCommand
         $previous = null;
 
         foreach ($columns as $column) {
-            $name = (string) $column['name'];
+            $name = $column['name'];
 
             if (in_array($name, $existing, true)) {
                 $previous = $name;
@@ -296,7 +317,7 @@ class Install extends AbstractCommand
      * than dropped, because a running database may have picked one up for a
      * reason this file does not know about.
      *
-     * @param list<array<string, mixed>> $indexes
+     * @param list<IndexDef> $indexes
      */
     private function addMissingIndexes(string $table, array $indexes): void
     {
@@ -314,7 +335,7 @@ class Install extends AbstractCommand
         );
 
         foreach ($indexes as $index) {
-            $name = (string) $index['name'];
+            $name = $index['name'];
 
             if (in_array($name, $existing, true)) {
                 continue;
@@ -353,11 +374,14 @@ class Install extends AbstractCommand
         // table looked absent, and the whole additive-migration path below
         // silently never ran. The two sibling queries in this file already ask
         // the connection.
-        return (int) $this->connection()->fetchValue(
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM information_schema.tables'
             . ' WHERE table_schema = DATABASE() AND table_name = ?',
             [$table],
-        ) > 0;
+        );
+
+        return $count > 0;
     }
 
     /**
@@ -484,13 +508,15 @@ class Install extends AbstractCommand
      */
     private function supportsRowAlias(): bool
     {
+        /** @var bool|null $supported */
         static $supported = null;
 
         if ($supported !== null) {
             return $supported;
         }
 
-        $version = (string) $this->connection()->pdo()->getAttribute(PDO::ATTR_SERVER_VERSION);
+        /** @var string $version */
+        $version = $this->connection()->pdo()->getAttribute(PDO::ATTR_SERVER_VERSION);
 
         return $supported = !str_contains(strtolower($version), 'mariadb')
             && version_compare($version, '8.0.19', '>=');
