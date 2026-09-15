@@ -642,6 +642,23 @@ class AdminController extends AbstractController
         $repository = new SettingsRepository($this->connection());
 
         foreach ($parsed as $key => $value) {
+            // The form posts every field in the group back, touched or not,
+            // so `$parsed` is not "the fields that changed" -- it is all of
+            // them. `SettingsRepository::set()` only refuses to repeat an
+            // existing override, comparing against the raw override table;
+            // a field with no override yet, posted back holding the same
+            // value its config default already gives it, has no prior
+            // override to match against, so that guard never fires and it
+            // writes and logs a "change" to a value the field already
+            // effectively had. Comparing here against what this field
+            // actually reads as right now -- override or config default
+            // alike -- is what "changed" has to mean from the operator's
+            // side (found after G3.1, #304, made every save visible enough
+            // for this to be noticed at all).
+            if (json_encode($value, JSON_THROW_ON_ERROR) === json_encode(Settings::get($key), JSON_THROW_ON_ERROR)) {
+                continue;
+            }
+
             $repository->set($key, $value);
         }
 
