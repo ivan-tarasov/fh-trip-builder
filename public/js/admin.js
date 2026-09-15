@@ -79,24 +79,65 @@
     };
 
     /*
-    | The one confirm.
+    | The one confirm -- Bootstrap's own modal now (G3.2, #305), not the
+    | browser's native `confirm()`. That was the reason given for staying on
+    | native: "a stylesheet's worth of modal for one sentence is how the
+    | 230KB this panel was built to shed got there in the first place." True
+    | when it was written (A3.5, #230), stale since G2.1 (#287) loaded
+    | Bootstrap's bundle for other things -- the modal has been sitting there
+    | unused.
     |
-    | On the booking buttons, which are the only controls in the panel that
-    | change something a traveller can see. Native `confirm()` and not a dialog
-    | of our own: a stylesheet's worth of modal for one sentence is how the 230KB
-    | this panel was built to shed got there in the first place.
-    |
-    | Delegated from the document, so a button added to a later page is covered
-    | by having the attribute rather than by remembering this file exists.
+    | `confirm()` blocks the thread and returns before the click finishes; a
+    | modal answers later, on its own click. So every `[data-confirm]` click
+    | is prevented unconditionally and the element remembered, and only the
+    | modal's own "Confirm" button carries the action out -- a form's
+    | `requestSubmit()` if the element sits in one, a navigation to its
+    | `href` otherwise. Delegated from the document, so a button added to a
+    | later page is covered by having the attribute rather than by
+    | remembering this file exists.
     */
     var confirmFirst = function () {
+        var modalEl = document.getElementById('confirmModal');
+
+        if (!modalEl || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        var modal = new bootstrap.Modal(modalEl);
+        var body = modalEl.querySelector('[data-confirm-modal-body]');
+        var accept = modalEl.querySelector('[data-confirm-modal-accept]');
+        var pending = null;
+
         document.addEventListener('click', function (event) {
             // A click can land on a text node's parent, on the document, or
             // on an SVG -- only an element has `closest`.
             var button = event.target.closest && event.target.closest('[data-confirm]');
 
-            if (button && !window.confirm(button.dataset.confirm)) {
-                event.preventDefault();
+            if (!button) {
+                return;
+            }
+
+            event.preventDefault();
+            pending = button;
+            body.textContent = button.dataset.confirm;
+            modal.show();
+        });
+
+        accept.addEventListener('click', function () {
+            var button = pending;
+            pending = null;
+            modal.hide();
+
+            if (!button) {
+                return;
+            }
+
+            var form = button.closest('form');
+
+            if (form) {
+                form.requestSubmit(button);
+            } else if (button.href) {
+                window.location.href = button.href;
             }
         });
     };
