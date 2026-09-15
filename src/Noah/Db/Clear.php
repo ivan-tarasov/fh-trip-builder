@@ -58,6 +58,7 @@ class Clear extends AbstractCommand
     {
         $existingTables = $this->getAllDatabaseTables();
 
+        /** @var string $chosenTable */
         $chosenTable = $input->getArgument(self::ARG_NAME)
             ?? $this->io->choice(
                 'Which table(s) are being cleared?',
