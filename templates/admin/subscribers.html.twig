@@ -6,6 +6,10 @@
 
 {% block tools %}
     <span class="text-body-secondary small">{{ total }} on the list</span>
+
+    <a class="btn btn-sm btn-outline-secondary" href="/admin/subscribers/export">
+        <i class="bi bi-download" aria-hidden="true"></i> Export CSV
+    </a>
 {% endblock %}
 
 {# An address and a subscribe date is everything this row holds, so there is

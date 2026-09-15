@@ -95,6 +95,17 @@ final class SettingsRepositoryTest extends IntegrationTestCase
         self::assertNull($entry['old_value']);
     }
 
+    public function testHistoryWithNoLimitOmitsTheLimitClause(): void
+    {
+        $settings = $this->settings();
+        $settings->set(self::KEY, 5);
+        $settings->set(self::KEY, 9);
+
+        $matching = array_filter($settings->history(null), static fn(array $entry): bool => $entry['setting_key'] === self::KEY);
+
+        self::assertCount(2, $matching);
+    }
+
     public function testRemovingTakesTheOverrideOff(): void
     {
         $settings = $this->settings();

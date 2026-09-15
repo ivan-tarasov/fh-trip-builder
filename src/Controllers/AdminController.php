@@ -6,6 +6,7 @@ namespace TripBuilder\Controllers;
 
 use DateTimeImmutable;
 use Exception;
+use RuntimeException;
 use Throwable;
 use TripBuilder\Admin;
 use TripBuilder\BookingActor;
@@ -310,6 +311,58 @@ class AdminController extends AbstractController
     }
 
     /**
+     * Every booking the current search matches, as a download.
+     *
+     * `exportAll()`/`exportMatching()` and not `recent()`/`search()`: the
+     * term carries over, the page does not -- a CSV capped at 25 rows isn't
+     * an export (G3.5, #308). Columns mirror the list table exactly, not the
+     * detail page: no address, no phone, no date of birth, same restraint
+     * `bookings.html.twig` already documents for the list itself.
+     */
+    public function exportBookings(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $bookings = new BookingRepository($this->connection());
+        $term = mb_substr(trim($this->request->query->str('q', '')), 0, 64);
+
+        $rows = $term === '' ? $bookings->exportAll() : $bookings->exportMatching($term);
+
+        $names = $rows === []
+            ? []
+            : new BookingPassengerRepository($this->connection())->namesFor(array_map(self::bookingId(...), $rows));
+
+        $lines = [];
+
+        foreach ($rows as $row) {
+            $listed = $this->listed($row, $names[$row['id']] ?? []);
+            $travellers = $listed['others'] === []
+                ? $listed['lead']
+                : $listed['lead'] . '; ' . implode(', ', $listed['others']);
+
+            $lines[] = [
+                $listed['id'],
+                $listed['reference'],
+                $travellers,
+                $listed['from'],
+                $listed['to'],
+                $listed['departs']?->format('Y-m-d'),
+                $listed['created'],
+                $listed['price_total']['text'] ?? null,
+                $listed['status_label'],
+            ];
+        }
+
+        $this->downloadCsv(
+            'bookings-' . date('Y-m-d') . '.csv',
+            ['ID', 'Reference', 'Travellers', 'From', 'To', 'Departs', 'Made', 'Total', 'Status'],
+            $lines,
+        );
+    }
+
+    /**
      * One booking, in full.
      *
      * Shaped by `BookingPresenter`, which is what the traveller's own booking
@@ -480,6 +533,22 @@ class AdminController extends AbstractController
             'page' => $page,
             'per_page' => self::PER_PAGE,
         ]);
+    }
+
+    /** Every address on the list, as a download. There is nothing to filter here. */
+    public function exportSubscribers(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $subscribers = new SubscriberRepository($this->connection());
+        $lines = array_map(
+            static fn(array $subscriber): array => [$subscriber['email'], $subscriber['subscribed_at']],
+            $subscribers->exportAll(),
+        );
+
+        $this->downloadCsv('subscribers-' . date('Y-m-d') . '.csv', ['Address', 'Subscribed'], $lines);
     }
 
     /**
@@ -749,6 +818,27 @@ class AdminController extends AbstractController
         }
 
         return $setting === null ? $encoded : $setting->format(json_decode($encoded, true));
+    }
+
+    /**
+     * The full change log, as a download -- one export for all three groups,
+     * the same as the page's own "Recent changes" table reads across all of
+     * them rather than filtering by which group is open. `history(null)`
+     * and not `history(20)`: an audit trail capped at twenty rows isn't one
+     * (G3.5, #308).
+     */
+    public function exportSettingsHistory(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $lines = array_map(
+            static fn(array $line): array => [$line['key'], $line['from'], $line['to'], $line['changed_at']],
+            array_map(self::historyLine(...), new SettingsRepository($this->connection())->history(null)),
+        );
+
+        $this->downloadCsv('settings-history-' . date('Y-m-d') . '.csv', ['Setting', 'From', 'To', 'When'], $lines);
     }
 
     /**
@@ -1199,6 +1289,46 @@ class AdminController extends AbstractController
             'price_total' => $shaped['price_total'],
             'broken' => false,
         ];
+    }
+
+    /**
+     * A CSV attachment, built with `fputcsv` on `php://temp` rather than
+     * joined by hand -- it already knows how to quote a comma or a stray
+     * quote in a passenger's name, which string concatenation does not
+     * (G3.5, #308).
+     *
+     * Not wrapped in the public layout: `/admin/*\/export` is listed in
+     * `Routes::EXCLUDE_HEADER_FOOTER_ROUTES`, the same as
+     * `MyController::calendar()`'s `.ics` download.
+     *
+     * @param list<string> $header
+     * @param list<list<string|int|null>> $rows
+     */
+    private function downloadCsv(string $filename, array $header, array $rows): void
+    {
+        $stream = fopen('php://temp', 'r+');
+
+        if ($stream === false) {
+            throw new RuntimeException('Could not open a temporary stream for the export.');
+        }
+
+        // PHP 8.4 deprecated the implicit `\` escape character; named here
+        // rather than left to the default so a row holding a literal `"`
+        // still quotes the way it always has.
+        fputcsv($stream, $header, escape: '\\');
+
+        foreach ($rows as $row) {
+            fputcsv($stream, $row, escape: '\\');
+        }
+
+        rewind($stream);
+        $csv = stream_get_contents($stream);
+        fclose($stream);
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        echo $csv === false ? '' : $csv;
     }
 
     /**

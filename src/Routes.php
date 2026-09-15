@@ -71,7 +71,9 @@ class Routes
         // (A3.6, #231). One address per section, so the rail can name them.
         '/admin/content' => 'Admin@content',
         '/admin/bookings' => 'Admin@bookings',
+        '/admin/bookings/export' => 'Admin@exportBookings',
         '/admin/subscribers' => 'Admin@subscribers',
+        '/admin/subscribers/export' => 'Admin@exportSubscribers',
         // Settings is a rail parent with two more children below it, each
         // its own address the same way -- Search rules kept `/admin/settings`
         // itself, the same idiom Orchid's own expandable parent link uses
@@ -79,6 +81,9 @@ class Routes
         '/admin/settings' => 'Admin@settings',
         '/admin/settings/site-identity' => 'Admin@settingsSiteIdentity',
         '/admin/settings/map' => 'Admin@settingsMap',
+        // One export for all three groups, since the history it reads is
+        // already shared across them (G3.5, #308).
+        '/admin/settings/export' => 'Admin@exportSettingsHistory',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in
@@ -264,6 +269,9 @@ class Routes
      */
     public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
         '#^/admin/preview$#',
+        '#^/admin/bookings/export$#',
+        '#^/admin/subscribers/export$#',
+        '#^/admin/settings/export$#',
         '#^/my/bookings/\d+/calendar$#',
         '#^/sitemap\.xml$#',
         '#^/robots\.txt$#',
