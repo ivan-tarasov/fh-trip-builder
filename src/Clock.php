@@ -53,7 +53,8 @@ final readonly class Clock
     public static function drift(Connection $connection): ?int
     {
         try {
-            $database = (string) $connection->fetchValue('SELECT NOW()');
+            /** @var string $database */
+            $database = $connection->fetchValue('SELECT NOW()');
 
             if ($database === '') {
                 return null;

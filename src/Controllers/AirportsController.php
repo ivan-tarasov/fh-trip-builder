@@ -52,7 +52,7 @@ class AirportsController extends AbstractController
      * which appears nowhere in "Gatwick", so the city is searchable too.
      *
      * @param list<AirportRow> $airports
-     * @return list<array<string, mixed>>
+     * @return list<array{name: string, ...}>
      */
     private static function addressable(array $airports): array
     {
@@ -61,7 +61,7 @@ class AirportsController extends AbstractController
 
     /**
      * @param AirportRow $airport
-     * @return array<string, mixed>
+     * @return array{name: string, ...}
      */
     private static function address(array $airport): array
     {

@@ -19,9 +19,8 @@ class Response extends AbstractApi
      */
     public function get(): void
     {
-        $codes = !empty($this->data[self::DATA_KEY_SELECTED])
-            ? explode(',', $this->data[self::DATA_KEY_SELECTED])
-            : null;
+        $selected = $this->data[self::DATA_KEY_SELECTED] ?? null;
+        $codes = is_string($selected) && $selected !== '' ? explode(',', $selected) : null;
 
         $majorOnly = !empty($this->data[self::DATA_KEY_MAJOR]) && $this->data[self::DATA_KEY_MAJOR];
 

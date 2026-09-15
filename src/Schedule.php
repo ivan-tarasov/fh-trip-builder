@@ -68,6 +68,7 @@ final readonly class Schedule
                 throw new RuntimeException('Every scheduled task needs a `' . self::COMMAND . '`.');
             }
 
+            /** @var array<string, string|int> $row */
             $command = (string) $row[self::COMMAND];
 
             $tasks[] = [

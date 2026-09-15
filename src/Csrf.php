@@ -21,7 +21,10 @@ class Csrf
             $_SESSION[self::SESSION_KEY] = bin2hex(random_bytes(32));
         }
 
-        return $_SESSION[self::SESSION_KEY];
+        /** @var string $token */
+        $token = $_SESSION[self::SESSION_KEY];
+
+        return $token;
     }
 
     /**
@@ -29,8 +32,13 @@ class Csrf
      */
     public static function isValid(?string $token): bool
     {
-        return is_string($token)
-            && !empty($_SESSION[self::SESSION_KEY])
-            && hash_equals($_SESSION[self::SESSION_KEY], $token);
+        if ($token === null || empty($_SESSION[self::SESSION_KEY])) {
+            return false;
+        }
+
+        /** @var string $stored */
+        $stored = $_SESSION[self::SESSION_KEY];
+
+        return hash_equals($stored, $token);
     }
 }

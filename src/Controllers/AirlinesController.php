@@ -11,6 +11,9 @@ use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\View\Directory;
 use TripBuilder\View\TwigRenderer;
 
+/**
+ * @phpstan-import-type AirlineSellableRow from AirlineRepository
+ */
 class AirlinesController extends AbstractController
 {
     /**
@@ -48,15 +51,15 @@ class AirlinesController extends AbstractController
      * "Luxembourg" is the word that tells them which airline they were looking
      * at.
      *
-     * @param list<array<string, mixed>> $airlines
-     * @return list<array<string, mixed>>
+     * @param list<AirlineSellableRow> $airlines
+     * @return list<array{name: string, ...}>
      */
     private static function addressable(array $airlines): array
     {
         return array_map(
             static function (array $airline): array {
-                $name = (string) $airline['name'];
-                $code = (string) $airline['code'];
+                $name = $airline['name'];
+                $code = $airline['code'];
                 $country = (string) $airline['country'];
 
                 return [

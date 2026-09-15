@@ -36,7 +36,8 @@ final readonly class RateLimitRepository
             [$scope->value, $client, self::window()],
         );
 
-        $hits = (int) $this->connection->fetchValue(
+        /** @var int $hits */
+        $hits = $this->connection->fetchValue(
             'SELECT hits FROM ' . Table::RateLimits->value
             . ' WHERE scope = ? AND client = ? AND window_start = ?',
             [$scope->value, $client, self::window()],

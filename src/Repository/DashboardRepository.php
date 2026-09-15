@@ -281,6 +281,7 @@ final readonly class DashboardRepository
         $drift = null;
 
         try {
+            /** @var int $drift */
             $drift = $this->connection->fetchValue(
                 'SELECT TIMESTAMPDIFF(SECOND, NOW(), ?)',
                 [date('Y-m-d H:i:s')],
@@ -289,7 +290,7 @@ final readonly class DashboardRepository
             return ['label' => 'Database', 'value' => 'not answering', 'note' => 'the clock could not be read', 'tone' => Tone::Bad];
         }
 
-        $seconds = abs((int) $drift);
+        $seconds = abs($drift);
 
         return [
             'label' => 'Database',
@@ -325,9 +326,11 @@ final readonly class DashboardRepository
     /** @return array{label: string, value: ?string, note: string} */
     private function searches(): array
     {
-        $run = (int) $this->connection->fetchValue(
+        /** @var string $run */
+        $run = $this->connection->fetchValue(
             'SELECT COALESCE(SUM(search_count), 0) FROM ' . Table::Search->value,
         );
+        $run = (int) $run;
 
         return [
             'label' => 'Searches',
@@ -365,8 +368,11 @@ final readonly class DashboardRepository
     /** One table's rows, optionally narrowed. */
     private function count(string $table, ?string $where = null): int
     {
-        return (int) $this->connection->fetchValue(
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
             'SELECT COUNT(*) FROM ' . $table . ($where === null ? '' : ' WHERE ' . $where),
         );
+
+        return $count;
     }
 }

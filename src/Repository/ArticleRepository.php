@@ -31,6 +31,8 @@ use TripBuilder\ImportOutcome;
  * and it is why `short` comes back as null rather than being absent -- the
  * footer's `$article['short'] ?? $article['title']` behaves the same either
  * way.
+ *
+ * @phpstan-type ArticleRow array{title: string, short: ?string, icon: string, category: string, summary: string}
  */
 final readonly class ArticleRepository
 {
@@ -474,7 +476,7 @@ final readonly class ArticleRepository
      * footer column falls back on when nobody has voted -- which, with no
      * seeder for article_votes, is every fresh install.
      *
-     * @return array<string, array{title: string, short: ?string, icon: string, category: string, summary: string}>
+     * @return array<string, ArticleRow>
      */
     public function all(string $locale = self::DEFAULT_LOCALE): array
     {

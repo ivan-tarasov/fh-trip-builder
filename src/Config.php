@@ -72,11 +72,11 @@ class Config
         $value = static::$configData;
 
         foreach ($segments as $segment) {
-            if (isset($value[$segment])) {
-                $value = $value[$segment];
-            } else {
+            if (!is_array($value) || !isset($value[$segment])) {
                 return $default;
             }
+
+            $value = $value[$segment];
         }
 
         return $value;

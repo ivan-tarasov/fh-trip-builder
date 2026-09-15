@@ -40,6 +40,9 @@ final class Env
             return $value;
         }
 
-        return isset($_ENV[$key->value]) ? (string) $_ENV[$key->value] : '';
+        /** @var string|null $fromEnv */
+        $fromEnv = $_ENV[$key->value] ?? null;
+
+        return $fromEnv ?? '';
     }
 }

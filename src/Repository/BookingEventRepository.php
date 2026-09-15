@@ -88,11 +88,12 @@ final readonly class BookingEventRepository
      */
     public function startedAt(): ?string
     {
+        /** @var string|null $first */
         $first = $this->connection->fetchValue(
             'SELECT MIN(at) FROM ' . Table::BookingEvents->value,
         );
 
-        return $first === null ? null : (string) $first;
+        return $first;
     }
 
     /**

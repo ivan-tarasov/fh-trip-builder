@@ -22,6 +22,8 @@ use TripBuilder\SearchUrl;
  * compact spelling and this is it. That also gives the validator for free:
  * SearchUrl::parse() is the same parser the router trusts, and it rejects
  * everything malformed without a second regex to keep in step.
+ *
+ * @phpstan-type PlaceRow array{code: string, label: string, city?: string}
  */
 final readonly class RecentSearches
 {
@@ -124,7 +126,7 @@ final readonly class RecentSearches
      * a code with no name left in the network -- an airport since disabled --
      * falls back to the code rather than to an empty row.
      *
-     * @param list<array<string, mixed>> $places
+     * @param list<PlaceRow> $places
      *
      * @return list<array{
      *     path: string,
@@ -150,7 +152,7 @@ final readonly class RecentSearches
         $names = [];
 
         foreach ($places as $place) {
-            $names[(string) $place['code']] = (string) ($place['city'] ?? $place['label']);
+            $names[$place['code']] = $place['city'] ?? $place['label'];
         }
 
         $rows = [];
