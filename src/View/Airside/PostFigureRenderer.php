@@ -34,6 +34,9 @@ final class PostFigureRenderer implements NodeRendererInterface
             return $childRenderer->renderNodes($node->children());
         }
 
-        return new HtmlElement('p', $node->data->get('attributes'), $childRenderer->renderNodes($node->children()));
+        /** @var array<string, array<string>|bool|string> $attributes */
+        $attributes = $node->data->get('attributes');
+
+        return new HtmlElement('p', $attributes, $childRenderer->renderNodes($node->children()));
     }
 }

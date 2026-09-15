@@ -36,6 +36,7 @@ class AjaxController extends AbstractController
     /** The same, for a vote cast with no scripting. */
     private const string VOTE_NOTICE = 'article_vote_notice';
 
+    /** @var array{booking_id: int} */
     private array $get;
 
     public function addTrip(): void
@@ -161,6 +162,7 @@ class AjaxController extends AbstractController
         echo json_encode($json);
     }
 
+    /** @param array{booking_id: int} $params */
     private function setGet(array $params): void
     {
         $this->get = $params;
@@ -288,7 +290,10 @@ class AjaxController extends AbstractController
         $name = 'route_prices_' . $from . '_' . $to . '_' . $cabin->value;
         $connection = $this->connection();
 
-        if ((int) $connection->fetchValue('SELECT GET_LOCK(?, 0)', [$name], 0) !== 1) {
+        /** @var int|null $acquired */
+        $acquired = $connection->fetchValue('SELECT GET_LOCK(?, 0)', [$name], 0);
+
+        if ($acquired !== 1) {
             return;
         }
 
@@ -583,7 +588,7 @@ class AjaxController extends AbstractController
      * Left as two short methods rather than one with six arguments; what must
      * not be duplicated is returnTo(), and it is not.
      *
-     * @param array<string, mixed> $payload
+     * @param array{message: string, ...} $payload
      */
     private function answerVote(bool $asJson, HttpStatus $code, array $payload, string $tone): void
     {
@@ -597,7 +602,7 @@ class AjaxController extends AbstractController
 
         $_SESSION[self::VOTE_NOTICE] = [
             'tone' => $tone,
-            'message' => (string) $payload['message'],
+            'message' => $payload['message'],
         ];
 
         // Back to the article, at the block that was just used, and a 303 so
@@ -608,7 +613,7 @@ class AjaxController extends AbstractController
     /**
      * JSON to a script, the page back to a browser.
      *
-     * @param array<string, mixed> $payload
+     * @param array{message: string, ...} $payload
      */
     private function answerSubscribe(bool $asJson, HttpStatus $code, array $payload, string $tone): void
     {
@@ -625,7 +630,7 @@ class AjaxController extends AbstractController
         // and it would be there to be shared by anybody copying the address.
         $_SESSION[self::SUBSCRIBE_NOTICE] = [
             'tone' => $tone,
-            'message' => (string) $payload['message'],
+            'message' => $payload['message'],
         ];
 
         // Redirect rather than render: a POST left in history is a POST the

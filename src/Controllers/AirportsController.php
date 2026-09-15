@@ -11,6 +11,9 @@ use TripBuilder\Repository\AirportRepository;
 use TripBuilder\View\Directory;
 use TripBuilder\View\TwigRenderer;
 
+/**
+ * @phpstan-import-type AirportRow from AirportRepository
+ */
 class AirportsController extends AbstractController
 {
     /**
@@ -48,25 +51,30 @@ class AirportsController extends AbstractController
      * country are printed under it; and somebody looking for it types "London",
      * which appears nowhere in "Gatwick", so the city is searchable too.
      *
-     * @param list<array<string, mixed>> $airports
-     * @return list<array<string, mixed>>
+     * @param list<AirportRow> $airports
+     * @return list<array{name: string, ...}>
      */
     private static function addressable(array $airports): array
     {
-        return array_map(
-            static function (array $airport): array {
-                $title = (string) $airport['title'];
-                $code = (string) $airport['code'];
+        return array_map(self::address(...), $airports);
+    }
 
-                return [
-                    'name' => $title,
-                    'code' => $code,
-                    'url' => Helper::airportUrl($title, $code),
-                    'note' => $airport['city'] . ', ' . $airport['country'],
-                    'search' => $title . ' ' . $airport['city'] . ' ' . $airport['country'],
-                ];
-            },
-            $airports,
-        );
+    /**
+     * @param AirportRow $airport
+     * @return array{name: string, ...}
+     */
+    private static function address(array $airport): array
+    {
+        $title = $airport['title'];
+        $code = $airport['code'];
+        $country = $airport['country'] ?? '';
+
+        return [
+            'name' => $title,
+            'code' => $code,
+            'url' => Helper::airportUrl($title, $code),
+            'note' => $airport['city'] . ', ' . $country,
+            'search' => $title . ' ' . $airport['city'] . ' ' . $country,
+        ];
     }
 }

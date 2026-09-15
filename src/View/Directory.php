@@ -35,15 +35,16 @@ final class Directory
      * this having to sort anything itself -- which also means a caller that
      * wants a different order inside a group can have one.
      *
-     * @param list<array<string, mixed>> $items
-     * @return array<string, list<array<string, mixed>>>
+     * @template T of array{name: string, ...}
+     * @param list<T> $items
+     * @return array<string, list<T>>
      */
     public static function byLetter(array $items): array
     {
         $groups = [];
 
         foreach ($items as $item) {
-            $groups[self::letterOf((string) $item['name'])][] = $item;
+            $groups[self::letterOf($item['name'])][] = $item;
         }
 
         return $groups;

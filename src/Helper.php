@@ -144,6 +144,8 @@ class Helper
 
     /**
      * Return random number from provided range
+     *
+     * @param array{int, int} $range
      */
     public static function random(array $range): int
     {
@@ -479,6 +481,7 @@ class Helper
      */
     private static function foldMap(): array
     {
+        /** @var array<string, string>|null $map */
         static $map = null;
 
         if ($map === null) {

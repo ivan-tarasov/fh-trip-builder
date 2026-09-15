@@ -211,7 +211,7 @@ final readonly class RouteRepository
      * rather than to choose between them. That is also why nothing is deduped
      * here.
      *
-     * @return list<array<string, mixed>>
+     * @return list<SearchedRouteRow>
      */
     public function searched(): array
     {

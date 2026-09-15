@@ -21,6 +21,8 @@ use TripBuilder\View\TwigRenderer;
  * Nothing here touches the database, so nothing here catches a database error.
  * The only failure worth a catch is a template that will not render, which is a
  * broken deploy rather than a missing page.
+ *
+ * @phpstan-type LegalDocument array{title: string, icon: string, summary: string}
  */
 class LegalController extends AbstractController
 {
@@ -41,7 +43,7 @@ class LegalController extends AbstractController
 
         try {
             echo new TwigRenderer()->renderPage('legal/view.html.twig', [
-                'breadcrumbs' => Breadcrumbs::trail($this->request->path(), (string) $document['title']),
+                'breadcrumbs' => Breadcrumbs::trail($this->request->path(), $document['title']),
                 'document' => $document,
                 // The other two. These pages are read in a set -- somebody who
                 // wants to know about cookies has usually just read what is
@@ -57,11 +59,11 @@ class LegalController extends AbstractController
     /**
      * The documents, keyed by slug.
      *
-     * @return array<string, array<string, mixed>>
+     * @return array<string, LegalDocument>
      */
     private static function documents(): array
     {
-        /** @var array<string, array<string, mixed>> $documents */
+        /** @var array<string, LegalDocument> $documents */
         $documents = Config::get('legal.documents', []);
 
         return $documents;
@@ -70,7 +72,7 @@ class LegalController extends AbstractController
     /**
      * The documents as a list, each with the address it is reached at.
      *
-     * @param array<string, array<string, mixed>> $documents
+     * @param array<string, LegalDocument> $documents
      * @return list<array<string, mixed>>
      */
     private static function addressable(array $documents): array

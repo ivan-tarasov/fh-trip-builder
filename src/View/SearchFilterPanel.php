@@ -31,6 +31,7 @@ use TripBuilder\Service\FlightFinder;
  * directly instead of by running a whole search.
  *
  * @phpstan-import-type ResponseSearch from FlightFinder
+ * @phpstan-import-type AirlineSearchRow from AirlineRepository
  */
 final readonly class SearchFilterPanel
 {
@@ -350,7 +351,7 @@ final readonly class SearchFilterPanel
         $titles = [];
 
         foreach (new AirlineRepository($this->connection)->search($available, false) as $airline) {
-            $titles[(string) $airline['code']] = (string) $airline['title'];
+            $titles[$airline['code']] = $airline['title'];
         }
 
         $options = [];
@@ -713,9 +714,28 @@ final readonly class SearchFilterPanel
         $own = [];
 
         foreach (FlightFilters::QUERY_KEYS as $key) {
-            $own[$key] = $this->get[$this->prefix . $key] ?? null;
+            $own[$key] = self::chosenValue($this->get[$this->prefix . $key] ?? null);
         }
 
         return $own;
+    }
+
+    /**
+     * One filter's raw query value, narrowed to the shape it can arrive in: a
+     * string from a shared link, a list from a checkbox group, or absent.
+     *
+     * @return string|list<string>|null
+     */
+    private static function chosenValue(mixed $raw): string|array|null
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        if (is_array($raw)) {
+            return array_values(array_map(strval(...), array_filter($raw, is_scalar(...))));
+        }
+
+        return is_scalar($raw) ? (string) $raw : null;
     }
 }

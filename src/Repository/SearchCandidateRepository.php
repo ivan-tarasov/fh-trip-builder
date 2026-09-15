@@ -136,10 +136,13 @@ final readonly class SearchCandidateRepository
     /** How many are still worth reading, for `db:prune` to report. */
     public function countStale(): int
     {
-        return (int) $this->connection->fetchValue(
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
             'SELECT COUNT(*) FROM ' . Table::SearchCandidates->value . ' WHERE built_at < ?',
             [$this->staleBefore()],
         );
+
+        return $count;
     }
 
     /**
@@ -159,7 +162,10 @@ final readonly class SearchCandidateRepository
      */
     private function generation(): int
     {
-        return (int) $this->connection->fetchValue('SELECT MAX(id) FROM ' . Table::Flights->value);
+        /** @var int $id */
+        $id = $this->connection->fetchValue('SELECT MAX(id) FROM ' . Table::Flights->value);
+
+        return $id;
     }
 
     private function staleBefore(): string

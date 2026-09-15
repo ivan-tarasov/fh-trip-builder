@@ -134,7 +134,10 @@ final class Connection
     {
         // array_values, because PDO::FETCH_ASSOC numbers its rows from zero
         // but says so to nobody, and the return type here is a list.
-        return array_values($this->run($sql, $params)->fetchAll());
+        /** @var list<array<string, mixed>> $rows */
+        $rows = array_values($this->run($sql, $params)->fetchAll());
+
+        return $rows;
     }
 
     /**
@@ -143,6 +146,7 @@ final class Connection
      */
     public function fetchOne(string $sql, array $params = []): ?array
     {
+        /** @var array<string, mixed>|false $row */
         $row = $this->run($sql, $params)->fetch();
 
         return $row === false ? null : $row;

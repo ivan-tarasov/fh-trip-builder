@@ -221,7 +221,7 @@ class CityController extends AbstractController
      * forcing one caller's extra columns onto the other.
      *
      * @param list<array{code: string, name: string, ...}> $cities
-     * @return list<array<string, mixed>>
+     * @return list<array{name: string, ...}>
      */
     private static function addressable(array $cities): array
     {

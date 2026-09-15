@@ -37,6 +37,8 @@ use TripBuilder\Voter;
  * answer is a 404, and the vote tally, where a rating block with no figures is
  * a smaller loss than no article. The third thing that can go wrong is a slug
  * naming no article, which is also a 404 and not an error.
+ *
+ * @phpstan-import-type ArticleRow from ArticleRepository
  */
 class HelpController extends AbstractController
 {
@@ -82,7 +84,7 @@ class HelpController extends AbstractController
         $filed = [];
 
         foreach ($this->articles() as $slug => $article) {
-            $filed[(string) $article['category']][] = self::link($slug, $article);
+            $filed[$article['category']][] = self::link($slug, $article);
         }
 
         $groups = [];
@@ -151,7 +153,7 @@ class HelpController extends AbstractController
                 // not arrive".
                 'breadcrumbs' => Breadcrumbs::trail(
                     $this->request->path(),
-                    (string) $article['title'],
+                    $article['title'],
                 ),
                 'article' => $article,
                 // The rest of this article's own group, and the group's name
@@ -164,7 +166,7 @@ class HelpController extends AbstractController
                 // was. Eight links under a finished article is a second hub
                 // rather than a next step, and the two most useful of them
                 // were always the ones about the same thing.
-                'siblings' => $this->siblings($slug, (string) $article['category']),
+                'siblings' => $this->siblings($slug, $article['category']),
                 'verdict' => $this->verdict($slug),
             ]);
         } catch (Throwable $e) {
@@ -293,7 +295,7 @@ class HelpController extends AbstractController
     /**
      * The article index, keyed by slug.
      *
-     * @return array<string, array<string, mixed>>
+     * @return array<string, ArticleRow>
      */
     private function articles(): array
     {
@@ -319,7 +321,7 @@ class HelpController extends AbstractController
      * addressable()'s reason for existing, and it outlived the whole-list
      * shape that method had -- both readers now filter as they go.
      *
-     * @param array<string, mixed> $article
+     * @param ArticleRow $article
      * @return array<string, mixed>
      */
     private static function link(string $slug, array $article): array

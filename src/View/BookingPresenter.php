@@ -33,6 +33,7 @@ use TripBuilder\TripType;
  * @phpstan-import-type ResponseItinerary from FlightFinder
  * @phpstan-import-type BookingRow from BookingRepository
  * @phpstan-import-type BookingPassengerRow from BookingPassengerRepository
+ * @phpstan-import-type FareRuleFields from FareRules
  *
  * @phpstan-type PriceParts array{
  *     symbol: string, whole: string, cents: string|null, point: string,
@@ -252,7 +253,7 @@ final readonly class BookingPresenter
             return null;
         }
 
-        /** @var array<string, mixed> $data */
+        /** @var FareRuleFields $data */
         return FareRules::fromRow($data)->lines();
     }
 

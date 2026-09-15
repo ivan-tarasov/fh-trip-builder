@@ -40,6 +40,18 @@ use TripBuilder\View\TwigRenderer;
  *
  * @phpstan-import-type SubmittedPassenger from BookingPassengerRepository
  * @phpstan-import-type BookingRow from BookingRepository
+ *
+ * @phpstan-type PriceParts array{
+ *     symbol: string, whole: string, cents: string|null, point: string,
+ *     before: bool, code: string, text: string,
+ * }
+ * @phpstan-type Trip array{
+ *     outbound: array{direction: array<string, mixed>, ids: list<int>},
+ *     return: array{direction: array<string, mixed>, ids: list<int>}|null,
+ *     price_base: PriceParts, price_tax: PriceParts, price_total: PriceParts,
+ *     party_label: string, party: Party, raw_base: float, raw_tax: float,
+ *     rules: list<array{route: string, title: string, lines: list<array{text: string, allowed: bool}>}>,
+ * }
  */
 class CheckoutController extends AbstractController
 {
@@ -224,7 +236,7 @@ class CheckoutController extends AbstractController
      *
      * @param list<int> $outboundIds
      * @param list<int> $returnIds
-     * @return array<string, mixed>|null
+     * @return Trip|null
      */
     private function resolveTrip(array $outboundIds, array $returnIds, CabinClass $cabin): ?array
     {
@@ -316,7 +328,7 @@ class CheckoutController extends AbstractController
      * The money written here comes from `$trip`, which was resolved from the
      * database — a total in the POST body would be a total the buyer chose.
      *
-     * @param array<string, mixed> $trip
+     * @param Trip $trip
      * @param array<string, string> $form
      * @param list<SubmittedPassenger> $passengers
      * @param list<int> $outboundIds

@@ -13,6 +13,12 @@ use TripBuilder\Database\Table;
  *
  * There are a handful of rows and every checkout reads them, so they are read
  * once per request and held.
+ *
+ * @phpstan-type FareBrandRow array{
+ *     code: string, title: string, weight: int, carry_on: int,
+ *     checked_bag: int, changes: int, cancellation: int,
+ *     seat_selection: int, refundable: int,
+ * }
  */
 final readonly class FareBrandRepository
 {
@@ -23,6 +29,7 @@ final readonly class FareBrandRepository
      */
     public function all(): array
     {
+        /** @var array<string, FareRules>|null $brands */
         static $brands = null;
 
         if ($brands !== null) {
@@ -31,8 +38,11 @@ final readonly class FareBrandRepository
 
         $brands = [];
 
-        foreach ($this->connection->fetchAll('SELECT * FROM ' . Table::FareBrands->value) as $row) {
-            $brands[(string) $row['code']] = FareRules::fromRow($row);
+        /** @var list<FareBrandRow> $rows */
+        $rows = $this->connection->fetchAll('SELECT * FROM ' . Table::FareBrands->value);
+
+        foreach ($rows as $row) {
+            $brands[$row['code']] = FareRules::fromRow($row);
         }
 
         return $brands;

@@ -132,11 +132,12 @@ final readonly class ArticleVoteRepository
      */
     public function verdictOf(string $slug, string $voter): ?bool
     {
+        /** @var int|null $helpful */
         $helpful = $this->connection->fetchValue(
             'SELECT helpful FROM ' . Table::ArticleVotes->value . ' WHERE slug = ? AND voter = ?',
             [$slug, $voter],
         );
 
-        return $helpful === null ? null : (int) $helpful === 1;
+        return $helpful === null ? null : $helpful === 1;
     }
 }

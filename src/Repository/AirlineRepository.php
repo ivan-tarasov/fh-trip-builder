@@ -29,6 +29,11 @@ use TripBuilder\Database\Table;
  * @phpstan-type AircraftTypeRow array{title: string, manufacturer: ?string, is_widebody: int, flights: int}
  * @phpstan-type AirlinePeerRow array{code: string, name: string, flights: int}
  * @phpstan-type AirlineBookedRow array{code: string, name: string}
+ * @phpstan-type AirlineSearchRow array{
+ *     code: string, title: string, url: ?string, phone: ?string, country: ?string,
+ *     hubs: ?string, traffic: ?int, is_major: int, book_count: int, last_search: ?string,
+ * }
+ * @phpstan-type AirlineSellableRow array{code: string, name: string, country: ?string}
  */
 final readonly class AirlineRepository
 {
@@ -242,17 +247,20 @@ final readonly class AirlineRepository
     /**
      * Every airline we sell a seat on, name-ordered for the directory.
      *
-     * @return list<array<string, mixed>>
+     * @return list<AirlineSellableRow>
      */
     public function sellable(): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<AirlineSellableRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT al.code, al.title AS name, c.title AS country'
             . ' FROM ' . Table::Airlines->value . ' al'
             . ' LEFT JOIN ' . Table::Countries->value . ' c ON c.code = al.country'
             . ' WHERE' . self::ONLY_SELLABLE
             . ' ORDER BY name ASC',
         );
+
+        return $rows;
     }
 
     public function countSellable(): int
@@ -288,7 +296,7 @@ final readonly class AirlineRepository
      * and/or to major carriers only.
      *
      * @param list<string>|null $codes
-     * @return list<array<string, mixed>>
+     * @return list<AirlineSearchRow>
      */
     public function search(?array $codes, bool $majorOnly): array
     {
@@ -312,7 +320,10 @@ final readonly class AirlineRepository
 
         $sql .= ' ORDER BY title ASC';
 
-        return $this->connection->fetchAll($sql, $params);
+        /** @var list<AirlineSearchRow> $rows */
+        $rows = $this->connection->fetchAll($sql, $params);
+
+        return $rows;
     }
 
     /**

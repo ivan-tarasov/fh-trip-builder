@@ -17,6 +17,11 @@ use RuntimeException;
  * The catalogue is config/common/currencies.php, which carries the reasoning
  * for the fields, the two deliberate simplifications, and why CAD sits in the
  * list at 1 rather than being special-cased here.
+ *
+ * @phpstan-type CurrencyEntry array{
+ *     name: string, symbol: string, before: bool, decimals: int,
+ *     group: string, point: string,
+ * }
  */
 final readonly class Currency
 {
@@ -54,19 +59,19 @@ final readonly class Currency
      */
     public static function all(): array
     {
-        /** @var array<string, array<string, mixed>> $list */
+        /** @var array<string, CurrencyEntry> $list */
         $list = Config::get('currencies.list', []);
         $currencies = [];
 
         foreach ($list as $code => $entry) {
             $currencies[$code] = new self(
                 code: $code,
-                name: (string) $entry['name'],
-                symbol: (string) $entry['symbol'],
-                symbolFirst: (bool) $entry['before'],
-                decimals: (int) $entry['decimals'],
-                group: (string) $entry['group'],
-                point: (string) $entry['point'],
+                name: $entry['name'],
+                symbol: $entry['symbol'],
+                symbolFirst: $entry['before'],
+                decimals: $entry['decimals'],
+                group: $entry['group'],
+                point: $entry['point'],
             );
         }
 

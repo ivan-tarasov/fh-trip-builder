@@ -188,7 +188,10 @@ final readonly class AirportRepository
             $sql .= ' AND is_major = 1';
         }
 
-        return (int) $this->connection->fetchValue($sql);
+        /** @var int $count */
+        $count = $this->connection->fetchValue($sql);
+
+        return $count;
     }
 
     /**
@@ -325,12 +328,13 @@ final readonly class AirportRepository
      */
     public function cityByCode(string $code): ?string
     {
+        /** @var string|null $city */
         $city = $this->connection->fetchValue(
             'SELECT city FROM ' . Table::Airports->value . ' WHERE code = ? OR city_code = ? LIMIT 1',
             [$code, $code],
         );
 
-        return $city === null ? null : (string) $city;
+        return $city;
     }
 
     /**

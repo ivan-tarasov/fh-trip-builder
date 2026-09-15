@@ -185,7 +185,7 @@ class CountryController extends AbstractController
      * Give each country the address it is reached at.
      *
      * @param list<CountrySellableRow> $countries
-     * @return list<array<string, mixed>>
+     * @return list<array{name: string, ...}>
      */
     private static function addressable(array $countries): array
     {

@@ -69,6 +69,9 @@ abstract class AbstractApi
         }
     }
 
+    /**
+     * @param array<string, string|int> $headers
+     */
     public function sendResponse(HttpStatus $status, array $data = [], array $headers = []): void
     {
         // Sending response code

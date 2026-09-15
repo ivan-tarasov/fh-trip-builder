@@ -22,6 +22,7 @@ class HomeController extends AbstractController
     public function index(): void
     {
         // Three random points of interest for the promo cards.
+        /** @var list<array{country: string, city: string, title: string, image: string}> $poi */
         $poi = Config::get('site.poi');
         shuffle($poi);
         $poi = array_slice($poi, 0, 3);
