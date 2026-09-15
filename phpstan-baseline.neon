@@ -13,12 +13,6 @@ parameters:
 			path: src/Api/AbstractApi.php
 
 		-
-			message: '#^Property TripBuilder\\Api\\AbstractApi\:\:\$data type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Api/AbstractApi.php
-
-		-
 			message: '#^Right side of && is always true\.$#'
 			identifier: booleanAnd.rightAlwaysTrue
 			count: 1
@@ -47,12 +41,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/Controllers/AjaxController.php
-
-		-
-			message: '#^Method TripBuilder\\Helper\:\:getGitInfo\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Helper.php
 
 		-
 			message: '#^Method TripBuilder\\Helper\:\:random\(\) has parameter \$range with no value type specified in iterable type array\.$#'

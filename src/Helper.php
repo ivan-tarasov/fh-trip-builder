@@ -52,6 +52,7 @@ class Helper
     }
 
     /**
+     * @return array{branch: string, tag: string, commit_hash: string, commit_date: string}
      * @throws Exception
      */
     public static function getGitInfo(): array
@@ -60,6 +61,7 @@ class Helper
         // 200ms of process spawning. The answer only changes when the checkout
         // does, so it is cached to disk and refreshed when git's own state
         // changes; the static keeps it to one read per request.
+        /** @var array{branch: string, tag: string, commit_hash: string, commit_date: string}|null $info */
         static $info = null;
 
         if ($info !== null) {
@@ -73,7 +75,10 @@ class Helper
             $cached = json_decode((string) file_get_contents($cacheFile), true);
 
             if (is_array($cached) && ($cached['stamp'] ?? null) === $stamp && isset($cached['info'])) {
-                return $info = $cached['info'];
+                /** @var array{branch: string, tag: string, commit_hash: string, commit_date: string} $cachedInfo */
+                $cachedInfo = $cached['info'];
+
+                return $info = $cachedInfo;
             }
         }
 

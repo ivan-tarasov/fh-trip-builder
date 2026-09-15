@@ -30,6 +30,7 @@ use TripBuilder\Database\Table;
  *     latitude: string, longitude: string,
  * }
  * @phpstan-type CountrySellableRow array{code: string, name: string, cities: int}
+ * @phpstan-type CountrySearchedRow array{code: string, name: string, hits: int, weight: int}
  */
 final readonly class CountryRepository
 {
@@ -125,12 +126,15 @@ final readonly class CountryRepository
     /** Counts what sellable() lists, so the join that excludes empty countries stays. */
     public function countSellable(): int
     {
-        return (int) $this->connection->fetchValue(
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
             'SELECT COUNT(DISTINCT c.code)'
             . ' FROM ' . Table::Countries->value . ' c'
             . ' JOIN ' . Table::Airports->value . ' a ON a.country_code = c.code'
             . ' WHERE' . self::ONLY_SELLABLE,
         );
+
+        return $count;
     }
 
     /**
@@ -154,11 +158,12 @@ final readonly class CountryRepository
      * country is on nought and the curated weight is what keeps the column
      * sensible.
      *
-     * @return list<array<string, mixed>>
+     * @return list<CountrySearchedRow>
      */
     public function mostSearched(int $limit): array
     {
-        return $this->connection->fetchAll(
+        /** @var list<CountrySearchedRow> $rows */
+        $rows = $this->connection->fetchAll(
             'SELECT c.code, c.title AS name, MAX(a.search_count) AS hits,'
             . ' MAX(a.traffic_weight) AS weight'
             . ' FROM ' . Table::Airports->value . ' a'
@@ -170,6 +175,8 @@ final readonly class CountryRepository
             . ' ORDER BY hits DESC, weight DESC, c.title ASC'
             . ' LIMIT ' . max(1, $limit),
         );
+
+        return $rows;
     }
 
     /**
