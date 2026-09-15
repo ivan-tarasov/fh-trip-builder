@@ -32,6 +32,24 @@ use TripBuilder\View\StoredItinerary;
  * database or a currency: `direction()` never reaches for a price.
  *
  * @phpstan-import-type ResponseItinerary from FlightFinder
+ *
+ * @phpstan-type Direction array{
+ *     stops_label: string, duration: string, co2: mixed,
+ *     carriers: list<array<string, mixed>>,
+ *     depart_time: string, depart_code: string, depart_city: string, depart_day: string,
+ *     arrive_time: string, arrive_code: string, arrive_city: string, arrive_day: string,
+ *     notices: list<array{severity: string, icon: string, label: string, text: string}>,
+ *     badges: list<array<string, mixed>>,
+ *     route: list<array{
+ *         type: string, weight: int, tooltip: string,
+ *         start_code: ?string, end_code: ?string, code: ?string,
+ *     }>,
+ *     layovers: list<array{
+ *         airport_code: string, airport_city: string, wait: string,
+ *         notes: list<array{text: string, tone: string}>,
+ *     }>,
+ *     segments: list<array{cabin: ?string, ...}>,
+ * }
  */
 final class ItineraryPresenterTest extends TestCase
 {
@@ -505,11 +523,14 @@ final class ItineraryPresenterTest extends TestCase
 
     /**
      * @param ResponseItinerary $itinerary
-     * @return array<string, mixed>
+     * @return Direction
      */
     private function direction(array $itinerary): array
     {
-        return new ItineraryPresenter()->direction($itinerary)['direction'];
+        /** @var Direction $direction */
+        $direction = new ItineraryPresenter()->direction($itinerary)['direction'];
+
+        return $direction;
     }
 
     /**

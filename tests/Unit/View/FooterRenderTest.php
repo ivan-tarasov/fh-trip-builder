@@ -31,6 +31,16 @@ use TripBuilder\View\TwigRenderer;
  * And this file also carries every script tag and closes the document, so a
  * restructure that drops them takes the search form, the calendar and the
  * back-to-top button with it and leaves no error behind.
+ *
+ * @phpstan-type FooterColumn array{
+ *     title: string, source: string, count: int,
+ *     more?: array{text: string, url: string, total?: string},
+ * }
+ * @phpstan-type FooterDestination array{city: string, country: string, url: string}
+ * @phpstan-type MainMenuItem array{
+ *     text: string, icon: string, enabled: bool,
+ *     spacer?: int, header?: bool, footer?: bool,
+ * }
  */
 final class FooterRenderTest extends TestCase
 {
@@ -66,6 +76,33 @@ final class FooterRenderTest extends TestCase
         return html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
     }
 
+    /** @return list<FooterColumn> */
+    private static function footerColumns(): array
+    {
+        /** @var list<FooterColumn> $columns */
+        $columns = Config::get('site.footer-columns');
+
+        return $columns;
+    }
+
+    /** @return list<FooterDestination> */
+    private static function footerDestinations(): array
+    {
+        /** @var list<FooterDestination> $destinations */
+        $destinations = Config::get('site.footer-destinations');
+
+        return $destinations;
+    }
+
+    /** @return array<string, MainMenuItem> */
+    private static function mainMenu(): array
+    {
+        /** @var array<string, MainMenuItem> $menu */
+        $menu = Config::get('site.main-menu');
+
+        return $menu;
+    }
+
     /**
      * The data-driven column appears when it has something and not when it does
      * not.
@@ -78,7 +115,7 @@ final class FooterRenderTest extends TestCase
     public function testADataDrivenColumnFollowsItsData(): void
     {
         $columns = array_filter(
-            Config::get('site.footer-columns'),
+            self::footerColumns(),
             static fn(array $column): bool => isset($column['source']),
         );
 
@@ -151,7 +188,7 @@ final class FooterRenderTest extends TestCase
     {
         $html = $this->render('/');
 
-        foreach (Config::get('site.footer-destinations') as $place) {
+        foreach (self::footerDestinations() as $place) {
             self::assertStringContainsString('>' . $place['city'] . '</span>', $html);
             self::assertStringContainsString('href="' . $place['url'] . '"', $html);
         }
@@ -167,7 +204,7 @@ final class FooterRenderTest extends TestCase
     {
         $html = $this->render('/airlines');
 
-        foreach (Config::get('site.main-menu') as $url => $item) {
+        foreach (self::mainMenu() as $url => $item) {
             $shown = $item['enabled'] && ($item['footer'] ?? true);
             $needle = 'href="' . $url . '"';
 
@@ -523,7 +560,7 @@ final class FooterRenderTest extends TestCase
     {
         $checked = 0;
 
-        foreach (Config::get('site.footer-columns') as $column) {
+        foreach (self::footerColumns() as $column) {
             $url = $column['more']['url'] ?? null;
 
             if ($url === null) {

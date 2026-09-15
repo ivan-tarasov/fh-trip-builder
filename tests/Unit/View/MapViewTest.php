@@ -21,6 +21,13 @@ use TripBuilder\View\MapView;
  *
  * The token is set to a dummy here and put back afterwards, so the suite
  * behaves the same on a machine that has a real one and on one that does not.
+ *
+ * @phpstan-type MapConfig array{
+ *     token: string, style: string, zoom: int|null, padding: int,
+ *     markers: list<array{at: array{0: float, 1: float}, colour: string, label: string|null}>,
+ *     paths: list<list<array{0: float, 1: float}>>,
+ *     path: array{colour: string, width: int},
+ * }
  */
 final class MapViewTest extends TestCase
 {
@@ -54,6 +61,15 @@ final class MapViewTest extends TestCase
     private static function oneMarker(): array
     {
         return [['lat' => 51.4706, 'lon' => -0.4619]];
+    }
+
+    /** @return MapConfig */
+    private static function decodedConfig(string $json): array
+    {
+        /** @var MapConfig $config */
+        $config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+        return $config;
     }
 
     /**
@@ -143,7 +159,7 @@ final class MapViewTest extends TestCase
             'the picture should open at the configured zoom',
         );
 
-        $config = json_decode(MapView::config(self::oneMarker()), true, 512, JSON_THROW_ON_ERROR);
+        $config = self::decodedConfig(MapView::config(self::oneMarker()));
 
         self::assertSame($expected, $config['zoom'], 'and so should the live map');
     }
@@ -155,21 +171,16 @@ final class MapViewTest extends TestCase
     {
         $two = [['lat' => 51.4706, 'lon' => -0.4619], ['lat' => 51.1537, 'lon' => -0.1821]];
 
-        $framed = json_decode(MapView::config($two), true, 512, JSON_THROW_ON_ERROR);
+        $framed = self::decodedConfig(MapView::config($two));
         self::assertNull($framed['zoom'], 'two pins frame themselves');
 
-        $withPath = json_decode(
-            MapView::config(
-                self::oneMarker(),
-                [[['lat' => 51.5, 'lon' => -0.1], ['lat' => 40.7, 'lon' => -73.9]]],
-            ),
-            true,
-            512,
-            JSON_THROW_ON_ERROR,
-        );
+        $withPath = self::decodedConfig(MapView::config(
+            self::oneMarker(),
+            [[['lat' => 51.5, 'lon' => -0.1], ['lat' => 40.7, 'lon' => -73.9]]],
+        ));
         self::assertNull($withPath['zoom'], 'a path is something to frame');
 
-        $asked = json_decode(MapView::config(self::oneMarker(), [], 12), true, 512, JSON_THROW_ON_ERROR);
+        $asked = self::decodedConfig(MapView::config(self::oneMarker(), [], 12));
         self::assertSame(12, $asked['zoom'], "a caller's own zoom wins");
     }
 
@@ -304,9 +315,8 @@ final class MapViewTest extends TestCase
     {
         $json = MapView::config(self::oneMarker(), [], 10);
 
-        $config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        $config = self::decodedConfig($json);
 
-        self::assertIsArray($config);
         self::assertSame(self::DUMMY, $config['token']);
         self::assertSame(10, $config['zoom']);
         // GL JS takes the mapbox:// form where the picture endpoint takes it
@@ -334,15 +344,10 @@ final class MapViewTest extends TestCase
      */
     public function testCoordinatesCrossIntoJavascriptInGeojsonOrder(): void
     {
-        $config = json_decode(
-            MapView::config(
-                [['lat' => 51.5032, 'lon' => -0.1228]],
-                [[['lat' => 51.5032, 'lon' => -0.1228], ['lat' => 40.7019, 'lon' => -73.9462]]],
-            ),
-            true,
-            512,
-            JSON_THROW_ON_ERROR,
-        );
+        $config = self::decodedConfig(MapView::config(
+            [['lat' => 51.5032, 'lon' => -0.1228]],
+            [[['lat' => 51.5032, 'lon' => -0.1228], ['lat' => 40.7019, 'lon' => -73.9462]]],
+        ));
 
         self::assertSame([-0.1228, 51.5032], $config['markers'][0]['at'], 'a marker is [lon, lat]');
         self::assertSame([-0.1228, 51.5032], $config['paths'][0][0], 'and so is a path point');
@@ -356,15 +361,10 @@ final class MapViewTest extends TestCase
      */
     public function testColoursReachTheBrowserWithTheirHash(): void
     {
-        $config = json_decode(
-            MapView::config([
-                ['lat' => 40.7019, 'lon' => -73.9462, 'colour' => '0EB600'],
-                ['lat' => 51.5032, 'lon' => -0.1228, 'colour' => '#EC3735'],
-            ]),
-            true,
-            512,
-            JSON_THROW_ON_ERROR,
-        );
+        $config = self::decodedConfig(MapView::config([
+            ['lat' => 40.7019, 'lon' => -73.9462, 'colour' => '0EB600'],
+            ['lat' => 51.5032, 'lon' => -0.1228, 'colour' => '#EC3735'],
+        ]));
 
         self::assertSame('#0EB600', $config['markers'][0]['colour']);
         self::assertSame('#EC3735', $config['markers'][1]['colour']);
@@ -377,15 +377,10 @@ final class MapViewTest extends TestCase
      */
     public function testASplitRouteReachesTheBrowserAsTwoPaths(): void
     {
-        $config = json_decode(
-            MapView::config(
-                [['lat' => 35.6612, 'lon' => 140.0860]],
-                GreatCircle::segments(35.6612, 140.0860, 33.9423, -118.4069),
-            ),
-            true,
-            512,
-            JSON_THROW_ON_ERROR,
-        );
+        $config = self::decodedConfig(MapView::config(
+            [['lat' => 35.6612, 'lon' => 140.0860]],
+            GreatCircle::segments(35.6612, 140.0860, 33.9423, -118.4069),
+        ));
 
         self::assertCount(2, $config['paths']);
     }
@@ -399,11 +394,8 @@ final class MapViewTest extends TestCase
      */
     public function testCoordinatesReachTheBrowserAsNumbers(): void
     {
-        $config = json_decode(
+        $config = self::decodedConfig(
             MapView::config([['lat' => '51.46960000', 'lon' => '-0.45360000']], [], 10),
-            true,
-            512,
-            JSON_THROW_ON_ERROR,
         );
 
         self::assertSame([-0.4536, 51.4696], $config['markers'][0]['at']);
