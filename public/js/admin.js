@@ -3,13 +3,12 @@
 | The panel
 |------------------------------------------------------------------------------
 |
-| Its own file, and the only script the panel loads. What it replaced was
-| fourteen external assets inherited from the site's layout -- jQuery,
-| Bootstrap, Font Awesome, sweetalert, a range slider, a datepicker -- none of
-| which an operator page uses (A3.5, #230).
-|
-| No framework and no jQuery on purpose: what is here is one fetch, one timer
-| and one confirm.
+| The panel's own script, sitting beside the vendored Bootstrap bundle rather
+| than replacing it (A10.1, #287). Still no jQuery, Font Awesome, sweetalert,
+| a range slider or a datepicker -- none of which an operator page uses
+| (A3.5, #230) -- and everything below is here because Bootstrap's own bundle
+| does not do it: a markdown preview, a confirm before a destructive action,
+| and the dark/light toggle.
 |
 | One function per piece, because the first one written was inline and bailed
 | out with a `return` when its element was missing -- which on every page but
@@ -102,6 +101,157 @@
         });
     };
 
+    /*
+    | Dark or light, the same `.js-theme` pattern `global.js` already proved on
+    | the public site -- `aria-pressed` is the whole of the visual state, so
+    | there is one source for "is it dark" rather than a class kept in step
+    | with an attribute. The layout's own inline script already set
+    | `data-theme`/`data-bs-theme` from storage before the first paint; this is
+    | only what runs after a click.
+    |
+    | No page carries more than one `.js-theme` button -- the topbar's and the
+    | sign-in page's replace each other, never coexist -- so there is nothing
+    | here to delegate.
+    */
+    var themeToggle = function () {
+        var button = document.querySelector('.js-theme');
+
+        if (!button) {
+            return;
+        }
+
+        var media = window.matchMedia('(prefers-color-scheme: dark)');
+
+        var stored = function () {
+            try {
+                var choice = window.localStorage.getItem('tb-theme');
+
+                return choice === 'light' || choice === 'dark' ? choice : null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        var effective = function () {
+            return stored() || (media.matches ? 'dark' : 'light');
+        };
+
+        var show = function (mode) {
+            button.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
+        };
+
+        button.addEventListener('click', function () {
+            var next = effective() === 'dark' ? 'light' : 'dark';
+            var root = document.documentElement;
+
+            root.setAttribute('data-theme', next);
+            root.setAttribute('data-bs-theme', next);
+
+            try {
+                window.localStorage.setItem('tb-theme', next);
+            } catch (e) {}
+
+            show(next);
+        });
+
+        media.addEventListener('change', function () {
+            if (stored() === null) {
+                show(effective());
+            }
+        });
+
+        show(effective());
+    };
+
+    /*
+    | The sidebar: a mobile drawer below `lg`, a collapse-to-icons toggle at
+    | `lg` and up. Orchid's own `sidebar.js` behind this, minus the half that
+    | marks a clicked link "active" -- ours already renders that server-side,
+    | correctly, from the route that answered the request, so there is
+    | nothing for a click handler to get out of step with.
+    */
+    var railToggle = function () {
+        var rail = document.getElementById('adminRail');
+        var backdrop = document.querySelector('.rail-backdrop');
+
+        if (!rail) {
+            return;
+        }
+
+        var MOBILE_BREAKPOINT = 992;
+        var COLLAPSED_KEY = 'tb-admin-rail-collapsed';
+
+        var isMobile = function () {
+            return window.innerWidth < MOBILE_BREAKPOINT;
+        };
+
+        var openMobile = function () {
+            rail.classList.add('is-open');
+
+            if (backdrop) {
+                backdrop.classList.add('is-visible');
+            }
+        };
+
+        var closeMobile = function () {
+            rail.classList.remove('is-open');
+
+            if (backdrop) {
+                backdrop.classList.remove('is-visible');
+            }
+        };
+
+        var toggleDesktopCollapse = function () {
+            var root = document.documentElement;
+            var collapsed = root.hasAttribute('data-rail-collapsed');
+
+            if (collapsed) {
+                root.removeAttribute('data-rail-collapsed');
+            } else {
+                root.setAttribute('data-rail-collapsed', '');
+            }
+
+            try {
+                window.localStorage.setItem(COLLAPSED_KEY, collapsed ? '0' : '1');
+            } catch (e) {}
+        };
+
+        document.querySelectorAll('[data-rail-toggle]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (isMobile()) {
+                    rail.classList.contains('is-open') ? closeMobile() : openMobile();
+                } else {
+                    toggleDesktopCollapse();
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-rail-close]').forEach(function (el) {
+            el.addEventListener('click', closeMobile);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && rail.classList.contains('is-open')) {
+                closeMobile();
+            }
+        });
+
+        // A drawer left open across a resize past the breakpoint would sit
+        // there translated back into a static sidebar's place.
+        var resizeTimer = null;
+
+        window.addEventListener('resize', function () {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(function () {
+                if (!isMobile()) {
+                    closeMobile();
+                }
+            }, 120);
+        });
+    };
+
     markdownPreview();
     confirmFirst();
+    themeToggle();
+    railToggle();
 }());

@@ -8,6 +8,16 @@
    before this existed: 48KB of HTML and eighteen link/script tags, for one
    password field. None of it is for the person running the site (A3.5, #230).
 
+   **Bootstrap came back in A10.1 (#287)**, on purpose and scoped to the panel:
+   growing panel functionality changed the tradeoff A3.5 made, and a licensed
+   dashboard template (Orchid) gives tables, forms, cards and charts already
+   built. What did not come back is the CDN -- Bootstrap, its icon font and
+   Inter are vendored into `public/` from the official npm packages, the same
+   way the typeface already was, so the panel still fetches nothing from off
+   this server. The palette, the type and the shell are Orchid's own, as
+   bought -- see `admin.css`'s own docblock for why that is not the site's
+   teal any more.
+
    `Routes::EXCLUDE_HEADER_FOOTER` looks like the lever for this and is not: it
    means "emits its own payload", for JSON. This is a different document, not
    the absence of one -- and `Kernel::wrapped()` lets it through untouched
@@ -28,7 +38,16 @@
        header gives: a stylesheet cannot read localStorage and a script at the
        foot runs after the paint, so a dark reader would see the light palette
        flash on every navigation. The same key as the public side, so choosing
-       dark out there means dark in here. #}
+       dark out there means dark in here. `data-bs-theme` is set alongside
+       `data-theme` so Bootstrap's own component colours never disagree with
+       ours -- the same pairing `global.js`'s toggle already keeps in step on
+       the public site.
+
+       The collapsed sidebar reads the same way and for the same reason: a
+       class Bootstrap's `defer`red bundle applied after paint would still
+       show the full-width rail for one frame. `data-rail-collapsed` sits on
+       `<html>` rather than `<body>`, because `<body>` does not exist yet
+       while this still runs in `<head>`. #}
     <script>
         (function () {
             try {
@@ -36,25 +55,47 @@
 
                 if (choice === 'light' || choice === 'dark') {
                     document.documentElement.setAttribute('data-theme', choice);
+                    document.documentElement.setAttribute('data-bs-theme', choice);
+                }
+
+                if (window.localStorage.getItem('tb-admin-rail-collapsed') === '1') {
+                    document.documentElement.setAttribute('data-rail-collapsed', '');
                 }
             } catch (e) {}
         }());
     </script>
 
+    <link href="{{ asset(config('site.directory.css') ~ '/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset(config('site.directory.css') ~ '/admin.css') }}" rel="stylesheet">
 </head>
 <body class="shell{% block shell_class %}{% endblock %}">
 
 {% block shell %}
-    {# One rail, one well. The rail is dark against a light well on purpose:
-       an operator should never have to look twice to know which side of the
-       site they are on. #}
+    {# One rail, one well, the rail fixed and permanent beside it -- Orchid's
+       own layout, not a flag on the public one. #}
     {% include 'admin/partials/rail.html.twig' %}
 
     <div class="well">
         <header class="well__top">
-            <h1 class="well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
-            <div class="well__tools">{% block tools %}{% endblock %}</div>
+            <div class="well__lead">
+                {# One button, two jobs: `railToggle()` in `admin.js` opens the
+                   mobile drawer below `lg` and collapses the rail to icons at
+                   `lg` and up, the same button Orchid's `data-orchid-sidebar-toggle`
+                   is. #}
+                <button type="button" class="btn btn-icon well__toggle" data-rail-toggle aria-controls="adminRail" aria-label="Toggle navigation">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <h1 class="well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
+            </div>
+
+            <div class="well__tools">
+                {% block tools %}{% endblock %}
+
+                <button type="button" class="btn btn-icon js-theme well__theme" aria-pressed="false" aria-label="Toggle dark theme">
+                    <i class="bi bi-sun-fill well__theme-icon well__theme-icon--sun" aria-hidden="true"></i>
+                    <i class="bi bi-moon-stars-fill well__theme-icon well__theme-icon--moon" aria-hidden="true"></i>
+                </button>
+            </div>
         </header>
 
         {# `tabindex="-1"` so the skip link can put focus here, the same reason
@@ -65,6 +106,7 @@
     </div>
 {% endblock %}
 
+<script src="{{ asset(config('site.directory.js') ~ '/bootstrap.bundle.min.js') }}" defer></script>
 <script src="{{ asset(config('site.directory.js') ~ '/admin.js') }}" defer></script>
 </body>
 </html>
