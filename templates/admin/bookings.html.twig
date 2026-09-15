@@ -114,7 +114,8 @@
                                     {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}&mdash;{% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge{{ booking.is_cancelled ? ' text-bg-danger' : ' text-bg-success' }}">
+                                    <span class="status-chip{{ booking.is_cancelled ? ' status-chip--bad' : ' status-chip--good' }}">
+                                        <i class="bi bi-{{ booking.is_cancelled ? 'x-circle-fill' : 'check-circle-fill' }}" aria-hidden="true"></i>
                                         {{ booking.status_label }}
                                     </span>
                                 </td>

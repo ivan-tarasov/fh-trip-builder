@@ -594,9 +594,10 @@ a:hover { text-decoration: underline; }
 | Orchid stat cards
 |------------------------------------------------------------------------------
 |
-| The overview dashboard's own cards (G2.2, #288) -- Orchid's own
-| `.orchid-card`/`.orchid-stat-card` shape, not the `.tile` grid above, which
-| `booking.html.twig` still uses and this task does not touch.
+| Orchid's own `.orchid-card`/`.orchid-stat-card` shape (G2.2, #288): an icon
+| chip, a label, a value, a note. Reused as the booking detail page's own
+| header row (G2.4, #290) rather than inventing a second "KPI" component --
+| one card shape for every place this panel states a fact and a tone.
 |
 */
 
@@ -636,6 +637,117 @@ a:hover { text-decoration: underline; }
 
 .orchid-chart-wrap { position: relative; width: 100%; }
 .orchid-chart-wrap--md { height: 12rem; }
+
+/*
+|------------------------------------------------------------------------------
+| Orchid tables
+|------------------------------------------------------------------------------
+|
+| `.orchid-table` names a look, not just a hook: a small-caps header row like
+| Orchid's own list pages carry, a quiet hover, borders that read as rules
+| rather than a grid. First used on the help-content list (G2.3, #289) and the
+| bookings/subscribers tables (G2.4, #290) -- every `table.orchid-table` in the
+| panel picks it up, including the ones G2.5 has not touched yet.
+|
+*/
+
+.orchid-table > thead th {
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+  background: var(--sunken);
+  border-bottom-color: var(--rule);
+}
+
+.orchid-table > tbody td { border-color: var(--rule); }
+.orchid-table > tbody tr:hover > td { background: var(--sunken); }
+
+/* A row that sums the ones above it -- the booking payment breakdown's
+   Total, so it reads as heavier than Base fare and Taxes & fees without a
+   second table component. */
+.orchid-table tr.is-total > td { font-weight: 700; background: var(--signal-soft); }
+
+/* Icon + label + tone, for anything that used to be a bare Bootstrap
+   `.badge`: a booking's state in a list row, a flight leg's stop count. Tone
+   is emphasis, same rule as `.tile`/`.stat-card` -- every chip still prints
+   its state in words. */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .6rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.status-chip i { font-size: .6875rem; }
+
+.status-chip--good { background: var(--good-soft); color: var(--good); }
+.status-chip--bad { background: var(--bad-soft); color: var(--bad); }
+.status-chip--muted { background: var(--sunken); color: var(--ink-quiet); }
+
+/* An initial or two, for a passenger row with no photo to show. One tone
+   for every circle rather than a hashed palette -- the colour would carry no
+   information a hash didn't invent. */
+.avatar-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--signal-soft);
+  color: var(--signal);
+  font-size: .6875rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* The booking log, as a flat grid row rather than a table: a fixed-width
+   timestamp, a dot coloured by what happened, the message, the actor --
+   Orchid's own compact-timeline column order, without the connecting spine a
+   `.timeline` needs to earn its keep. */
+.log-row {
+  display: grid;
+  grid-template-columns: 8.5rem 1rem 1fr auto;
+  align-items: baseline;
+  gap: .1rem .75rem;
+  padding: .55rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: .8125rem;
+}
+
+.log-row:last-child { border-bottom: 0; }
+
+.log-row__dot {
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  align-self: center;
+  background: var(--ink-faint);
+}
+
+.log-row__dot--signal { background: var(--signal); }
+.log-row__dot--good { background: var(--good); }
+.log-row__dot--bad { background: var(--bad); }
+
+.log-row__actor { color: var(--ink-quiet); font-size: .75rem; white-space: nowrap; }
+
+@media (max-width: 575.98px) {
+  .log-row {
+    grid-template-columns: 1rem 1fr;
+    grid-template-areas: "dot time" "dot msg" "dot actor";
+  }
+
+  .log-row__dot { grid-area: dot; }
+  .log-row__time { grid-area: time; }
+  .log-row__msg { grid-area: msg; }
+  .log-row__actor { grid-area: actor; }
+}
 
 .sheet { width: 100%; border-collapse: collapse; font-size: .8125rem; }
 
