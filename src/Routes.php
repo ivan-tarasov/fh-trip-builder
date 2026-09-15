@@ -71,6 +71,7 @@ class Routes
         // (A3.6, #231). One address per section, so the rail can name them.
         '/admin/content' => 'Admin@content',
         '/admin/bookings' => 'Admin@bookings',
+        '/admin/subscribers' => 'Admin@subscribers',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in
