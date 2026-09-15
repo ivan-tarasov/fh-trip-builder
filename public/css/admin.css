@@ -14,10 +14,16 @@
 | coat over another. So this is Orchid's own token set
 | (`assets/css/orchid.css`), renamed onto the variable names the rest of this
 | file already reads -- `--signal` is Orchid's `--orchid-primary`, `--ground`
-| is `--orchid-bg`, and so on -- so `.button`, `.group`, `.row`, `.flag` and
-| every other component this task does not touch keep working, unaware their
-| colours moved. `AdminShellTest`'s old parity check against `main.css` is
-| gone with it: there is nothing left to stay in step with.
+| is `--orchid-bg`, and so on -- so every component this task does not touch
+| keeps working, unaware its colours moved. `AdminShellTest`'s old parity
+| check against `main.css` is gone with it: there is nothing left to stay in
+| step with.
+|
+| The rows/tables/forms this bought (`.group`, `.sheet`, `.field`, `.pair`,
+| `.pill`, `.tile`, most of `.button`) have since been rebuilt onto Orchid's
+| own Bootstrap components page by page (G2.1-G2.5, #287-#291) and removed
+| once the last page using one was; `.flag`/`.notice`/`.band`/`.field__hint`
+| are what is left of the panel's own row-and-form vocabulary today.
 |
 | Nothing external is loaded except the typeface, self-hosted the same way
 | Bootstrap and its icons are (A10.1, #287): no CDN, no jQuery, no Font
@@ -382,7 +388,11 @@ a:hover { text-decoration: underline; }
 | Buttons
 |------------------------------------------------------------------------------
 |
-| The panel's own, because Bootstrap is 230KB of stylesheet for four of them.
+| The panel's own, once used everywhere Bootstrap's own `.btn` is now used
+| instead (G2.1-G2.5, #287-#291). One holdout: the sign-out button in the
+| rail (`admin/partials/rail.html.twig`), reached before Bootstrap's own
+| bundle has loaded on the login screen's cousin pages, so it stays on the
+| lighter component rather than pulling `.btn` in for one button.
 |
 */
 
@@ -402,95 +412,13 @@ a:hover { text-decoration: underline; }
 .button:hover { background: var(--sunken); text-decoration: none; }
 .button:disabled { opacity: .4; cursor: default; }
 
-.button--go {
-  border-color: var(--signal);
-  background: var(--signal);
-  color: #fff;
-}
-
-.button--go:hover { background: var(--signal); filter: brightness(1.08); }
-
-/* White on the teal in light, and near-black on it in dark, where the teal
-   lifts to #2AC3B2 -- white on that is 1.9 and the site's own ink is 8.9, so
-   the glyph flips rather than the fill. The same trade main.css documents for
-   every colour that is worn both ways. */
-:root[data-theme="dark"] .button--go { color: #0B111C; }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .button--go { color: #0B111C; }
-}
-
 .button--quiet { background: transparent; color: var(--ink-quiet); border-color: var(--rule); }
 .button--quiet:hover { background: var(--sunken); color: var(--ink); }
 .button--block { display: block; width: 100%; text-align: center; }
 
-.button--tiny {
-  padding: 0 .5rem;
-  font-size: .75rem;
-  line-height: 1.5rem;
-  color: var(--ink-quiet);
-}
-
-/* Destructive, and quiet about it. A filled red button in the top bar of every
-   booking would shout on the twenty-four pages where nothing is wrong; the
-   colour is in the word and the edge, and the fill arrives on hover. Cancelling
-   is reversible from the same bar anyway. */
-.button--bad {
-  border-color: var(--bad-edge);
-  color: var(--bad);
-}
-
-.button--bad:hover { background: var(--bad-soft); }
-
-/*
-|------------------------------------------------------------------------------
-| Rows
-|------------------------------------------------------------------------------
-|
-| A group is a table without being a <table>: the cells are a name, an
-| identifier, some states and some buttons, and only the first two are data.
-|
-*/
-
-.group {
-  margin-bottom: 1.25rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  overflow: hidden;
-}
-
-/* Renamed from `.row` (G2.2, #288). Bootstrap's grid does not just style
-   `.row` -- it has a universal-child rule, `.row > * { width: 100%; ... }`,
-   built to be overridden per column by a more specific `.col-*` class. This
-   component's children (`.flag`, `.row__acts`) carried no such override, so
-   scoping only the row itself under `.group` was not enough: Bootstrap's
-   selector matches on the literal class name regardless of ancestor, and
-   still forced every child to `width: 100%` the moment a page also used the
-   real Bootstrap grid. Renaming the block is what actually escapes it. */
-.list-row {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  min-height: var(--row);
-  padding: .35rem .75rem;
-  border-top: 1px solid var(--rule);
-}
-
-.list-row:first-child { border-top: 0; }
-.list-row--head { background: var(--sunken); font-weight: 600; }
-.list-row--child { padding-left: 2rem; }
-
-.list-row__name { flex: 1; color: inherit; min-width: 0; }
-.list-row__name:hover { color: var(--signal); }
-
-.list-row__slug {
-  color: var(--ink-quiet);
-  font-family: var(--mono);
-  font-size: .75rem;
-}
-
-/* Said in a word, never only in a colour. */
+/* Said in a word, never only in a colour. Still used on every state/flag the
+   panel prints outside a `.stat-card`/`.status-chip` -- "Overridden" on a
+   settings field is its last first-class user (G2.5, #291). */
 .flag {
   padding: .05rem .4rem;
   border: 1px solid var(--rule-strong);
@@ -505,17 +433,6 @@ a:hover { text-decoration: underline; }
 }
 
 .flag--owned { border-color: var(--good-edge); background: var(--good-soft); color: var(--good); }
-
-.list-row__acts { display: flex; gap: .25rem; }
-.list-row__act { margin: 0; }
-
-.group__empty {
-  margin: 0;
-  padding: .5rem .75rem .5rem 2rem;
-  border-top: 1px solid var(--rule);
-  color: var(--ink-quiet);
-  font-size: .8125rem;
-}
 
 /*
 |------------------------------------------------------------------------------
@@ -543,51 +460,6 @@ a:hover { text-decoration: underline; }
 .band ~ .band { margin-top: 1.5rem; }
 
 .stamp { color: var(--ink-quiet); font-size: .75rem; }
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: .5rem;
-  margin-bottom: 1.5rem;
-}
-
-.tile {
-  padding: .75rem .85rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-}
-
-.tile__label { margin: 0 0 .15rem; font-size: .75rem; color: var(--ink-quiet); }
-.tile__value { margin: 0; font-size: 1.0625rem; font-weight: 600; }
-.tile__note { margin: .15rem 0 0; font-size: .6875rem; color: var(--ink-quiet); }
-.tile__line { margin: .15rem 0 0; font-size: .8125rem; }
-
-/* A count nobody has yet. Quiet rather than bold, because the number that is
-   not there is not the headline. */
-.tile__value--none { font-weight: 400; color: var(--ink-faint); }
-
-/* The tones. Colour is emphasis here and never the whole message -- every tile
-   prints its state in words too, so none of this is load-bearing. */
-.tile--good { border-color: var(--good-edge); background: var(--good-soft); }
-.tile--good .tile__label,
-.tile--good .tile__value,
-.tile--good .tile__note { color: var(--good); }
-
-.tile--warn { border-color: var(--signal-edge); background: var(--signal-soft); }
-.tile--warn .tile__label,
-.tile--warn .tile__value,
-.tile--warn .tile__note { color: var(--signal); }
-
-.tile--bad { border-color: var(--bad-edge); background: var(--bad-soft); }
-.tile--bad .tile__label,
-.tile--bad .tile__value,
-.tile--bad .tile__note { color: var(--bad); }
-
-.tile--quiet .tile__value { color: var(--ink-quiet); }
-
-/* The counts and the two summaries below carry no opinion at all. */
-.tile--plain { background: var(--sunken); border-color: transparent; }
 
 /*
 |------------------------------------------------------------------------------
@@ -683,8 +555,8 @@ a:hover { text-decoration: underline; }
 
 /* Icon + label + tone, for anything that used to be a bare Bootstrap
    `.badge`: a booking's state in a list row, a flight leg's stop count. Tone
-   is emphasis, same rule as `.tile`/`.stat-card` -- every chip still prints
-   its state in words. */
+   is emphasis, same rule as `.stat-card` -- every chip still prints its
+   state in words. */
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -761,124 +633,13 @@ a:hover { text-decoration: underline; }
   .log-row__actor { grid-area: actor; }
 }
 
-.sheet { width: 100%; border-collapse: collapse; font-size: .8125rem; }
-
-.sheet th {
-  padding: .4rem .75rem;
-  border-bottom: 1px solid var(--rule);
-  background: var(--sunken);
-  color: var(--ink-quiet);
-  font-size: .6875rem;
-  font-weight: 600;
-  text-align: left;
-}
-
-.sheet td { padding: .35rem .75rem; border-top: 1px solid var(--rule); }
-.sheet tbody tr:first-child td { border-top: 0; }
-.sheet__quiet { color: var(--ink-quiet); }
-
-.pill {
-  display: inline-block;
-  padding: .05rem .45rem;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink-quiet);
-  font-family: var(--mono);
-  font-size: .6875rem;
-}
-
-.pill--good { border-color: var(--good-edge); background: var(--good-soft); color: var(--good); }
-
-/* A label column in a two-column sheet: the field name, not data. */
-.sheet__key { width: 9rem; color: var(--ink-quiet); }
-
-/* The same column when it holds a moment rather than a field name. Wider and
-   unbreakable, because "11 Sep 2026, 14:20" wrapped after the comma reads as
-   two entries in a log that is a list of them. */
-.sheet__when { width: 11rem; white-space: nowrap; color: var(--ink-quiet); }
-
-/* A caption is a heading for the table under it, so it sits above the head row
-   rather than reading as one. */
-.sheet__caption {
-  padding: .4rem .75rem;
-  border-bottom: 1px solid var(--rule);
-  color: var(--ink-quiet);
-  font-size: .75rem;
-  text-align: left;
-}
-
-/* Two facts to a cell, the second quieter: a code and a time, then the date. */
-.sheet td .sheet__quiet { display: block; font-size: .75rem; }
-
-/* An itinerary card inside a group, which is not a row. */
-.sheet__block { padding: .75rem; }
-.sheet__block--next { border-top: 1px solid var(--rule); }
-
-.pager { display: flex; align-items: center; gap: 1rem; font-size: .8125rem; }
-.pill--bad { border-color: var(--bad-edge); background: var(--bad-soft); color: var(--bad); }
-
-/*
-|------------------------------------------------------------------------------
-| Forms
-|------------------------------------------------------------------------------
-*/
-
-.form { max-width: 68rem; }
-.field { margin-bottom: 1rem; }
-.field > label { display: block; margin-bottom: .25rem; color: var(--ink-quiet); font-size: .75rem; }
-.field--check > label { display: flex; align-items: center; gap: .5rem; color: var(--ink); font-size: .875rem; }
-
-.field input[type="text"],
-.field input[type="password"],
-.field input[type="number"],
-.field select,
-.field textarea {
-  width: 100%;
-  padding: .4rem .55rem;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-
-/* A slug is an identifier, so it is typed in the type identifiers are read in. */
-.field input[name="slug"],
-.field input[name="icon"],
-.field input[name="accent"] { font-family: var(--mono); }
-
-.field input:disabled { background: var(--sunken); color: var(--ink-quiet); }
+/* What `.field__hint`/`.field__hint--bad` below hang off of now: Bootstrap's
+   own `.form-control`/`.form-label`, not a `.field` wrapper -- every field on
+   every admin form went onto those in G2.1-G2.5 (#287-#291). The hint text
+   under a field stayed the panel's own, since Bootstrap's `.form-text` reads
+   lighter than this data-dense panel wants. */
 .field__hint { margin: .25rem 0 0; color: var(--ink-quiet); font-size: .75rem; }
-
-/* As specific as .field input[type="text"] above, or that rule's own border
-   colour wins regardless of source order. */
-.field--bad input[type="text"],
-.field--bad textarea { border-color: var(--bad-edge); background: var(--bad-soft); }
 .field__hint--bad { color: var(--bad); }
-/* The bookings search, which lives in the title bar rather than over the table:
-   it is the page's control, not the table's, and it is the first thing reached
-   for when somebody is on the phone. */
-.finder { display: flex; gap: .35rem; }
-
-.finder input[type="search"] {
-  width: 16rem;
-  max-width: 40vw;
-  padding: 0 .5rem;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: .8125rem;
-  line-height: calc(var(--row) - 2px);
-}
-
-.finder input[type="search"]::placeholder { color: var(--ink-faint); }
-
-/* Two columns, used by the forms and by the dashboard's two summaries. */
-.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.actions { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; }
 
 .notice {
   margin-bottom: 1rem;
@@ -1187,6 +948,6 @@ a:hover { text-decoration: underline; }
 .gate__submit:hover { background-position: 100% 50%; color: #fff; }
 
 @media (max-width: 60em) {
-  .editor, .pair { grid-template-columns: 1fr; }
+  .editor { grid-template-columns: 1fr; }
   .well__body { padding: 1rem; }
 }
