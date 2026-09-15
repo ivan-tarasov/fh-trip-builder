@@ -41,19 +41,28 @@ final readonly class Request
      */
     public static function capture(): self
     {
+        // $_SERVER is a superglobal PHPStan cannot type per key; these three
+        // are always strings when the web server sets them at all.
+        /** @var string|null $method */
+        $method = $_SERVER['REQUEST_METHOD'] ?? null;
+        /** @var string|null $uri */
+        $uri = $_SERVER['REQUEST_URI'] ?? null;
+        /** @var string|null $remoteAddress */
+        $remoteAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+
         return new self(
             query: new Input($_GET),
             body: new Input($_POST),
             cookies: new Input($_COOKIE),
-            method: strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')),
-            uri: (string) ($_SERVER['REQUEST_URI'] ?? '/'),
+            method: strtoupper($method ?? 'GET'),
+            uri: $uri ?? '/',
             secure: !empty($_SERVER['HTTPS']),
             // Read here rather than where it is parsed, so the API endpoints
             // take their JSON body from the same object as everything else.
             // Empty for a form post, which PHP has already parsed into $_POST.
             rawBody: (string) file_get_contents('php://input'),
             headers: self::captureHeaders(),
-            remoteAddress: (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+            remoteAddress: $remoteAddress ?? '',
         );
     }
 
@@ -156,11 +165,16 @@ final readonly class Request
      */
     private static function captureHeaders(): array
     {
-        $headers = self::headersFromServer($_SERVER);
+        /** @var array<string, mixed> $server */
+        $server = $_SERVER;
+        $headers = self::headersFromServer($server);
 
         if (function_exists('getallheaders')) {
-            foreach (getallheaders() as $name => $value) {
-                $headers[self::normaliseHeader((string) $name)] ??= (string) $value;
+            /** @var array<string, string> $sapiHeaders */
+            $sapiHeaders = getallheaders();
+
+            foreach ($sapiHeaders as $name => $value) {
+                $headers[self::normaliseHeader($name)] ??= $value;
             }
         }
 

@@ -31,18 +31,6 @@ parameters:
 			path: src/Config.php
 
 		-
-			message: '#^Method TripBuilder\\Controllers\\AjaxController\:\:setGet\(\) has parameter \$params with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controllers/AjaxController.php
-
-		-
-			message: '#^Property TripBuilder\\Controllers\\AjaxController\:\:\$get type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Controllers/AjaxController.php
-
-		-
 			message: '#^Method TripBuilder\\Helper\:\:random\(\) has parameter \$range with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

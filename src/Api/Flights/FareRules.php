@@ -11,6 +11,17 @@ namespace TripBuilder\Api\Flights;
  * is what lets `strictest()` fold a connecting itinerary into one set: a fare is
  * only as generous as the tightest leg in it, so a journey whose second leg
  * forbids changes forbids changes, whatever the first leg allowed.
+ *
+ * `fromRow()` reads two different shapes: a live `fare_brands` row
+ * (`FareBrandRepository::all()`, which also carries `code`/`weight` --
+ * a wider shape still satisfies this one) and a booking's own stored
+ * snapshot (`toArray()`, json-decoded back in `BookingPresenter`), whose
+ * `refundable` is already a real `bool` rather than the row's raw `int`.
+ *
+ * @phpstan-type FareRuleFields array{
+ *     title: string, carry_on: int, checked_bag: int, changes: int,
+ *     cancellation: int, seat_selection: int, refundable: int|bool,
+ * }
  */
 final readonly class FareRules
 {
@@ -30,17 +41,17 @@ final readonly class FareRules
     ) {}
 
     /**
-     * @param array<string, mixed> $row a fare_brands row
+     * @param FareRuleFields $row
      */
     public static function fromRow(array $row): self
     {
         return new self(
-            title: (string) $row['title'],
-            carryOn: (int) $row['carry_on'],
-            checkedBag: (int) $row['checked_bag'],
-            changes: (int) $row['changes'],
-            cancellation: (int) $row['cancellation'],
-            seatSelection: (int) $row['seat_selection'],
+            title: $row['title'],
+            carryOn: $row['carry_on'],
+            checkedBag: $row['checked_bag'],
+            changes: $row['changes'],
+            cancellation: $row['cancellation'],
+            seatSelection: $row['seat_selection'],
             refundable: (bool) $row['refundable'],
         );
     }
