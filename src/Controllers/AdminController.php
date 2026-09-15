@@ -22,6 +22,7 @@ use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\DashboardRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
+use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Schedule;
 use TripBuilder\View\BookingPresenter;
 use TripBuilder\View\Markdown;
@@ -430,6 +431,53 @@ class AdminController extends AbstractController
         }
 
         $this->bounce($back);
+    }
+
+    /**
+     * The fare-alert list, and the removing of one address from it.
+     *
+     * No detail page, unlike a booking: an address and a subscribe date is
+     * everything the row holds, so there is nothing to open one for.
+     *
+     * @throws Exception|Error
+     */
+    public function subscribers(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->removeSubscriber();
+
+            return;
+        }
+
+        $subscribers = new SubscriberRepository($this->connection());
+        $page = max(1, (int) $this->request->query->str('page', '1'));
+        $offset = ($page - 1) * self::PER_PAGE;
+
+        echo new TwigRenderer()->render('admin/subscribers.html.twig', [
+            'subscribers' => $subscribers->all(self::PER_PAGE, $offset),
+            'total' => $subscribers->countAll(),
+            'page' => $page,
+            'per_page' => self::PER_PAGE,
+        ]);
+    }
+
+    /**
+     * The list's one action: take an address off it.
+     *
+     * Whichever way E23 (#188) eventually gives a visitor their own way off
+     * this list, it belongs here too -- one row, one way to leave it.
+     */
+    private function removeSubscriber(): void
+    {
+        if (Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            new SubscriberRepository($this->connection())->remove($this->request->body->int('id'));
+        }
+
+        $this->bounce('/admin/subscribers');
     }
 
     /**
