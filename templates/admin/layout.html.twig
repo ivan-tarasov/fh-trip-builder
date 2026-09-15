@@ -88,6 +88,30 @@
     </div>
 {% endif %}
 
+{# One shared modal for every `data-confirm` button, rather than one per
+   site -- Orchid's own `modalStatic` shape (`ui-modals.html`), including
+   its `data-bs-backdrop="static"`: a decision worth confirming is worth
+   not losing to a stray Escape or an off-target click. `admin.js`'s
+   `confirmFirst()` fills the body and wires the accept button (G3.2,
+   #305). #}
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalTitle">Please confirm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" data-confirm-modal-body></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-confirm-modal-accept>Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% block shell %}
     {# One rail, one well, the rail fixed and permanent beside it -- Orchid's
        own layout, not a flag on the public one. #}
