@@ -441,6 +441,17 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius);
 }
 
+/* A `.btn-icon` sized to sit beside a value rather than in the topbar --
+   the copy buttons on identifiers (G3.3, #306). The checkmark it swaps to
+   on click reads as confirmation on its own; the tone just says so twice. */
+.copy-btn {
+  --bs-btn-padding-x: .3rem;
+  --bs-btn-padding-y: .2rem;
+  font-size: .8rem;
+}
+
+.copy-btn.is-copied { --bs-btn-color: var(--good); }
+
 /* One glyph shown at a time, the same `aria-pressed`-reads-the-icon pattern
    `theme-switcher.html.twig` uses on the public site -- the button's state is
    the one source of truth, not a class kept in step with it. Sun by default

@@ -160,6 +160,49 @@
     };
 
     /*
+    | Copy a booking reference, a session id, an email onto the clipboard
+    | (G3.3, #306) -- read aloud or pasted elsewhere constantly, and until
+    | now only ever selectable by hand. The icon itself is the confirmation,
+    | swapped to a checkmark for a moment: an instant client-side action has
+    | nothing to survive a redirect for, which is what `toasts()` above is
+    | actually built around. Guarded on `navigator.clipboard` existing, the
+    | same graceful-degradation `toasts()` gives `bootstrap`: an insecure
+    | context (plain HTTP, not localhost) has no Clipboard API at all.
+    */
+    var copyButtons = function () {
+        if (!navigator.clipboard) {
+            return;
+        }
+
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest && event.target.closest('[data-copy]');
+
+            if (!button) {
+                return;
+            }
+
+            navigator.clipboard.writeText(button.dataset.copy).then(function () {
+                var icon = button.querySelector('i');
+                var original = icon.className;
+
+                button.classList.add('is-copied');
+                icon.className = 'bi bi-check-lg';
+
+                window.setTimeout(function () {
+                    button.classList.remove('is-copied');
+                    icon.className = original;
+                }, 1500);
+            }, function () {
+                // Denied (an insecure context slipping past the guard above,
+                // a browser permission the operator refused) is silent on
+                // purpose: the icon simply does not confirm, which is the
+                // honest answer, rather than a second UI for an error this
+                // small.
+            });
+        });
+    };
+
+    /*
     | Dark or light, the same `.js-theme` pattern `global.js` already proved on
     | the public site -- `aria-pressed` is the whole of the visual state, so
     | there is one source for "is it dark" rather than a class kept in step
@@ -420,6 +463,7 @@
     markdownPreview();
     confirmFirst();
     toasts();
+    copyButtons();
     themeToggle();
     railToggle();
     charts();

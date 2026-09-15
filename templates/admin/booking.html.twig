@@ -36,6 +36,18 @@
     {{- parts[0]|first|upper -}}{{- parts[parts|length - 1]|first|upper -}}
 {% endmacro %}
 
+{# A booking reference, a session id, a contact email: read aloud or pasted
+   elsewhere constantly, and until now only ever selectable by hand. Nothing
+   when there is nothing to copy -- a booking with no reference issued has no
+   button for one (G3.3, #306). #}
+{% macro copyButton(value, label) %}
+    {% if value %}
+        <button type="button" class="btn btn-icon copy-btn" data-copy="{{ value }}" aria-label="Copy {{ label }}">
+            <i class="bi bi-clipboard" aria-hidden="true"></i>
+        </button>
+    {% endif %}
+{% endmacro %}
+
 {# The legs, one per row, rather than the card the search page draws.
    The *shaping* is still `BookingPresenter`'s, so nothing here can disagree
    with what the traveller is looking at -- but the card's drawing lives in
@@ -110,7 +122,10 @@
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="min-w-0">
                                 <p class="stat-card__label">Reference</p>
-                                <h3 class="stat-card__value mono">{{ booking.reference ?: 'none issued' }}</h3>
+                                <h3 class="stat-card__value mono d-flex align-items-center gap-1">
+                                    {{ booking.reference ?: 'none issued' }}
+                                    {{ self.copyButton(booking.reference, 'reference') }}
+                                </h3>
                             </div>
                             <span class="stat-card__icon"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
                         </div>
@@ -177,7 +192,12 @@
                     <tbody>
                         <tr>
                             <td class="text-body-secondary"><i class="bi bi-envelope me-2" aria-hidden="true"></i>Email</td>
-                            <td class="mono">{{ booking.contact_email ?: '—' }}</td>
+                            <td class="mono">
+                                <span class="d-inline-flex align-items-center gap-1">
+                                    {{ booking.contact_email ?: '—' }}
+                                    {{ self.copyButton(booking.contact_email, 'email') }}
+                                </span>
+                            </td>
                         </tr>
                         <tr>
                             <td class="text-body-secondary"><i class="bi bi-telephone me-2" aria-hidden="true"></i>Phone</td>
@@ -188,7 +208,12 @@
                            duplicate can see they came from one person, not two. #}
                         <tr>
                             <td class="text-body-secondary"><i class="bi bi-fingerprint me-2" aria-hidden="true"></i>Session</td>
-                            <td class="mono text-body-secondary">{{ extra.session ?: '—' }}</td>
+                            <td class="mono text-body-secondary">
+                                <span class="d-inline-flex align-items-center gap-1">
+                                    {{ extra.session ?: '—' }}
+                                    {{ self.copyButton(extra.session, 'session id') }}
+                                </span>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
