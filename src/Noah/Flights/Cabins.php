@@ -34,6 +34,27 @@ use TripBuilder\Noah\AbstractCommand;
  * shared search links, and regenerating would renumber every one of them.
  *
  * Runs in id batches so the whole table is never locked at once.
+ *
+ * Live-verified: `MIN`/`MAX`/`COUNT(*)` over `flights.id` (a plain `int`
+ * PK) all stay `int`. The fleet report's row is a LEFT JOIN from
+ * `aircraft` to `aircraft_cabins`, so every cabin-side column is nullable
+ * in the result even though none of them are nullable in the table --
+ * `width_inches` (DECIMAL) stringifies the same way it does everywhere
+ * else in this codebase. `BIT_OR(...)` -- the mask `CabinAvailability`
+ * builds -- comes back `string`, not `int`, the same DECIMAL-shaped
+ * surprise `SUM()` gives elsewhere; `COALESCE()` of it stays `string` too.
+ *
+ * @phpstan-type FlightBoundsRow array{lo: int, hi: int, total: int}
+ * @phpstan-type FleetCabinRow array{
+ *     code: string, title: string, manufacturer: string|null,
+ *     max_range_km: int, cruise_speed_kmh: int, engine_count: int, is_widebody: int,
+ *     cabin: string|null, layout: string|null, pitch_inches: int|null,
+ *     width_inches: string|null, seats: int|null, is_flat_bed: int|null,
+ * }
+ * @phpstan-type FareSampleRow array{
+ *     distance: int, aircraft: string|null, price_base: string, price_tax: string, mask: string,
+ * }
+ * @phpstan-type CabinTotalsRow array{total: int, y: string, w: string, c: string, f: string}
  */
 #[AsCommand(
     name: 'flights:cabins',
@@ -76,6 +97,7 @@ class Cabins extends AbstractCommand
         $dryRun = (bool) $input->getOption('dry-run');
 
         try {
+            /** @var FlightBoundsRow|null $bounds */
             $bounds = $this->connection()->fetchAll(
                 'SELECT MIN(id) AS lo, MAX(id) AS hi, COUNT(*) AS total FROM ' . $flights,
             )[0] ?? null;
@@ -85,7 +107,7 @@ class Cabins extends AbstractCommand
             return Command::FAILURE;
         }
 
-        if ($bounds === null || (int) $bounds['total'] === 0) {
+        if ($bounds === null || $bounds['total'] === 0) {
             $this->io->warning('No flights to populate.');
 
             return Command::SUCCESS;
@@ -95,7 +117,7 @@ class Cabins extends AbstractCommand
             $this->reportFleet();
         }
 
-        $this->formatOutput('Flights in network', number_format((int) $bounds['total']), 'info');
+        $this->formatOutput('Flights in network', number_format($bounds['total']), 'info');
 
         // Reported from the fleet rather than the column, so it reads the same
         // whether or not the column exists yet.
@@ -132,7 +154,7 @@ class Cabins extends AbstractCommand
         $changed = 0;
 
         try {
-            for ($lo = (int) $bounds['lo']; $lo <= (int) $bounds['hi']; $lo += self::BATCH_SIZE) {
+            for ($lo = $bounds['lo']; $lo <= $bounds['hi']; $lo += self::BATCH_SIZE) {
                 $changed += $this->connection()->execute($sql, [$lo, $lo + self::BATCH_SIZE - 1]);
             }
         } catch (Throwable $e) {
@@ -153,11 +175,14 @@ class Cabins extends AbstractCommand
      */
     private function columnExists(string $flights): bool
     {
-        return (int) $this->connection()->fetchValue(
+        /** @var int $count */
+        $count = $this->connection()->fetchValue(
             'SELECT COUNT(*) FROM information_schema.columns'
             . ' WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?',
             [$flights, self::COLUMN],
-        ) > 0;
+        );
+
+        return $count > 0;
     }
 
     /**
@@ -169,6 +194,7 @@ class Cabins extends AbstractCommand
      */
     private function reportFleet(): void
     {
+        /** @var list<FleetCabinRow> $rows */
         $rows = $this->connection()->fetchAll(sprintf(
             'SELECT a.code, a.title, a.manufacturer, a.max_range_km, a.cruise_speed_kmh,'
             . ' a.engine_count, a.is_widebody, c.cabin, c.layout, c.pitch_inches,'
@@ -216,14 +242,14 @@ class Cabins extends AbstractCommand
                 $table->addRow(new TableSeparator());
             }
 
-            $seen = (string) $row['code'];
+            $seen = $row['code'];
 
             $table->addRow([
                 $row['code'],
                 $row['title'],
                 $row['is_widebody'] ? 'wide' : 'narrow',
-                number_format((int) $row['max_range_km']) . ' km',
-                number_format((int) $row['cruise_speed_kmh']) . ' km/h',
+                number_format($row['max_range_km']) . ' km',
+                number_format($row['cruise_speed_kmh']) . ' km/h',
                 ...$this->cabinCells($row),
             ]);
         }
@@ -236,7 +262,7 @@ class Cabins extends AbstractCommand
     /**
      * The cabin half of a fleet row.
      *
-     * @param array<string, mixed> $row
+     * @param FleetCabinRow $row
      * @return list<string>
      */
     private function cabinCells(array $row): array
@@ -245,10 +271,10 @@ class Cabins extends AbstractCommand
             return ['—', '', '', '', '', ''];
         }
 
-        $cabin = CabinClass::tryFromCode((string) $row['cabin']);
+        $cabin = CabinClass::tryFromCode($row['cabin']);
 
         return [
-            $cabin?->label() ?? (string) $row['cabin'],
+            $cabin?->label() ?? $row['cabin'],
             (string) $row['layout'],
             $row['pitch_inches'] . '"',
             $row['width_inches'] . '"',
@@ -271,6 +297,7 @@ class Cabins extends AbstractCommand
             $sums[] = sprintf('SUM((mask & %d) > 0) AS %s', $cabin->bit(), strtolower($cabin->code()));
         }
 
+        /** @var CabinTotalsRow|null $row */
         $row = $this->connection()->fetchAll(sprintf(
             'SELECT COUNT(*) AS total, %s FROM ('
             . 'SELECT COALESCE(m.mask, %d) AS mask FROM %s f LEFT JOIN %s ON m.aircraft = f.aircraft'
@@ -285,10 +312,18 @@ class Cabins extends AbstractCommand
             return;
         }
 
-        $total = max(1, (int) $row['total']);
+        $total = max(1, $row['total']);
 
         foreach (CabinClass::cases() as $cabin) {
-            $count = (int) $row[strtolower($cabin->code())];
+            // A literal key per case, not `$row[strtolower($cabin->code())]`
+            // -- a dynamic offset stays `mixed` even against a sealed shape
+            // like `CabinTotalsRow`.
+            $count = (int) match ($cabin) {
+                CabinClass::Economy => $row['y'],
+                CabinClass::PremiumEconomy => $row['w'],
+                CabinClass::Business => $row['c'],
+                CabinClass::First => $row['f'],
+            };
 
             $this->formatOutput(
                 'Flights selling ' . $cabin->label(),
@@ -316,6 +351,7 @@ class Cabins extends AbstractCommand
         $this->io->writeln('<comment>' . $header . '</comment>');
 
         foreach (self::SAMPLE_BANDS as [$lo, $hi]) {
+            /** @var FareSampleRow|null $row */
             $row = $this->connection()->fetchAll(sprintf(
                 'SELECT f.distance, f.aircraft, f.price_base, f.price_tax,'
                 . ' COALESCE(m.mask, %d) AS mask'
@@ -330,7 +366,7 @@ class Cabins extends AbstractCommand
                 continue;
             }
 
-            $distance = (int) $row['distance'];
+            $distance = $row['distance'];
             $economy = (float) $row['price_base'] + (float) $row['price_tax'];
             $mask = (int) $row['mask'];
 

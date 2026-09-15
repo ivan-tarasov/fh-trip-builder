@@ -22,13 +22,6 @@ use TripBuilder\Service\PostImageUploader;
 use TripBuilder\View\Airside\PostImages;
 use TripBuilder\View\Airside\PostImageSet;
 
-#[AsCommand(
-    name: 'airside:import',
-    description: 'Make the Airside posts in the database match the files in config/content/airside.',
-    aliases: [],
-    hidden: false,
-)]
-
 /**
  * The Airside posts, from files into rows.
  *
@@ -40,7 +33,18 @@ use TripBuilder\View\Airside\PostImageSet;
  *
  * What differs from help, and only this: a post carries a date it chooses
  * rather than a position somebody assigns, and it may carry a hero image.
+ *
+ * @phpstan-type Post array{
+ *     title: string, published_at: string, author: string, summary: string,
+ *     hero: ?string, hero_alt: ?string, tags: array<string, string>, body: string,
+ * }
  */
+#[AsCommand(
+    name: 'airside:import',
+    description: 'Make the Airside posts in the database match the files in config/content/airside.',
+    aliases: [],
+    hidden: false,
+)]
 final class Import extends AbstractCommand
 {
     private const string CONTENT_DIR = 'config/content/airside';
@@ -349,7 +353,7 @@ final class Import extends AbstractCommand
      * Public and static for the reason `parse()` is: it is a judgement the
      * import makes, and testing it needs neither the table nor the command.
      *
-     * @param array<string, array<string, mixed>> $posts
+     * @param array<string, Post> $posts
      * @return list<string>
      */
     public static function missingImages(array $posts): array
@@ -359,11 +363,11 @@ final class Import extends AbstractCommand
         foreach ($posts as $slug => $post) {
             $wanted = [];
 
-            if (($post['hero'] ?? null) !== null) {
-                $wanted['hero'] = [(string) $post['hero']];
+            if ($post['hero'] !== null) {
+                $wanted['hero'] = [$post['hero']];
             }
 
-            $body = PostImages::inBody((string) ($post['body'] ?? ''));
+            $body = PostImages::inBody($post['body']);
 
             if ($body !== []) {
                 $wanted['image'] = array_values(array_unique($body));
@@ -528,7 +532,7 @@ final class Import extends AbstractCommand
      *
      * Public and static for the reason `parse()` is.
      *
-     * @param array<string, array<string, mixed>> $posts
+     * @param array<string, Post> $posts
      * @return list<string>
      */
     public static function tagNameClashes(array $posts): array
@@ -537,14 +541,14 @@ final class Import extends AbstractCommand
         $clashes = [];
 
         foreach ($posts as $slug => $post) {
-            foreach ($post['tags'] ?? [] as $tag => $name) {
+            foreach ($post['tags'] as $tag => $name) {
                 if (isset($seen[$tag]) && $seen[$tag]['name'] !== $name) {
                     $clashes[] = sprintf(
                         'tag `%s` is written `%s` in %s.md and `%s` in %s.md -- pick one.',
                         $tag,
                         $seen[$tag]['name'],
                         $seen[$tag]['slug'],
-                        (string) $name,
+                        $name,
                         $slug,
                     );
 

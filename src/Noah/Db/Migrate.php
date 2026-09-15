@@ -114,9 +114,10 @@ class Migrate extends AbstractCommand
             return false;
         }
 
+        /** @var list<string> $statements */
         foreach ($statements as $sql) {
             try {
-                $this->connection()->pdo()->exec((string) $sql);
+                $this->connection()->pdo()->exec($sql);
             } catch (Throwable $e) {
                 $this->formatOutput($action, 'failed', 'danger');
                 // Named, so a half-applied migration says which statement to
@@ -157,10 +158,16 @@ class Migrate extends AbstractCommand
      */
     private function applied(): array
     {
-        return array_map(
-            static fn(array $row): string => (string) $row['version'],
-            $this->connection()->fetchAll('SELECT version FROM ' . self::TABLE),
-        );
+        /** @var list<array{version: string}> $rows */
+        $rows = $this->connection()->fetchAll('SELECT version FROM ' . self::TABLE);
+
+        return array_map(self::version(...), $rows);
+    }
+
+    /** @param array{version: string} $row */
+    private static function version(array $row): string
+    {
+        return $row['version'];
     }
 
     /**

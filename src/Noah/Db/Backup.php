@@ -54,7 +54,8 @@ final class Backup extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $binary = (string) $input->getOption('binary');
+        /** @var string $binary */
+        $binary = $input->getOption('binary');
 
         if (!Dump::isAvailable($binary)) {
             $this->io->error(sprintf(

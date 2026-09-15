@@ -378,8 +378,9 @@ class Import extends AbstractCommand
     /**
      * Every `.md` file in one directory, parsed and keyed by slug.
      *
-     * @param callable(string): array<string, mixed> $parse
-     * @return array<string, array<string, mixed>>
+     * @template T of array<string, mixed>
+     * @param callable(string): T $parse
+     * @return array<string, T>
      */
     private static function read(string $directory, callable $parse): array
     {
@@ -411,7 +412,7 @@ class Import extends AbstractCommand
     /**
      * Articles pointing at a category that is not there, named one per line.
      *
-     * @param array<string, array<string, mixed>> $articles
+     * @param array<string, array{title: string, short: ?string, category: string, icon: string, position: int, summary: string, body: string}> $articles
      * @param list<string> $known
      * @return list<string>
      */
@@ -424,7 +425,7 @@ class Import extends AbstractCommand
                 $unknown[] = sprintf(
                     '%s.md names category `%s`, which does not exist. Known: %s.',
                     $slug,
-                    (string) $article['category'],
+                    $article['category'],
                     implode(', ', $known) ?: '(none)',
                 );
             }

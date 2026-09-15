@@ -19,7 +19,14 @@ use TripBuilder\Database\Table;
 use TripBuilder\Helper;
 use TripBuilder\Horizon;
 use TripBuilder\Noah\AbstractCommand;
+use TripBuilder\Repository\AirportRepository;
 
+/**
+ * @phpstan-import-type AirportFullRow from AirportRepository
+ *
+ * @phpstan-type AirlineSeedRow array{code: string, country: string|null, hubs: string|null, traffic: int}
+ * @phpstan-type FareBrandSeedRow array{code: string, weight: int}
+ */
 #[AsCommand(
     name: 'flights:add',
     description: 'Generate flights to database.',
@@ -68,6 +75,7 @@ class Generate extends AbstractCommand
 
     private const int INSERT_BATCH_SIZE = 500;
 
+    /** @var array<string, int> */
     private array $count = [
         self::COUNT_DUPLICATES => 0,
         self::COUNT_TOTAL => 0,
@@ -99,6 +107,7 @@ class Generate extends AbstractCommand
      */
     private function plan(InputInterface $input, int $flightsToAdd): ?array
     {
+        /** @var string|null $day */
         $day = $input->getOption('day');
         $level = $input->getOption('level') === true;
 
@@ -107,7 +116,7 @@ class Generate extends AbstractCommand
         }
 
         if ($day !== null) {
-            return [self::readDay((string) $day) => $flightsToAdd];
+            return [self::readDay($day) => $flightsToAdd];
         }
 
         if (!$level) {
@@ -122,12 +131,15 @@ class Generate extends AbstractCommand
         // put a Honolulu evening on the following day.
         $have = [];
 
-        foreach ($this->connection()->fetchAll(
+        /** @var list<array{day: string, flights: int}> $rows */
+        $rows = $this->connection()->fetchAll(
             'SELECT DATE(departure_time) AS day, COUNT(*) AS flights FROM ' . Table::Flights->value
             . ' WHERE departure_time >= ? AND departure_time < ? + INTERVAL 1 DAY GROUP BY day',
             [$window[0], $window[count($window) - 1]],
-        ) as $row) {
-            $have[(string) $row['day']] = (int) $row['flights'];
+        );
+
+        foreach ($rows as $row) {
+            $have[$row['day']] = $row['flights'];
         }
 
         return DayPlan::level($window, $have, $flightsToAdd);
@@ -169,7 +181,7 @@ class Generate extends AbstractCommand
         $flightsToAdd = $input->getArgument('flights') ?? $this->io->ask(
             'Number of flights to add',
             (string) self::FLIGHTS_COUNT,
-            function (string $number): int {
+            function (mixed $number): int {
                 if (!is_numeric($number)) {
                     throw new RuntimeException('You must type a number.');
                 }
@@ -189,6 +201,7 @@ class Generate extends AbstractCommand
         // much of it they carry. Without the filter every one of the ~1,150
         // carriers flew equally, so obscure operators outnumbered the majors —
         // and many of them have no logo to show.
+        /** @var list<AirlineSeedRow> $airlines */
         $airlines = $this->connection()->fetchAll(
             'SELECT code, country, hubs, traffic FROM ' . Table::Airlines->value
             . ' WHERE is_major = 1 AND traffic > 0',
@@ -200,6 +213,7 @@ class Generate extends AbstractCommand
             return Command::INVALID;
         }
 
+        /** @var list<AirportFullRow> $airports */
         $airports = $this->connection()->fetchAll(
             'SELECT * FROM ' . Table::Airports->value
             . ' WHERE enabled = 1 AND is_major = 1 AND traffic_weight > 0',
@@ -223,6 +237,7 @@ class Generate extends AbstractCommand
 
         // The fare each leg is sold under. Cumulative weights so a brand is one
         // binary search rather than a scan, the same shape as the fleet draw.
+        /** @var list<FareBrandSeedRow> $brands */
         $brands = $this->connection()->fetchAll(
             'SELECT code, weight FROM ' . Table::FareBrands->value . ' WHERE weight > 0',
         );
@@ -239,7 +254,7 @@ class Generate extends AbstractCommand
 
         foreach ($brands as $brand) {
             $brandTotal += (float) $brand['weight'];
-            $brandCodes[] = (string) $brand['code'];
+            $brandCodes[] = $brand['code'];
             $brandCumulative[] = $brandTotal;
         }
 
@@ -369,13 +384,13 @@ class Generate extends AbstractCommand
                     departureTime: $departureDateTime,
                     departureUtc: LegBuilder::departureUtc(
                         $departureDateTime,
-                        (string) $departAirport['timezone_name'],
+                        $departAirport['timezone_name'],
                     ),
                     arrivalAirport: $arriveAirport['code'],
                     arrivalTime: LegBuilder::arrivalTime(
                         $departureDateTime,
-                        (string) $departAirport['timezone_name'],
-                        (string) $arriveAirport['timezone_name'],
+                        $departAirport['timezone_name'],
+                        $arriveAirport['timezone_name'],
                         $leg->duration,
                     ),
                     distance: $distance,
@@ -420,13 +435,16 @@ class Generate extends AbstractCommand
         // Show statistic
         $this->io->writeln('<primary> Summary: </primary>');
         foreach ($this->count as $key => $count) {
-            $this->formatOutput($key, number_format((int) $count), 'info');
+            $this->formatOutput($key, number_format($count), 'info');
         }
+
+        /** @var int $totalInDatabase */
+        $totalInDatabase = $this->connection()->fetchValue('SELECT count(1) FROM ' . Table::Flights->value);
 
         // Total rows in the flight table
         $this->formatOutput(
             'Total in Database',
-            number_format((int) $this->connection()->fetchValue('SELECT count(1) FROM ' . Table::Flights->value)),
+            number_format($totalInDatabase),
             'info',
             true,
         );
@@ -486,8 +504,8 @@ class Generate extends AbstractCommand
      * pairs are still reachable, as the connecting tiers of the search build
      * them out of legs that do exist.
      *
-     * @param list<array<string, mixed>> $airports
-     * @param list<array<string, mixed>> $airlines
+     * @param list<AirportFullRow> $airports
+     * @param list<AirlineSeedRow> $airlines
      * @param int $maxLegKm longest nonstop this network will schedule
      * @return array{0: list<int>, 1: list<float>, 2: list<int>, 3: list<string>, 4: float}
      */
@@ -501,10 +519,10 @@ class Generate extends AbstractCommand
         $carrierWeight = [];
 
         foreach ($airlines as $airline) {
-            $code = (string) $airline['code'];
+            $code = $airline['code'];
             $carrierHubs[$code] = array_flip(preg_split('/\s+/', trim((string) $airline['hubs']), -1, PREG_SPLIT_NO_EMPTY) ?: []);
             $carrierCountry[$code] = (string) $airline['country'];
-            $carrierWeight[$code] = (int) $airline['traffic'];
+            $carrierWeight[$code] = $airline['traffic'];
         }
 
         $routes = [];
@@ -519,10 +537,10 @@ class Generate extends AbstractCommand
                     continue;
                 }
 
-                $from = (string) $airports[$i]['code'];
-                $to = (string) $airports[$j]['code'];
-                $fromCountry = (string) $airports[$i]['country_code'];
-                $toCountry = (string) $airports[$j]['country_code'];
+                $from = $airports[$i]['code'];
+                $to = $airports[$j]['code'];
+                $fromCountry = $airports[$i]['country_code'];
+                $toCountry = $airports[$j]['country_code'];
 
                 $serving = [];
                 $servingWeight = 0;
@@ -554,7 +572,7 @@ class Generate extends AbstractCommand
                     continue;
                 }
 
-                $routeWeight = (int) $airports[$i]['traffic_weight'] * (int) $airports[$j]['traffic_weight']
+                $routeWeight = $airports[$i]['traffic_weight'] * $airports[$j]['traffic_weight']
                     / (1 + $distance / self::ROUTE_DISTANCE_HALVING_KM);
 
                 // Share the route's traffic among the carriers that fly it.
@@ -645,8 +663,11 @@ class Generate extends AbstractCommand
         ));
 
         $progressIndicator->advance();
-        $this->count[self::COUNT_DUPLICATES] = (int) $connection->fetchValue('SELECT count(*) FROM ' . $tempTable);
-        $this->count[self::COUNT_TOTAL] -= $this->count[self::COUNT_DUPLICATES];
+
+        /** @var int $duplicates */
+        $duplicates = $connection->fetchValue('SELECT count(*) FROM ' . $tempTable);
+        $this->count[self::COUNT_DUPLICATES] = $duplicates;
+        $this->count[self::COUNT_TOTAL] -= $duplicates;
 
         // 2. Deleting duplicate rows from the flight table
         $progressIndicator->advance();

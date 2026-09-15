@@ -20,6 +20,8 @@ use TripBuilder\Noah\Airside\Import;
  * and may carry an image. Both are ways a file can be wrong that an article
  * could not be -- a date that does not exist, and a picture with nothing said
  * about what it shows.
+ *
+ * @phpstan-import-type Post from Import
  */
 final class AirsideImportTest extends TestCase
 {
@@ -310,8 +312,8 @@ final class AirsideImportTest extends TestCase
     public function testTwoSpellingsOfOneTagAreRefusedAndBothNamed(): void
     {
         $clashes = Import::tagNameClashes([
-            'one' => ['tags' => ['hand-luggage' => 'Hand luggage']],
-            'two' => ['tags' => ['hand-luggage' => 'Hand Luggage']],
+            'one' => self::post(['tags' => ['hand-luggage' => 'Hand luggage']]),
+            'two' => self::post(['tags' => ['hand-luggage' => 'Hand Luggage']]),
         ]);
 
         self::assertCount(1, $clashes);
@@ -322,8 +324,8 @@ final class AirsideImportTest extends TestCase
     public function testTheSameSpellingInTwoFilesIsFine(): void
     {
         self::assertSame([], Import::tagNameClashes([
-            'one' => ['tags' => ['security' => 'Security']],
-            'two' => ['tags' => ['security' => 'Security']],
+            'one' => self::post(['tags' => ['security' => 'Security']]),
+            'two' => self::post(['tags' => ['security' => 'Security']]),
         ]));
     }
 
@@ -341,7 +343,7 @@ final class AirsideImportTest extends TestCase
     public function testAHeroThatIsNotCommittedIsNamed(): void
     {
         $missing = Import::missingImages([
-            'picking-a-seat' => ['hero' => 'not-a-real-file.jpg'],
+            'picking-a-seat' => self::post(['hero' => 'not-a-real-file.jpg']),
         ]);
 
         self::assertCount(1, $missing);
@@ -351,14 +353,14 @@ final class AirsideImportTest extends TestCase
 
     public function testAPostWithNoHeroIsNotAMissingImage(): void
     {
-        self::assertSame([], Import::missingImages(['picking-a-seat' => ['hero' => null]]));
+        self::assertSame([], Import::missingImages(['picking-a-seat' => self::post()]));
     }
 
     /** An image inside the prose has to be committed too. */
     public function testABodyImageThatIsNotCommittedIsNamed(): void
     {
         $missing = Import::missingImages([
-            'picking-a-seat' => ['hero' => null, 'body' => 'Look: ![a wing](never-committed.jpg)'],
+            'picking-a-seat' => self::post(['body' => 'Look: ![a wing](never-committed.jpg)']),
         ]);
 
         self::assertCount(1, $missing);
@@ -374,12 +376,33 @@ final class AirsideImportTest extends TestCase
     public function testAnImageInACodeBlockIsNotAMissingImage(): void
     {
         self::assertSame([], Import::missingImages([
-            'writing-posts' => ['hero' => null, 'body' => "Write:\n\n```\n![alt](example.jpg)\n```"],
+            'writing-posts' => self::post(['body' => "Write:\n\n```\n![alt](example.jpg)\n```"]),
         ]));
     }
 
     private static function file(string $header, string $body): string
     {
         return "---\n" . $header . "\n---\n\n" . $body . "\n";
+    }
+
+    /**
+     * @param array<string, mixed> $overrides
+     * @return Post
+     */
+    private static function post(array $overrides = []): array
+    {
+        /** @var Post $post */
+        $post = $overrides + [
+            'title' => 'How to pick a seat',
+            'published_at' => '2026-03-01 00:00:00',
+            'author' => 'A Writer',
+            'summary' => 'Where you sit is decided before you board, and mostly by the fare.',
+            'hero' => null,
+            'hero_alt' => null,
+            'tags' => [],
+            'body' => '',
+        ];
+
+        return $post;
     }
 }

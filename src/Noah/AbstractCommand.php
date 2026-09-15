@@ -14,6 +14,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use TripBuilder\Database\Connection;
 use TripBuilder\Helper;
 
+/**
+ * @phpstan-type TableNameRow array{name: string}
+ */
 abstract class AbstractCommand extends Command
 {
     /**
@@ -139,10 +142,12 @@ abstract class AbstractCommand extends Command
     }
 
     /**
+     * @return list<string>
      * @throws Exception
      */
     protected function getAllDatabaseTables(): array
     {
+        /** @var list<TableNameRow> $rows */
         $rows = $this->connection()->fetchAll(
             // DATABASE() rather than $_ENV -- see the note in Install::tableExists().
             'SELECT table_name AS name FROM information_schema.tables'
@@ -150,7 +155,13 @@ abstract class AbstractCommand extends Command
             ['BASE TABLE'],
         );
 
-        return array_map(static fn(array $row): string => (string) $row['name'], $rows);
+        return array_map(self::tableName(...), $rows);
+    }
+
+    /** @param TableNameRow $row */
+    private static function tableName(array $row): string
+    {
+        return $row['name'];
     }
 
     private function buildFormats(): void
