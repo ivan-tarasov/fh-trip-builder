@@ -172,62 +172,58 @@ final class AdminShellTest extends TestCase
     }
 
     /**
-     * The panel wears the site's palette, and keeps wearing it.
+     * The panel wears Orchid's own palette, and keeps wearing it.
      *
-     * The values are copied into `admin.css` rather than inherited, because
-     * inheriting would mean loading all 8,500 lines of `main.css` to get forty
-     * tokens. A copy drifts, so this is what stops it: change a colour on the
-     * public side and this fails until the panel is changed with it.
-     *
-     * The rail is the deliberate exception and is not listed. It wears the
-     * site's navy, but its accent has to be the *lifted* teal in both palettes
-     * -- measured, the light one is 2.85 on that navy, which is under the bar
-     * for text.
+     * **Reversed from the site's palette in A10 (#286).** This test used to
+     * compare `admin.css` against `main.css` token-for-token, because A3.5
+     * copied the site's teal so the panel "looked like the same people made
+     * it". A10 buys a dashboard template specifically for its design, so that
+     * comparison is gone -- there is nothing left to stay in step with -- and
+     * what replaces it is the opposite guard: these are Orchid's own
+     * documented values (`assets/css/orchid.css`'s `--orchid-*` tokens,
+     * renamed onto the variable names the rest of this file reads), and a
+     * silent edit away from them is a drift away from what was actually
+     * bought.
      */
-    #[DataProvider('sharedColours')]
-    public function testThePanelWearsTheSitesPalette(string $admin, string $site): void
+    #[DataProvider('orchidColours')]
+    public function testThePanelWearsOrchidsOwnPalette(string $token, string $light, string $dark): void
     {
+        $css = self::read('public/css/admin.css');
+
+        self::assertSame($light, self::colour($css, $token), $token . ' has drifted from Orchid\'s light value');
+
+        // The dark declaration appears twice -- the media query and the
+        // explicit attribute -- so this is the second occurrence, not the
+        // light block's.
         self::assertSame(
-            self::colour(self::read('public/css/main.css'), $site),
-            self::colour(self::read('public/css/admin.css'), $admin),
-            $admin . ' has drifted from main.css ' . $site,
+            $dark,
+            self::colour($css, $token, occurrence: 2),
+            $token . ' has drifted from Orchid\'s dark value',
         );
     }
 
     /**
-     * Admin token => the one in `main.css` it was copied from.
+     * Token => Orchid's own light and dark values for it.
      *
-     * @return iterable<string, array{string, string}>
+     * @return iterable<string, array{string, string, string}>
      */
-    public static function sharedColours(): iterable
+    public static function orchidColours(): iterable
     {
-        $light = [
-            '--ground' => '--surface',
-            '--surface' => '--surface-raised',
-            '--sunken' => '--surface-sunken',
-            '--rule' => '--line',
-            '--rule-strong' => '--line-strong',
-            '--ink' => '--ink-body',
-            '--ink-quiet' => '--ink-muted',
-            '--ink-faint' => '--ink-faint',
-            '--signal' => '--brand-accent',
-            '--signal-soft' => '--brand-tint',
-            '--signal-edge' => '--brand-tint-edge',
-            '--good' => '--brand-success',
-            '--good-soft' => '--success-tint',
-            '--good-edge' => '--success-tint-edge',
-            '--bad' => '--brand-danger',
-            '--bad-soft' => '--danger-tint',
-            '--bad-edge' => '--danger-tint-edge',
-            '--rail' => '--brand-ink',
-            '--rail-rule' => '--brand-ink-700',
-            // The rail's accent is the dark-palette teal in both palettes,
-            // because the rail is a dark band in both.
-            '--rail-signal' => '--d-brand-accent',
+        $tokens = [
+            '--ground' => ['#F5F6FA', '#0F1220'],
+            '--surface' => ['#FFFFFF', '#171A2B'],
+            '--sunken' => ['#F2F3F8', '#1E2338'],
+            '--rule' => ['#E9ECF3', '#232842'],
+            '--ink' => ['#1E2436', '#E6E8F2'],
+            '--ink-quiet' => ['#6B7385', '#8891A8'],
+            '--signal' => ['#4F46E5', '#818CF8'],
+            '--signal-accent' => ['#22D3EE', '#22D3EE'],
+            '--good' => ['#10B981', '#34D399'],
+            '--bad' => ['#EF4444', '#F87171'],
         ];
 
-        foreach ($light as $admin => $site) {
-            yield $admin . ' is ' . $site => [$admin, $site];
+        foreach ($tokens as $token => [$light, $dark]) {
+            yield $token => [$token, $light, $dark];
         }
     }
 
@@ -237,13 +233,13 @@ final class AdminShellTest extends TestCase
      * First, because both files declare each one twice -- once for the light
      * palette and once for dark -- and the light block comes first in each.
      */
-    private static function colour(string $css, string $token): string
+    private static function colour(string $css, string $token, int $occurrence = 1): string
     {
-        $found = preg_match('/' . preg_quote($token, '/') . ':\s*(#[0-9A-Fa-f]{3,8})\s*;/', $css, $match);
+        $found = preg_match_all('/' . preg_quote($token, '/') . ':\s*(#[0-9A-Fa-f]{3,8})\s*;/', $css, $matches);
 
-        self::assertSame(1, $found, $token . ' is not declared as a colour');
+        self::assertGreaterThanOrEqual($occurrence, $found, $token . ' is not declared that many times as a colour');
 
-        return strtoupper($match[1]);
+        return strtoupper($matches[1][$occurrence - 1]);
     }
 
     /**

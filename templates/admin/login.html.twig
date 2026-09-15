@@ -4,54 +4,89 @@
 
 {# No rail: there is nothing to navigate until somebody is signed in, and
    showing the panel's shape to a stranger tells them what is worth attacking.
-   Orchid's own sign-in page is a two-column marketing layout -- a feature
-   list, a testimonial, three social-login buttons -- built for a multi-tenant
-   product this is not: one operator, one password, no accounts. What is taken
-   here is the card, the shadow and the Bootstrap form controls; not the hero
-   half, which would show a stranger more than the old page did, not less
+
+   Orchid's own sign-in page is a two-column hero -- a feature list, a
+   testimonial, three social-login buttons -- built for a multi-tenant
+   product this is not: one operator, one password, no accounts. The split,
+   the gradient, the card and the form controls are taken as Orchid built
+   them; the hero's three bullets are not its fabricated "40+ integrations"
+   and "SOC 2 Type II", which would describe a product that does not exist --
+   they are the three true things about how this gate actually behaves,
+   which is data alignment rather than a reason to drop the hero entirely
    (A10.1, #287). #}
 {% block shell_class %} shell--gate{% endblock %}
 
 {% block shell %}
+<button type="button" class="btn btn-icon js-theme gate__theme" aria-pressed="false" aria-label="Toggle dark theme">
+    <i class="bi bi-sun-fill well__theme-icon well__theme-icon--sun" aria-hidden="true"></i>
+    <i class="bi bi-moon-stars-fill well__theme-icon well__theme-icon--moon" aria-hidden="true"></i>
+</button>
+
 <main class="gate" id="main" tabindex="-1">
-    <button type="button" class="btn btn-icon js-theme gate__theme" aria-pressed="false" aria-label="Toggle dark theme">
-        <i class="bi bi-sun-fill well__theme-icon well__theme-icon--sun" aria-hidden="true"></i>
-        <i class="bi bi-moon-stars-fill well__theme-icon well__theme-icon--moon" aria-hidden="true"></i>
-    </button>
+    <aside class="gate__hero" aria-hidden="true">
+        <a class="gate__hero-brand" href="/">
+            {# The site's own mark -- see `rail.html.twig` for where the icon
+               comes from. A glass chip here rather than teal: the hero is
+               already a vivid gradient, and a flat teal square fought it
+               rather than sitting on it. #}
+            <span class="gate__hero-mark"><i class="bi bi-airplane-fill"></i></span>
+            <span>{{ config('app.name') }}</span>
+        </a>
 
-    <div class="gate__card">
-        <p class="gate__mark">{{ config('app.name') }} admin</p>
-        <h1 class="gate__title">Sign in</h1>
+        <div class="gate__hero-body">
+            <span class="gate__hero-eyebrow"><i class="bi bi-shield-lock" aria-hidden="true"></i> Operator access</span>
+            <h1 class="gate__hero-title">One password, and nothing else to break in through.</h1>
+            <p class="gate__hero-lead">There is no account system behind this gate — just a password the owner holds, and a session while it lasts.</p>
 
-        {% if not configured %}
-            {# Said on the page where the person who can fix it is standing. The
-               alternative is a correct password refused with no explanation. #}
-            <p class="notice" role="status">
-                No password is set on this server. Run <code>php noah admin:password</code>
-                and put the line it prints in <code>.env</code>.
-            </p>
-        {% endif %}
+            <ul class="gate__hero-facts">
+                <li><i class="bi bi-person-x" aria-hidden="true"></i><span>No accounts table — no row to leak, no user to enumerate.</span></li>
+                <li><i class="bi bi-hourglass-split" aria-hidden="true"></i><span>Ten attempts an hour, then a wait — the only limit here guarding a secret rather than a table.</span></li>
+                <li><i class="bi bi-clock-history" aria-hidden="true"></i><span>A session that times out the moment it sits idle.</span></li>
+            </ul>
+        </div>
+    </aside>
 
-        {% if error %}
-            {# `assertive`, not `polite`: the field is about to be retyped, and a
-               message read out after the typing has started is read out too late. #}
-            <p class="notice notice--bad" role="alert" aria-live="assertive">{{ error }}</p>
-        {% endif %}
+    <section class="gate__panel">
+        <a class="gate__mark" href="/">
+            <span class="gate__mark-logo" aria-hidden="true"><i class="bi bi-airplane-fill"></i></span>
+            <span class="gate__mark-text">{{ config('app.name') }}</span>
+        </a>
 
-        <form method="post" action="/admin/login">
-            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <div class="gate__form">
+            <p class="gate__eyebrow">Sign in</p>
+            <h2 class="gate__title">Welcome back</h2>
+            <p class="gate__subtitle">Enter the operator password to continue.</p>
 
-            <div class="field">
-                <label for="admin-password" class="form-label">Password</label>
-                {# `current-password` so a password manager offers the right entry,
-                   and autofocus because this page has one thing on it. #}
-                <input id="admin-password" name="password" type="password" class="form-control"
-                       autocomplete="current-password" autocapitalize="off" spellcheck="false"
-                       required autofocus>
-            </div>
+            {% if not configured %}
+                {# Said on the page where the person who can fix it is standing. The
+                   alternative is a correct password refused with no explanation. #}
+                <p class="notice" role="status">
+                    No password is set on this server. Run <code>php noah admin:password</code>
+                    and put the line it prints in <code>.env</code>.
+                </p>
+            {% endif %}
 
-            <button type="submit" class="button button--go button--block">Sign in</button>
-        </form>
-    </div>
+            {% if error %}
+                {# `assertive`, not `polite`: the field is about to be retyped, and a
+                   message read out after the typing has started is read out too late. #}
+                <p class="notice notice--bad" role="alert" aria-live="assertive">{{ error }}</p>
+            {% endif %}
+
+            <form method="post" action="/admin/login">
+                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+
+                <div class="gate__field">
+                    <label for="admin-password" class="form-label">Password</label>
+                    {# `current-password` so a password manager offers the right entry,
+                       and autofocus because this page has one thing on it. #}
+                    <input id="admin-password" name="password" type="password" class="form-control"
+                           autocomplete="current-password" autocapitalize="off" spellcheck="false"
+                           required autofocus>
+                </div>
+
+                <button type="submit" class="gate__submit">Sign in</button>
+            </form>
+        </div>
+    </section>
 </main>
 {% endblock %}

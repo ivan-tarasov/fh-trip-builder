@@ -163,7 +163,95 @@
         show(effective());
     };
 
+    /*
+    | The sidebar: a mobile drawer below `lg`, a collapse-to-icons toggle at
+    | `lg` and up. Orchid's own `sidebar.js` behind this, minus the half that
+    | marks a clicked link "active" -- ours already renders that server-side,
+    | correctly, from the route that answered the request, so there is
+    | nothing for a click handler to get out of step with.
+    */
+    var railToggle = function () {
+        var rail = document.getElementById('adminRail');
+        var backdrop = document.querySelector('.rail-backdrop');
+
+        if (!rail) {
+            return;
+        }
+
+        var MOBILE_BREAKPOINT = 992;
+        var COLLAPSED_KEY = 'tb-admin-rail-collapsed';
+
+        var isMobile = function () {
+            return window.innerWidth < MOBILE_BREAKPOINT;
+        };
+
+        var openMobile = function () {
+            rail.classList.add('is-open');
+
+            if (backdrop) {
+                backdrop.classList.add('is-visible');
+            }
+        };
+
+        var closeMobile = function () {
+            rail.classList.remove('is-open');
+
+            if (backdrop) {
+                backdrop.classList.remove('is-visible');
+            }
+        };
+
+        var toggleDesktopCollapse = function () {
+            var root = document.documentElement;
+            var collapsed = root.hasAttribute('data-rail-collapsed');
+
+            if (collapsed) {
+                root.removeAttribute('data-rail-collapsed');
+            } else {
+                root.setAttribute('data-rail-collapsed', '');
+            }
+
+            try {
+                window.localStorage.setItem(COLLAPSED_KEY, collapsed ? '0' : '1');
+            } catch (e) {}
+        };
+
+        document.querySelectorAll('[data-rail-toggle]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (isMobile()) {
+                    rail.classList.contains('is-open') ? closeMobile() : openMobile();
+                } else {
+                    toggleDesktopCollapse();
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-rail-close]').forEach(function (el) {
+            el.addEventListener('click', closeMobile);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && rail.classList.contains('is-open')) {
+                closeMobile();
+            }
+        });
+
+        // A drawer left open across a resize past the breakpoint would sit
+        // there translated back into a static sidebar's place.
+        var resizeTimer = null;
+
+        window.addEventListener('resize', function () {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(function () {
+                if (!isMobile()) {
+                    closeMobile();
+                }
+            }, 120);
+        });
+    };
+
     markdownPreview();
     confirmFirst();
     themeToggle();
+    railToggle();
 }());

@@ -5,24 +5,34 @@
    rail that showed a single entry would say less than the truth. Nothing here
    is a dead link -- what does not exist is not clickable.
 
-   `offcanvas-lg`: a normal sidebar at `lg` and wider, a slide-in panel with its
-   own backdrop and focus trap below it -- Bootstrap's own behaviour, so the
-   rail carries no JavaScript of its own for this (A10.1, #287). #}
-<div class="offcanvas-lg offcanvas-start rail" tabindex="-1" id="adminRail" aria-labelledby="adminRailLabel">
-    {# Not `.offcanvas-header`: Bootstrap hides that class at `lg` and up,
-       built for a toggle that only makes sense while collapsed. The brand
-       mark stays visible at every width, so it gets a plain class instead. #}
+   Fixed, permanent, and the same surface as the content beside it -- Orchid's
+   own sidebar, not a separate dark band. `admin.js`'s `railToggle()` drives
+   the mobile slide-in and the desktop collapse-to-icons; there is no
+   Bootstrap component for either, since Orchid does not use one (A10.1,
+   #287).
+
+   The mark is the site's own -- `fa-plane-departure` on brand teal, the same
+   icon `footer/bottom.html.twig` and the public header already carry -- drawn
+   here with Bootstrap Icons' `bi-airplane-fill` instead of Font Awesome,
+   which stays out of the panel (A3.5, #230). Fixed teal in both palettes,
+   the same reason `main.css` gives for its own brand tile: a logo is not
+   the thing that themes. #}
+<div class="rail" id="adminRail">
     <div class="rail__top">
-        <a class="rail__mark" href="/" title="Back to the site" id="adminRailLabel">
-            <span class="rail__mark-name">{{ config('app.name') }}</span>
-            <span class="rail__mark-role">admin</span>
+        <a class="rail__mark" href="/" title="Back to the site">
+            <span class="rail__mark-logo" aria-hidden="true"><i class="bi bi-airplane-fill"></i></span>
+            <span>
+                <span class="rail__mark-name">{{ config('app.name') }}</span>
+                <span class="rail__mark-role">Admin</span>
+            </span>
         </a>
-        <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas"
-                data-bs-target="#adminRail" aria-label="Close"></button>
+        <button type="button" class="btn btn-icon d-lg-none" data-rail-close aria-label="Close navigation">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
     </div>
 
-    <div class="offcanvas-body rail__body">
-        <ul class="rail__list nav flex-column">
+    <div class="rail__body">
+        <ul class="rail__list">
             {% for item in [
                 { 'href': '/admin', 'label': 'Overview', 'icon': 'speedometer2', 'match': 'overview' },
                 { 'href': '/admin/content', 'label': 'Help content', 'icon': 'journal-text', 'match': 'content' },
@@ -30,8 +40,8 @@
                 { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'match': 'subscribers' }
             ] %}
                 {% set current = admin_section|default('') == item.match %}
-                <li class="nav-item">
-                    <a class="nav-link rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
+                <li>
+                    <a class="rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
                        {{ current ? 'aria-current="page"' : '' }}>
                         <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
                         <span>{{ item.label }}</span>
@@ -41,10 +51,10 @@
         </ul>
 
         <p class="rail__soon-label">Not built yet</p>
-        <ul class="rail__list rail__list--soon nav flex-column">
+        <ul class="rail__list">
             {% for label in ['Settings'] %}
-                <li class="nav-item">
-                    <span class="nav-link rail__item rail__item--soon">
+                <li>
+                    <span class="rail__item rail__item--soon">
                         <i class="bi bi-gear" aria-hidden="true"></i>
                         <span>{{ label }}</span>
                     </span>
@@ -55,8 +65,10 @@
         <form method="post" action="/admin/logout" class="rail__out">
             <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
             <button type="submit" class="button button--quiet button--block">
-                <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i> <span>Sign out</span>
             </button>
         </form>
     </div>
 </div>
+
+<div class="rail-backdrop" data-rail-close aria-hidden="true"></div>
