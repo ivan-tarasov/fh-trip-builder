@@ -48,6 +48,11 @@ use TripBuilder\Database\Table;
  *     arrival_time: string, duration: int, other_code: string,
  *     other_title: string, other_city: string, other_city_code: string,
  * }
+ * @phpstan-type AirportFullRow array{
+ *     code: string, country_code: string, timezone_name: string,
+ *     latitude: string, longitude: string, traffic_weight: int,
+ *     ...
+ * }
  */
 final readonly class AirportRepository
 {
