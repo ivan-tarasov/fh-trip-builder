@@ -4,6 +4,16 @@
 
 {% block title %}Settings{% endblock %}
 
+{# One icon per group name, presentation only -- `PanelSetting::group()` has
+   no reason to know what glyph its own name wears (same call as the
+   dashboard's `icons` map, G2.2, #288). A group this map does not know falls
+   back to a plain gear rather than an empty badge. #}
+{% set icons = {
+    'Search rules': 'sliders',
+    'Site identity': 'globe2',
+    'Map': 'map'
+} %}
+
 {# Every field here survived #232's own scope call: most of config/common is
    a decision coupled to code, not a preference, and this names only what is
    left -- real business rules, recoverable when wrong, and three lines of
@@ -16,76 +26,83 @@
    its own button per field -- it posts only its own name, so clicking it
    does not also save whatever else is sitting unsaved in the form. #}
 {% block content %}
-    <form method="post" class="form" action="/admin/settings">
+    <form method="post" action="/admin/settings">
         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
 
         {% for group, fields in groups %}
-            <section class="group">
-                <div class="list-row list-row--head">
-                    <span class="list-row__name">{{ group }}</span>
+            <div class="card orchid-card mb-3">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <span class="icon-badge icon-badge--sm" aria-hidden="true"><i class="bi bi-{{ icons[group]|default('gear') }}"></i></span>
+                    <span class="fw-semibold">{{ group }}</span>
                 </div>
 
-                {% for field in fields %}
-                    <div class="field{{ field.error ? ' field--bad' : '' }}">
-                        <label for="{{ field.key }}">{{ field.label }}</label>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for field in fields %}
+                            <div class="col-12 col-md-6">
+                                <label for="{{ field.key }}" class="form-label">{{ field.label }}</label>
 
-                        {% if field.is_list %}
-                            <textarea id="{{ field.key }}" name="settings[{{ field.key }}]" rows="4"
-                                      autocapitalize="off" spellcheck="false">{{ field.value }}</textarea>
-                        {% else %}
-                            <input id="{{ field.key }}" name="settings[{{ field.key }}]" type="text"
-                                   value="{{ field.value }}" autocapitalize="off" spellcheck="false">
-                        {% endif %}
+                                {% if field.is_list %}
+                                    <textarea id="{{ field.key }}" name="settings[{{ field.key }}]" rows="4"
+                                              class="form-control mono{{ field.error ? ' is-invalid' : '' }}"
+                                              autocapitalize="off" spellcheck="false">{{ field.value }}</textarea>
+                                {% else %}
+                                    <input id="{{ field.key }}" name="settings[{{ field.key }}]" type="text"
+                                           class="form-control mono{{ field.error ? ' is-invalid' : '' }}"
+                                           value="{{ field.value }}" autocapitalize="off" spellcheck="false">
+                                {% endif %}
 
-                        {% if field.error %}
-                            <p class="field__hint field__hint--bad" role="alert">{{ field.error }}</p>
-                        {% endif %}
+                                {% if field.error %}
+                                    <p class="field__hint field__hint--bad" role="alert">{{ field.error }}</p>
+                                {% endif %}
 
-                        <p class="field__hint">{{ field.reason }}</p>
+                                <p class="field__hint">{{ field.reason }}</p>
 
-                        {% if field.overridden %}
-                            <span class="flag flag--owned">Overridden</span>
-                            <button type="submit" name="reset_key" value="{{ field.key }}"
-                                    class="button button--tiny">Reset to default</button>
-                        {% else %}
-                            <span class="sheet__quiet">Using the config default</span>
-                        {% endif %}
+                                {% if field.overridden %}
+                                    <p class="mt-1 mb-0">
+                                        <span class="flag flag--owned">Overridden</span>
+                                        <button type="submit" name="reset_key" value="{{ field.key }}"
+                                                class="btn btn-sm btn-outline-secondary">Reset to default</button>
+                                    </p>
+                                {% else %}
+                                    <p class="field__hint mb-0">Using the config default</p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            </section>
+                </div>
+            </div>
         {% endfor %}
 
-        <div class="actions">
-            <button type="submit" class="button button--go">Save changes</button>
-        </div>
+        <button type="submit" class="btn btn-primary">Save changes</button>
     </form>
 
     {% if history is not empty %}
-        <section class="group">
-            <div class="list-row list-row--head">
-                <span class="list-row__name">Recent changes</span>
-            </div>
+        <p class="band mt-4">Recent changes</p>
 
-            <table class="sheet">
-                <thead>
-                    <tr>
-                        <th scope="col">Setting</th>
-                        <th scope="col">From</th>
-                        <th scope="col">To</th>
-                        <th scope="col">When</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for change in history %}
+        <div class="card orchid-card">
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0">
+                    <thead>
                         <tr>
-                            <td class="mono">{{ change.key }}</td>
-                            <td class="mono sheet__quiet">{{ change.from }}</td>
-                            <td class="mono">{{ change.to }}</td>
-                            <td class="mono sheet__quiet">{{ change.changed_at|date('j M Y, H:i') }}</td>
+                            <th scope="col">Setting</th>
+                            <th scope="col">From</th>
+                            <th scope="col">To</th>
+                            <th scope="col">When</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
+                    </thead>
+                    <tbody>
+                        {% for change in history %}
+                            <tr>
+                                <td class="mono">{{ change.key }}</td>
+                                <td class="mono text-body-secondary">{{ change.from }}</td>
+                                <td class="mono">{{ change.to }}</td>
+                                <td class="mono text-body-secondary">{{ change.changed_at|date('j M Y, H:i') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     {% endif %}
 {% endblock %}
