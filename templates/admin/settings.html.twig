@@ -4,6 +4,11 @@
 
 {% block title %}{{ group }}{% endblock %}
 
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/settings">Settings</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ group }}</li>
+{% endblock %}
+
 {# One icon per group name, presentation only -- `PanelSetting::group()` has
    no reason to know what glyph its own name wears (same call as the
    dashboard's `icons` map, G2.2, #288). A group this map does not know falls
@@ -13,6 +18,15 @@
     'Site identity': 'globe2',
     'Map': 'map'
 } %}
+
+{# One line per group, the same reasoning `icons` above gives for keeping
+   this off `PanelSetting::group()` itself (G6.1, #329). #}
+{% set descriptions = {
+    'Search rules': 'Real business rules for search results -- recoverable if a value turns out wrong.',
+    'Site identity': 'The three lines of copy the site shows as its own name and brand.',
+    'Map': 'Which provider and style draws the airport map.'
+} %}
+{% block description %}<p class="well__description">{{ descriptions[group]|default('Config values worth changing without a deploy.') }}</p>{% endblock %}
 
 {# Every field here survived #232's own scope call: most of config/common is
    a decision coupled to code, not a preference, and this names only what is

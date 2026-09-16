@@ -6,6 +6,11 @@
 
 {% block title %}{{ extra.reference ?: 'Booking ' ~ extra.id }}{% endblock %}
 
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/bookings">Bookings</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ block('title') }}</li>
+{% endblock %}
+
 {% block tools %}
     <span class="text-body-secondary small mono">#{{ extra.id }}</span>
 

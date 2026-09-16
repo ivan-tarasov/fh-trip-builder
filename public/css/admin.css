@@ -396,7 +396,9 @@ a:hover { text-decoration: underline; }
 .well { display: flex; flex-direction: column; min-width: 0; }
 
 /* Sticky and blurred, the way `.orchid-header` sits above scrolling content
-   rather than scrolling with it. */
+   rather than scrolling with it. Chrome only -- a breadcrumb and the icon
+   toggles -- since the page header below carries the title, the description
+   and that page's own actions (G6.1, #329). */
 .well__top {
   position: sticky;
   top: 0;
@@ -404,8 +406,6 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Wraps because the bookings pages put a search box and two buttons up here,
-     and a bar that cannot wrap pushes the title off a narrow screen instead. */
   flex-wrap: wrap;
   gap: 1rem;
   min-height: 4.25rem;
@@ -416,9 +416,44 @@ a:hover { text-decoration: underline; }
 }
 
 .well__lead { display: flex; align-items: center; gap: .75rem; min-width: 0; }
-.well__title { margin: 0; font-size: 1.0625rem; font-weight: 700; letter-spacing: -.01em; }
-.well__tools { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+/* Sizing comes from Bootstrap's own `.h3` (`cms-page-title`'s own split, in
+   the reference) -- only the weight, tracking and spacing below the title
+   are this app's to set. */
+.well__title { margin: 0 0 .25rem; font-weight: 700; letter-spacing: -.01em; }
+.well__tools, .well__top-tools { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .well__body { padding: 1.5rem; min-width: 0; }
+
+/* The page's own title, description and actions -- not sticky, unlike
+   `.well__top` above: it scrolls away with the content beneath it, the same
+   as Orchid's own page header inside `.orchid-main` (G6.1, #329). Wraps for
+   the same reason a page's action buttons used to live in a wrapping bar:
+   a search box and two buttons next to a long title needs a second line on
+   a narrow screen rather than pushing either off it. */
+.well__page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.well__description { margin: 0; color: var(--ink-quiet); font-size: .875rem; }
+
+/* Orchid's own `.orchid-footer` (G6.2, #330): a border rather than the
+   sticky topbar's blur, since nothing scrolls under a page's last element. */
+.well__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.well__footer a { text-decoration: none; }
+.well__footer a:hover { color: var(--ink); }
 
 /*
 | One icon button shape, shared by the nav toggle and the theme switch --

@@ -5,6 +5,8 @@
 
 {% block title %}Bookings{% endblock %}
 
+{% block description %}<p class="well__description">Every booking made on the site, searchable by reference, name or address.</p>{% endblock %}
+
 {% block tools %}
     {# A GET and not a POST, so a search can be linked, refreshed and paged.
        The cost is that the term lands in the access log, which is why the box

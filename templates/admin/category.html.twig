@@ -4,6 +4,11 @@
 
 {% block title %}{{ category ? 'Edit category' : 'New category' }}{% endblock %}
 
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/content">Help content</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ block('title') }}</li>
+{% endblock %}
+
 {% block tools %}<a class="btn btn-outline-secondary btn-sm" href="/admin/content">Back</a>{% endblock %}
 
 {% block content %}
