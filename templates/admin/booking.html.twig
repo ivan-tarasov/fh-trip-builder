@@ -385,6 +385,66 @@
         </div>
     {% endif %}
 
+    {# Outside the `if` above too, and for the same reason as the log below --
+       a booking whose flights will not build is exactly the one an operator
+       most needs to leave a note about (G8.2, #337).
+
+       Append-only, same reasoning as the log itself: a note somebody can
+       edit or delete after the fact is not a trustworthy one. Newest first,
+       unlike the log's own timeline -- this is a running note an operator
+       wants the latest of without scrolling past the rest. #}
+    <p class="band">Remarks</p>
+
+    <div class="card orchid-card mb-3">
+        <div class="card-body">
+            <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-start mb-3">
+                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="remark">
+                <div class="col-12 col-sm-3 col-md-2">
+                    <select name="tone" class="form-select form-select-sm" aria-label="Remark mark">
+                        {% for tone in remark_tones %}
+                            <option value="{{ tone.value }}">{{ tone.label() }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-7 col-md-8">
+                    <textarea
+                        name="body"
+                        class="form-control form-control-sm"
+                        rows="1"
+                        maxlength="2000"
+                        placeholder="Leave a note for whoever looks at this next…"
+                        aria-label="Remark text"
+                        required
+                    ></textarea>
+                </div>
+                <div class="col-12 col-sm-2">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+                </div>
+            </form>
+
+            {% if remarks is empty %}
+                <p class="text-body-secondary small mb-0">No remarks yet.</p>
+            {% else %}
+                <div class="d-flex flex-column gap-2">
+                    {% for remark in remarks %}
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="status-chip status-chip--{{ remark.tone ? remark.tone.chipClass() : 'muted' }} flex-shrink-0">
+                                {{ remark.tone ? remark.tone.label() : remark.raw_tone }}
+                            </span>
+                            <div class="min-w-0">
+                                <p class="mb-0">{{ remark.body }}</p>
+                                <p class="text-body-secondary small mb-0">
+                                    {{ remark.actor ? remark.actor.label() : 'somebody' }} &middot; {{ remark.created|date('j M Y, H:i') }}
+                                </p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
     {# The log.
 
        Outside the `if` above on purpose: a booking whose flights will not build

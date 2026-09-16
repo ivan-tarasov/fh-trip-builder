@@ -571,6 +571,45 @@ a:hover { text-decoration: underline; }
 
 /*
 |------------------------------------------------------------------------------
+| Form fields
+|------------------------------------------------------------------------------
+|
+| Bootstrap's own dark mode gives `.form-control`/`.form-select` a palette of
+| its own (`--bs-body-bg`, `--bs-border-color`), which this file never
+| touches -- so every text field and select in the panel rendered Bootstrap's
+| generic grey box rather than this app's surface and border, the one thing
+| left that did not actually follow the page into dark mode. `.gate__field`
+| had already worked out the fix for the login form; this is that fix made
+| general, so nothing else has to work it out a second time.
+|
+*/
+
+.form-control,
+.form-select {
+  border-radius: var(--radius);
+  border-color: var(--rule);
+  background-color: var(--surface);
+  color: var(--ink);
+}
+
+.form-control::placeholder { color: var(--ink-faint); }
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--signal);
+  background-color: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 3px var(--signal-soft);
+}
+
+.input-group-text {
+  border-color: var(--rule);
+  background-color: var(--surface);
+  color: var(--ink-quiet);
+}
+
+/*
+|------------------------------------------------------------------------------
 | The dashboard
 |------------------------------------------------------------------------------
 |
@@ -1122,21 +1161,11 @@ a:hover { text-decoration: underline; }
 .gate__field { margin-bottom: 1.1rem; }
 .gate__field .form-label { font-size: .85rem; font-weight: 600; color: var(--ink); margin-bottom: .375rem; }
 
-.gate__field .form-control {
-  border-radius: var(--radius);
-  padding: .7rem .95rem;
-  border: 1px solid var(--rule);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: .925rem;
-}
-
-.gate__field .form-control:focus {
-  border-color: var(--signal);
-  box-shadow: 0 0 0 4px var(--signal-soft);
-  background: var(--surface);
-  color: var(--ink);
-}
+/* The border, background, colour and focus ring now come from the general
+   `.form-control` rule; a bigger field earns a bigger ring, not a
+   different one, which is the only thing still worth overriding here. */
+.gate__field .form-control { padding: .7rem .95rem; font-size: .925rem; }
+.gate__field .form-control:focus { box-shadow: 0 0 0 4px var(--signal-soft); }
 
 /* The gradient CTA, Orchid's own -- a moving gradient on hover rather than a
    flat colour shift, which is what makes it read as this template's button
