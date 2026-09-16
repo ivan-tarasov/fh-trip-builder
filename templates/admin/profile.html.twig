@@ -1,0 +1,107 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Profile{% endblock %}
+
+{# Orchid's `account-settings.html` -- structure and style exactly as shown:
+   `.settings-shell`, a vertical `.settings-nav` of pills with an icon each,
+   `.tab-content` beside it, one `.settings-panel` per section (G9, #350).
+
+   Two tabs, not the reference's six: Profile is the one section this app has
+   real data behind (`config('meta.author.*')`, editable the same way Search
+   rules/Site identity/Map already are). Password explains the only rotation
+   this app actually offers -- `noah admin:password` plus a manual `.env`
+   edit -- rather than a form with nothing behind it. Notifications, Billing,
+   Team and a Danger Zone are left out entirely: there is no notification
+   system, no billing, no multi-user concept, and nothing destructive to
+   offer the one operator a fresh install ships with. #}
+{% block content %}
+    <div class="settings-shell">
+        <nav class="nav nav-pills flex-column settings-nav" role="tablist" aria-label="Account sections">
+            <button class="nav-link active" id="tab-profile" data-bs-toggle="pill" data-bs-target="#pane-profile"
+                    type="button" role="tab" aria-controls="pane-profile" aria-selected="true">
+                <i class="bi bi-person" aria-hidden="true"></i><span>Profile</span>
+            </button>
+            <button class="nav-link" id="tab-password" data-bs-toggle="pill" data-bs-target="#pane-password"
+                    type="button" role="tab" aria-controls="pane-password" aria-selected="false">
+                <i class="bi bi-shield-lock" aria-hidden="true"></i><span>Password</span>
+            </button>
+        </nav>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile">
+                <div class="settings-panel">
+                    <div class="settings-panel__head">
+                        <h2 class="h5 settings-panel__title">Profile</h2>
+                        <p class="settings-panel__desc">The identity shown in the topbar user menu and the public site's footer credit.</p>
+                    </div>
+
+                    <form method="post" action="/admin/profile">
+                        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+
+                        <div class="settings-section">
+                            <h3 class="settings-section__title">Photo</h3>
+                            <div class="d-flex align-items-center gap-3">
+                                <img class="well__user-avatar profile-photo__preview" src="{{ config('meta.author.avatar') }}" width="72" height="72" alt="">
+                                <p class="field__hint mb-0">This app has no image upload -- the avatar below is a URL, the same as a GitHub profile picture already is.</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h3 class="settings-section__title">Personal information</h3>
+                            <div class="row g-3">
+                                {% for field in fields %}
+                                    <div class="col-md-6">
+                                        <label for="{{ field.key }}" class="form-label">{{ field.label }}</label>
+                                        <input id="{{ field.key }}" name="settings[{{ field.key }}]" type="text"
+                                               class="form-control{{ field.error ? ' is-invalid' : '' }}"
+                                               value="{{ field.value }}" autocapitalize="off" spellcheck="false">
+
+                                        {% if field.error %}
+                                            <p class="field__hint field__hint--bad" role="alert">{{ field.error }}</p>
+                                        {% endif %}
+
+                                        <p class="field__hint">{{ field.reason }}</p>
+
+                                        {% if field.overridden %}
+                                            <p class="mt-1 mb-0">
+                                                <span class="flag flag--owned">Overridden</span>
+                                                <button type="submit" name="reset_key" value="{{ field.key }}"
+                                                        class="btn btn-sm btn-outline-secondary">Reset to default</button>
+                                            </p>
+                                        {% else %}
+                                            <p class="field__hint mb-0">Using the config default</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="pane-password" role="tabpanel" aria-labelledby="tab-password">
+                <div class="settings-panel">
+                    <div class="settings-panel__head">
+                        <h2 class="h5 settings-panel__title">Password &amp; security</h2>
+                        <p class="settings-panel__desc">How the operator's password is actually changed on this install.</p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3 class="settings-section__title">Changing the password</h3>
+                        <p>There is no form here on purpose. The panel checks a password against a hash stored in <code>.env</code>, and nothing in the app ever writes to that file -- so a form that looked like it changed the password would be lying about what it did.</p>
+                        <p class="mb-0">To change it: run <code>php noah admin:password</code>, paste the line it prints into <code>.env</code> on the server, and deploy. The current session stays signed in until it goes idle.</p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3 class="settings-section__title">Two-factor authentication &amp; sessions</h3>
+                        <p class="mb-0">Neither exists on this install -- one password, one session flag, no accounts table for either to attach to.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -87,6 +87,8 @@ class Routes
         // The command palette's own endpoint (G4.1, #312) -- JSON, listed in
         // EXCLUDE_HEADER_FOOTER_ROUTES below the same way `/admin/preview` is.
         '/admin/search' => 'Admin@search',
+        // Reached from the topbar user menu, not the rail (G9, #350).
+        '/admin/profile' => 'Admin@profile',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in

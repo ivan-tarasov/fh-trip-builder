@@ -114,4 +114,22 @@ final class PanelSettingTest extends TestCase
     {
         self::assertSame("AE\nSA", PanelSetting::GulfCountries->format(['AE', 'SA']));
     }
+
+    public function testProfileEmailRequiresARealAddress(): void
+    {
+        $setting = PanelSetting::ProfileEmail;
+
+        self::assertNull($setting->invalidBecause($setting->parse('ivan@tarasov.ca')));
+        self::assertNotNull($setting->invalidBecause($setting->parse('not an email')));
+        self::assertNotNull($setting->invalidBecause($setting->parse('   ')));
+    }
+
+    public function testProfileAvatarRequiresARealUrl(): void
+    {
+        $setting = PanelSetting::ProfileAvatar;
+
+        self::assertNull($setting->invalidBecause($setting->parse('https://github.com/ivan-tarasov.png')));
+        self::assertNotNull($setting->invalidBecause($setting->parse('not a url')));
+        self::assertNotNull($setting->invalidBecause($setting->parse('   ')));
+    }
 }

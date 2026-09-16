@@ -1263,6 +1263,11 @@ class AdminController extends AbstractController
         'Map' => ['slug' => 'map', 'path' => '/admin/settings/map'],
     ];
 
+    // Not in `SETTINGS_GROUPS` above: the profile page is reached from the
+    // topbar user menu, not a Settings rail child, and draws its own
+    // template (G9, #350) rather than `admin/settings.html.twig`.
+    private const string PROFILE_PATH = '/admin/profile';
+
     /**
      * The settings a config file no longer has the last word on.
      *
@@ -1420,6 +1425,35 @@ class AdminController extends AbstractController
      */
     private function settingsForm(string $group, array $errors = []): void
     {
+        $fields = $this->settingsFields($group, $errors);
+
+        // Shared across all three pages rather than filtered per group: a
+        // change to Map is still worth seeing while looking at Search
+        // rules, and filtering would need a fourth column nobody asked for.
+        $history = array_map(
+            self::historyLine(...),
+            new SettingsRepository($this->connection())->history(20),
+        );
+
+        echo new TwigRenderer()->render('admin/settings.html.twig', [
+            'group' => $group,
+            'group_slug' => self::SETTINGS_GROUPS[$group]['slug'],
+            'path' => self::SETTINGS_GROUPS[$group]['path'],
+            'fields' => $fields,
+            'history' => $history,
+        ]);
+    }
+
+    /**
+     * Every `PanelSetting` in `$group`, shaped for a form -- shared by the
+     * settings pages and the profile page (G9, #350), which draws the same
+     * "overridden, reset to default" affordance in a different template.
+     *
+     * @param array<string, string> $errors keyed by the field that failed
+     * @return list<array{key: string, label: string, reason: string, is_list: bool, overridden: bool, error: ?string, value: string}>
+     */
+    private function settingsFields(string $group, array $errors): array
+    {
         /** @var array<string, mixed> $overrides */
         $overrides = new SettingsRepository($this->connection())->all();
         $posted = $errors === [] ? null : $this->request->body->raw('settings');
@@ -1448,20 +1482,77 @@ class AdminController extends AbstractController
             ];
         }
 
-        // Shared across all three pages rather than filtered per group: a
-        // change to Map is still worth seeing while looking at Search
-        // rules, and filtering would need a fourth column nobody asked for.
-        $history = array_map(
-            self::historyLine(...),
-            new SettingsRepository($this->connection())->history(20),
-        );
+        return $fields;
+    }
 
-        echo new TwigRenderer()->render('admin/settings.html.twig', [
-            'group' => $group,
-            'group_slug' => self::SETTINGS_GROUPS[$group]['slug'],
-            'path' => self::SETTINGS_GROUPS[$group]['path'],
-            'fields' => $fields,
-            'history' => $history,
+    /**
+     * The operator's own identity page (G9, #350) -- name, email, role and
+     * avatar, editable through the same `PanelSetting` mechanism the other
+     * settings pages use, plus a read-only Password tab: there is no in-app
+     * rotation to offer, since `ADMIN_PASSWORD_HASH` is a `.env` value
+     * nothing here can write back to (A3.2, #100).
+     *
+     * @throws Exception|Error
+     */
+    public function profile(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->postProfile();
+
+            return;
+        }
+
+        $this->profileForm();
+    }
+
+    private function postProfile(): void
+    {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
+            $this->bounce(self::PROFILE_PATH);
+
+            return;
+        }
+
+        $resetKey = $this->request->body->nullableStr('reset_key');
+
+        if ($resetKey !== null) {
+            if (PanelSetting::tryFrom($resetKey) !== null) {
+                new SettingsRepository($this->connection())->remove($resetKey);
+                Settings::forget();
+                Flash::set('Reset to the config default.');
+            }
+
+            $this->bounce(self::PROFILE_PATH);
+
+            return;
+        }
+
+        $errors = $this->saveSettings('Profile');
+
+        if ($errors !== []) {
+            $this->profileForm($errors);
+
+            return;
+        }
+
+        Settings::forget();
+        Flash::set('Profile saved.');
+        $this->bounce(self::PROFILE_PATH);
+    }
+
+    /**
+     * @param array<string, string> $errors keyed by the field that failed
+     * @throws Exception|Error
+     */
+    private function profileForm(array $errors = []): void
+    {
+        echo new TwigRenderer()->render('admin/profile.html.twig', [
+            'fields' => $this->settingsFields('Profile', $errors),
         ]);
     }
 
