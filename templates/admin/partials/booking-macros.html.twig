@@ -3,6 +3,17 @@
    draw identically whether the page renders whole or a POST hands back a
    fresh fragment for `fetch()` to drop in (G8.3, #338). #}
 
+{# A block's title lives inside the card it belongs to, not in a `<p
+   class="band">` sitting above it -- Orchid's own `payments.html`
+   ("Transactions") shape, adopted here for every card on the booking page
+   rather than a bespoke header written out seven times (G8.5, #340). #}
+{% macro blockHeader(icon, title) %}
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-{{ icon }} text-body-secondary" aria-hidden="true"></i>
+        <strong>{{ title }}</strong>
+    </div>
+{% endmacro %}
+
 {# An initial or two, for a passenger row with no photo. First and last word
    of whatever name is on file -- one word gives the same letter twice, which
    is a smaller lie than a blank circle. #}
