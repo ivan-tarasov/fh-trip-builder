@@ -101,4 +101,28 @@ final readonly class SubscriberRepository
             [$id],
         ) > 0;
     }
+
+    /**
+     * Take zero or more addresses off the list in one query -- the bulk
+     * counterpart to {@see remove()} (G3.7, #310).
+     *
+     * @param list<int> $ids
+     */
+    public function removeMany(array $ids): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+
+        return $this->connection->execute(
+            'DELETE FROM ' . Table::Subscribers->value . ' WHERE id IN (' . self::placeholders($ids) . ')',
+            $ids,
+        );
+    }
+
+    /** @param list<int> $ids */
+    private static function placeholders(array $ids): string
+    {
+        return implode(', ', array_fill(0, count($ids), '?'));
+    }
 }

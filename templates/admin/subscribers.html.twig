@@ -18,11 +18,35 @@
     {% if subscribers is empty %}
         <p class="notice">Nobody has asked for fare alerts yet.</p>
     {% else %}
+        {# Its own form, mostly empty -- every checkbox and the submit button
+           below name it via `form="bulkRemoveForm"` rather than living
+           inside it. That keeps this separate from each row's own "Remove"
+           form: two independent `<form>`s, neither nested in the other,
+           neither able to interfere with what the other submits (G3.7,
+           #310). #}
+        <form id="bulkRemoveForm" method="post" action="/admin/subscribers">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        </form>
+
+        {# Hidden until something is checked -- `bulkSelect()` in `admin.js`
+           toggles `d-none`/`d-flex` rather than the `hidden` attribute,
+           which a `.d-flex` utility class would otherwise silently outrank. #}
+        <div class="d-none align-items-center justify-content-between gap-2 mb-2" data-bulk-bar>
+            <span class="text-body-secondary small" data-bulk-count></span>
+            <button type="submit" form="bulkRemoveForm" class="btn btn-sm btn-outline-danger"
+                    data-confirm="Remove the selected addresses from the fare-alert list?">
+                Remove selected
+            </button>
+        </div>
+
         <div class="card orchid-card">
             <div class="table-responsive">
-                <table class="table orchid-table align-middle mb-0">
+                <table class="table orchid-table align-middle mb-0" data-bulk-table>
                     <thead>
                         <tr>
+                            <th scope="col" style="width: 1%;">
+                                <input type="checkbox" class="form-check-input" form="bulkRemoveForm" data-bulk-select-all aria-label="Select all">
+                            </th>
                             <th scope="col">Address</th>
                             <th scope="col">Subscribed</th>
                             <th scope="col" class="text-end">&nbsp;</th>
@@ -31,6 +55,9 @@
                     <tbody>
                         {% for subscriber in subscribers %}
                             <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input" form="bulkRemoveForm" name="ids[]" value="{{ subscriber.id }}" data-bulk-checkbox aria-label="Select {{ subscriber.email }}">
+                                </td>
                                 <td>{{ subscriber.email }}</td>
                                 <td class="mono text-body-secondary">{{ subscriber.subscribed_at|date('j M Y') }}</td>
                                 <td class="text-end row-actions" style="width: 1%;">

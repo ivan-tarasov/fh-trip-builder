@@ -109,6 +109,27 @@ final class SubscriberRepositoryTest extends IntegrationTestCase
         self::assertFalse($this->subscribers()->remove(0));
     }
 
+    public function testRemoveManyTakesEveryRowOffInOneCall(): void
+    {
+        $subscribers = $this->subscribers();
+        $subscribers->add($this->email('bulk-one'));
+        $subscribers->add($this->email('bulk-two'));
+
+        $one = self::findByEmail($subscribers, $this->email('bulk-one'));
+        $two = self::findByEmail($subscribers, $this->email('bulk-two'));
+        self::assertNotNull($one);
+        self::assertNotNull($two);
+
+        self::assertSame(2, $subscribers->removeMany([$one['id'], $two['id']]));
+        self::assertNull(self::findByEmail($subscribers, $this->email('bulk-one')));
+        self::assertNull(self::findByEmail($subscribers, $this->email('bulk-two')));
+    }
+
+    public function testRemoveManyWithNoIdsTouchesNothing(): void
+    {
+        self::assertSame(0, $this->subscribers()->removeMany([]));
+    }
+
     /** @return SubscriberRow|null */
     private static function findByEmail(SubscriberRepository $subscribers, string $email): ?array
     {
