@@ -238,8 +238,7 @@ a:hover { text-decoration: underline; }
   html[data-rail-collapsed] .well { margin-left: 5.25rem; }
   html[data-rail-collapsed] .rail__mark-name,
   html[data-rail-collapsed] .rail__mark-role,
-  html[data-rail-collapsed] .rail__item span,
-  html[data-rail-collapsed] .rail__out span { display: none; }
+  html[data-rail-collapsed] .rail__item span { display: none; }
   html[data-rail-collapsed] .rail__item { justify-content: center; }
 }
 
@@ -390,8 +389,6 @@ a:hover { text-decoration: underline; }
   html[data-rail-collapsed] .rail__chevron,
   html[data-rail-collapsed] .rail__sub { display: none; }
 }
-
-.rail__out { margin: auto 0 0; padding-top: 1rem; border-top: 1px solid var(--rule); }
 
 .well { display: flex; flex-direction: column; min-width: 0; }
 
@@ -571,44 +568,62 @@ a:hover { text-decoration: underline; }
 
 .palette__empty { padding: 2.5rem 1.25rem; text-align: center; color: var(--ink-quiet); font-size: .875rem; }
 
+/* The topbar's own user menu (G6.4, #348) -- Orchid's `.orchid-profile-btn`
+   and `.orchid-dropdown--profile` shape (`analytics.html`), renamed into
+   this panel's own `.well__` vocabulary rather than its literal class
+   names. Scoped to Sign out for now, the same way the dropdown's own
+   Profile/Settings/Billing/Help Center items are not here yet -- that is
+   the user-profile work still ahead, not this one. */
+.well__user {
+  display: inline-flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .3rem .5rem;
+}
+.well__user:hover { background: var(--sunken); }
+
+.well__user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.well__user-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  text-align: left;
+}
+.well__user-name { font-weight: 600; font-size: .8125rem; }
+.well__user-role { font-size: .6875rem; color: var(--ink-quiet); }
+
+.well__user-menu {
+  min-width: 240px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 18, 32, .1);
+}
+.well__user-menu-header {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .875rem 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+.well__user-menu .well__user-avatar { width: 40px; height: 40px; }
+
+.well__user-menu .dropdown-item { padding: .55rem 1rem; font-size: .875rem; }
+.well__user-menu .dropdown-item i { font-size: 1rem; width: 20px; }
+
 /* Same pattern, the density toggle: `aria-pressed="true"` means compact is
    on (G3.6, #309). */
 .well__density-icon--compact { display: none; }
 [aria-pressed="true"] .well__density-icon--comfortable { display: none; }
 [aria-pressed="true"] .well__density-icon--compact { display: inline-block; }
-
-/*
-|------------------------------------------------------------------------------
-| Buttons
-|------------------------------------------------------------------------------
-|
-| The panel's own, once used everywhere Bootstrap's own `.btn` is now used
-| instead (G2.1-G2.5, #287-#291). One holdout: the sign-out button in the
-| rail (`admin/partials/rail.html.twig`), reached before Bootstrap's own
-| bundle has loaded on the login screen's cousin pages, so it stays on the
-| lighter component rather than pulling `.btn` in for one button.
-|
-*/
-
-.button {
-  display: inline-block;
-  padding: 0 .75rem;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: .8125rem;
-  line-height: calc(var(--row) - 2px);
-  cursor: pointer;
-}
-
-.button:hover { background: var(--sunken); text-decoration: none; }
-.button:disabled { opacity: .4; cursor: default; }
-
-.button--quiet { background: transparent; color: var(--ink-quiet); border-color: var(--rule); }
-.button--quiet:hover { background: var(--sunken); color: var(--ink); }
-.button--block { display: block; width: 100%; text-align: center; }
 
 /* Said in a word, never only in a colour. Still used on every state/flag the
    panel prints outside a `.stat-card`/`.status-chip` -- "Overridden" on a
