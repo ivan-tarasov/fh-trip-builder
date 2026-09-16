@@ -189,7 +189,7 @@
     </div>
 
     <div class="card orchid-card mb-3">
-        {{ self.blockHeader('people', 'Travelling') }}
+        {{ self.blockHeader('people', 'Travelling', booking.passengers|length ~ (booking.passengers|length == 1 ? ' passenger' : ' passengers')) }}
         <div class="table-responsive">
             <table class="table orchid-table align-middle mb-0">
                 <thead>
