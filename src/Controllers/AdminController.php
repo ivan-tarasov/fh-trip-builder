@@ -13,7 +13,6 @@ use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
 use TripBuilder\BookingStatus;
 use TripBuilder\Csrf;
-use TripBuilder\Currency;
 use TripBuilder\Flash;
 use TripBuilder\FlashTone;
 use TripBuilder\Helper;
@@ -549,7 +548,6 @@ class AdminController extends AbstractController
                 // right call for showing a price but the wrong one for saying
                 // what currency the buyer was actually charged in (G8.1, #336).
                 'currency' => $row['currency'],
-                'currency_name' => Currency::tryFrom($row['currency'])?->name,
                 'language' => $row['language'],
                 'ip_address' => $row['ip_address'],
                 'city' => $row['city'],
