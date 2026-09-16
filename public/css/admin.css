@@ -406,21 +406,37 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 1rem;
   min-height: 4.25rem;
-  padding: .5rem 1.5rem;
+  padding: .5rem 1rem;
+  background-color: var(--surface);
   border-bottom: 1px solid var(--rule);
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
   backdrop-filter: saturate(180%) blur(6px);
 }
 
-.well__lead { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+@media (max-width: 575.98px) {
+  .well__top { padding: .5rem .75rem; }
+}
+
+.well__lead { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.well__top-tools { display: flex; align-items: center; gap: .375rem; }
+
+.well__breadcrumb .breadcrumb {
+  align-items: center;
+  margin-bottom: 0;
+  font-size: .8125rem;
+  color: var(--ink-quiet);
+}
+
+.well__breadcrumb .breadcrumb a { color: var(--ink-quiet); text-decoration: none; }
+.well__breadcrumb .breadcrumb a:hover { color: var(--signal); }
+.well__breadcrumb .breadcrumb-item.active { color: var(--ink); font-weight: 500; }
+
 /* Sizing comes from Bootstrap's own `.h3` (`cms-page-title`'s own split, in
    the reference) -- only the weight, tracking and spacing below the title
    are this app's to set. */
 .well__title { margin: 0 0 .25rem; font-weight: 700; letter-spacing: -.01em; }
-.well__tools, .well__top-tools { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.well__tools { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .well__body { padding: 1.5rem; min-width: 0; }
 
 /* The page's own title, description and actions -- not sticky, unlike
@@ -449,6 +465,7 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   gap: .5rem;
   padding: 1.25rem 1.5rem;
+  background-color: var(--surface);
   border-top: 1px solid var(--rule);
 }
 
