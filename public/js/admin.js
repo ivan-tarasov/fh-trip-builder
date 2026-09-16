@@ -265,6 +265,52 @@
     };
 
     /*
+    | Comfortable or compact, the same `aria-pressed`-reads-the-icon shape as
+    | `themeToggle()` above -- minus the `matchMedia` half, since there is no
+    | OS-level "compact" preference to default to. One key, `tb-density`,
+    | read by the layout's own pre-paint script the same way `tb-theme` is
+    | (G3.6, #309).
+    */
+    var densityToggle = function () {
+        var button = document.querySelector('.js-density');
+
+        if (!button) {
+            return;
+        }
+
+        var stored = function () {
+            try {
+                return window.localStorage.getItem('tb-density') === 'compact' ? 'compact' : 'comfortable';
+            } catch (e) {
+                return 'comfortable';
+            }
+        };
+
+        var show = function (mode) {
+            button.setAttribute('aria-pressed', mode === 'compact' ? 'true' : 'false');
+        };
+
+        button.addEventListener('click', function () {
+            var next = stored() === 'compact' ? 'comfortable' : 'compact';
+            var root = document.documentElement;
+
+            if (next === 'compact') {
+                root.setAttribute('data-density', 'compact');
+            } else {
+                root.removeAttribute('data-density');
+            }
+
+            try {
+                window.localStorage.setItem('tb-density', next);
+            } catch (e) {}
+
+            show(next);
+        });
+
+        show(stored());
+    };
+
+    /*
     | The sidebar: a mobile drawer below `lg`, a collapse-to-icons toggle at
     | `lg` and up. Orchid's own `sidebar.js` behind this, minus the half that
     | marks a clicked link "active" -- ours already renders that server-side,
@@ -465,6 +511,7 @@
     toasts();
     copyButtons();
     themeToggle();
+    densityToggle();
     railToggle();
     charts();
 }());

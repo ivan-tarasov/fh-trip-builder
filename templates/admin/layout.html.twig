@@ -65,6 +65,12 @@
                 if (window.localStorage.getItem('tb-admin-rail-collapsed') === '1') {
                     document.documentElement.setAttribute('data-rail-collapsed', '');
                 }
+
+                /* No OS-level preference to fall back to here, unlike the
+                   theme above -- density is compact only when asked for. */
+                if (window.localStorage.getItem('tb-density') === 'compact') {
+                    document.documentElement.setAttribute('data-density', 'compact');
+                }
             } catch (e) {}
         }());
     </script>
@@ -136,6 +142,14 @@
 
             <div class="well__tools">
                 {% block tools %}{% endblock %}
+
+                {# One preference for every `.orchid-table` on the panel, not a
+                   per-page choice -- `densityToggle()` in `admin.js` (G3.6,
+                   #309). #}
+                <button type="button" class="btn btn-icon js-density" aria-pressed="false" aria-label="Toggle table density">
+                    <i class="bi bi-arrows-expand well__density-icon well__density-icon--comfortable" aria-hidden="true"></i>
+                    <i class="bi bi-arrows-collapse well__density-icon well__density-icon--compact" aria-hidden="true"></i>
+                </button>
 
                 <button type="button" class="btn btn-icon js-theme well__theme" aria-pressed="false" aria-label="Toggle dark theme">
                     <i class="bi bi-sun-fill well__theme-icon well__theme-icon--sun" aria-hidden="true"></i>
