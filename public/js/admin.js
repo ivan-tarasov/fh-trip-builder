@@ -132,7 +132,11 @@
                 return;
             }
 
-            var form = button.closest('form');
+            // `.form`, not `.closest('form')`: a button can belong to one
+            // through the `form="..."` attribute without being inside it at
+            // all, the bulk-remove button's own shape (G3.7, #310), and
+            // `.closest` only ever finds an ancestor.
+            var form = button.form;
 
             if (form) {
                 form.requestSubmit(button);
@@ -308,6 +312,63 @@
         });
 
         show(stored());
+    };
+
+    /*
+    | The fare-alert list's contextual toolbar: nothing until a row is
+    | checked, then a live count and the bulk-remove button -- `data-confirm`
+    | on that button routes it through the shared modal `confirmFirst()`
+    | already wires up, the same as any other destructive action.
+    |
+    | The toolbar toggles `d-none`/`d-flex` rather than the `hidden`
+    | attribute: a `.d-flex` utility class outranks `[hidden]` regardless of
+    | specificity, because author styles always beat a user-agent default,
+    | so the two would otherwise fight and `.d-flex` would win -- visible
+    | with nothing checked (G3.7, #310).
+    */
+    var bulkSelect = function () {
+        var table = document.querySelector('[data-bulk-table]');
+
+        if (!table) {
+            return;
+        }
+
+        var bar = document.querySelector('[data-bulk-bar]');
+        var count = bar.querySelector('[data-bulk-count]');
+        var selectAll = table.querySelector('[data-bulk-select-all]');
+
+        var boxes = function () {
+            return Array.prototype.slice.call(table.querySelectorAll('[data-bulk-checkbox]'));
+        };
+
+        var refresh = function () {
+            var all = boxes();
+            var checked = all.filter(function (box) { return box.checked; });
+
+            bar.classList.toggle('d-none', checked.length === 0);
+            bar.classList.toggle('d-flex', checked.length > 0);
+            count.textContent = checked.length + ' selected';
+
+            if (selectAll) {
+                selectAll.checked = checked.length > 0 && checked.length === all.length;
+                selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+            }
+        };
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                boxes().forEach(function (box) { box.checked = selectAll.checked; });
+                refresh();
+            });
+        }
+
+        table.addEventListener('change', function (event) {
+            if (event.target.matches('[data-bulk-checkbox]')) {
+                refresh();
+            }
+        });
+
+        refresh();
     };
 
     /*
@@ -512,6 +573,7 @@
     copyButtons();
     themeToggle();
     densityToggle();
+    bulkSelect();
     railToggle();
     charts();
 }());

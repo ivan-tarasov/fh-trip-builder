@@ -552,18 +552,33 @@ class AdminController extends AbstractController
     }
 
     /**
-     * The list's one action: take an address off it.
+     * The list's action: take one address off it, or several at once.
      *
-     * Whichever way E23 (#188) eventually gives a visitor their own way off
-     * this list, it belongs here too -- one row, one way to leave it.
+     * `ids` (an array) means the bulk toolbar's own form; `id` (a single
+     * value) means a row's own "Remove" -- the two never collide, since the
+     * bulk form and a row's form are separate `<form>` elements (G3.7,
+     * #310). Whichever way E23 (#188) eventually gives a visitor their own
+     * way off this list, it belongs here too.
      */
     private function removeSubscriber(): void
     {
-        if (Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
-            new SubscriberRepository($this->connection())->remove($this->request->body->int('id'));
-            Flash::set('Removed from the fare-alert list.');
-        } else {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
             Flash::set('That form went stale. Try again.', FlashTone::Error);
+            $this->bounce('/admin/subscribers');
+
+            return;
+        }
+
+        $subscribers = new SubscriberRepository($this->connection());
+        $raw = $this->request->body->raw('ids');
+
+        if (is_array($raw)) {
+            $ids = array_values(array_unique(array_map(intval(...), $raw)));
+            $removed = $subscribers->removeMany($ids);
+            Flash::set($removed === 1 ? 'Removed from the fare-alert list.' : $removed . ' removed from the fare-alert list.');
+        } else {
+            $subscribers->remove($this->request->body->int('id'));
+            Flash::set('Removed from the fare-alert list.');
         }
 
         $this->bounce('/admin/subscribers');
