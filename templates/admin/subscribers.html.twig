@@ -64,7 +64,10 @@
                                     <form method="post" action="/admin/subscribers">
                                         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
                                         <input type="hidden" name="id" value="{{ subscriber.id }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Remove</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                data-confirm="Remove {{ subscriber.email }} from the fare-alert list?">
+                                            Remove
+                                        </button>
                                     </form>
                                 </td>
                             </tr>
