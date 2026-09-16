@@ -99,6 +99,18 @@ final class RouteRepositoryTest extends IntegrationTestCase
             $this->connection()->execute('DELETE FROM search WHERE hash = ?', [$hash]);
         }
 
+        // `record()` also bumps today's row in `search_daily_counts` (G7.1,
+        // #332) once per seeded hash -- a shared, date-keyed counter with
+        // no sentinel of its own to delete, so this undoes exactly what
+        // setUp() added rather than deleting the day's row, which could
+        // belong to other activity too.
+        if ($this->seeded !== []) {
+            $this->connection()->execute(
+                'UPDATE search_daily_counts SET count = count - ? WHERE search_date = CURDATE()',
+                [count($this->seeded)],
+            );
+        }
+
         $this->seeded = [];
     }
 

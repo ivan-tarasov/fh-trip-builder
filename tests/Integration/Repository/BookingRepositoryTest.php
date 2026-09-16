@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration\Repository;
 
+use DateTimeImmutable;
 use TripBuilder\BookingStatus;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -126,6 +127,58 @@ final class BookingRepositoryTest extends IntegrationTestCase
             self::assertArrayHasKey('flight_outbound', $bookings[0]);
         } finally {
             $connection->execute('DELETE FROM bookings WHERE session_id = ?', [$session]);
+        }
+    }
+
+    /**
+     * A year with nothing else in it, so the window's own count is the
+     * whole answer rather than one this session's fixture shares with
+     * whatever real data the dev database happens to hold around
+     * `created`'s actual default of "now" (G7.1, #332).
+     */
+    public function testMadeCancelledAndCostAllReadTheSameWindow(): void
+    {
+        $repo = new BookingRepository($this->connection());
+        $session = 'test-' . uniqid();
+
+        $repo->create(self::booking($session, [
+            'created' => '2020-03-10 10:00:00', 'price_base' => 100.0, 'price_tax' => 20.0,
+        ]));
+        $repo->create(self::booking($session, [
+            'created' => '2020-03-15 10:00:00', 'status' => 'cancelled',
+            'price_base' => 50.0, 'price_tax' => 5.0,
+        ]));
+        // Outside the window on purpose -- proves the bound is exclusive at
+        // `$to` and not just "everything before some date".
+        $repo->create(self::booking($session, [
+            'created' => '2020-04-01 00:00:00', 'price_base' => 999.0, 'price_tax' => 999.0,
+        ]));
+
+        try {
+            $from = new DateTimeImmutable('2020-03-01');
+            $to = new DateTimeImmutable('2020-04-01');
+
+            self::assertSame(2, $repo->madeCount($from, $to));
+            self::assertSame(1, $repo->cancelledCount($from, $to));
+            self::assertSame(175.0, $repo->totalCost($from, $to), 'gross of both -- cancelled still cost something');
+        } finally {
+            $this->connection()->execute('DELETE FROM bookings WHERE session_id = ?', [$session]);
+        }
+    }
+
+    public function testDailyMadeCountsFillsAContinuousRunOfDays(): void
+    {
+        $repo = new BookingRepository($this->connection());
+        $session = 'test-' . uniqid();
+
+        $repo->create(self::booking($session, ['created' => '2020-06-15 09:00:00']));
+
+        try {
+            $series = $repo->dailyMadeCounts(new DateTimeImmutable('2020-06-14'), new DateTimeImmutable('2020-06-17'));
+
+            self::assertSame(['2020-06-14' => 0, '2020-06-15' => 1, '2020-06-16' => 0], $series);
+        } finally {
+            $this->connection()->execute('DELETE FROM bookings WHERE session_id = ?', [$session]);
         }
     }
 }

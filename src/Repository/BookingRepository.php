@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Repository;
 
+use DateTimeImmutable;
 use RuntimeException;
 use TripBuilder\BookingStatus;
 use TripBuilder\Database\Connection;
@@ -430,5 +431,149 @@ final readonly class BookingRepository
         );
 
         return ['bookings' => $bookings, 'passengers' => $passengers, 'events' => $events];
+    }
+
+    /**
+     * Bookings made in `[$from, $to)`.
+     *
+     * The hero's own cohort: every count and sum on it reads the same window
+     * of `created`, so "made" and "cancelled" describe the same bookings
+     * rather than two unrelated ones (G7.1, #332).
+     */
+    public function madeCount(DateTimeImmutable $from, DateTimeImmutable $to): int
+    {
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
+            'SELECT COUNT(*) FROM ' . Table::Bookings->value . ' WHERE created >= ? AND created < ?',
+            [$from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s')],
+        );
+
+        return $count;
+    }
+
+    /**
+     * Of the bookings made in `[$from, $to)`, how many are cancelled now.
+     *
+     * Not `booking_events` -- that log "begins the day it is installed"
+     * (see {@see BookingEventRepository::startedAt()}), so a cancellation
+     * older than the log has no event row even though the booking plainly
+     * is cancelled. The status column has no such gap (G7.1, #332).
+     */
+    public function cancelledCount(DateTimeImmutable $from, DateTimeImmutable $to): int
+    {
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
+            'SELECT COUNT(*) FROM ' . Table::Bookings->value
+            . ' WHERE created >= ? AND created < ? AND status = ?',
+            [$from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s'), BookingStatus::Cancelled->value],
+        );
+
+        return $count;
+    }
+
+    /**
+     * The gross value of what was made in `[$from, $to)` -- cancelled or
+     * not. A booking's price does not stop having been charged the moment
+     * it is cancelled, and nothing on this hero claims to be a net figure.
+     */
+    public function totalCost(DateTimeImmutable $from, DateTimeImmutable $to): float
+    {
+        /** @var string $sum */
+        $sum = $this->connection->fetchValue(
+            'SELECT COALESCE(SUM(price_base + price_tax), 0) FROM ' . Table::Bookings->value
+            . ' WHERE created >= ? AND created < ?',
+            [$from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s')],
+        );
+
+        return (float) $sum;
+    }
+
+    /**
+     * Every day in `[$from, $to)` and how many bookings were made on it,
+     * zero for a day with none -- the same `date => value` shape
+     * {@see CurrencyRateRepository::history()} already hands a sparkline,
+     * so a chart reads a continuous run of days rather than sparse events.
+     *
+     * @return array<string, int>
+     */
+    public function dailyMadeCounts(DateTimeImmutable $from, DateTimeImmutable $to): array
+    {
+        /** @var list<array{d: string, c: int}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT DATE(created) AS d, COUNT(*) AS c FROM ' . Table::Bookings->value
+            . ' WHERE created >= ? AND created < ? GROUP BY DATE(created)',
+            [$from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s')],
+        );
+
+        /** @var array<string, int> */
+        return self::continuousDays($from, $to, $rows);
+    }
+
+    /**
+     * Every day in `[$from, $to)` and how many of that day's bookings are
+     * cancelled now, zero for a day with none.
+     *
+     * @return array<string, int>
+     */
+    public function dailyCancelledCounts(DateTimeImmutable $from, DateTimeImmutable $to): array
+    {
+        /** @var list<array{d: string, c: int}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT DATE(created) AS d, COUNT(*) AS c FROM ' . Table::Bookings->value
+            . ' WHERE created >= ? AND created < ? AND status = ? GROUP BY DATE(created)',
+            [$from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s'), BookingStatus::Cancelled->value],
+        );
+
+        /** @var array<string, int> */
+        return self::continuousDays($from, $to, $rows);
+    }
+
+    /**
+     * Every day in `[$from, $to)` and that day's gross booked value, zero
+     * for a day with none.
+     *
+     * @return array<string, float>
+     */
+    public function dailyCostSums(DateTimeImmutable $from, DateTimeImmutable $to): array
+    {
+        /** @var list<array{d: string, c: string}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT DATE(created) AS d, SUM(price_base + price_tax) AS c FROM ' . Table::Bookings->value
+            . ' WHERE created >= ? AND created < ? GROUP BY DATE(created)',
+            [$from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s')],
+        );
+
+        /** @var array<string, float> */
+        return self::continuousDays($from, $to, $rows, cast: static fn(int|string $value): float => (float) $value);
+    }
+
+    /**
+     * One `date => value` entry per day between two dates, filling in zero
+     * for a day the grouped query above did not return a row for at all --
+     * the shared shaping step behind {@see dailyMadeCounts()},
+     * {@see dailyCancelledCounts()} and {@see dailyCostSums()}.
+     *
+     * @param list<array{d: string, c: int|string}> $rows
+     * @param (callable(int|string): (int|float))|null $cast
+     * @return array<string, int|float>
+     */
+    private static function continuousDays(DateTimeImmutable $from, DateTimeImmutable $to, array $rows, ?callable $cast = null): array
+    {
+        $cast ??= static fn(int|string $value): int => (int) $value;
+
+        $byDate = [];
+
+        foreach ($rows as $row) {
+            $byDate[$row['d']] = $cast($row['c']);
+        }
+
+        $series = [];
+
+        for ($day = $from; $day < $to; $day = $day->modify('+1 day')) {
+            $date = $day->format('Y-m-d');
+            $series[$date] = $byDate[$date] ?? 0;
+        }
+
+        return $series;
     }
 }

@@ -182,17 +182,27 @@
         <main class="well__body" id="main" tabindex="-1">
             {# Not sticky -- unlike the topbar above, this scrolls away with
                the content beneath it, the same as Orchid's own page header
-               does inside `.orchid-main`. #}
-            <div class="well__page-header">
-                <div>
-                    <h1 class="h3 well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
-                    {% block description %}{% endblock %}
-                </div>
+               does inside `.orchid-main`. Suppressed whole rather than
+               partly: a page with its own hero (Bookings' analytics header,
+               G7.1 #332) replaces the title *and* the actions next to it,
+               the same as Orchid's own `analytics.html` has no second,
+               plainer title above its hero either. #}
+            {# `is not defined or page_header`, not `page_header|default(true)`:
+               Twig's `default` filter treats `false` itself as "empty" and
+               silently overrides it back to the default, which would make a
+               page's own `{% set page_header = false %}` do nothing. #}
+            {% if page_header is not defined or page_header %}
+                <div class="well__page-header">
+                    <div>
+                        <h1 class="h3 well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
+                        {% block description %}{% endblock %}
+                    </div>
 
-                <div class="well__tools">
-                    {% block tools %}{% endblock %}
+                    <div class="well__tools">
+                        {% block tools %}{% endblock %}
+                    </div>
                 </div>
-            </div>
+            {% endif %}
 
             {% block content %}{% endblock %}
         </main>

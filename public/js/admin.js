@@ -486,12 +486,21 @@
 
         canvases.forEach(function (canvas) {
             if (canvas.dataset.chart === 'sparkline') {
-                sparkline(canvas, signal);
+                // The bookings hero is always dark regardless of the panel's
+                // own light/dark toggle (G7.1, #332), so its sparklines take
+                // a fixed colour by tone rather than the ambient `--signal`/
+                // `--good`/`--bad`, which are tuned for whichever palette is
+                // currently showing and would go low-contrast against a hero
+                // that never follows it.
+                var tone = HERO_SPARKLINE_TONES[canvas.dataset.tone];
+                sparkline(canvas, tone || signal);
             } else if (canvas.dataset.chart === 'searches') {
                 searchesChart(canvas, signal, quiet, rule);
             }
         });
     };
+
+    var HERO_SPARKLINE_TONES = { good: '#a3e635', bad: '#fda4af', neutral: '#7dd3fc' };
 
     /*
     | A line with nothing else on it: no axis, no grid, no legend, no points

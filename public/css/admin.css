@@ -1100,6 +1100,185 @@ a:hover { text-decoration: underline; }
 
 .gate__submit:hover { background-position: 100% 50%; color: #fff; }
 
+/* =====================================================
+   Bookings' analytics hero (G7.1, #332)
+   Orchid's own `.analytics-hero` (analytics.html), values read from
+   `analytics.css` rather than approximated. Unique to this page -- no
+   shared conventions with the rest of the panel, the same isolation
+   Orchid's own docblock claims for its `.analytics-` prefix. Always the
+   dark gradient treatment regardless of `data-theme`/`data-bs-theme`:
+   the source does the same (only three ink-adjacent variables move
+   under its own dark mode, the gradient itself never lightens), so a
+   light-mode visit to this page still sees a dark hero on purpose, not
+   by a missed override.
+   ===================================================== */
+.bookings-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  padding: 1.75rem clamp(1.25rem, 3vw, 2.5rem) 1.5rem;
+  border-radius: 22px;
+  color: #f8fafc;
+  background: radial-gradient(140% 100% at 0% 0%, #182058 0%, #0a1230 55%, #050914 100%);
+  box-shadow: 0 24px 60px -20px rgba(10, 18, 48, .55);
+}
+
+.bookings-hero__decor { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+
+.bookings-hero__grid {
+  position: absolute;
+  inset: -1px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, .045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, .045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(120% 80% at 50% 30%, #000 0%, transparent 75%);
+}
+
+.bookings-hero__orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: .55; }
+.bookings-hero__orb--a {
+  top: -120px;
+  right: -60px;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, #7c3aed, transparent 70%);
+}
+.bookings-hero__orb--b {
+  bottom: -160px;
+  left: -80px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, #22d3ee, transparent 70%);
+  opacity: .35;
+}
+
+.bookings-hero__head {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.bookings-hero__title {
+  margin: 0;
+  font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -.025em;
+  line-height: 1.05;
+  background: linear-gradient(90deg, #fff 0%, #c4b5fd 60%, #7dd3fc 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.bookings-hero__sub { margin: .5rem 0 0; color: rgba(255, 255, 255, .65); font-size: .92rem; }
+
+.bookings-hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+
+.bookings-range {
+  display: inline-flex;
+  padding: 3px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 999px;
+}
+
+.bookings-range__btn {
+  padding: .35rem .8rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, .75);
+  font-weight: 700;
+  font-size: .75rem;
+  letter-spacing: .04em;
+  text-decoration: none;
+  transition: background .18s ease, color .18s ease;
+}
+.bookings-range__btn:hover { color: #fff; }
+.bookings-range__btn.is-active { background: #fff; color: #0a1230; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); }
+
+.bookings-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .9rem;
+  border-radius: 12px;
+  color: #fff;
+  text-decoration: none;
+  font-size: .82rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #7c3aed, #22d3ee);
+  box-shadow: 0 10px 24px rgba(124, 58, 237, .35);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.bookings-btn-primary:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 14px 28px rgba(124, 58, 237, .45); }
+
+.bookings-hero__kpis {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .875rem;
+  padding: .875rem;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
+  border: 1px solid rgba(255, 255, 255, .08);
+  backdrop-filter: blur(6px);
+}
+
+.bookings-hero__kpi {
+  display: flex;
+  flex-direction: column;
+  padding: .875rem 1rem 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid rgba(255, 255, 255, .06);
+  overflow: hidden;
+  transition: background .18s ease, border-color .18s ease;
+}
+.bookings-hero__kpi:hover { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .12); }
+
+.bookings-hero__kpi-head { display: flex; flex-direction: column; gap: .35rem; margin-bottom: .75rem; }
+
+.bookings-hero__kpi-label {
+  color: rgba(255, 255, 255, .55);
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.bookings-hero__kpi-value { color: #fff; font-size: clamp(1.4rem, 2.2vw, 1.85rem); font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+
+.bookings-hero__kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  width: fit-content;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 700;
+}
+.bookings-hero__kpi-delta--up { background: rgba(132, 204, 22, .14); color: #a3e635; }
+.bookings-hero__kpi-delta--down { background: rgba(244, 63, 94, .14); color: #fda4af; }
+.bookings-hero__kpi-delta--flat { background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .55); }
+
+.bookings-hero__kpi-chart { position: relative; height: 64px; margin: 0 -1rem; }
+.bookings-hero__kpi-chart canvas { display: block; width: 100% !important; height: 100% !important; }
+
+@media (max-width: 991.98px) {
+  .bookings-hero__kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 575.98px) {
+  .bookings-hero { padding: 1.5rem 1.25rem; }
+  .bookings-hero__kpis { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 60em) {
   .editor { grid-template-columns: 1fr; }
   .well__body { padding: 1rem; }
