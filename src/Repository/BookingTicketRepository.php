@@ -14,8 +14,8 @@ use TripBuilder\TicketStatus;
  * traveller rather than to the booking itself -- a passenger can hold more
  * than one (G8.3, #338).
  *
- * `setStatus()` and `remove()` both join back to `booking_passengers` and
- * check its `booking_id`, the same way `BookingRepository::cancelForSession()`
+ * Every write to an existing row joins back to `booking_passengers` and
+ * checks its `booking_id`, the same way `BookingRepository::cancelForSession()`
  * scopes a write: the form only ever offers a row from the booking whose
  * page it is on, but a tampered POST could name a ticket that belongs to a
  * different one.
@@ -67,27 +67,34 @@ final readonly class BookingTicketRepository
     {
         /** @var list<TicketRow> $rows */
         $rows = $this->connection->fetchAll(
-            'SELECT t.id, t.booking_passenger_id, p.first_name, p.last_name, p.type AS passenger_type,'
-            . ' t.document_type, t.document_number, t.status, t.issue_date'
-            . ' FROM ' . Table::BookingTickets->value . ' t'
-            . ' JOIN ' . Table::BookingPassengers->value . ' p ON p.id = t.booking_passenger_id'
-            . ' WHERE p.booking_id = ?'
-            . ' ORDER BY p.position ASC, t.issue_date ASC, t.id ASC',
+            self::selectSql() . ' WHERE p.booking_id = ? ORDER BY p.position ASC, t.issue_date ASC, t.id ASC',
             [$bookingId],
         );
 
-        return array_map(static fn(array $row): array => [
-            'id' => $row['id'],
-            'booking_passenger_id' => $row['booking_passenger_id'],
-            'passenger' => trim($row['first_name'] . ' ' . $row['last_name']),
-            'passenger_type' => self::PASSENGER_TYPES[$row['passenger_type']] ?? $row['passenger_type'],
-            'document_type' => DocumentType::tryFrom($row['document_type']),
-            'raw_document_type' => $row['document_type'],
-            'document_number' => $row['document_number'],
-            'status' => TicketStatus::tryFrom($row['status']),
-            'raw_status' => $row['status'],
-            'issue_date' => $row['issue_date'],
-        ], $rows);
+        return array_map(self::shape(...), $rows);
+    }
+
+    /**
+     * One ticket, scoped to the booking it belongs to -- for a caller that
+     * needs to say what a ticket *was* before changing or removing it, the
+     * same reason the log wants a passenger's name and a document type in
+     * its note rather than just an id.
+     *
+     * @return array{
+     *     id: int, booking_passenger_id: int, passenger: string, passenger_type: string,
+     *     document_type: ?DocumentType, raw_document_type: string, document_number: string,
+     *     status: ?TicketStatus, raw_status: string, issue_date: string,
+     * }|null
+     */
+    public function find(int $id, int $bookingId): ?array
+    {
+        /** @var TicketRow|null $row */
+        $row = $this->connection->fetchOne(
+            self::selectSql() . ' WHERE t.id = ? AND p.booking_id = ?',
+            [$id, $bookingId],
+        );
+
+        return $row === null ? null : self::shape($row);
     }
 
     /**
@@ -126,5 +133,48 @@ final readonly class BookingTicketRepository
             . ' WHERE t.id = ? AND p.booking_id = ?',
             [$id, $bookingId],
         );
+    }
+
+    /** Correct a mistyped number -- the only field on a fake document worth fixing in place rather than replacing. */
+    public function updateNumber(int $id, int $bookingId, string $number): int
+    {
+        return $this->connection->execute(
+            'UPDATE ' . Table::BookingTickets->value . ' t'
+            . ' JOIN ' . Table::BookingPassengers->value . ' p ON p.id = t.booking_passenger_id'
+            . ' SET t.document_number = ? WHERE t.id = ? AND p.booking_id = ?',
+            [$number, $id, $bookingId],
+        );
+    }
+
+    private static function selectSql(): string
+    {
+        return 'SELECT t.id, t.booking_passenger_id, p.first_name, p.last_name, p.type AS passenger_type,'
+            . ' t.document_type, t.document_number, t.status, t.issue_date'
+            . ' FROM ' . Table::BookingTickets->value . ' t'
+            . ' JOIN ' . Table::BookingPassengers->value . ' p ON p.id = t.booking_passenger_id';
+    }
+
+    /**
+     * @param TicketRow $row
+     * @return array{
+     *     id: int, booking_passenger_id: int, passenger: string, passenger_type: string,
+     *     document_type: ?DocumentType, raw_document_type: string, document_number: string,
+     *     status: ?TicketStatus, raw_status: string, issue_date: string,
+     * }
+     */
+    private static function shape(array $row): array
+    {
+        return [
+            'id' => $row['id'],
+            'booking_passenger_id' => $row['booking_passenger_id'],
+            'passenger' => trim($row['first_name'] . ' ' . $row['last_name']),
+            'passenger_type' => self::PASSENGER_TYPES[$row['passenger_type']] ?? $row['passenger_type'],
+            'document_type' => DocumentType::tryFrom($row['document_type']),
+            'raw_document_type' => $row['document_type'],
+            'document_number' => $row['document_number'],
+            'status' => TicketStatus::tryFrom($row['status']),
+            'raw_status' => $row['status'],
+            'issue_date' => $row['issue_date'],
+        ];
     }
 }

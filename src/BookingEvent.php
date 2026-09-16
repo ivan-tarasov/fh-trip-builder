@@ -7,11 +7,12 @@ namespace TripBuilder;
 /**
  * The things that can happen to a booking.
  *
- * Three, because three is what the application can actually do to one: it is
- * created at checkout, it can be cancelled, and — now that there is a panel —
- * a cancellation can be undone. Anything else a booking log might want to show
- * (a refund, a schedule change, an email sent) would need the thing itself to
- * exist first, and none of them do (A3.8, #233).
+ * Started at three -- created at checkout, cancelled, and a cancellation
+ * undone -- because that was what the application could actually do to one.
+ * The rule was that anything else a booking log might want to show (a
+ * refund, a ticket, an email sent) needed the thing itself to exist first;
+ * tickets now do (G8.3, #338), so every write `BookingTicketRepository`
+ * causes gets a case here too, the same as the booking's own status moves.
  *
  * A backed enum so the stored word and the case cannot drift, and so a row
  * written by an older version still reads: `tryFrom()` gives null for a case
@@ -23,6 +24,10 @@ enum BookingEvent: string
     case Booked = 'booked';
     case Cancelled = 'cancelled';
     case Reinstated = 'reinstated';
+    case TicketAdded = 'ticket_added';
+    case TicketStatusChanged = 'ticket_status_changed';
+    case TicketNumberChanged = 'ticket_number_changed';
+    case TicketRemoved = 'ticket_removed';
 
     /** What the log says happened. */
     public function label(): string
@@ -31,6 +36,10 @@ enum BookingEvent: string
             self::Booked => 'Booked',
             self::Cancelled => 'Cancelled',
             self::Reinstated => 'Reinstated',
+            self::TicketAdded => 'Ticket added',
+            self::TicketStatusChanged => 'Ticket status changed',
+            self::TicketNumberChanged => 'Ticket number changed',
+            self::TicketRemoved => 'Ticket removed',
         };
     }
 }

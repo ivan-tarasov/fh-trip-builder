@@ -132,6 +132,15 @@
             <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
+            {# Opens the modal below rather than submitting on its own --
+               the one menu item here that needs a field to type into
+               first, which a dropdown item cannot hold. #}
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#ticketNumberModal{{ ticket.id }}">
+                    <i class="bi bi-pencil" aria-hidden="true"></i> Edit number
+                </button>
+            </li>
+            <li><hr class="dropdown-divider"></li>
             {% for status in statuses %}
                 {% if ticket.status != status %}
                     {{ _self.ticketAction(
@@ -146,6 +155,47 @@
                 'Remove this ' ~ kind ~ ' for ' ~ ticket.passenger ~ '?'
             ) }}
         </ul>
+    </div>
+{% endmacro %}
+
+{# One modal per ticket rather than one shared modal repopulated by JS --
+   this panel's established shape for a form that needs a starting value
+   (`admin/article.html.twig`'s own per-field forms are all server-filled
+   too), and it is already true of `#ticketAddModal` below that nothing
+   here needs JS to work. #}
+{% macro ticketNumberModal(bookingId, ticket) %}
+    <div class="modal fade" id="ticketNumberModal{{ ticket.id }}" tabindex="-1" aria-labelledby="ticketNumberModalTitle{{ ticket.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketNumberModalTitle{{ ticket.id }}">Edit document number</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="ticketNumberForm{{ ticket.id }}" method="post" action="/admin/bookings/{{ bookingId }}">
+                    <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="ticket_number">
+                    <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                    <div class="modal-body">
+                        <label for="ticketNumberInput{{ ticket.id }}" class="form-label">
+                            {{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }} for {{ ticket.passenger }}
+                        </label>
+                        <input
+                            id="ticketNumberInput{{ ticket.id }}"
+                            name="document_number"
+                            type="text"
+                            class="form-control mono"
+                            value="{{ ticket.document_number }}"
+                            maxlength="20"
+                            required
+                        >
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 {% endmacro %}
 
@@ -421,33 +471,33 @@
 
                     <div class="table-responsive">
                         <table class="table orchid-table align-middle mb-0">
-                            {# Five columns, not seven: Passenger+Type and Document
-                               type+number are each folded into one cell. At the
-                               panel's usual width this table was wide enough that
-                               Status and the actions column scrolled off screen
-                               inside `.table-responsive` with no visible cue that
-                               there was more to the right -- which read as "there
-                               are no actions" rather than "scroll for them." #}
+                            {# Passenger type and document type read as separate
+                               facts, not a subtitle under something else -- each
+                               gets its own column. The actions column is pinned
+                               to the right edge of the scroll area (`.sticky-end`)
+                               rather than folded away to make room: this table
+                               already lost its actions once by scrolling out of
+                               view with no visible cue there was more to the
+                               right, and a narrower table is not worth that
+                               again. #}
                             <thead>
                                 <tr>
                                     <th scope="col">Passenger</th>
-                                    <th scope="col">Document</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Document type</th>
+                                    <th scope="col">Document number</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Issue date</th>
-                                    <th scope="col" class="text-end">&nbsp;</th>
+                                    <th scope="col" class="text-end sticky-end">&nbsp;</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for ticket in tickets %}
                                     <tr>
-                                        <td>
-                                            {{ ticket.passenger }}
-                                            <span class="text-body-secondary small d-block">{{ ticket.passenger_type }}</span>
-                                        </td>
-                                        <td>
-                                            {{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}
-                                            <span class="mono text-body-secondary small d-block">{{ ticket.document_number }}</span>
-                                        </td>
+                                        <td>{{ ticket.passenger }}</td>
+                                        <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
+                                        <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
+                                        <td class="mono">{{ ticket.document_number }}</td>
                                         <td>
                                             <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
                                                 {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
@@ -457,12 +507,12 @@
                                         {# Always visible, unlike the other row-action menus on this
                                            panel -- there is no larger list to declutter here, and an
                                            action a reader cannot see is one they will not find. #}
-                                        <td class="text-end" style="width: 1%;">
+                                        <td class="text-end sticky-end" style="width: 1%;">
                                             {{ self.ticketActions(extra.id, ticket, ticket_statuses) }}
                                         </td>
                                     </tr>
                                 {% else %}
-                                    <tr><td colspan="5" class="text-body-secondary">No tickets yet.</td></tr>
+                                    <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -513,6 +563,10 @@
                 </div>
             </div>
         </div>
+
+        {% for ticket in tickets %}
+            {{ self.ticketNumberModal(extra.id, ticket) }}
+        {% endfor %}
 
         <p class="band">The trip</p>
 
@@ -655,7 +709,11 @@
        stays here rather than on `BookingEvent` itself, same reason the
        dashboard's icons stay off `DashboardRepository` (G2.2, #288): a domain
        enum has no reason to know what colour its own log line wears. #}
-    {% set log_tones = {'booked': 'signal', 'cancelled': 'bad', 'reinstated': 'good'} %}
+    {% set log_tones = {
+        'booked': 'signal', 'cancelled': 'bad', 'reinstated': 'good',
+        'ticket_added': 'good', 'ticket_status_changed': 'signal',
+        'ticket_number_changed': 'signal', 'ticket_removed': 'bad',
+    } %}
 
     <p class="band">Booking log</p>
 

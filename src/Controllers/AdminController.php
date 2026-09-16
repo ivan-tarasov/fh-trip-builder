@@ -641,6 +641,12 @@ class AdminController extends AbstractController
             return;
         }
 
+        if ($action === 'ticket_number') {
+            $this->updateTicketNumber($id, $back);
+
+            return;
+        }
+
         if ($action === 'ticket_generate') {
             $this->generateTickets($id, $back);
 
@@ -733,9 +739,17 @@ class AdminController extends AbstractController
         $issueDate = date_create_immutable($this->request->body->str('issue_date') ?: 'invalid');
 
         $passengers = new BookingPassengerRepository($this->connection())->forBooking($id);
-        $belongsHere = in_array($passengerId, array_column($passengers, 'id'), true);
+        $passenger = null;
 
-        if (!$belongsHere || $type === null || $number === '' || $issueDate === false) {
+        foreach ($passengers as $candidate) {
+            if ($candidate['id'] === $passengerId) {
+                $passenger = $candidate;
+
+                break;
+            }
+        }
+
+        if ($passenger === null || $type === null || $number === '' || $issueDate === false) {
             Flash::set('A ticket needs a passenger, a document type, a number and a real issue date.', FlashTone::Error);
             $this->bounce($back);
 
@@ -756,6 +770,12 @@ class AdminController extends AbstractController
             TicketStatus::Issued,
             $issueDate->format('Y-m-d'),
         );
+        new BookingEventRepository($this->connection())->record(
+            $id,
+            BookingEvent::TicketAdded,
+            BookingActor::Operator,
+            sprintf('%s for %s', $type->label(), trim($passenger['first_name'] . ' ' . $passenger['last_name'])),
+        );
         Flash::set('Ticket added.');
         $this->bounce($back);
     }
@@ -765,13 +785,23 @@ class AdminController extends AbstractController
     {
         $ticketId = (int) $this->request->body->str('ticket_id');
         $status = TicketStatus::tryFrom($this->request->body->str('status'));
+        $tickets = new BookingTicketRepository($this->connection());
+        $ticket = $tickets->find($ticketId, $id);
 
-        if ($status !== null && new BookingTicketRepository($this->connection())->setStatus($ticketId, $id, $status) > 0) {
-            Flash::set(sprintf('Ticket marked %s.', strtolower($status->label())));
-        } else {
+        if ($status === null || $ticket === null || $tickets->setStatus($ticketId, $id, $status) === 0) {
             Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
+            $this->bounce($back);
+
+            return;
         }
 
+        new BookingEventRepository($this->connection())->record(
+            $id,
+            BookingEvent::TicketStatusChanged,
+            BookingActor::Operator,
+            sprintf('%s for %s marked %s', self::ticketKind($ticket), $ticket['passenger'], strtolower($status->label())),
+        );
+        Flash::set(sprintf('Ticket marked %s.', strtolower($status->label())));
         $this->bounce($back);
     }
 
@@ -779,13 +809,66 @@ class AdminController extends AbstractController
     private function removeTicket(int $id, string $back): void
     {
         $ticketId = (int) $this->request->body->str('ticket_id');
+        $tickets = new BookingTicketRepository($this->connection());
+        $ticket = $tickets->find($ticketId, $id);
 
-        if (new BookingTicketRepository($this->connection())->remove($ticketId, $id) > 0) {
-            Flash::set('Ticket removed.');
-        } else {
+        if ($ticket === null || $tickets->remove($ticketId, $id) === 0) {
             Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
+            $this->bounce($back);
+
+            return;
         }
 
+        new BookingEventRepository($this->connection())->record(
+            $id,
+            BookingEvent::TicketRemoved,
+            BookingActor::Operator,
+            sprintf('%s for %s (%s)', self::ticketKind($ticket), $ticket['passenger'], $ticket['document_number']),
+        );
+        Flash::set('Ticket removed.');
+        $this->bounce($back);
+    }
+
+    /** Correct a mistyped document number, scoped to this booking. */
+    private function updateTicketNumber(int $id, string $back): void
+    {
+        $ticketId = (int) $this->request->body->str('ticket_id');
+        $number = trim($this->request->body->str('document_number'));
+        $tickets = new BookingTicketRepository($this->connection());
+        $ticket = $tickets->find($ticketId, $id);
+
+        if ($ticket === null || $number === '') {
+            Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
+            $this->bounce($back);
+
+            return;
+        }
+
+        if (mb_strlen($number) > self::DOCUMENT_NUMBER_MAX_LENGTH) {
+            Flash::set(sprintf('%d characters at most.', self::DOCUMENT_NUMBER_MAX_LENGTH), FlashTone::Error);
+            $this->bounce($back);
+
+            return;
+        }
+
+        // A re-save of the same value is not a change worth a log line --
+        // the button offers no other way to reach this branch, but a
+        // double-submit does.
+        if ($number === $ticket['document_number']) {
+            Flash::set('Ticket number unchanged.');
+            $this->bounce($back);
+
+            return;
+        }
+
+        $tickets->updateNumber($ticketId, $id, $number);
+        new BookingEventRepository($this->connection())->record(
+            $id,
+            BookingEvent::TicketNumberChanged,
+            BookingActor::Operator,
+            sprintf('%s for %s: %s to %s', self::ticketKind($ticket), $ticket['passenger'], $ticket['document_number'], $number),
+        );
+        Flash::set('Ticket number updated.');
         $this->bounce($back);
     }
 
@@ -805,10 +888,31 @@ class AdminController extends AbstractController
             $tickets->create($passengerId, DocumentType::Ticket, self::fakeTicketNumber(), TicketStatus::Issued, date('Y-m-d'));
         }
 
+        if ($missing !== []) {
+            new BookingEventRepository($this->connection())->record(
+                $id,
+                BookingEvent::TicketAdded,
+                BookingActor::Operator,
+                sprintf('%d dummy ticket(s) generated', count($missing)),
+            );
+        }
+
         Flash::set($missing === []
             ? 'Every passenger already has a ticket.'
             : sprintf('%d dummy ticket(s) added.', count($missing)));
         $this->bounce($back);
+    }
+
+    /**
+     * A document's own kind, the way the log and the flash both say it --
+     * the case where this version knows the word, or the raw one where it
+     * does not.
+     *
+     * @param array{document_type: ?DocumentType, raw_document_type: string} $ticket
+     */
+    private static function ticketKind(array $ticket): string
+    {
+        return $ticket['document_type'] ? $ticket['document_type']->label() : $ticket['raw_document_type'];
     }
 
     /** A number that reads like a real e-ticket number and is not one. */

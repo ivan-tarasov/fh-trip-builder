@@ -106,6 +106,42 @@ final class BookingTicketRepositoryTest extends IntegrationTestCase
         self::assertSame([], $this->tickets()->forBooking($id));
     }
 
+    public function testFindReadsBackOneTicketScopedToItsBooking(): void
+    {
+        $id = $this->insert('ZZT010');
+        $otherId = $this->insert('ZZT011');
+        $passengerId = $this->firstPassengerId($id);
+
+        $ticketId = $this->tickets()->create($passengerId, DocumentType::Emd, '6666666666666', TicketStatus::Issued, '2026-01-15');
+
+        $found = $this->tickets()->find($ticketId, $id);
+
+        self::assertNotNull($found);
+        self::assertSame('6666666666666', $found['document_number']);
+        self::assertSame(DocumentType::Emd, $found['document_type']);
+
+        self::assertNull($this->tickets()->find($ticketId, $otherId), 'a ticket from a different booking should not be found');
+        self::assertNull($this->tickets()->find(0, $id), 'a ticket that does not exist should not be found');
+    }
+
+    public function testUpdateNumberChangesItScopedToItsOwnBooking(): void
+    {
+        $id = $this->insert('ZZT012');
+        $passengerId = $this->firstPassengerId($id);
+
+        $ticketId = $this->tickets()->create($passengerId, DocumentType::Ticket, '7777777777777', TicketStatus::Issued, '2026-01-15');
+
+        self::assertSame(
+            0,
+            $this->tickets()->updateNumber($ticketId, $this->insert('ZZT013'), '8888888888888'),
+            'updated through the wrong booking',
+        );
+        self::assertSame('7777777777777', $this->tickets()->find($ticketId, $id)['document_number'] ?? null);
+
+        self::assertSame(1, $this->tickets()->updateNumber($ticketId, $id, '9999999999999'));
+        self::assertSame('9999999999999', $this->tickets()->find($ticketId, $id)['document_number'] ?? null);
+    }
+
     public function testPassengersWithoutTicketsFindsOnlyThoseWithNone(): void
     {
         $withTicket = $this->insert('ZZT008');

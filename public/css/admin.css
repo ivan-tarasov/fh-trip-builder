@@ -808,6 +808,16 @@ a:hover { text-decoration: underline; }
    second table component (G2.4, #290). */
 .orchid-table tr.is-total td { font-weight: 700; background: var(--signal-soft); }
 
+/* Pinned to the right edge of `.table-responsive`'s own scroll area, so a
+   wide table's last column survives scrolling out of view -- which is
+   what an always-visible actions column did on the tickets table before
+   this, with nothing on the page hinting there was more to the right
+   (G8.3, #338). A solid background, not `.orchid-table`'s own transparent
+   `--bs-table-bg`: a sticky cell with a transparent fill lets the columns
+   scrolling underneath show through it, which is worse than the column
+   it is meant to keep visible. */
+.sticky-end { position: sticky; right: 0; background: var(--surface); }
+
 /* Icon + label + tone, for anything that used to be a bare Bootstrap
    `.badge`: a booking's state in a list row, a flight leg's stop count. Tone
    is emphasis, same rule as `.stat-card` -- every chip still prints its
