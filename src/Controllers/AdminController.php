@@ -329,10 +329,13 @@ class AdminController extends AbstractController
         $to = new DateTimeImmutable('tomorrow');
         $days = self::HERO_RANGE_DAYS[$range] ?? null;
 
-        // `all` starts from before this app's own earliest possible row
-        // rather than from null, so every query below stays a plain
-        // `DateTimeImmutable` with nothing nullable to check.
-        $from = $days === null ? new DateTimeImmutable('2000-01-01') : $to->modify("-{$days} days");
+        // `all` starts a year back rather than from null, so every query
+        // below stays a plain `DateTimeImmutable` with nothing nullable to
+        // check. Not this app's actual earliest possible row (there is no
+        // real ceiling on how old a booking could be) -- a chart spanning
+        // decades to show a few months of real data is a flat line with a
+        // bump at the end, which answers nothing a shorter one does not.
+        $from = $days === null ? $to->modify('-1 year') : $to->modify("-{$days} days");
         $prevFrom = $days === null ? null : $from->modify("-{$days} days");
         $prevTo = $from;
 
