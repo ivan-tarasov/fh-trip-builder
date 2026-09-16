@@ -1517,6 +1517,47 @@ a:hover { text-decoration: underline; }
   .bookings-hero__kpis { grid-template-columns: 1fr; }
 }
 
+/* Orchid's `.products-toolbar` (`inventory.html`), renamed into this page's
+   own namespace: the bordered strip a filter bar sits in, with the search
+   box carrying its own icon rather than an input-group. */
+.bookings-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  padding: .875rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background-color: var(--surface);
+}
+
+.bookings-toolbar__search {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.bookings-toolbar__search i {
+  position: absolute;
+  top: 50%;
+  left: .75rem;
+  transform: translateY(-50%);
+  color: var(--ink-quiet);
+  pointer-events: none;
+}
+
+.bookings-toolbar__search input.form-control {
+  padding-left: 2.15rem;
+  height: 38px;
+}
+
+.bookings-toolbar > .form-select-sm,
+.bookings-toolbar > .form-control-sm {
+  flex: 0 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
 @media (max-width: 60em) {
   .editor { grid-template-columns: 1fr; }
   .well__body { padding: 1rem; }

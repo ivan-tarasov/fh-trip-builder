@@ -99,39 +99,40 @@
     </section>
 
     {# The list's own toolbar -- unaffected by the hero's range, which is
-       about the numbers above, not which rows are listed below. #}
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        {# A GET and not a POST, so a search (and its filters) can be linked,
-           refreshed and paged. The cost is that the term lands in the access
-           log, which is why the box is offered for a reference, a name and
-           an address and nothing finer. #}
-        <form class="d-flex flex-wrap align-items-center gap-2" method="get" action="/admin/bookings" role="search">
-            <label class="visually-hidden" for="find">Search bookings</label>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent"><i class="bi bi-search" aria-hidden="true"></i></span>
-                <input id="find" type="search" class="form-control" name="q" value="{{ term }}" placeholder="Reference, name or address" autocomplete="off">
-            </div>
+       about the numbers above, not which rows are listed below. Orchid's
+       own `.products-toolbar` (`inventory.html`), structure and style only:
+       a bordered strip, the search box carrying its own icon.
 
-            <label class="visually-hidden" for="filterStatus">Status</label>
-            <select id="filterStatus" name="status" class="form-select form-select-sm">
-                <option value="">Any status</option>
-                {% for s in statuses %}
-                    <option value="{{ s.value }}"{{ status == s ? ' selected' : '' }}>{{ s.label() }}</option>
-                {% endfor %}
-            </select>
+       A GET and not a POST, so a search (and its filters) can be linked,
+       refreshed and paged. The cost is that the term lands in the access
+       log, which is why the box is offered for a reference, a name and an
+       address and nothing finer. #}
+    <form class="bookings-toolbar mb-3" method="get" action="/admin/bookings" role="search">
+        <label class="visually-hidden" for="find">Search bookings</label>
+        <div class="bookings-toolbar__search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input id="find" type="search" class="form-control" name="q" value="{{ term }}" placeholder="Reference, name or address" autocomplete="off">
+        </div>
 
-            <label class="visually-hidden" for="filterFrom">Booked from</label>
-            <input id="filterFrom" type="date" name="from" class="form-control form-control-sm" value="{{ from }}" title="Booked from">
+        <label class="visually-hidden" for="filterStatus">Status</label>
+        <select id="filterStatus" name="status" class="form-select form-select-sm">
+            <option value="">Any status</option>
+            {% for s in statuses %}
+                <option value="{{ s.value }}"{{ status == s ? ' selected' : '' }}>{{ s.label() }}</option>
+            {% endfor %}
+        </select>
 
-            <label class="visually-hidden" for="filterTo">Booked to</label>
-            <input id="filterTo" type="date" name="to" class="form-control form-control-sm" value="{{ to }}" title="Booked to">
+        <label class="visually-hidden" for="filterFrom">Booked from</label>
+        <input id="filterFrom" type="date" name="from" class="form-control form-control-sm" value="{{ from }}" title="Booked from">
 
-            <button class="btn btn-outline-secondary btn-sm" type="submit">Search</button>
-            {% if term or status or from or to %}<a class="btn btn-outline-secondary btn-sm" href="/admin/bookings">Clear</a>{% endif %}
-        </form>
+        <label class="visually-hidden" for="filterTo">Booked to</label>
+        <input id="filterTo" type="date" name="to" class="form-control form-control-sm" value="{{ to }}" title="Booked to">
 
-        <span class="text-body-secondary small">{{ total }} {{ term or status or from or to ? 'found' : 'in all' }}</span>
-    </div>
+        <button class="btn btn-outline-secondary btn-sm" type="submit">Search</button>
+        {% if term or status or from or to %}<a class="btn btn-outline-secondary btn-sm" href="/admin/bookings">Clear</a>{% endif %}
+    </form>
+
+    <p class="text-body-secondary small text-end mb-3">{{ total }} {{ term or status or from or to ? 'found' : 'in all' }}</p>
 
     {% if (term or status or from or to) and bookings is empty %}
         <p class="notice">
