@@ -128,18 +128,46 @@
     </div>
 </div>
 
+{# The command palette -- one shared modal, the same reason `#confirmModal`
+   above is one. No header/footer chrome: the search input *is* the header,
+   Orchid's own command-palette shape from nowhere in this template set
+   (there is no demo page for one), so this is built from the same modal
+   primitive rather than a bespoke overlay -- `commandPalette()` in
+   `admin.js` fills `[data-palette-results]` and wires the keyboard
+   (G4.1, #312). #}
+<div class="modal fade" id="commandPalette" tabindex="-1" aria-hidden="true" aria-labelledby="commandPaletteLabel">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content palette">
+            <h2 class="visually-hidden" id="commandPaletteLabel">Search</h2>
+            <div class="palette__search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input
+                    type="text"
+                    class="palette__input"
+                    data-palette-input
+                    placeholder="Search bookings, subscribers, help content…"
+                    aria-label="Search bookings, subscribers, help content"
+                    autocomplete="off"
+                >
+            </div>
+            <div class="palette__results" data-palette-results role="listbox" aria-label="Search results"></div>
+        </div>
+    </div>
+</div>
+
 {% block shell %}
     {# One rail, one well, the rail fixed and permanent beside it -- Orchid's
        own layout, not a flag on the public one. #}
     {% include 'admin/partials/rail.html.twig' %}
 
     <div class="well">
-        {# Chrome only -- a breadcrumb and the two icon toggles. Everything
-           about the page itself (title, description, its own actions) lives
-           below in the page header instead, which is Orchid's own split
-           (`cms-pages.html`'s `.orchid-header` versus its page header), not
-           the one row this used to cram both into. Search, notifications and
-           a user menu are later work, not this one (G6.1, #329). #}
+        {# Chrome only -- a breadcrumb, search and two icon toggles.
+           Everything about the page itself (title, description, its own
+           actions) lives below in the page header instead, which is
+           Orchid's own split (`cms-pages.html`'s `.orchid-header` versus
+           its page header), not the one row this used to cram both into.
+           Search is G4.1 (#312); notifications and a user menu are still
+           later work (G6.1, #329). #}
         <header class="well__top">
             <div class="well__lead">
                 {# One button, two jobs: `railToggle()` in `admin.js` opens the
@@ -165,6 +193,15 @@
             </div>
 
             <div class="well__top-tools">
+                {# The command palette's own trigger -- `Ctrl`/`Cmd`+`K` from
+                   anywhere opens the same thing, this button is the one for
+                   a reader who does not know that yet. Finding a booking
+                   used to mean going to Bookings first and typing there;
+                   this is what "later work" above turned into (G4.1, #312). #}
+                <button type="button" class="btn btn-icon js-search-trigger" data-bs-toggle="modal" data-bs-target="#commandPalette" aria-label="Search (Ctrl+K)">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                </button>
+
                 {# One preference for every `.orchid-table` on the panel, not a
                    per-page choice -- `densityToggle()` in `admin.js` (G3.6,
                    #309). Not part of Orchid's own template, but the same kind

@@ -89,6 +89,30 @@ final readonly class SubscriberRepository
     }
 
     /**
+     * Addresses matching a term, newest first -- for the command palette
+     * (G4.1, #312), not the list page, which has never needed one of its
+     * own with the whole thing fitting on a page or two.
+     *
+     * @return list<SubscriberRow>
+     */
+    public function search(string $term, int $limit): array
+    {
+        /** @var list<SubscriberRow> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT id, email, subscribed_at FROM ' . Table::Subscribers->value
+            . ' WHERE email LIKE ? ORDER BY subscribed_at DESC, id DESC LIMIT ' . max(1, $limit),
+            [self::like($term)],
+        );
+
+        return $rows;
+    }
+
+    private static function like(string $term): string
+    {
+        return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term) . '%';
+    }
+
+    /**
      * Take one address off the list.
      *
      * True when a row was actually removed, so a caller can tell a stale id

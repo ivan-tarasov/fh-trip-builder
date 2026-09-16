@@ -271,13 +271,18 @@ final readonly class ArticleRepository
      * it back everywhere at once. The panel is the one reader that has to see
      * what it is hiding (A3.3, #101).
      *
-     * @return list<array{slug: string, title: string, category: string, position: int, enabled: bool, edited: bool, updated_at: string}>
+     * `summary` rides along for the command palette (G4.1, #312), which
+     * wants to match more than just a title -- every other reader of this
+     * ignores the extra key, and the row was already being read into PHP
+     * whole, so it costs nothing this query was not already paying.
+     *
+     * @return list<array{slug: string, title: string, category: string, position: int, enabled: bool, edited: bool, updated_at: string, summary: string}>
      */
     public function forPanel(string $locale = self::DEFAULT_LOCALE): array
     {
-        /** @var list<array{slug: string, category: string, position: int, enabled: int, edited_at: string|null, title: string|null, updated_at: string|null}> $rows */
+        /** @var list<array{slug: string, category: string, position: int, enabled: int, edited_at: string|null, title: string|null, updated_at: string|null, summary: string|null}> $rows */
         $rows = $this->connection->fetchAll(
-            'SELECT a.slug, a.category, a.position, a.enabled, a.edited_at, t.title, t.updated_at'
+            'SELECT a.slug, a.category, a.position, a.enabled, a.edited_at, t.title, t.updated_at, t.summary'
             . ' FROM ' . Table::Articles->value . ' a'
             // LEFT, for the same reason `all()` gives: a row with no
             // translation in this locale is still an article somebody has to
@@ -298,6 +303,7 @@ final readonly class ArticleRepository
             // `articles:import` does to it (A3.4, #102).
             'edited' => $row['edited_at'] !== null,
             'updated_at' => (string) ($row['updated_at'] ?? ''),
+            'summary' => (string) ($row['summary'] ?? ''),
         ], $rows);
     }
 

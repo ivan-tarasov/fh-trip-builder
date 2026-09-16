@@ -82,6 +82,9 @@ class AdminController extends AbstractController
     /** Bookings to a page. Enough to scan, few enough to read. */
     private const int PER_PAGE = 25;
 
+    /** Results per kind in the command palette -- a palette, not a list page. */
+    private const int SEARCH_LIMIT = 5;
+
     /** A remark long enough for a real note and short enough to still read as one. */
     private const int REMARK_MAX_LENGTH = 2000;
 
@@ -256,6 +259,91 @@ class AdminController extends AbstractController
         }
 
         $this->categoryForm($category);
+    }
+
+    /**
+     * The command palette's own endpoint -- a booking, a subscriber, a
+     * help-content article, from wherever in the panel somebody is rather
+     * than from the one list page each thing happens to live on (G4.1,
+     * #312).
+     *
+     * `Admin::isSignedIn()` and a bare 403, not `guard()`'s redirect: this
+     * is answered to a script, not navigated to, and a script does not
+     * want a login page back in place of JSON. No CSRF check either -- a
+     * read costs nothing to repeat, which is the whole reason that check
+     * exists for the actions that do.
+     */
+    public function search(): void
+    {
+        header('Content-type: application/json; charset=utf-8');
+
+        if (!Admin::isSignedIn()) {
+            http_response_code(HttpStatus::Forbidden->value);
+            echo json_encode(['results' => []]);
+
+            return;
+        }
+
+        $term = mb_substr(trim($this->request->query->str('q', '')), 0, 64);
+
+        if ($term === '') {
+            echo json_encode(['results' => []]);
+
+            return;
+        }
+
+        $results = [];
+
+        foreach (new BookingRepository($this->connection())->search($term, self::SEARCH_LIMIT) as $row) {
+            $results[] = [
+                'type' => 'Booking',
+                'label' => trim($row['reference']) ?: ('Booking ' . $row['id']),
+                'meta' => trim($row['passenger_first'] . ' ' . $row['passenger_last']),
+                'url' => '/admin/bookings/' . $row['id'],
+            ];
+        }
+
+        foreach (new SubscriberRepository($this->connection())->search($term, self::SEARCH_LIMIT) as $row) {
+            $results[] = [
+                'type' => 'Subscriber',
+                'label' => $row['email'],
+                'meta' => null,
+                'url' => '/admin/subscribers',
+            ];
+        }
+
+        // A handful of articles at most on a site this size -- filtered in
+        // PHP rather than a second SQL search, the same call `content()`
+        // already makes for the panel's own article list.
+        $needle = mb_strtolower($term);
+        $matched = 0;
+
+        foreach (new ArticleRepository($this->connection())->forPanel() as $article) {
+            if ($matched >= self::SEARCH_LIMIT) {
+                break;
+            }
+
+            // The title first -- a reader typing a couple of words is
+            // usually naming the thing, not quoting its summary -- but a
+            // summary is what a reader searches when they remember the
+            // topic and not the headline it was given.
+            if (
+                !str_contains(mb_strtolower($article['title']), $needle)
+                && !str_contains(mb_strtolower($article['summary']), $needle)
+            ) {
+                continue;
+            }
+
+            $results[] = [
+                'type' => 'Help content',
+                'label' => $article['title'],
+                'meta' => $article['category'],
+                'url' => '/admin/article/' . $article['slug'],
+            ];
+            $matched++;
+        }
+
+        echo json_encode(['results' => $results]);
     }
 
     /**
