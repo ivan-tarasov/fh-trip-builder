@@ -4,6 +4,15 @@
 
 {% block title %}Overview{% endblock %}
 
+{# The greeting Orchid's own dashboard opens with ("Welcome back, Alex 👋"),
+   minus the name -- there is no accounts table to read one from (A3.2,
+   #100), and a hard-coded name would be a lie the moment anyone else sat
+   down at this panel. The subtitle echoes this page's own two bands
+   below it rather than Orchid's "your business" line, which describes
+   nothing this app actually shows (G6, #328). #}
+{% block heading %}Welcome back 👋{% endblock %}
+{% block description %}<p class="well__description">Whether it's running, and how much there is.</p>{% endblock %}
+
 {# When every figure was read. Nothing on this page is cached -- a dashboard
    reporting a cached number is reporting on the cache -- so saying when it was
    read is what lets somebody trust a green tile (G1.6, #231). #}

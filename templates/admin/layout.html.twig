@@ -128,6 +128,12 @@
     {% include 'admin/partials/rail.html.twig' %}
 
     <div class="well">
+        {# Chrome only -- a breadcrumb and the two icon toggles. Everything
+           about the page itself (title, description, its own actions) lives
+           below in the page header instead, which is Orchid's own split
+           (`cms-pages.html`'s `.orchid-header` versus its page header), not
+           the one row this used to cram both into. Search, notifications and
+           a user menu are later work, not this one (G6.1, #329). #}
         <header class="well__top">
             <div class="well__lead">
                 {# One button, two jobs: `railToggle()` in `admin.js` opens the
@@ -137,15 +143,28 @@
                 <button type="button" class="btn btn-icon well__toggle" data-rail-toggle aria-controls="adminRail" aria-label="Toggle navigation">
                     <i class="bi bi-list" aria-hidden="true"></i>
                 </button>
-                <h1 class="well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
+
+                {# Hidden below `md`, the same breakpoint Orchid's own demo
+                   hides it at -- there is not room for both this and the
+                   rail toggle on a phone-width screen, and the rail toggle
+                   wins. #}
+                <nav aria-label="breadcrumb" class="well__breadcrumb d-none d-md-block">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="/admin" aria-label="Overview"><i class="bi bi-house-door" aria-hidden="true"></i></a></li>
+                        {% block breadcrumb %}
+                            <li class="breadcrumb-item active" aria-current="page">{{ block('title') }}</li>
+                        {% endblock %}
+                    </ol>
+                </nav>
             </div>
 
-            <div class="well__tools">
-                {% block tools %}{% endblock %}
-
+            <div class="well__top-tools">
                 {# One preference for every `.orchid-table` on the panel, not a
                    per-page choice -- `densityToggle()` in `admin.js` (G3.6,
-                   #309). #}
+                   #309). Not part of Orchid's own template, but the same kind
+                   of tiny global toggle as the theme switch beside it, so it
+                   stays in the topbar rather than moving to a page's own
+                   actions. #}
                 <button type="button" class="btn btn-icon js-density" aria-pressed="false" aria-label="Toggle table density">
                     <i class="bi bi-arrows-expand well__density-icon well__density-icon--comfortable" aria-hidden="true"></i>
                     <i class="bi bi-arrows-collapse well__density-icon well__density-icon--compact" aria-hidden="true"></i>
@@ -161,8 +180,35 @@
         {# `tabindex="-1"` so the skip link can put focus here, the same reason
            the public layout gives for its own landing point. #}
         <main class="well__body" id="main" tabindex="-1">
+            {# Not sticky -- unlike the topbar above, this scrolls away with
+               the content beneath it, the same as Orchid's own page header
+               does inside `.orchid-main`. #}
+            <div class="well__page-header">
+                <div>
+                    <h1 class="h3 well__title">{% block heading %}{{ block('title') }}{% endblock %}</h1>
+                    {% block description %}{% endblock %}
+                </div>
+
+                <div class="well__tools">
+                    {% block tools %}{% endblock %}
+                </div>
+            </div>
+
             {% block content %}{% endblock %}
         </main>
+
+        {# Orchid's own shape (`cms-pages.html`'s `.orchid-footer`), this
+           app's own content: no fabricated tagline, no dead links. Privacy
+           and Terms are real pages this site already has; Orchid's generic
+           "Support" becomes Help, the real hub in its place (G6.2, #330). #}
+        <footer class="well__footer" role="contentinfo">
+            <p class="mb-0 small text-body-secondary">&copy; {{ "now"|date("Y") }} {{ config('app.name') }}.</p>
+            <ul class="list-inline mb-0 small">
+                <li class="list-inline-item"><a class="text-body-secondary" href="/privacy">Privacy</a></li>
+                <li class="list-inline-item"><a class="text-body-secondary" href="/terms">Terms</a></li>
+                <li class="list-inline-item"><a class="text-body-secondary" href="/help">Help</a></li>
+            </ul>
+        </footer>
     </div>
 {% endblock %}
 
