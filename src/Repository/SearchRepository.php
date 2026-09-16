@@ -127,16 +127,40 @@ final readonly class SearchRepository
         int $departSpan = 1,
         int $returnSpan = 1,
     ): void {
+        // Read before the write: this is what "have I already counted this
+        // hash today" has to mean, and it is decided before the row's own
+        // `daily_counted_on` moves to today below (G7.1, #332).
+        $countedToday = $this->countedToday($hash);
+
         $this->connection->execute(
             'INSERT INTO ' . Table::Search->value
             . ' (hash, from_code, from_name, to_code, to_name, depart, depart_span,'
-            . ' `return`, return_span, triptype, `class`)'
-            . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-            . ' ON DUPLICATE KEY UPDATE search_count = search_count + 1, last_search = NOW()',
+            . ' `return`, return_span, triptype, `class`, daily_counted_on)'
+            . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())'
+            . ' ON DUPLICATE KEY UPDATE search_count = search_count + 1, last_search = NOW(), daily_counted_on = CURDATE()',
             [$hash, $fromCode, $fromName, $toCode, $toName, $depart, $departSpan, $return, $returnSpan, $triptype, $cabin->value],
         );
 
-        $this->bumpDailyCount();
+        if (!$countedToday) {
+            $this->bumpDailyCount();
+        }
+    }
+
+    /**
+     * Whether this route's hash has already bumped today's row in
+     * `search_daily_counts` -- a route searched ten times in one day (nine
+     * of them a filter re-applying the same search, not a new one) should
+     * count as one day's search, not ten.
+     */
+    private function countedToday(string $hash): bool
+    {
+        /** @var string|null $countedOn */
+        $countedOn = $this->connection->fetchValue(
+            'SELECT daily_counted_on FROM ' . Table::Search->value . ' WHERE hash = ?',
+            [$hash],
+        );
+
+        return $countedOn === date('Y-m-d');
     }
 
     /**

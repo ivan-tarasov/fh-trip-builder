@@ -67,12 +67,53 @@ final class SearchRepositoryTest extends IntegrationTestCase
 
             // `record()` also bumps today's row in `search_daily_counts`
             // (G7.1, #332) -- a shared, date-keyed counter with no sentinel
-            // of its own to delete, so this undoes exactly the two calls
-            // above by subtracting rather than deleting the day's row,
-            // which could belong to other activity too.
+            // of its own to delete, so this undoes exactly the one bump
+            // above (the second call is the same hash on the same day, so
+            // it does not bump again -- see testRecordOnlyBumpsDailyCountOnceAday)
+            // by subtracting rather than deleting the day's row, which
+            // could belong to other activity too.
             $connection->execute(
-                'UPDATE search_daily_counts SET count = count - 2 WHERE search_date = CURDATE()',
+                'UPDATE search_daily_counts SET count = count - 1 WHERE search_date = CURDATE()',
             );
+        }
+    }
+
+    /**
+     * The fix for what applying a filter looked like from this table's own
+     * side: the hash never changes (filters are not part of it), so ten
+     * requests for the same route on the same day used to look like ten
+     * searches. Now it is one -- the same hash, the same day, only the
+     * first call bumps `search_daily_counts` (G7.1, #332).
+     */
+    public function testRecordOnlyBumpsDailyCountOnceADay(): void
+    {
+        $connection = $this->connection();
+        $repo = new SearchRepository($connection);
+        $hash = 'test-' . uniqid();
+
+        $today = new DateTimeImmutable('today');
+        $before = $repo->total($today, $today->modify('+1 day'));
+
+        try {
+            $repo->record($hash, 'YUL', 'Montreal', 'YYZ', 'Toronto', '2026-09-15', '2026-09-22', 'roundtrip', CabinClass::Economy);
+            $repo->record($hash, 'YUL', 'Montreal', 'YYZ', 'Toronto', '2026-09-15', '2026-09-22', 'roundtrip', CabinClass::Economy);
+            $repo->record($hash, 'YUL', 'Montreal', 'YYZ', 'Toronto', '2026-09-15', '2026-09-22', 'roundtrip', CabinClass::Economy);
+
+            self::assertSame(
+                $before + 1,
+                $repo->total($today, $today->modify('+1 day')),
+                'three requests for the same route on the same day is one search, not three',
+            );
+
+            // A new day resets it: yesterday's hash searched again today is
+            // a new day's event, not a repeat of one already counted.
+            $connection->execute('UPDATE search SET daily_counted_on = ? WHERE hash = ?', ['2020-01-01', $hash]);
+            $repo->record($hash, 'YUL', 'Montreal', 'YYZ', 'Toronto', '2026-09-15', '2026-09-22', 'roundtrip', CabinClass::Economy);
+
+            self::assertSame($before + 2, $repo->total($today, $today->modify('+1 day')));
+        } finally {
+            $connection->execute('DELETE FROM search WHERE hash = ?', [$hash]);
+            $connection->execute('UPDATE search_daily_counts SET count = count - 2 WHERE search_date = CURDATE()');
         }
     }
 
