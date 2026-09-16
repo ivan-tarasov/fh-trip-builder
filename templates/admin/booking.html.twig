@@ -421,12 +421,17 @@
 
                     <div class="table-responsive">
                         <table class="table orchid-table align-middle mb-0">
+                            {# Five columns, not seven: Passenger+Type and Document
+                               type+number are each folded into one cell. At the
+                               panel's usual width this table was wide enough that
+                               Status and the actions column scrolled off screen
+                               inside `.table-responsive` with no visible cue that
+                               there was more to the right -- which read as "there
+                               are no actions" rather than "scroll for them." #}
                             <thead>
                                 <tr>
                                     <th scope="col">Passenger</th>
-                                    <th scope="col">Type</th>
-                                    <th scope="col">Document type</th>
-                                    <th scope="col">Document number</th>
+                                    <th scope="col">Document</th>
                                     <th scope="col">Status</th>
                                     <th scope="col">Issue date</th>
                                     <th scope="col" class="text-end">&nbsp;</th>
@@ -435,10 +440,14 @@
                             <tbody>
                                 {% for ticket in tickets %}
                                     <tr>
-                                        <td>{{ ticket.passenger }}</td>
-                                        <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
-                                        <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
-                                        <td class="mono">{{ ticket.document_number }}</td>
+                                        <td>
+                                            {{ ticket.passenger }}
+                                            <span class="text-body-secondary small d-block">{{ ticket.passenger_type }}</span>
+                                        </td>
+                                        <td>
+                                            {{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}
+                                            <span class="mono text-body-secondary small d-block">{{ ticket.document_number }}</span>
+                                        </td>
                                         <td>
                                             <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
                                                 {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
@@ -453,7 +462,7 @@
                                         </td>
                                     </tr>
                                 {% else %}
-                                    <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
+                                    <tr><td colspan="5" class="text-body-secondary">No tickets yet.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
