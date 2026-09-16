@@ -424,6 +424,32 @@
             </table>
         </div>
     </div>
+
+    {# The rules `booking.fare_brand` above only names -- already shaped by
+       `BookingPresenter::fareRules()` for the traveller's own
+       `templates/my/bookings/blocks/fare.html.twig`, which this reuses
+       rather than re-deriving from `bookings.fare_rules` a second way. Only
+       the drawing differs: that page uses Font Awesome, which this panel
+       does not load (A3.5, A10.1), so Bootstrap Icons stand in for it here
+       (G8.4, #339). #}
+    <p class="band">Fare rules</p>
+
+    <div class="card orchid-card mb-3">
+        <div class="card-body">
+            {% if booking.fare_rules %}
+                <ul class="list-unstyled mb-0">
+                    {% for line in booking.fare_rules %}
+                        <li class="d-flex align-items-center gap-2{{ loop.last ? '' : ' mb-2' }}">
+                            <i class="bi bi-{{ line.allowed ? 'check-lg text-success' : 'x-lg text-danger' }}" aria-hidden="true"></i>
+                            <span{{ line.allowed ? '' : ' class="text-body-secondary"' }}>{{ line.text }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-body-secondary mb-0">No fare rules on file for this booking.</p>
+            {% endif %}
+        </div>
+    </div>
 {% endif %}
 
 {# Outside the `if` above too, and for the same reason as the log below --
