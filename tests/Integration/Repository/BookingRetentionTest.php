@@ -6,8 +6,10 @@ namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
+use TripBuilder\RemarkTone;
 use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
+use TripBuilder\Repository\BookingRemarkRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
@@ -55,6 +57,11 @@ final class BookingRetentionTest extends IntegrationTestCase
         );
         $this->connection()->execute(
             'DELETE FROM booking_events WHERE booking_id IN'
+            . ' (SELECT id FROM bookings WHERE session_id LIKE ?)',
+            [self::SESSION . '%'],
+        );
+        $this->connection()->execute(
+            'DELETE FROM booking_remarks WHERE booking_id IN'
             . ' (SELECT id FROM bookings WHERE session_id LIKE ?)',
             [self::SESSION . '%'],
         );
@@ -188,5 +195,23 @@ final class BookingRetentionTest extends IntegrationTestCase
 
         self::assertGreaterThanOrEqual(1, $removed['events']);
         self::assertSame([], new BookingEventRepository($this->connection())->forBooking($id));
+    }
+
+    /**
+     * The remarks go with the booking, same reasoning as the log (G8.2, #337).
+     */
+    public function testForgettingRemovesTheRemarksToo(): void
+    {
+        [$bookings, $id] = $this->bookingDeparting(self::LONG_GONE);
+
+        new BookingRemarkRepository($this->connection())
+            ->record($id, BookingActor::Operator, RemarkTone::Info, 'Called to confirm seats.');
+
+        self::assertCount(1, new BookingRemarkRepository($this->connection())->forBooking($id));
+
+        $removed = $bookings->forgetDepartedBefore(self::CUTOFF);
+
+        self::assertGreaterThanOrEqual(1, $removed['remarks']);
+        self::assertSame([], new BookingRemarkRepository($this->connection())->forBooking($id));
     }
 }

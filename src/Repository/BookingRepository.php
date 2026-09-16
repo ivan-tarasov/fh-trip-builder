@@ -409,7 +409,7 @@ final readonly class BookingRepository
      * that is gone -- which is the shape of a bug that keeps the personal
      * information and loses the thing that explains it.
      *
-     * @return array{bookings: int, passengers: int, events: int}
+     * @return array{bookings: int, passengers: int, events: int, remarks: int}
      */
     public function forgetDepartedBefore(string $cutoff): array
     {
@@ -429,12 +429,18 @@ final readonly class BookingRepository
             [$cutoff],
         );
 
+        // Same reasoning as the events, for the same reason (G8.2, #337).
+        $remarks = $this->connection->execute(
+            'DELETE FROM ' . Table::BookingRemarks->value . ' WHERE booking_id IN (' . $expired . ')',
+            [$cutoff],
+        );
+
         $bookings = $this->connection->execute(
             'DELETE FROM ' . Table::Bookings->value . ' WHERE departure_time < ?',
             [$cutoff],
         );
 
-        return ['bookings' => $bookings, 'passengers' => $passengers, 'events' => $events];
+        return ['bookings' => $bookings, 'passengers' => $passengers, 'events' => $events, 'remarks' => $remarks];
     }
 
     /**

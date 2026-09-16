@@ -19,10 +19,12 @@ use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\PanelSetting;
+use TripBuilder\RemarkTone;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
+use TripBuilder\Repository\BookingRemarkRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\DashboardRepository;
@@ -76,6 +78,9 @@ class AdminController extends AbstractController
 
     /** Bookings to a page. Enough to scan, few enough to read. */
     private const int PER_PAGE = 25;
+
+    /** A remark long enough for a real note and short enough to still read as one. */
+    private const int REMARK_MAX_LENGTH = 2000;
 
     /** How many days back each named range covers. `all` has no entry -- it has no length to name. */
     private const array HERO_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90];
@@ -570,6 +575,8 @@ class AdminController extends AbstractController
             // When the log itself began, so a booking with no events can say
             // why rather than reading as one nothing ever happened to.
             'log_from' => $events->startedAt(),
+            'remarks' => new BookingRemarkRepository($this->connection())->forBooking($id),
+            'remark_tones' => RemarkTone::cases(),
         ]);
     }
 
@@ -595,6 +602,12 @@ class AdminController extends AbstractController
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
             Flash::set('That form went stale. Try again.', FlashTone::Error);
             $this->bounce($back);
+
+            return;
+        }
+
+        if ($this->request->body->str('action') === 'remark') {
+            $this->addRemark($id, $back);
 
             return;
         }
@@ -631,6 +644,40 @@ class AdminController extends AbstractController
             Flash::set('Nothing changed. This booking may already be in that state.', FlashTone::Error);
         }
 
+        $this->bounce($back);
+    }
+
+    /**
+     * Leave a remark on a booking.
+     *
+     * A separate method rather than another `match` arm in `actOnBooking()`:
+     * a remark is not a status transition, so it has nothing to check itself
+     * against and nothing to undo. Flashed on success or failure rather than
+     * shown inline -- this page has no other field-level validation either,
+     * and `BookingRemarkRepository::record()` does not swallow its own
+     * errors, so a write that fails is a write this method has to know about.
+     */
+    private function addRemark(int $id, string $back): void
+    {
+        $body = trim($this->request->body->str('body'));
+        $tone = RemarkTone::tryFrom($this->request->body->str('tone'));
+
+        if ($body === '' || $tone === null) {
+            Flash::set('A remark needs a mark and some text.', FlashTone::Error);
+            $this->bounce($back);
+
+            return;
+        }
+
+        if (mb_strlen($body) > self::REMARK_MAX_LENGTH) {
+            Flash::set(sprintf('%d characters at most.', self::REMARK_MAX_LENGTH), FlashTone::Error);
+            $this->bounce($back);
+
+            return;
+        }
+
+        new BookingRemarkRepository($this->connection())->record($id, BookingActor::Operator, $tone, $body);
+        Flash::set('Remark added.');
         $this->bounce($back);
     }
 

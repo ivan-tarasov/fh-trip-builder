@@ -385,6 +385,83 @@
         </div>
     {% endif %}
 
+    {# Outside the `if` above too, and for the same reason as the log below --
+       a booking whose flights will not build is exactly the one an operator
+       most needs to leave a note about (G8.2, #337).
+
+       Append-only, same reasoning as the log itself: a note somebody can
+       edit or delete after the fact is not a trustworthy one. Newest first,
+       unlike the log's own timeline -- this is a running note an operator
+       wants the latest of without scrolling past the rest. #}
+    <p class="band">Remarks</p>
+
+    <div class="card orchid-card mb-3">
+        <div class="card-body">
+            <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-start mb-3">
+                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="remark">
+                <div class="col-12 col-sm-3 col-md-2">
+                    <select name="tone" class="form-select form-select-sm" aria-label="Remark mark">
+                        {% for tone in remark_tones %}
+                            <option value="{{ tone.value }}">{{ tone.label() }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-sm-7 col-md-8">
+                    <textarea
+                        name="body"
+                        class="form-control form-control-sm"
+                        rows="1"
+                        maxlength="2000"
+                        placeholder="Leave a note for whoever looks at this next…"
+                        aria-label="Remark text"
+                        required
+                    ></textarea>
+                </div>
+                <div class="col-12 col-sm-2">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width: 1%;">Mark</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">By</th>
+                            <th scope="col">Remark</th>
+                            {# No actions yet -- append-only for now, and this
+                               is where one would go if that ever changes. #}
+                            <th scope="col" class="text-end">&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for remark in remarks %}
+                            <tr>
+                                <td>
+                                    <span class="status-chip status-chip--{{ remark.tone ? remark.tone.chipClass() : 'muted' }}">
+                                        {{ remark.tone ? remark.tone.label() : remark.raw_tone }}
+                                    </span>
+                                </td>
+                                <td class="mono text-body-secondary">{{ remark.created|date('j M Y, H:i') }}</td>
+                                <td class="text-body-secondary">{{ remark.actor ? remark.actor.label() : 'somebody' }}</td>
+                                <td>{{ remark.body }}</td>
+                                <td class="text-end row-actions" style="width: 1%;">
+                                    <button type="button" class="btn btn-icon" disabled aria-label="More actions (not available yet)" title="Not available yet">
+                                        <i class="bi bi-three-dots" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5" class="text-body-secondary">No remarks yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     {# The log.
 
        Outside the `if` above on purpose: a booking whose flights will not build
