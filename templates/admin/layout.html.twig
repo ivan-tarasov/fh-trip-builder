@@ -161,13 +161,13 @@
     {% include 'admin/partials/rail.html.twig' %}
 
     <div class="well">
-        {# Chrome only -- a breadcrumb, search and two icon toggles.
-           Everything about the page itself (title, description, its own
-           actions) lives below in the page header instead, which is
-           Orchid's own split (`cms-pages.html`'s `.orchid-header` versus
-           its page header), not the one row this used to cram both into.
-           Search is G4.1 (#312); notifications and a user menu are still
-           later work (G6.1, #329). #}
+        {# Chrome only -- a breadcrumb, search, two icon toggles and the
+           user menu. Everything about the page itself (title, description,
+           its own actions) lives below in the page header instead, which
+           is Orchid's own split (`cms-pages.html`'s `.orchid-header`
+           versus its page header), not the one row this used to cram both
+           into. Search is G4.1 (#312), the user menu G6.4 (#348);
+           notifications are still later work (G6.1, #329). #}
         <header class="well__top">
             <div class="well__lead">
                 {# One button, two jobs: `railToggle()` in `admin.js` opens the
@@ -217,6 +217,43 @@
                     <i class="bi bi-sun-fill well__theme-icon well__theme-icon--sun" aria-hidden="true"></i>
                     <i class="bi bi-moon-stars-fill well__theme-icon well__theme-icon--moon" aria-hidden="true"></i>
                 </button>
+
+                {# The other half of "a user menu" (G6.1, #329). Scoped to
+                   Sign out for now -- Profile/Settings/Billing/Help Center
+                   wait for the user-profile work itself, which is still
+                   ahead. There is no accounts table this could read a
+                   name/role/email from -- "one password, one session flag,
+                   no accounts table" (`AdminController`, A3.2, #100) -- so
+                   all three, and the avatar, are `config('meta.author')`,
+                   the same block the public footer's own credit line
+                   already reads (G6.4, #348). #}
+                <div class="dropdown">
+                    <button type="button" class="btn btn-icon well__user" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
+                        <img class="well__user-avatar" src="{{ config('meta.author.avatar') }}" width="32" height="32" alt="">
+                        <span class="well__user-meta d-none d-lg-flex">
+                            <span class="well__user-name">{{ config('meta.author.name') }}</span>
+                            <span class="well__user-role">{{ config('meta.author.role') }}</span>
+                        </span>
+                        <i class="bi bi-chevron-down d-none d-lg-inline" aria-hidden="true"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end well__user-menu">
+                        <li class="well__user-menu-header">
+                            <img class="well__user-avatar" src="{{ config('meta.author.avatar') }}" width="40" height="40" alt="">
+                            <div class="min-w-0">
+                                <p class="mb-0 fw-semibold">{{ config('meta.author.name') }}</p>
+                                <small class="text-body-secondary">{{ config('meta.author.email') }}</small>
+                            </div>
+                        </li>
+                        <li>
+                            <form method="post" action="/admin/logout">
+                                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                                <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger">
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </header>
 
