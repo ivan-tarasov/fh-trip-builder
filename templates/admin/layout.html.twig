@@ -253,9 +253,21 @@
         {# Orchid's own shape (`cms-pages.html`'s `.orchid-footer`), this
            app's own content: no fabricated tagline, no dead links. Privacy
            and Terms are real pages this site already has; Orchid's generic
-           "Support" becomes Help, the real hub in its place (G6.2, #330). #}
+           "Support" becomes Help, the real hub in its place (G6.2, #330).
+
+           What the page cost to build rides on the same line as the
+           copyright rather than a column of its own -- the public
+           footer's own restraint (`footer/bottom.html.twig`) for the same
+           reason: worth keeping on a project whose point is how it is
+           built, not worth making the loudest thing in the footer. Free
+           to print here: see `LayoutData::footerPerf()` for why this is
+           not `stats()` (G6.3, #346). #}
+        {% set perf = footer_perf() %}
         <footer class="well__footer" role="contentinfo">
-            <p class="mb-0 small text-body-secondary">&copy; {{ "now"|date("Y") }} {{ config('app.name') }}.</p>
+            <p class="mb-0 small text-body-secondary">
+                &copy; {{ "now"|date("Y") }} {{ config('app.name') }}.
+                {{ perf.execution_time }}s &middot; {{ perf.database_requests }} quer{{ perf.database_requests == 1 ? 'y' : 'ies' }}
+            </p>
             <ul class="list-inline mb-0 small">
                 <li class="list-inline-item"><a class="text-body-secondary" href="/privacy">Privacy</a></li>
                 <li class="list-inline-item"><a class="text-body-secondary" href="/terms">Terms</a></li>

@@ -102,6 +102,28 @@ final class LayoutData
         ];
     }
 
+    /**
+     * The two footer figures that cost nothing to print. `queryCount()` is a
+     * running total already kept on the one connection every page shares,
+     * and `Timer` is already started for every request regardless of who
+     * reads it -- neither is a query of its own.
+     *
+     * Not `stats()`: that one also runs `flightsCount()`, a real `SELECT
+     * COUNT(*) FROM flights`, which is the public footer's own furniture
+     * and the reason `AdminController` reads none of `stats()` at all
+     * (A3.5, #230). The admin footer wants the two free figures without
+     * reviving the one that is not (G6.3, #346).
+     *
+     * @return array{execution_time: string, database_requests: int}
+     */
+    public function footerPerf(): array
+    {
+        return [
+            'execution_time' => $this->executionTime(),
+            'database_requests' => $this->connection()->queryCount(),
+        ];
+    }
+
     public function currentPage(): string
     {
         return Routes::getCurrentPage();
