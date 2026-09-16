@@ -323,7 +323,14 @@ class AdminController extends AbstractController
                 break;
             }
 
-            if (!str_contains(mb_strtolower($article['title']), $needle)) {
+            // The title first -- a reader typing a couple of words is
+            // usually naming the thing, not quoting its summary -- but a
+            // summary is what a reader searches when they remember the
+            // topic and not the headline it was given.
+            if (
+                !str_contains(mb_strtolower($article['title']), $needle)
+                && !str_contains(mb_strtolower($article['summary']), $needle)
+            ) {
                 continue;
             }
 
