@@ -5,12 +5,16 @@
 
 {# A block's title lives inside the card it belongs to, not in a `<p
    class="band">` sitting above it -- Orchid's own `payments.html`
-   ("Transactions") shape, adopted here for every card on the booking page
-   rather than a bespoke header written out seven times (G8.5, #340). #}
-{% macro blockHeader(icon, title) %}
-    <div class="card-header d-flex align-items-center gap-2">
-        <i class="bi bi-{{ icon }} text-body-secondary" aria-hidden="true"></i>
-        <strong>{{ title }}</strong>
+   ("Transactions") structure and style (`.sales-card__head`/
+   `.sales-card__title`, `assets/css/pages/sales-lists.css`), reused as
+   `.block-head`/`.block-head__title` for every card on the booking page
+   rather than a bespoke header written out seven times. `count` is the
+   same trailing "16 transactions" that page prints -- only supplied where
+   a block already has one clean number to show (G8.5, #340). #}
+{% macro blockHeader(icon, title, count) %}
+    <div class="block-head">
+        <h6 class="block-head__title"><i class="bi bi-{{ icon }} me-2" aria-hidden="true"></i>{{ title }}</h6>
+        {% if count is not null %}<span class="text-body-secondary small">{{ count }}</span>{% endif %}
     </div>
 {% endmacro %}
 

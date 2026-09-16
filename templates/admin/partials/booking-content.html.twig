@@ -263,7 +263,7 @@
     </form>
 
     <div class="card orchid-card mb-3">
-        {{ self.blockHeader('ticket-perforated', 'Tickets') }}
+        {{ self.blockHeader('ticket-perforated', 'Tickets', tickets|length ~ (tickets|length == 1 ? ' ticket' : ' tickets')) }}
         <div class="card-body">
             <div class="d-flex justify-content-end align-items-center gap-2 mb-3">
                 <button
@@ -516,7 +516,7 @@
    unlike the log's own timeline -- this is a running note an operator
    wants the latest of without scrolling past the rest. #}
 <div class="card orchid-card mb-3">
-    {{ self.blockHeader('chat-square-text', 'Remarks') }}
+    {{ self.blockHeader('chat-square-text', 'Remarks', remarks|length ~ (remarks|length == 1 ? ' remark' : ' remarks')) }}
     <div class="card-body">
         <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-start mb-3">
             <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">

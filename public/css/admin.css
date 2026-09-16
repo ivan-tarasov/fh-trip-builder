@@ -825,6 +825,22 @@ a:hover { text-decoration: underline; }
    only while its menu is open fixes that without touching the rest. */
 .sticky-end:has(.dropdown-menu.show) { z-index: 1051; }
 
+/* A block's own title, inside the card rather than a `<p class="band">`
+   above it -- Orchid's `.sales-card__head`/`.sales-card__title`
+   (`payments.html`, `assets/css/pages/sales-lists.css`), renamed for reuse
+   across every block on this page rather than one page's own transaction
+   list (G8.5, #340). */
+.block-head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.block-head__title { margin: 0; font-size: .95rem; font-weight: 700; }
+
 /* A tabbed switch between two views of the same block's own content --
    Orchid's `todo-filter-tabs` shape (`todo.html`), an underline rather than
    Bootstrap's boxed `.nav-tabs` look. Left as plain `.nav` markup rather
