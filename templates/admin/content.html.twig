@@ -99,7 +99,7 @@
                                         {% if article.edited %}<span class="badge text-bg-success">Edited here</span>{% endif %}
                                         {% if article.enabled and not article.edited %}<span class="text-body-secondary small">Live</span>{% endif %}
                                     </td>
-                                    <td class="text-end" style="width: 1%;">
+                                    <td class="text-end row-actions" style="width: 1%;">
                                         {{ do.menu([
                                             { label: 'Move up', icon: 'arrow-up', kind: 'article', slug: article.slug, action: 'up', disabled: loop.first },
                                             { label: 'Move down', icon: 'arrow-down', kind: 'article', slug: article.slug, action: 'down', disabled: loop.last },

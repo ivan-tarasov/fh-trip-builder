@@ -460,6 +460,12 @@ a:hover { text-decoration: underline; }
 [aria-pressed="true"] .well__theme-icon--sun { display: none; }
 [aria-pressed="true"] .well__theme-icon--moon { display: inline-block; }
 
+/* Same pattern, the density toggle: `aria-pressed="true"` means compact is
+   on (G3.6, #309). */
+.well__density-icon--compact { display: none; }
+[aria-pressed="true"] .well__density-icon--comfortable { display: none; }
+[aria-pressed="true"] .well__density-icon--compact { display: inline-block; }
+
 /*
 |------------------------------------------------------------------------------
 | Buttons
@@ -624,6 +630,24 @@ a:hover { text-decoration: underline; }
 
 .orchid-table tbody td { padding: .875rem .75rem; border-bottom: 1px solid var(--rule); }
 .orchid-table tbody tr:last-child td { border-bottom: 0; }
+
+/* Compact reads as "the same table, tighter" rather than a different
+   component, so this only ever touches the padding the row rule above
+   already sets -- one global preference, not a per-table choice, the same
+   `data-*` on `<html>` the theme already uses (G3.6, #309). */
+[data-density="compact"] .orchid-table thead th { padding: .375rem .75rem; }
+[data-density="compact"] .orchid-table tbody td { padding: .4rem .75rem; }
+
+/* A row's own action -- the article menu, the fare-alert "Remove" -- draws
+   the eye once the row is looked at, not on every row all the time. A
+   permanently-visible icon in every row was noise on a table scanned by its
+   content, not its controls. `:focus-within` reveals the same on keyboard
+   focus, so tabbing through never lands on a control nobody can see (G3.6,
+   #309). */
+.row-actions { opacity: 0; transition: opacity 120ms ease; }
+
+.orchid-table tbody tr:hover .row-actions,
+.orchid-table tbody tr:focus-within .row-actions { opacity: 1; }
 
 /* A row that sums the ones above it -- the booking payment breakdown's
    Total, so it reads as heavier than Base fare and Taxes & fees without a

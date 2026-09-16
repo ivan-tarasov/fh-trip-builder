@@ -33,7 +33,7 @@
                             <tr>
                                 <td>{{ subscriber.email }}</td>
                                 <td class="mono text-body-secondary">{{ subscriber.subscribed_at|date('j M Y') }}</td>
-                                <td class="text-end" style="width: 1%;">
+                                <td class="text-end row-actions" style="width: 1%;">
                                     <form method="post" action="/admin/subscribers">
                                         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
                                         <input type="hidden" name="id" value="{{ subscriber.id }}">
