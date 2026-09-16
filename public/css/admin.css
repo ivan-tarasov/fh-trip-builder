@@ -1517,6 +1517,82 @@ a:hover { text-decoration: underline; }
   .bookings-hero__kpis { grid-template-columns: 1fr; }
 }
 
+/* Orchid's `.products-toolbar` (`inventory.html`), renamed into this page's
+   own namespace: the bordered strip a filter bar sits in, with the search
+   box carrying its own icon rather than an input-group. */
+.bookings-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  padding: .875rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background-color: var(--surface);
+}
+
+.bookings-toolbar__search {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.bookings-toolbar__search i {
+  position: absolute;
+  top: 50%;
+  left: .75rem;
+  transform: translateY(-50%);
+  color: var(--ink-quiet);
+  pointer-events: none;
+}
+
+.bookings-toolbar__search input.form-control {
+  padding-left: 2.15rem;
+  height: 38px;
+}
+
+.bookings-toolbar > .form-select-sm,
+.bookings-toolbar > .form-control-sm {
+  flex: 0 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+/* Orchid's own `.sales-pager` (`orders.html`), renamed: the count's
+   permanent home, flush under the table rather than a separate block
+   below the card. */
+.bookings-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .875rem 1.25rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-quiet);
+  font-size: .8125rem;
+  flex-wrap: wrap;
+}
+
+.bookings-pager .page-link {
+  border-radius: 8px !important;
+  margin: 0 2px;
+  font-size: .8125rem;
+  color: var(--ink);
+  border: 1px solid var(--rule);
+}
+
+/* Orchid's own `.inv-table` (`inventory.html`), the one thing `.orchid-table`
+   -- this panel's shared table dressing -- doesn't already give it: a
+   tinted head, rather than one that blends into the card. Scoped to this
+   table rather than folded into `.orchid-table` itself, which every other
+   admin list also uses. */
+.bookings-table thead th { background: var(--sunken); }
+
+.bookings-pager .page-item.active .page-link {
+  background: var(--signal);
+  border-color: var(--signal);
+}
+
 @media (max-width: 60em) {
   .editor { grid-template-columns: 1fr; }
   .well__body { padding: 1rem; }
