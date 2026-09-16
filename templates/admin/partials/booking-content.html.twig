@@ -608,7 +608,7 @@
 } %}
 
 <div class="card orchid-card">
-    {{ self.blockHeader('clock-history', 'Booking log') }}
+    {{ self.blockHeader('clock-history', 'Booking log', log|length ~ (log|length == 1 ? ' event' : ' events')) }}
     <div class="card-body py-1">
         {% for line in log %}
             {% set tone = line.event ? log_tones[line.event.value]|default('') : '' %}
