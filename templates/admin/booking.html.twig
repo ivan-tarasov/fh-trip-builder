@@ -119,71 +119,125 @@
            without a fake comparison (G2.2, #288), because there is nothing
            stored to compare a single booking against. Passengers and total paid
            replace what used to be a plain two-card pair: both are fields the
-           presenter already shapes, just not ones this page read before. #}
+           presenter already shapes, just not ones this page read before.
+
+           Icon-left, Orchid's own `customer-list.html` KPI shape rather than
+           this component's usual icon-right one -- only the layout moved
+           here, `.stat-card` itself is unchanged, since the dashboard and the
+           bookings hero still draw it the old way. #}
         <div class="row g-3 mb-3">
             <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card orchid-card stat-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="min-w-0">
-                                <p class="stat-card__label">Reference</p>
-                                <h3 class="stat-card__value mono d-flex align-items-center gap-1">
-                                    {{ booking.reference ?: 'none issued' }}
-                                    {{ self.copyButton(booking.reference, 'reference') }}
-                                </h3>
-                            </div>
-                            <span class="stat-card__icon"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
+                    <div class="card-body d-flex align-items-start gap-3">
+                        <span class="stat-card__icon flex-shrink-0"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <p class="stat-card__label">Reference</p>
+                            <h3 class="stat-card__value mono d-flex align-items-center gap-1">
+                                {{ booking.reference ?: 'none issued' }}
+                                {{ self.copyButton(booking.reference, 'reference') }}
+                            </h3>
+                            <p class="stat-card__note">made {{ booking.created|date('j M Y, H:i') }} &middot; {{ extra.made_ago }}</p>
                         </div>
-                        <p class="stat-card__note">made {{ booking.created|date('j M Y, H:i') }} &middot; {{ extra.made_ago }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card orchid-card stat-card{{ extra.is_cancelled ? ' stat-card--bad' : ' stat-card--good' }} h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="min-w-0">
-                                <p class="stat-card__label">State</p>
-                                <h3 class="stat-card__value">{{ booking.status_label }}</h3>
-                            </div>
-                            <span class="stat-card__icon"><i class="bi bi-{{ extra.is_cancelled ? 'x-circle-fill' : 'check-circle-fill' }}" aria-hidden="true"></i></span>
+                    <div class="card-body d-flex align-items-start gap-3">
+                        <span class="stat-card__icon flex-shrink-0"><i class="bi bi-{{ extra.is_cancelled ? 'x-circle-fill' : 'check-circle-fill' }}" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <p class="stat-card__label">State</p>
+                            <h3 class="stat-card__value">{{ booking.status_label }}</h3>
+                            <p class="stat-card__note">
+                                {% if booking.is_past %}already flown{% else %}{{ booking.departs_in }}{% endif %}
+                            </p>
                         </div>
-                        <p class="stat-card__note">
-                            {% if booking.is_past %}already flown{% else %}{{ booking.departs_in }}{% endif %}
-                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card orchid-card stat-card stat-card--warn h-100">
+                    <div class="card-body d-flex align-items-start gap-3">
+                        <span class="stat-card__icon flex-shrink-0"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <p class="stat-card__label">Passengers</p>
+                            <h3 class="stat-card__value">{{ booking.passengers|length }}</h3>
+                            <p class="stat-card__note">{{ booking.passenger_summary }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-12 col-sm-6 col-xl-3">
                 <div class="card orchid-card stat-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="min-w-0">
-                                <p class="stat-card__label">Passengers</p>
-                                <h3 class="stat-card__value">{{ booking.passengers|length }}</h3>
-                            </div>
-                            <span class="stat-card__icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                    <div class="card-body d-flex align-items-start gap-3">
+                        <span class="stat-card__icon flex-shrink-0"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
+                        <div class="min-w-0">
+                            <p class="stat-card__label">Total paid</p>
+                            <h3 class="stat-card__value{{ booking.price_total ? '' : ' stat-card__value--none' }} mono">
+                                {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}none on file{% endif %}
+                            </h3>
+                            <p class="stat-card__note">{{ booking.fare_brand ?: 'no fare brand on file' }}</p>
                         </div>
-                        <p class="stat-card__note">{{ booking.passenger_summary }}</p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card orchid-card stat-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="min-w-0">
-                                <p class="stat-card__label">Total paid</p>
-                                <h3 class="stat-card__value{{ booking.price_total ? '' : ' stat-card__value--none' }} mono">
-                                    {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}none on file{% endif %}
-                                </h3>
-                            </div>
-                            <span class="stat-card__icon"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
-                        </div>
-                        <p class="stat-card__note">{{ booking.fare_brand ?: 'no fare brand on file' }}</p>
+        {# One strip, six facts -- the same icon-chip-and-value shape
+           `.stat-card` already draws, laid out in a single row rather than
+           a table because none of these need a second column to explain
+           them. #}
+        <div class="card orchid-card mb-3">
+            <div class="detail-strip">
+                <div class="detail-strip__item">
+                    <span class="stat-card__icon"><i class="bi bi-cash" aria-hidden="true"></i></span>
+                    <div class="detail-strip__meta">
+                        <p class="detail-strip__label">Currency</p>
+                        <p class="detail-strip__value">{{ extra.currency }}</p>
+                    </div>
+                </div>
+                <div class="detail-strip__item">
+                    <span class="stat-card__icon"><i class="bi bi-translate" aria-hidden="true"></i></span>
+                    <div class="detail-strip__meta">
+                        <p class="detail-strip__label">Language</p>
+                        <p class="detail-strip__value">{{ extra.language }}</p>
+                    </div>
+                </div>
+                {# No tickets table yet -- this reads the same as the other
+                   uncaptured facts here rather than a count of zero as if
+                   one had been checked. Real rows land with G8.3 (#338). #}
+                <div class="detail-strip__item">
+                    <span class="stat-card__icon"><i class="bi bi-ticket" aria-hidden="true"></i></span>
+                    <div class="detail-strip__meta">
+                        <p class="detail-strip__label">Tickets</p>
+                        <p class="detail-strip__value fw-normal text-body-secondary">—</p>
+                    </div>
+                </div>
+                {# Captured at checkout going forward -- a booking made
+                   before this shipped has nothing here, the same as any
+                   column added mid-life (G8.1, #336). #}
+                <div class="detail-strip__item">
+                    <span class="stat-card__icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+                    <div class="detail-strip__meta">
+                        <p class="detail-strip__label">IP address</p>
+                        <p class="detail-strip__value{{ extra.ip_address ? '' : ' fw-normal text-body-secondary' }}">{{ extra.ip_address ?: '—' }}</p>
+                    </div>
+                </div>
+                <div class="detail-strip__item">
+                    <span class="stat-card__icon"><i class="bi bi-building" aria-hidden="true"></i></span>
+                    <div class="detail-strip__meta">
+                        <p class="detail-strip__label">City</p>
+                        <p class="detail-strip__value{{ extra.city ? '' : ' fw-normal text-body-secondary' }}">{{ extra.city ?: '—' }}</p>
+                    </div>
+                </div>
+                <div class="detail-strip__item">
+                    <span class="stat-card__icon"><i class="bi bi-flag" aria-hidden="true"></i></span>
+                    <div class="detail-strip__meta">
+                        <p class="detail-strip__label">Country</p>
+                        <p class="detail-strip__value{{ extra.country ? '' : ' fw-normal text-body-secondary' }}">{{ extra.country_name ?: (extra.country ?: '—') }}</p>
                     </div>
                 </div>
             </div>

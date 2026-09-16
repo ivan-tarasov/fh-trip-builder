@@ -645,6 +645,69 @@ a:hover { text-decoration: underline; }
 .orchid-chart-wrap { position: relative; width: 100%; }
 .orchid-chart-wrap--md { height: 12rem; }
 
+/* A row of small facts, one `.stat-card__icon` chip each, side by side
+   inside a single card rather than a table -- Orchid's own deals KPI strip
+   (`.deals-kpi-strip`), adopted here without its sparklines: nothing on the
+   booking page has a trend to show (G8.1, #336). */
+.detail-strip {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: .75rem;
+    padding: .85rem 1rem;
+    /* Bootstrap's `.card` sets `word-wrap: break-word`, and this strip sits
+       inside one -- without resetting it, a narrow column breaks something
+       like an IP address mid-digit rather than wrapping at a space. */
+    overflow-wrap: normal;
+}
+
+@media (max-width: 1199.98px) {
+    .detail-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .detail-strip__item:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
+}
+
+@media (max-width: 575.98px) {
+    .detail-strip { grid-template-columns: repeat(2, 1fr); }
+    .detail-strip__item:nth-child(odd) { border-left: 0; padding-left: 0; }
+}
+
+.detail-strip__item {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    min-width: 0;
+}
+
+/* Six of these side by side, not four in a row that spans the page --
+   smaller than `.stat-card__icon` is everywhere else, so the value beside
+   it keeps enough room to read. */
+.detail-strip__item .stat-card__icon {
+    width: 2.125rem;
+    height: 2.125rem;
+    font-size: 1rem;
+}
+
+.detail-strip__item + .detail-strip__item {
+    border-left: 1px dashed var(--rule);
+    padding-left: .95rem;
+}
+
+.detail-strip__meta { flex: 1; min-width: 0; }
+
+.detail-strip__label {
+    margin: 0;
+    font-size: .7rem;
+    color: var(--ink-quiet);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.detail-strip__value {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
 /* A small icon tile wherever a card header wants one that is not a stat --
    same recipe as `.stat-card__icon`, kept separate because the two
    components should not have to evolve together (G2.3, #289). */

@@ -160,6 +160,10 @@ final class MoneyActiveRatesTest extends IntegrationTestCase
             'currency_rate' => '1.000000',
             'flight_outbound' => (string) json_encode([$segment]),
             'flight_return' => null,
+            'ip_address' => null,
+            'city' => null,
+            'country' => null,
+            'language' => 'English',
         ];
     }
 

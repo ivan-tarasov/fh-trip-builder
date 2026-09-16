@@ -404,6 +404,14 @@ class CheckoutController extends AbstractController
                 'card_brand' => Helper::cardScheme($form['card_number']),
                 // All of the card that is ever stored.
                 'card_last4' => substr(preg_replace('/\D+/', '', $form['card_number']) ?? '', -4),
+                'ip_address' => $this->request->clientIp(),
+                // No IP-to-city source exists in this app -- see the column's
+                // own comment.
+                'city' => null,
+                'country' => $this->request->country(),
+                // No language switcher on the public site yet -- every
+                // booking is genuinely in English, not a guess (G8.1, #336).
+                'language' => 'English',
                 'created' => date('Y-m-d H:i:s'),
             ]);
 

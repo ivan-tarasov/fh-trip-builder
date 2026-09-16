@@ -24,6 +24,7 @@ use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\DashboardRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Repository\SearchRepository;
@@ -542,6 +543,18 @@ class AdminController extends AbstractController
                 'made' => $row['created'],
                 'made_ago' => Helper::elapsed($row['created']),
                 'is_cancelled' => BookingStatus::fromRow($row['status']) === BookingStatus::Cancelled,
+                // The raw stored code, not the presenter's `price_base.code` --
+                // that one falls back to CAD on a corrupt row, which is the
+                // right call for showing a price but the wrong one for saying
+                // what currency the buyer was actually charged in (G8.1, #336).
+                'currency' => $row['currency'],
+                'language' => $row['language'],
+                'ip_address' => $row['ip_address'],
+                'city' => $row['city'],
+                'country' => $row['country'],
+                'country_name' => $row['country'] === null
+                    ? null
+                    : (new CountryRepository($this->connection())->all()[$row['country']] ?? null),
             ],
             'passengers' => $passengers,
             // How many bookings each traveller appears on, in the order the
