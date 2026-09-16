@@ -747,6 +747,55 @@
     };
 
     /*
+    | Recently-viewed bookings (G4.3, #314) -- `localStorage`-backed, since a
+    | single operator's own "what did I just look at" needs no server table.
+    | Stored in the exact `{type, label, meta, url}` shape the command
+    | palette's own search results already use, so the palette can draw
+    | either one with the same `render()`.
+    */
+    var RECENT_BOOKINGS_KEY = 'tb-recent-bookings';
+    var RECENT_BOOKINGS_MAX = 8;
+
+    var readRecentBookings = function () {
+        try {
+            var stored = JSON.parse(window.localStorage.getItem(RECENT_BOOKINGS_KEY) || '[]');
+
+            return Array.isArray(stored) ? stored : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    // Read from the booking page's own `#booking-content` -- present once
+    // per real navigation to the page, and untouched by `ajaxBookingForms()`
+    // swapping what is inside it, so a cancel/reinstate never bumps a
+    // booking's place in this list on its own.
+    var recordRecentBooking = function () {
+        var content = document.getElementById('booking-content');
+
+        if (!content || !content.dataset.recentBookingUrl) {
+            return;
+        }
+
+        var entry = {
+            type: 'Recently viewed',
+            label: content.dataset.recentBookingLabel,
+            meta: content.dataset.recentBookingMeta,
+            url: content.dataset.recentBookingUrl
+        };
+
+        try {
+            var list = readRecentBookings().filter(function (item) {
+                return item.url !== entry.url;
+            });
+
+            list.unshift(entry);
+
+            window.localStorage.setItem(RECENT_BOOKINGS_KEY, JSON.stringify(list.slice(0, RECENT_BOOKINGS_MAX)));
+        } catch (e) {}
+    };
+
+    /*
     | The command palette (G4.1, #312) -- `Ctrl`/`Cmd`+`K` from anywhere, or
     | the search icon in the topbar, opens the same thing: a booking, a
     | subscriber, a help-content article, without going to that thing's own
@@ -777,7 +826,8 @@
         var ICONS = {
             'Booking': 'ticket-perforated',
             'Subscriber': 'envelope',
-            'Help content': 'life-preserver'
+            'Help content': 'life-preserver',
+            'Recently viewed': 'clock-history'
         };
 
         var clear = function () {
@@ -851,13 +901,30 @@
             });
         };
 
+        // What the box shows before a term is typed -- G4.3 (#314), the
+        // same bookings `recordRecentBooking()` below writes, so opening
+        // the palette with nothing typed is a way back to what was just
+        // looked at rather than a blank box.
+        var showRecent = function () {
+            var recent = readRecentBookings();
+
+            if (recent.length === 0) {
+                clear();
+                resultsEl.innerHTML = '<p class="palette__empty">Search for a booking, a subscriber or a help article.</p>';
+
+                return;
+            }
+
+            render(recent);
+        };
+
         var search = function (term) {
             if (inFlight) {
                 inFlight.abort();
             }
 
             if (term === '') {
-                clear();
+                showRecent();
 
                 return;
             }
@@ -898,6 +965,10 @@
 
         modalEl.addEventListener('shown.bs.modal', function () {
             input.focus();
+
+            if (input.value.trim() === '') {
+                showRecent();
+            }
         });
 
         modalEl.addEventListener('hidden.bs.modal', clear);
@@ -926,4 +997,5 @@
     charts();
     ajaxBookingForms();
     commandPalette();
+    recordRecentBooking();
 }());

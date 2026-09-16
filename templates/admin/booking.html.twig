@@ -30,7 +30,14 @@
    back to a `fetch()` after a POST -- see that file's own comment for why one
    fragment covers every action here rather than one per card. #}
 {% block content %}
-    <div id="booking-content">
+    {# `data-recent-*` here, not inside the swapped fragment below: read once
+       by `recordRecentBooking()` (G4.3, #314) on a real navigation to this
+       page, and left alone by `ajaxBookingForms()` replacing the fragment's
+       `innerHTML` after a cancel/reinstate. #}
+    <div id="booking-content"
+         data-recent-booking-label="{{ extra.reference ?: 'Booking ' ~ extra.id }}"
+         data-recent-booking-meta="{{ booking.passenger }}"
+         data-recent-booking-url="/admin/bookings/{{ extra.id }}">
         {% include 'admin/partials/booking-content.html.twig' %}
     </div>
 {% endblock %}
