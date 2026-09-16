@@ -30,12 +30,13 @@ use TripBuilder\Repository\SearchCandidateRepository;
  * something is kept -- applied to three tables:
  *
  * **Bookings** past `BookingRepository::KEEP_DAYS_AFTER_DEPARTURE`, the
- * passengers travelling on them, the log of what happened to each and the
- * remarks left on each. These hold an email, a phone number, names, dates of
- * birth and genders, and before this nothing in the codebase ever deleted
- * one: `db:clear` empties tables and is not a policy. For a site priced in
- * CAD and addressed to Canadians that is PIPEDA scope, which asks that
- * personal information be kept only as long as it is needed (E9, #146).
+ * passengers travelling on them, the log of what happened to each, the
+ * remarks left on each and the tickets held by each. These hold an email, a
+ * phone number, names, dates of birth and genders, and before this nothing
+ * in the codebase ever deleted one: `db:clear` empties tables and is not a
+ * policy. For a site priced in CAD and addressed to Canadians that is
+ * PIPEDA scope, which asks that personal information be kept only as long
+ * as it is needed (E9, #146).
  *
  * **Rate-limit counters** for hours that have passed. Housekeeping rather than
  * privacy -- a counter is an IP and a number -- but it is the same sweep and
@@ -99,9 +100,9 @@ final class Prune extends AbstractCommand
 
         if (!$force) {
             $this->io->note(sprintf(
-                '%d booking(s) would be forgotten, with their passengers, their log and their '
-                . 'remarks, and finished rate-limit counters and %d stale search candidate(s) '
-                . 'with them. Nothing was. Run again with --force.',
+                '%d booking(s) would be forgotten, with their passengers, their log, their '
+                . 'remarks and their tickets, and finished rate-limit counters and %d stale '
+                . 'search candidate(s) with them. Nothing was. Run again with --force.',
                 count($expired),
                 $stale,
             ));
@@ -123,12 +124,13 @@ final class Prune extends AbstractCommand
         }
 
         $this->io->success(sprintf(
-            '%d booking(s), %d passenger(s), %d log line(s) and %d remark(s) forgotten, '
-            . '%d rate-limit counter(s) and %d search candidate(s) dropped.',
+            '%d booking(s), %d passenger(s), %d log line(s), %d remark(s) and %d ticket(s) '
+            . 'forgotten, %d rate-limit counter(s) and %d search candidate(s) dropped.',
             $removed['bookings'],
             $removed['passengers'],
             $removed['events'],
             $removed['remarks'],
+            $removed['tickets'],
             $counters,
             $stale,
         ));

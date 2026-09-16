@@ -1,0 +1,24 @@
+{# `{% block tools %}`'s own body, pulled out so the same markup can answer
+   a fresh POST too -- cancel/reinstate is the one action on this page that
+   changes something outside `#booking-content` (this button's own label,
+   and the "State" stat-card inside it), so its `fetch()` response carries
+   this fragment alongside the content one (G8.3, #338). #}
+<span class="text-body-secondary small mono">#{{ extra.id }}</span>
+
+{# Cancel and reinstate are each other's undo, which is what makes them safe
+   to put on the page. Nothing here deletes: a cancelled booking is a row the
+   traveller can still see, which is the whole reason `bookings.status`
+   exists (G1.8, #233). #}
+<form method="post" action="/admin/bookings/{{ extra.id }}" class="d-inline">
+    <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="{{ extra.is_cancelled ? 'reinstate' : 'cancel' }}">
+    <button
+        type="submit"
+        class="btn btn-sm {{ extra.is_cancelled ? 'btn-outline-secondary' : 'btn-outline-danger' }}"
+        data-confirm="{{ extra.is_cancelled
+            ? 'Put this booking back to confirmed?'
+            : 'Cancel this booking? The traveller will see it as cancelled.' }}"
+    >{{ extra.is_cancelled ? 'Reinstate' : 'Cancel booking' }}</button>
+</form>
+
+<a class="btn btn-sm btn-outline-secondary" href="/admin/bookings">Back</a>

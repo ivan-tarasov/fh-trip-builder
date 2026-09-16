@@ -6,12 +6,15 @@ namespace TripBuilder\Tests\Integration\Repository;
 
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
+use TripBuilder\DocumentType;
 use TripBuilder\RemarkTone;
 use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRemarkRepository;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Repository\BookingTicketRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
+use TripBuilder\TicketStatus;
 
 /**
  * The retention policy, applied to real rows.
@@ -63,6 +66,12 @@ final class BookingRetentionTest extends IntegrationTestCase
         $this->connection()->execute(
             'DELETE FROM booking_remarks WHERE booking_id IN'
             . ' (SELECT id FROM bookings WHERE session_id LIKE ?)',
+            [self::SESSION . '%'],
+        );
+        $this->connection()->execute(
+            'DELETE FROM booking_tickets WHERE booking_passenger_id IN'
+            . ' (SELECT id FROM booking_passengers WHERE booking_id IN'
+            . ' (SELECT id FROM bookings WHERE session_id LIKE ?))',
             [self::SESSION . '%'],
         );
         $this->connection()->execute('DELETE FROM bookings WHERE session_id LIKE ?', [self::SESSION . '%']);
@@ -213,5 +222,26 @@ final class BookingRetentionTest extends IntegrationTestCase
 
         self::assertGreaterThanOrEqual(1, $removed['remarks']);
         self::assertSame([], new BookingRemarkRepository($this->connection())->forBooking($id));
+    }
+
+    /**
+     * The tickets go with the booking -- a ticket names a passenger who is
+     * about to be forgotten too, so a sweep that left them behind would
+     * orphan rather than protect (G8.3, #338).
+     */
+    public function testForgettingRemovesTheTicketsToo(): void
+    {
+        [$bookings, $id] = $this->bookingDeparting(self::LONG_GONE);
+        $passengerId = new BookingPassengerRepository($this->connection())->forBooking($id)[0]['id'];
+
+        new BookingTicketRepository($this->connection())
+            ->create($passengerId, DocumentType::Ticket, '1234567890123', TicketStatus::Issued, '2026-01-01');
+
+        self::assertCount(1, new BookingTicketRepository($this->connection())->forBooking($id));
+
+        $removed = $bookings->forgetDepartedBefore(self::CUTOFF);
+
+        self::assertGreaterThanOrEqual(1, $removed['tickets']);
+        self::assertSame([], new BookingTicketRepository($this->connection())->forBooking($id));
     }
 }

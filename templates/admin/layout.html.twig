@@ -82,10 +82,16 @@
 
 {# Read once, called once: `flash()` clears the queued message the moment
    it is asked for, so it is captured here into a variable rather than
-   called again anywhere below (G3.1, #304). #}
+   called again anywhere below (G3.1, #304).
+
+   The container itself is not conditional any more: `admin.js`'s
+   `ajaxBookingForms()` builds its own toast for a `fetch()` answer, since
+   there is nothing queued in the session for `flash()` to hand back on a
+   page that never reloaded, and it needs a mount point that exists whether
+   or not this render happened to carry a flash (G8.3, #338). #}
 {% set flash = flash() %}
-{% if flash %}
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;" data-toast-container>
+    {% if flash %}
         <div class="toast align-items-center text-bg-{{ flash.tone.bootstrapClass() }} border-0"
              role="{{ flash.tone.value == 'error' ? 'alert' : 'status' }}"
              aria-live="{{ flash.tone.value == 'error' ? 'assertive' : 'polite' }}"
@@ -95,8 +101,8 @@
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
-    </div>
-{% endif %}
+    {% endif %}
+</div>
 
 {# One shared modal for every `data-confirm` button, rather than one per
    site -- Orchid's own `modalStatic` shape (`ui-modals.html`), including

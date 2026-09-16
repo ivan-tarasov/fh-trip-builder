@@ -404,16 +404,25 @@ final readonly class BookingRepository
     /**
      * Remove those bookings and everyone travelling on them.
      *
-     * Passengers first. There is no foreign key between the two tables, so
-     * deleting the parent first would leave the children pointing at a booking
-     * that is gone -- which is the shape of a bug that keeps the personal
-     * information and loses the thing that explains it.
+     * Tickets, then passengers, then the booking. There is no foreign key
+     * anywhere in this chain, so the order is the only thing stopping a
+     * child from surviving its parent -- a ticket names a passenger, so it
+     * has to go before the passenger does, the same reasoning the passenger
+     * comment already gives for going before the booking (G8.3, #338).
      *
-     * @return array{bookings: int, passengers: int, events: int, remarks: int}
+     * @return array{bookings: int, passengers: int, events: int, remarks: int, tickets: int}
      */
     public function forgetDepartedBefore(string $cutoff): array
     {
         $expired = 'SELECT id FROM ' . Table::Bookings->value . ' WHERE departure_time < ?';
+        $expiredPassengers = 'SELECT id FROM ' . Table::BookingPassengers->value
+            . ' WHERE booking_id IN (' . $expired . ')';
+
+        $tickets = $this->connection->execute(
+            'DELETE FROM ' . Table::BookingTickets->value
+            . ' WHERE booking_passenger_id IN (' . $expiredPassengers . ')',
+            [$cutoff],
+        );
 
         $passengers = $this->connection->execute(
             'DELETE FROM ' . Table::BookingPassengers->value . ' WHERE booking_id IN (' . $expired . ')',
@@ -440,7 +449,13 @@ final readonly class BookingRepository
             [$cutoff],
         );
 
-        return ['bookings' => $bookings, 'passengers' => $passengers, 'events' => $events, 'remarks' => $remarks];
+        return [
+            'bookings' => $bookings,
+            'passengers' => $passengers,
+            'events' => $events,
+            'remarks' => $remarks,
+            'tickets' => $tickets,
+        ];
     }
 
     /**

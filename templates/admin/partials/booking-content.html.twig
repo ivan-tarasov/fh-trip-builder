@@ -1,0 +1,570 @@
+{% import 'partials/money.html.twig' as money %}
+{% import 'admin/partials/booking-macros.html.twig' as self %}
+
+{# `{% block content %}`'s own body, pulled out so a POST can hand the exact
+   same markup back to `fetch()` instead of a redirect -- every action on
+   this page (a ticket, a remark, a status change) touches something a reader
+   could be scrolled past by the time a full-page reload landed them back at
+   the top, which was the actual complaint this fragment exists to fix
+   (G8.3, #338). One fragment for the whole block rather than one per card:
+   a ticket action can also move the "Tickets" count in the detail strip and
+   add a line to the log below, and a single re-render can never miss one of
+   those the way patching each card by hand eventually would. #}
+{% if not booking %}
+    <p class="notice notice--bad">
+        This booking's flights will not build, so there is nothing to draw.
+        The columns are still there; the legs it was folded from are gone.
+        The log below and the buttons above still work on it, because this is
+        exactly the row somebody rings up about.
+    </p>
+{% else %}
+    {# Four facts, not trends -- the same stat-card shape the dashboard uses
+       without a fake comparison (G2.2, #288), because there is nothing
+       stored to compare a single booking against. Passengers and total paid
+       replace what used to be a plain two-card pair: both are fields the
+       presenter already shapes, just not ones this page read before.
+
+       Icon-left, Orchid's own `customer-list.html` KPI shape rather than
+       this component's usual icon-right one -- only the layout moved
+       here, `.stat-card` itself is unchanged, since the dashboard and the
+       bookings hero still draw it the old way. #}
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card orchid-card stat-card h-100">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <span class="stat-card__icon flex-shrink-0"><i class="bi bi-ticket-perforated" aria-hidden="true"></i></span>
+                    <div class="min-w-0">
+                        <p class="stat-card__label">Reference</p>
+                        <h3 class="stat-card__value mono d-flex align-items-center gap-1">
+                            {{ booking.reference ?: 'none issued' }}
+                            {{ self.copyButton(booking.reference, 'reference') }}
+                        </h3>
+                        <p class="stat-card__note">made {{ booking.created|date('j M Y, H:i') }} &middot; {{ extra.made_ago }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card orchid-card stat-card{{ extra.is_cancelled ? ' stat-card--bad' : ' stat-card--good' }} h-100">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <span class="stat-card__icon flex-shrink-0"><i class="bi bi-{{ extra.is_cancelled ? 'x-circle-fill' : 'check-circle-fill' }}" aria-hidden="true"></i></span>
+                    <div class="min-w-0">
+                        <p class="stat-card__label">State</p>
+                        <h3 class="stat-card__value">{{ booking.status_label }}</h3>
+                        <p class="stat-card__note">
+                            {% if booking.is_past %}already flown{% else %}{{ booking.departs_in }}{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card orchid-card stat-card stat-card--warn h-100">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <span class="stat-card__icon flex-shrink-0"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                    <div class="min-w-0">
+                        <p class="stat-card__label">Passengers</p>
+                        <h3 class="stat-card__value">{{ booking.passengers|length }}</h3>
+                        <p class="stat-card__note">{{ booking.passenger_summary }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card orchid-card stat-card h-100">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <span class="stat-card__icon flex-shrink-0"><i class="bi bi-cash-stack" aria-hidden="true"></i></span>
+                    <div class="min-w-0">
+                        <p class="stat-card__label">Total paid</p>
+                        <h3 class="stat-card__value{{ booking.price_total ? '' : ' stat-card__value--none' }} mono">
+                            {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}none on file{% endif %}
+                        </h3>
+                        <p class="stat-card__note">{{ booking.fare_brand ?: 'no fare brand on file' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# One strip, six facts -- the same icon-chip-and-value shape
+       `.stat-card` already draws, laid out in a single row rather than
+       a table because none of these need a second column to explain
+       them. #}
+    <div class="card orchid-card mb-3">
+        <div class="detail-strip">
+            <div class="detail-strip__item">
+                <span class="stat-card__icon"><i class="bi bi-cash" aria-hidden="true"></i></span>
+                <div class="detail-strip__meta">
+                    <p class="detail-strip__label">Currency</p>
+                    <p class="detail-strip__value">{{ extra.currency }}</p>
+                </div>
+            </div>
+            <div class="detail-strip__item">
+                <span class="stat-card__icon"><i class="bi bi-translate" aria-hidden="true"></i></span>
+                <div class="detail-strip__meta">
+                    <p class="detail-strip__label">Language</p>
+                    <p class="detail-strip__value">{{ extra.language }}</p>
+                </div>
+            </div>
+            <div class="detail-strip__item">
+                <span class="stat-card__icon"><i class="bi bi-ticket" aria-hidden="true"></i></span>
+                <div class="detail-strip__meta">
+                    <p class="detail-strip__label">Tickets</p>
+                    <p class="detail-strip__value{{ tickets|length ? '' : ' fw-normal text-body-secondary' }}">{{ tickets|length ?: '—' }}</p>
+                </div>
+            </div>
+            {# Captured at checkout going forward -- a booking made
+               before this shipped has nothing here, the same as any
+               column added mid-life (G8.1, #336). #}
+            <div class="detail-strip__item">
+                <span class="stat-card__icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+                <div class="detail-strip__meta">
+                    <p class="detail-strip__label">IP address</p>
+                    <p class="detail-strip__value{{ extra.ip_address ? '' : ' fw-normal text-body-secondary' }}">{{ extra.ip_address ?: '—' }}</p>
+                </div>
+            </div>
+            <div class="detail-strip__item">
+                <span class="stat-card__icon"><i class="bi bi-building" aria-hidden="true"></i></span>
+                <div class="detail-strip__meta">
+                    <p class="detail-strip__label">City</p>
+                    <p class="detail-strip__value{{ extra.city ? '' : ' fw-normal text-body-secondary' }}">{{ extra.city ?: '—' }}</p>
+                </div>
+            </div>
+            <div class="detail-strip__item">
+                <span class="stat-card__icon"><i class="bi bi-flag" aria-hidden="true"></i></span>
+                <div class="detail-strip__meta">
+                    <p class="detail-strip__label">Country</p>
+                    <p class="detail-strip__value{{ extra.country ? '' : ' fw-normal text-body-secondary' }}">{{ extra.country_name ?: (extra.country ?: '—') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="band">Who to contact</p>
+
+    <div class="card orchid-card mb-3">
+        <div class="table-responsive">
+            <table class="table orchid-table align-middle mb-0">
+                <tbody>
+                    <tr>
+                        <td class="text-body-secondary"><i class="bi bi-envelope me-2" aria-hidden="true"></i>Email</td>
+                        <td class="mono">
+                            <span class="d-inline-flex align-items-center gap-1">
+                                {% if booking.contact_email %}
+                                    <a href="mailto:{{ booking.contact_email }}">{{ booking.contact_email }}</a>
+                                {% else %}
+                                    —
+                                {% endif %}
+                                {{ self.copyButton(booking.contact_email, 'email') }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-body-secondary"><i class="bi bi-telephone me-2" aria-hidden="true"></i>Phone</td>
+                        <td class="mono">
+                            {% if booking.contact_phone %}
+                                <a href="tel:{{ booking.contact_phone }}">{{ booking.contact_phone }}</a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {# Not identifying on its own, and it is how every other read
+                       of this table finds a booking -- so an operator chasing a
+                       duplicate can see they came from one person, not two. #}
+                    <tr>
+                        <td class="text-body-secondary"><i class="bi bi-fingerprint me-2" aria-hidden="true"></i>Session</td>
+                        <td class="mono text-body-secondary">
+                            <span class="d-inline-flex align-items-center gap-1">
+                                {{ extra.session ?: '—' }}
+                                {{ self.copyButton(extra.session, 'session id') }}
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="band">Travelling</p>
+
+    <div class="card orchid-card mb-3">
+        <div class="table-responsive">
+            <table class="table orchid-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Born</th>
+                        <th scope="col">Bookings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for passenger in booking.passengers %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="avatar-circle">{{ self.initials(passenger.name) }}</span>
+                                    {{ passenger.name }}
+                                </div>
+                            </td>
+                            <td class="text-body-secondary">{{ passenger.type }}</td>
+                            <td class="mono text-body-secondary">{{ passenger.dob }}</td>
+                            {# `elsewhere` is mapped from the same rows the
+                               presenter shaped, so position n here is position n
+                               there -- see AdminController::booking(). #}
+                            <td>
+                                {% set count = elsewhere[loop.index0]|default(1) %}
+                                {% if count > 1 %}
+                                    <a class="text-decoration-none" href="/admin/bookings?q={{ passenger.name|url_encode }}">{{ count }} bookings</a>
+                                    {# Said plainly, because the number is a match
+                                       on a name and a date of birth and not on a
+                                       person. This site has no passenger table and
+                                       no identity in it: a booking carries the
+                                       words somebody typed into a form. #}
+                                    <span class="text-body-secondary small">same name and date of birth</span>
+                                {% else %}
+                                    <span class="text-body-secondary small">only this one</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-body-secondary">{{ booking.passenger_summary }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Fake numbers -- this app has no real GDS or ticketing integration
+       behind it, so a document here is whatever the operator typed in,
+       not something a supplier issued (G8.3, #338). #}
+    <p class="band">Tickets</p>
+
+    {% set passenger_type_labels = {'A': 'Adult', 'C': 'Child', 'I': 'Infant'} %}
+
+    {# Both forms here carry only their booking-wide hidden fields;
+       their real inputs -- the modal's, and every per-row action
+       inside the table below -- name them via `form="..."` rather
+       than being their descendants. Not a style choice: the table
+       has its own `<form>` per row action (`ticketAction()`), and a
+       `<form>` wrapping content that contains more `<form>`s is
+       invalid HTML that browsers recover from unpredictably -- which
+       is exactly what "clicking Generate voided a ticket" was, from
+       an earlier version that wrapped the whole card in the generate
+       form (G8.3, #338). #}
+    <form id="ticketAddForm" method="post" action="/admin/bookings/{{ extra.id }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="ticket_add">
+    </form>
+
+    <form id="ticketGenerateForm" method="post" action="/admin/bookings/{{ extra.id }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="ticket_generate">
+    </form>
+
+    <div class="card orchid-card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-end align-items-center gap-2 mb-3">
+                <button
+                    type="submit"
+                    form="ticketGenerateForm"
+                    class="btn btn-sm btn-outline-secondary"
+                    data-confirm="Add a fake ticket for every passenger who doesn't have one yet?"
+                >
+                    <i class="bi bi-magic me-1" aria-hidden="true"></i>Generate dummy tickets
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ticketAddModal">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0">
+                    {# Passenger type and document type read as separate
+                       facts, not a subtitle under something else -- each
+                       gets its own column. The actions column is pinned
+                       to the right edge of the scroll area (`.sticky-end`)
+                       rather than folded away to make room: this table
+                       already lost its actions once by scrolling out of
+                       view with no visible cue there was more to the
+                       right, and a narrower table is not worth that
+                       again. #}
+                    <thead>
+                        <tr>
+                            <th scope="col">Passenger</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Document type</th>
+                            <th scope="col">Document number</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Issue date</th>
+                            <th scope="col" class="text-end sticky-end">&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                            <tr>
+                                <td>{{ ticket.passenger }}</td>
+                                <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
+                                <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
+                                <td class="mono">{{ ticket.document_number }}</td>
+                                <td>
+                                    <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
+                                        {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
+                                    </span>
+                                </td>
+                                <td class="mono text-body-secondary">{{ ticket.issue_date|date('j M Y') }}</td>
+                                {# Always visible, unlike the other row-action menus on this
+                                   panel -- there is no larger list to declutter here, and an
+                                   action a reader cannot see is one they will not find. #}
+                                <td class="text-end sticky-end" style="width: 1%;">
+                                    {{ self.ticketActions(extra.id, ticket, ticket_statuses) }}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="ticketAddModal" tabindex="-1" aria-labelledby="ticketAddModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketAddModalTitle">Add a ticket</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="ticketPassenger" class="form-label">Passenger</label>
+                        <select id="ticketPassenger" name="booking_passenger_id" form="ticketAddForm" class="form-select">
+                            {% for passenger in passengers %}
+                                <option value="{{ passenger.id }}">{{ passenger.first_name }} {{ passenger.last_name }} ({{ passenger_type_labels[passenger.type]|default(passenger.type) }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label for="ticketDocType" class="form-label">Document type</label>
+                            <select id="ticketDocType" name="document_type" form="ticketAddForm" class="form-select">
+                                {% for type in document_types %}
+                                    <option value="{{ type.value }}">{{ type.label() }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="ticketIssueDate" class="form-label">Issue date</label>
+                            <input id="ticketIssueDate" name="issue_date" form="ticketAddForm" type="date" class="form-control" value="{{ "now"|date("Y-m-d") }}" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="ticketNumber" class="form-label">Document number</label>
+                        <input id="ticketNumber" name="document_number" form="ticketAddForm" type="text" class="form-control" maxlength="20" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="ticketAddForm" class="btn btn-primary">Add ticket</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% for ticket in tickets %}
+        {{ self.ticketNumberModal(extra.id, ticket) }}
+    {% endfor %}
+
+    <p class="band">The trip</p>
+
+    {{ self.legs(booking.outbound, 'Outbound') }}
+    {% if booking.return %}{{ self.legs(booking.return, 'Return') }}{% endif %}
+
+    <p class="band">What was paid</p>
+
+    {# Base fare and tax were already on the presenter (`price_base`,
+       `price_tax`) but this page only ever printed their sum -- splitting
+       them is real data this page was leaving on the table, not a new
+       field invented for the redesign. #}
+    <div class="card orchid-card mb-3">
+        <div class="table-responsive">
+            <table class="table orchid-table align-middle mb-0">
+                <tbody>
+                    <tr>
+                        <td class="text-body-secondary">Base fare</td>
+                        <td class="mono">{{ money.whole(booking.price_base) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-body-secondary">Taxes and fees</td>
+                        <td class="mono">{{ money.whole(booking.price_tax) }}</td>
+                    </tr>
+                    <tr class="is-total">
+                        <td>Total</td>
+                        <td class="mono">{% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}—{% endif %}</td>
+                    </tr>
+                    <tr><td class="text-body-secondary">Fare</td><td>{{ booking.fare_brand ?: '—' }}</td></tr>
+                    <tr>
+                        <td class="text-body-secondary">Card</td>
+                        {# Every digit this site has ever held. No card number is
+                           stored anywhere, which is what a receipt shows too. #}
+                        <td class="mono">
+                            {% if extra.card_last4 %}
+                                {{ booking.card_brand }} &middot;&middot;&middot;&middot; {{ extra.card_last4 }}
+                            {% else %}
+                                &mdash;
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+{# Outside the `if` above too, and for the same reason as the log below --
+   a booking whose flights will not build is exactly the one an operator
+   most needs to leave a note about (G8.2, #337).
+
+   Append-only, same reasoning as the log itself: a note somebody can
+   edit or delete after the fact is not a trustworthy one. Newest first,
+   unlike the log's own timeline -- this is a running note an operator
+   wants the latest of without scrolling past the rest. #}
+<p class="band">Remarks</p>
+
+<div class="card orchid-card mb-3">
+    <div class="card-body">
+        <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-start mb-3">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="remark">
+            <div class="col-12 col-sm-3 col-md-2">
+                <select name="tone" class="form-select form-select-sm" aria-label="Remark mark">
+                    {% for tone in remark_tones %}
+                        <option value="{{ tone.value }}">{{ tone.label() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-sm-7 col-md-8">
+                <textarea
+                    name="body"
+                    class="form-control form-control-sm"
+                    rows="1"
+                    maxlength="2000"
+                    placeholder="Leave a note for whoever looks at this next…"
+                    aria-label="Remark text"
+                    required
+                ></textarea>
+            </div>
+            <div class="col-12 col-sm-2">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table orchid-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col" style="width: 1%;">Mark</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">By</th>
+                        <th scope="col">Remark</th>
+                        {# No actions yet -- append-only for now, and this
+                           is where one would go if that ever changes. #}
+                        <th scope="col" class="text-end">&nbsp;</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for remark in remarks %}
+                        <tr>
+                            <td>
+                                <span class="status-chip status-chip--{{ remark.tone ? remark.tone.chipClass() : 'muted' }}">
+                                    {{ remark.tone ? remark.tone.label() : remark.raw_tone }}
+                                </span>
+                            </td>
+                            <td class="mono text-body-secondary">{{ remark.created|date('j M Y, H:i') }}</td>
+                            <td class="text-body-secondary">{{ remark.actor ? remark.actor.label() : 'somebody' }}</td>
+                            <td>{{ remark.body }}</td>
+                            <td class="text-end row-actions" style="width: 1%;">
+                                <button type="button" class="btn btn-icon" disabled aria-label="More actions (not available yet)" title="Not available yet">
+                                    <i class="bi bi-three-dots" aria-hidden="true"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="text-body-secondary">No remarks yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# The log.
+
+   Outside the `if` above on purpose: a booking whose flights will not build
+   still has a history, and is the one an operator most wants it for.
+
+   **Two things it is honest about.** It begins the day it was installed, so
+   a booking older than that has no lines and says why rather than reading as
+   one nothing ever happened to. And it records what happened *to* a booking,
+   not every step the person took on the way to making it -- searches are
+   stored as an aggregate keyed by a hash, with no session and no booking on
+   them, so that history does not exist to show (G1.8, #233).
+
+   A flat grid row, not a table -- Orchid's own compact-timeline column
+   order (time, a dot coloured by what happened, the message, the actor)
+   without the connecting spine a full timeline needs to earn its keep. Tone
+   stays here rather than on `BookingEvent` itself, same reason the
+   dashboard's icons stay off `DashboardRepository` (G2.2, #288): a domain
+   enum has no reason to know what colour its own log line wears. #}
+{% set log_tones = {
+    'booked': 'signal', 'cancelled': 'bad', 'reinstated': 'good',
+    'ticket_added': 'good', 'ticket_status_changed': 'signal',
+    'ticket_number_changed': 'signal', 'ticket_removed': 'bad',
+} %}
+
+<p class="band">Booking log</p>
+
+<div class="card orchid-card">
+    <div class="card-body py-1">
+        {% for line in log %}
+            {% set tone = line.event ? log_tones[line.event.value]|default('') : '' %}
+            <div class="log-row">
+                <span class="log-row__time mono text-body-secondary">{{ line.at|date('j M Y, H:i') }}</span>
+                <span class="log-row__dot{{ tone ? ' log-row__dot--' ~ tone : '' }}"></span>
+                <span class="log-row__msg">
+                    {{ line.event ? line.event.label() : line.raw }}
+                    {% if line.note %}<span class="text-body-secondary">&middot; {{ line.note }}</span>{% endif %}
+                </span>
+                <span class="log-row__actor">{{ line.actor ? line.actor.label() : 'somebody' }}</span>
+            </div>
+        {% else %}
+            <div class="log-row">
+                <span class="log-row__time mono text-body-secondary">{{ extra.made|date('j M Y, H:i') }}</span>
+                <span class="log-row__dot log-row__dot--signal"></span>
+                <span class="log-row__msg">
+                    Booked
+                    <span class="text-body-secondary">&middot; from the booking's own row, which is the one thing about a booking this old that was written down</span>
+                </span>
+                <span class="log-row__actor">&mdash;</span>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if log is empty %}
+    <p class="text-body-secondary small mt-2">
+        {% if log_from %}
+            Nothing has been recorded against this booking. The log has been
+            running since {{ log_from|date('j M Y') }}, so anything that
+            happened to this one before then was not written down.
+        {% else %}
+            Nothing has been recorded against any booking yet. The log starts
+            with the next thing that happens.
+        {% endif %}
+    </p>
+{% endif %}
