@@ -425,6 +425,51 @@
         </div>
     </div>
 
+    {# `bookings.price_base`/`price_tax` are the party's total, not a
+       per-passenger one -- reconstructed by `BookingPresenter`, not stored
+       anywhere, by distributing the total back out with the same weights
+       checkout applied to arrive at it in the first place
+       (`Party::apply()`). Order date and paid date are the same instant
+       twice, not two different facts: checkout books and charges in one
+       step, and there is no separate "paid" column to read a different one
+       from (G8.5, #340). #}
+    <p class="band">Payment breakdown</p>
+
+    <div class="card orchid-card mb-3">
+        <div class="table-responsive">
+            <table class="table orchid-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Created by</th>
+                        <th scope="col">Order date</th>
+                        <th scope="col">Paid date</th>
+                        <th scope="col">Passenger</th>
+                        <th scope="col">Currency</th>
+                        <th scope="col">Base fare</th>
+                        <th scope="col">Tax</th>
+                        <th scope="col">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in booking.payment_breakdown %}
+                        <tr>
+                            <td class="text-body-secondary">{{ payment_created_by ? payment_created_by.label() : '—' }}</td>
+                            <td class="mono text-body-secondary">{{ booking.created|date('j M Y, H:i') }}</td>
+                            <td class="mono text-body-secondary">{{ booking.created|date('j M Y, H:i') }}</td>
+                            <td>{{ row.passenger }}</td>
+                            <td class="text-body-secondary">{{ extra.currency }}</td>
+                            <td class="mono">{{ money.whole(row.base) }}</td>
+                            <td class="mono">{{ money.whole(row.tax) }}</td>
+                            <td class="mono">{{ money.whole(row.total) }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" class="text-body-secondary">No passengers on file to break the payment down by.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     {# The rules `booking.fare_brand` above only names -- already shaped by
        `BookingPresenter::fareRules()` for the traveller's own
        `templates/my/bookings/blocks/fare.html.twig`, which this reuses

@@ -11,6 +11,7 @@ use TripBuilder\BookingStatus;
 use TripBuilder\CabinClass;
 use TripBuilder\Currency;
 use TripBuilder\Money;
+use TripBuilder\Party;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Service\FlightFinder;
@@ -49,6 +50,7 @@ use TripBuilder\TripType;
  *     fare_brand: string|null, fare_rules: list<array{text: string, allowed: bool}>|null,
  *     card_brand: string, card_last4: string,
  *     price_total: PriceParts|null, price_base: PriceParts, price_tax: PriceParts,
+ *     payment_breakdown: list<array{passenger: string, base: PriceParts, tax: PriceParts, total: PriceParts}>,
  *     outbound: array<string, mixed>, return: array<string, mixed>|null,
  *     starts_at: DateTimeImmutable|null, ends_at: DateTimeImmutable|null,
  *     is_past: bool, departs_in: string|null, days_until: int|null,
@@ -153,6 +155,7 @@ final readonly class BookingPresenter
             'price_total' => $base + $tax > 0 ? $this->itinerary->priceParts($base + $tax, $money) : null,
             'price_base' => $this->itinerary->priceParts($base, $money),
             'price_tax' => $this->itinerary->priceParts($tax, $money),
+            'payment_breakdown' => $this->paymentBreakdown($passengers, $base, $tax, $money),
             'outbound' => $outbound,
             'return' => $return,
             'starts_at' => $startsAt,
@@ -210,6 +213,93 @@ final readonly class BookingPresenter
         }
 
         return sprintf('%s + %d', $lead, $travellers - 1);
+    }
+
+    /**
+     * One row per passenger of what they cost, reconstructed rather than
+     * stored: `bookings.price_base`/`price_tax` are the party's total, not a
+     * per-passenger one. Checkout arrived at that total by applying `Party`'s
+     * own per-type weights to a per-seat price (`Party::apply()`, called from
+     * `CheckoutController`), so distributing the total back out by the same
+     * weights recovers exactly what each passenger's own share was -- for
+     * every booking that already exists, with nothing new stored for it
+     * (G8.5, #340).
+     *
+     * @param list<BookingPassengerRow> $passengers
+     * @return list<array{passenger: string, base: PriceParts, tax: PriceParts, total: PriceParts}>
+     */
+    private function paymentBreakdown(array $passengers, float $base, float $tax, Money $money): array
+    {
+        if ($passengers === []) {
+            return [];
+        }
+
+        $party = Party::fromCounts(
+            count(array_filter($passengers, static fn(array $p): bool => $p['type'] === 'A')),
+            count(array_filter($passengers, static fn(array $p): bool => $p['type'] === 'C')),
+            count(array_filter($passengers, static fn(array $p): bool => $p['type'] === 'I')),
+        );
+
+        if ($party === null) {
+            // The types on this row do not describe a real party -- older
+            // than `booking_passengers` carrying a real count, or corrupt.
+            // An even split rather than dividing by a party this booking
+            // does not actually have.
+            $count = count($passengers);
+            $shareBase = array_fill(0, $count, $base / $count);
+            $shareTax = array_fill(0, $count, $tax / $count);
+        } else {
+            $perSeatBase = $base / $party->fareShare();
+            $perSeatTax = $tax / $party->taxShare();
+            $shareBase = [];
+            $shareTax = [];
+
+            foreach ($passengers as $p) {
+                $share = Party::shareFor($p['type']);
+                $shareBase[] = $perSeatBase * $share['base'];
+                $shareTax[] = $perSeatTax * $share['tax'];
+            }
+        }
+
+        $shareBase = self::distributeRounded($shareBase, $base);
+        $shareTax = self::distributeRounded($shareTax, $tax);
+        $rows = [];
+
+        foreach ($passengers as $i => $p) {
+            $rowBase = $shareBase[$i];
+            $rowTax = $shareTax[$i];
+
+            $rows[] = [
+                'passenger' => trim($p['first_name'] . ' ' . $p['last_name']),
+                'base' => $this->itinerary->priceParts($rowBase, $money),
+                'tax' => $this->itinerary->priceParts($rowTax, $money),
+                'total' => $this->itinerary->priceParts($rowBase + $rowTax, $money),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Rounds each share to the cent, then folds whatever the rounding lost
+     * or gained into the last one -- so the rows always sum to exactly what
+     * the booking's own total column says, rather than to whatever pennies
+     * independent rounding happened to leave over.
+     *
+     * @param list<float> $shares
+     * @return list<float>
+     */
+    private static function distributeRounded(array $shares, float $total): array
+    {
+        $rounded = array_map(static fn(float $v): float => round($v, 2), $shares);
+        $remainder = round($total, 2) - round(array_sum($rounded), 2);
+
+        if ($rounded !== [] && abs($remainder) >= 0.01) {
+            $last = array_key_last($rounded);
+            $rounded[$last] = round($rounded[$last] + $remainder, 2);
+        }
+
+        return $rounded;
     }
 
     /**

@@ -57,6 +57,24 @@ final class PartyTest extends TestCase
     }
 
     /**
+     * The same weights `apply()` uses on a party total, keyed the way a
+     * passenger row actually stores its type -- what a per-passenger
+     * breakdown needs to distribute a stored total back out by (G8.5, #340).
+     */
+    public function testShareForMatchesTheSameWeightsApplyUses(): void
+    {
+        self::assertSame(['base' => 1.0, 'tax' => 1.0], Party::shareFor('A'));
+        self::assertSame(['base' => 0.75, 'tax' => 1.0], Party::shareFor('C'));
+        self::assertSame(['base' => 0.10, 'tax' => 0.0], Party::shareFor('I'));
+    }
+
+    /** An adult is the fallback -- a type this version does not know is not free. */
+    public function testShareForAnUnknownTypeReadsAsAnAdult(): void
+    {
+        self::assertSame(['base' => 1.0, 'tax' => 1.0], Party::shareFor('?'));
+    }
+
+    /**
      * @return list<array{0: int, 1: int, 2: int}>
      */
     public static function impossibleParties(): array
