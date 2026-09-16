@@ -528,13 +528,31 @@ class AdminController extends AbstractController
             return;
         }
 
+        echo new TwigRenderer()->render('admin/booking.html.twig', $this->bookingViewData($id, $row));
+    }
+
+    /**
+     * Everything the booking page, and a `fetch()` answer to a POST on it,
+     * both need to draw -- one place rather than two, so the two can never
+     * quietly drift apart on what a booking's page actually shows.
+     *
+     * `$row` is the caller's to fetch: the GET path already has one, and the
+     * POST path needs a fresh one after whatever it just changed, so neither
+     * a stale copy nor a second query is forced on the other (G8.3, #338).
+     *
+     * @param BookingRow $row
+     *
+     * @return array<string, mixed>
+     */
+    private function bookingViewData(int $id, array $row): array
+    {
         $travellers = new BookingPassengerRepository($this->connection());
         $passengers = $travellers->forBooking($id);
         $booking = new BookingPresenter()->booking($row, $passengers);
         $events = new BookingEventRepository($this->connection());
         $counts = $travellers->bookingCountsFor($passengers);
 
-        echo new TwigRenderer()->render('admin/booking.html.twig', [
+        return [
             'booking' => $booking,
             // Only what the presenter does not already give. No card number is
             // stored anywhere on this site -- a brand and four digits is all
@@ -586,7 +604,7 @@ class AdminController extends AbstractController
             'tickets' => new BookingTicketRepository($this->connection())->forBooking($id),
             'document_types' => DocumentType::cases(),
             'ticket_statuses' => TicketStatus::cases(),
-        ]);
+        ];
     }
 
     /**
@@ -607,10 +625,10 @@ class AdminController extends AbstractController
     {
         $id = $row['id'];
         $back = '/admin/bookings/' . $id;
+        $asJson = $this->wantsJson();
 
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
-            Flash::set('That form went stale. Try again.', FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking($asJson, $id, $back, 'That form went stale. Try again.', FlashTone::Error);
 
             return;
         }
@@ -618,37 +636,37 @@ class AdminController extends AbstractController
         $action = $this->request->body->str('action');
 
         if ($action === 'remark') {
-            $this->addRemark($id, $back);
+            $this->addRemark($id, $back, $asJson);
 
             return;
         }
 
         if ($action === 'ticket_add') {
-            $this->addTicket($id, $back);
+            $this->addTicket($id, $back, $asJson);
 
             return;
         }
 
         if ($action === 'ticket_status') {
-            $this->setTicketStatus($id, $back);
+            $this->setTicketStatus($id, $back, $asJson);
 
             return;
         }
 
         if ($action === 'ticket_remove') {
-            $this->removeTicket($id, $back);
+            $this->removeTicket($id, $back, $asJson);
 
             return;
         }
 
         if ($action === 'ticket_number') {
-            $this->updateTicketNumber($id, $back);
+            $this->updateTicketNumber($id, $back, $asJson);
 
             return;
         }
 
         if ($action === 'ticket_generate') {
-            $this->generateTickets($id, $back);
+            $this->generateTickets($id, $back, $asJson);
 
             return;
         }
@@ -677,15 +695,75 @@ class AdminController extends AbstractController
                 'from the panel',
             );
 
-            Flash::set($change['label']);
+            $this->respondBooking($asJson, $id, $back, $change['label'], FlashTone::Success);
         } else {
             // Either the button posted something this action does not know,
             // or the row had already moved -- somebody cancelled it in
             // another tab since this page was opened.
-            Flash::set('Nothing changed. This booking may already be in that state.', FlashTone::Error);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                'Nothing changed. This booking may already be in that state.',
+                FlashTone::Error,
+            );
+        }
+    }
+
+    /**
+     * Whether this POST wants its answer back in the hand rather than a
+     * redirect -- the same `Accept` header `AjaxController::subscribe()`
+     * already reads, so a script and a plain form posting the same action
+     * are told apart the same way there. `admin.js`'s `ajaxBookingForms()`
+     * sends it on every form this page owns.
+     */
+    private function wantsJson(): bool
+    {
+        return str_contains((string) $this->request->header('Accept'), 'application/json');
+    }
+
+    /**
+     * Answer a booking-page POST: a redirect carrying a flash message for a
+     * plain form post, or JSON carrying that message plus a fresh render of
+     * the page for a script to drop in.
+     *
+     * The whole content block, not just whatever the action touched -- a
+     * ticket action can also move the "Tickets" count in the detail strip and
+     * add a line to the log below, and one re-render is the one way that can
+     * never miss one of those the way patching each card by hand eventually
+     * would (G8.3, #338).
+     */
+    private function respondBooking(bool $asJson, int $id, string $back, string $message, FlashTone $tone): void
+    {
+        if (!$asJson) {
+            Flash::set($message, $tone);
+            $this->bounce($back);
+
+            return;
         }
 
-        $this->bounce($back);
+        $row = new BookingRepository($this->connection())->find($id);
+
+        // Nothing in this app deletes a booking, so this is here to keep the
+        // method honest rather than because it is expected to run.
+        if ($row === null) {
+            http_response_code(HttpStatus::InternalServerError->value);
+
+            return;
+        }
+
+        $data = $this->bookingViewData($id, $row);
+        $twig = new TwigRenderer();
+
+        header('Content-type: application/json; charset=utf-8');
+        http_response_code(($tone === FlashTone::Success ? HttpStatus::Ok : HttpStatus::UnprocessableEntity)->value);
+        echo json_encode([
+            'status' => $tone === FlashTone::Success ? 'ok' : 'error',
+            'message' => $message,
+            'tone' => $tone->bootstrapClass(),
+            'content_html' => $twig->render('admin/partials/booking-content.html.twig', $data),
+            'tools_html' => $twig->render('admin/partials/booking-tools.html.twig', ['extra' => $data['extra']]),
+        ]);
     }
 
     /**
@@ -698,28 +776,31 @@ class AdminController extends AbstractController
      * and `BookingRemarkRepository::record()` does not swallow its own
      * errors, so a write that fails is a write this method has to know about.
      */
-    private function addRemark(int $id, string $back): void
+    private function addRemark(int $id, string $back, bool $asJson): void
     {
         $body = trim($this->request->body->str('body'));
         $tone = RemarkTone::tryFrom($this->request->body->str('tone'));
 
         if ($body === '' || $tone === null) {
-            Flash::set('A remark needs a mark and some text.', FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking($asJson, $id, $back, 'A remark needs a mark and some text.', FlashTone::Error);
 
             return;
         }
 
         if (mb_strlen($body) > self::REMARK_MAX_LENGTH) {
-            Flash::set(sprintf('%d characters at most.', self::REMARK_MAX_LENGTH), FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                sprintf('%d characters at most.', self::REMARK_MAX_LENGTH),
+                FlashTone::Error,
+            );
 
             return;
         }
 
         new BookingRemarkRepository($this->connection())->record($id, BookingActor::Operator, $tone, $body);
-        Flash::set('Remark added.');
-        $this->bounce($back);
+        $this->respondBooking($asJson, $id, $back, 'Remark added.', FlashTone::Success);
     }
 
     /**
@@ -731,7 +812,7 @@ class AdminController extends AbstractController
      * the same caution `BookingTicketRepository::setStatus()`/`remove()`
      * apply to an existing row.
      */
-    private function addTicket(int $id, string $back): void
+    private function addTicket(int $id, string $back, bool $asJson): void
     {
         $passengerId = (int) $this->request->body->str('booking_passenger_id');
         $type = DocumentType::tryFrom($this->request->body->str('document_type'));
@@ -750,15 +831,25 @@ class AdminController extends AbstractController
         }
 
         if ($passenger === null || $type === null || $number === '' || $issueDate === false) {
-            Flash::set('A ticket needs a passenger, a document type, a number and a real issue date.', FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                'A ticket needs a passenger, a document type, a number and a real issue date.',
+                FlashTone::Error,
+            );
 
             return;
         }
 
         if (mb_strlen($number) > self::DOCUMENT_NUMBER_MAX_LENGTH) {
-            Flash::set(sprintf('%d characters at most.', self::DOCUMENT_NUMBER_MAX_LENGTH), FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                sprintf('%d characters at most.', self::DOCUMENT_NUMBER_MAX_LENGTH),
+                FlashTone::Error,
+            );
 
             return;
         }
@@ -776,12 +867,11 @@ class AdminController extends AbstractController
             BookingActor::Operator,
             sprintf('%s for %s', $type->label(), trim($passenger['first_name'] . ' ' . $passenger['last_name'])),
         );
-        Flash::set('Ticket added.');
-        $this->bounce($back);
+        $this->respondBooking($asJson, $id, $back, 'Ticket added.', FlashTone::Success);
     }
 
     /** Change one document's status, scoped to this booking. */
-    private function setTicketStatus(int $id, string $back): void
+    private function setTicketStatus(int $id, string $back, bool $asJson): void
     {
         $ticketId = (int) $this->request->body->str('ticket_id');
         $status = TicketStatus::tryFrom($this->request->body->str('status'));
@@ -789,8 +879,13 @@ class AdminController extends AbstractController
         $ticket = $tickets->find($ticketId, $id);
 
         if ($status === null || $ticket === null || $tickets->setStatus($ticketId, $id, $status) === 0) {
-            Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                'Nothing changed. This ticket may not exist any more.',
+                FlashTone::Error,
+            );
 
             return;
         }
@@ -801,20 +896,24 @@ class AdminController extends AbstractController
             BookingActor::Operator,
             sprintf('%s for %s marked %s', self::ticketKind($ticket), $ticket['passenger'], strtolower($status->label())),
         );
-        Flash::set(sprintf('Ticket marked %s.', strtolower($status->label())));
-        $this->bounce($back);
+        $this->respondBooking($asJson, $id, $back, sprintf('Ticket marked %s.', strtolower($status->label())), FlashTone::Success);
     }
 
     /** Remove one document, scoped to this booking. */
-    private function removeTicket(int $id, string $back): void
+    private function removeTicket(int $id, string $back, bool $asJson): void
     {
         $ticketId = (int) $this->request->body->str('ticket_id');
         $tickets = new BookingTicketRepository($this->connection());
         $ticket = $tickets->find($ticketId, $id);
 
         if ($ticket === null || $tickets->remove($ticketId, $id) === 0) {
-            Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                'Nothing changed. This ticket may not exist any more.',
+                FlashTone::Error,
+            );
 
             return;
         }
@@ -825,12 +924,11 @@ class AdminController extends AbstractController
             BookingActor::Operator,
             sprintf('%s for %s (%s)', self::ticketKind($ticket), $ticket['passenger'], $ticket['document_number']),
         );
-        Flash::set('Ticket removed.');
-        $this->bounce($back);
+        $this->respondBooking($asJson, $id, $back, 'Ticket removed.', FlashTone::Success);
     }
 
     /** Correct a mistyped document number, scoped to this booking. */
-    private function updateTicketNumber(int $id, string $back): void
+    private function updateTicketNumber(int $id, string $back, bool $asJson): void
     {
         $ticketId = (int) $this->request->body->str('ticket_id');
         $number = trim($this->request->body->str('document_number'));
@@ -838,15 +936,25 @@ class AdminController extends AbstractController
         $ticket = $tickets->find($ticketId, $id);
 
         if ($ticket === null || $number === '') {
-            Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                'Nothing changed. This ticket may not exist any more.',
+                FlashTone::Error,
+            );
 
             return;
         }
 
         if (mb_strlen($number) > self::DOCUMENT_NUMBER_MAX_LENGTH) {
-            Flash::set(sprintf('%d characters at most.', self::DOCUMENT_NUMBER_MAX_LENGTH), FlashTone::Error);
-            $this->bounce($back);
+            $this->respondBooking(
+                $asJson,
+                $id,
+                $back,
+                sprintf('%d characters at most.', self::DOCUMENT_NUMBER_MAX_LENGTH),
+                FlashTone::Error,
+            );
 
             return;
         }
@@ -855,8 +963,7 @@ class AdminController extends AbstractController
         // the button offers no other way to reach this branch, but a
         // double-submit does.
         if ($number === $ticket['document_number']) {
-            Flash::set('Ticket number unchanged.');
-            $this->bounce($back);
+            $this->respondBooking($asJson, $id, $back, 'Ticket number unchanged.', FlashTone::Success);
 
             return;
         }
@@ -868,8 +975,7 @@ class AdminController extends AbstractController
             BookingActor::Operator,
             sprintf('%s for %s: %s to %s', self::ticketKind($ticket), $ticket['passenger'], $ticket['document_number'], $number),
         );
-        Flash::set('Ticket number updated.');
-        $this->bounce($back);
+        $this->respondBooking($asJson, $id, $back, 'Ticket number updated.', FlashTone::Success);
     }
 
     /**
@@ -879,7 +985,7 @@ class AdminController extends AbstractController
      * every passenger needs at least a ticket to fly, and inventing a mix
      * nobody asked for would just be noise on top of a fake number.
      */
-    private function generateTickets(int $id, string $back): void
+    private function generateTickets(int $id, string $back, bool $asJson): void
     {
         $tickets = new BookingTicketRepository($this->connection());
         $missing = $tickets->passengersWithoutTickets($id);
@@ -897,10 +1003,13 @@ class AdminController extends AbstractController
             );
         }
 
-        Flash::set($missing === []
-            ? 'Every passenger already has a ticket.'
-            : sprintf('%d dummy ticket(s) added.', count($missing)));
-        $this->bounce($back);
+        $this->respondBooking(
+            $asJson,
+            $id,
+            $back,
+            $missing === [] ? 'Every passenger already has a ticket.' : sprintf('%d dummy ticket(s) added.', count($missing)),
+            FlashTone::Success,
+        );
     }
 
     /**

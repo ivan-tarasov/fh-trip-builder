@@ -272,6 +272,14 @@ class Routes
         '#^/admin/bookings/export$#',
         '#^/admin/subscribers/export$#',
         '#^/admin/settings/export$#',
+        // A GET here still renders the whole page through `admin/booking.html.twig`,
+        // which already carries its own `{% extends %}` -- `wrapped()`'s own
+        // `<!DOCTYPE` check was already a no-op for that. What this is actually for
+        // is the other half of the same route: `AdminController::respondBooking()`
+        // answering a POST with JSON for `fetch()` instead of a redirect, which
+        // has no doctype to be caught by that check and was landing inside the
+        // public layout as escaped text (G8.3, #338).
+        '#^/admin/bookings/\d+$#',
         '#^/my/bookings/\d+/calendar$#',
         '#^/sitemap\.xml$#',
         '#^/robots\.txt$#',

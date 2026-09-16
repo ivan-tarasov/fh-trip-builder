@@ -192,6 +192,148 @@
     };
 
     /*
+    | The same toast, built by hand for an answer `ajaxBookingForms()` gets
+    | back from `fetch()` rather than a queued flash -- there is nothing in
+    | the session for `flash()` to have written into the page, since the
+    | page never reloaded. `layout.html.twig`'s `[data-toast-container]` is
+    | always there now, flash or not, precisely so this has somewhere to put
+    | one (G8.3, #338).
+    |
+    | `textContent`, not `innerHTML`, for the message: the server already
+    | escapes what `{{ flash.message }}` prints, and a message built here
+    | from JSON deserves the same rather than a second, easier-to-miss place
+    | that could inject markup into the page.
+    */
+    var showToast = function (message, tone) {
+        var container = document.querySelector('[data-toast-container]');
+
+        if (!container || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        var el = document.createElement('div');
+        var isError = tone === 'danger';
+
+        el.className = 'toast align-items-center text-bg-' + (tone || 'success') + ' border-0';
+        el.setAttribute('role', isError ? 'alert' : 'status');
+        el.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+        el.setAttribute('aria-atomic', 'true');
+        el.innerHTML = '<div class="d-flex"><div class="toast-body"></div>'
+            + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>';
+        el.querySelector('.toast-body').textContent = message;
+        container.appendChild(el);
+
+        var toast = new bootstrap.Toast(el);
+
+        // Bootstrap hides a toast on a timer or a close click but never
+        // removes its element -- fine for the one the layout renders once,
+        // not fine for a container this keeps appending to on every action.
+        el.addEventListener('hidden.bs.toast', function () {
+            toast.dispose();
+            el.remove();
+        });
+
+        toast.show();
+    };
+
+    /*
+    | The booking page's forms, answered by `fetch()` instead of a reload --
+    | every one of them already posts to `/admin/bookings/{id}` and gets a
+    | flash and the whole page back; this asks for JSON instead and drops
+    | its rendering of `#booking-content`/`#booking-tools` in over what is
+    | there rather than navigating, which is the entire point: a reload sent
+    | whoever just edited a ticket or a remark back to the top of a long
+    | page, past the block they were just looking at (G8.3, #338).
+    |
+    | Delegated from `document`, the same as `confirmFirst()`/`copyButtons()`
+    | above -- a ticket this adds needs no re-wiring of its own new row's
+    | buttons for that reason. `fixedStrategyDropdowns()` is the one
+    | exception: it constructs an actual `bootstrap.Dropdown` per toggle
+    | rather than relying on Bootstrap's own delegated handling, so a toggle
+    | this drops in needs that call run again to get the same fix.
+    |
+    | A network failure falls through to the form's own plain POST -- not a
+    | second error path to maintain, the one this whole page already had.
+    */
+    var ajaxBookingForms = function () {
+        var content = document.getElementById('booking-content');
+        var tools = document.getElementById('booking-tools');
+
+        if (!content) {
+            return;
+        }
+
+        var owns = function (form) {
+            return content.contains(form) || (tools !== null && tools.contains(form));
+        };
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+
+            if (!(form instanceof HTMLFormElement) || !owns(form)) {
+                return;
+            }
+
+            event.preventDefault();
+
+            // `innerHTML` does not preserve scroll on its own: the container
+            // goes briefly empty as the browser parses the replacement, the
+            // document is shorter for that instant, and the scroll position
+            // clamps to whatever the shorter page allows -- which for a form
+            // near the bottom is the top. Read before, restore after: the one
+            // reason this whole feature exists is so editing a block near the
+            // bottom does not throw the reader back to the top of it (G8.3,
+            // #338).
+            var scrollY = window.scrollY;
+
+            // Not `form.action`: every form on this page carries a hidden
+            // `<input name="action">`, and HTML's named-element access
+            // shadows the form's own `action` IDL property with that input
+            // once it exists -- `form.action` reads back the *element*, not
+            // the URL, everywhere on this page. The attribute is the one
+            // thing that cannot be shadowed this way.
+            fetch(form.getAttribute('action'), {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: new FormData(form, event.submitter)
+            }).then(function (response) {
+                return response.json();
+            }).then(function (json) {
+                if (typeof json.content_html === 'string') {
+                    content.innerHTML = json.content_html;
+                }
+
+                if (tools !== null && typeof json.tools_html === 'string') {
+                    tools.innerHTML = json.tools_html;
+                }
+
+                // A submit from inside `#ticketNumberModal{id}` or
+                // `#ticketAddModal` just destroyed the open modal's own DOM
+                // node along with the rest of `#booking-content` -- Bootstrap
+                // never gets to run the backdrop/`modal-open` cleanup it
+                // normally does on its own `hide()`, because that cleanup is
+                // wired to a node that no longer exists. Nothing rendered
+                // here is ever open on arrival, so if nothing carries `.show`
+                // now, nothing should be holding the page open either.
+                if (!document.querySelector('.modal.show')) {
+                    document.querySelectorAll('.modal-backdrop').forEach(function (el) {
+                        el.remove();
+                    });
+                    document.body.classList.remove('modal-open');
+                    document.body.style.removeProperty('overflow');
+                    document.body.style.removeProperty('padding-right');
+                }
+
+                fixedStrategyDropdowns();
+                showToast(json.message, json.tone);
+                window.scrollTo(0, scrollY);
+            }).catch(function () {
+                form.submit();
+            });
+        });
+    };
+
+    /*
     | Copy a booking reference, a session id, an email onto the clipboard
     | (G3.3, #306) -- read aloud or pasted elsewhere constantly, and until
     | now only ever selectable by hand. The icon itself is the confirmation,
@@ -614,4 +756,5 @@
     bulkSelect();
     railToggle();
     charts();
+    ajaxBookingForms();
 }());

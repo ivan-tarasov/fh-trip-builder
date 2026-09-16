@@ -1,0 +1,175 @@
+{# The booking page's own macros, pulled out of `booking.html.twig` itself so
+   `booking-content.html.twig` can import them too -- the same markup has to
+   draw identically whether the page renders whole or a POST hands back a
+   fresh fragment for `fetch()` to drop in (G8.3, #338). #}
+
+{# An initial or two, for a passenger row with no photo. First and last word
+   of whatever name is on file -- one word gives the same letter twice, which
+   is a smaller lie than a blank circle. #}
+{% macro initials(name) %}
+    {%- set parts = name|split(' ') -%}
+    {{- parts[0]|first|upper -}}{{- parts[parts|length - 1]|first|upper -}}
+{% endmacro %}
+
+{# A booking reference, a session id, a contact email: read aloud or pasted
+   elsewhere constantly, and until now only ever selectable by hand. Nothing
+   when there is nothing to copy -- a booking with no reference issued has no
+   button for one (G3.3, #306). #}
+{% macro copyButton(value, label) %}
+    {% if value %}
+        <button type="button" class="btn btn-icon copy-btn" data-copy="{{ value }}" aria-label="Copy {{ label }}">
+            <i class="bi bi-clipboard" aria-hidden="true"></i>
+        </button>
+    {% endif %}
+{% endmacro %}
+
+{# The legs, one per row, rather than the card the search page draws.
+   The *shaping* is still `BookingPresenter`'s, so nothing here can disagree
+   with what the traveller is looking at -- but the card's drawing lives in
+   `main.css`, which the panel does not load, and an operator on a phone
+   wants the flight numbers the card keeps behind a click anyway. #}
+{% macro legs(direction, label) %}
+    <div class="card orchid-card mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="d-flex align-items-center gap-2">
+                <i class="bi bi-airplane text-body-secondary" aria-hidden="true"></i>
+                <strong>{{ label }}</strong>
+                <span class="text-body-secondary small">{{ direction.duration }} in transit</span>
+            </span>
+            <span class="status-chip status-chip--muted">{{ direction.stops_label }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table orchid-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Flight</th>
+                        <th scope="col">From</th>
+                        <th scope="col">To</th>
+                        <th scope="col">Cabin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leg in direction.segments %}
+                        <tr>
+                            <td>
+                                <span class="mono">{{ leg.flight_number }}</span>
+                                <span class="text-body-secondary small d-block">{{ leg.carrier_name }}</span>
+                            </td>
+                            <td>
+                                <span class="mono">{{ leg.depart_code }} {{ leg.depart_time }}</span>
+                                <span class="text-body-secondary small d-block">{{ leg.depart_date }}</span>
+                            </td>
+                            <td>
+                                <span class="mono">{{ leg.arrive_code }} {{ leg.arrive_time }}</span>
+                                <span class="text-body-secondary small d-block">{{ leg.arrive_date }}</span>
+                            </td>
+                            <td class="text-body-secondary">{{ leg.cabin ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endmacro %}
+
+{# One dropdown item, one form, one action -- three buttons cannot share a
+   submit. Same shape as `admin/content.html.twig`'s own `act()`/`menu()`
+   macros (a `.btn-icon` kebab, a `.dropdown-menu` of one-button forms), not
+   reused directly since that one posts to `/admin/content` with different
+   field names. #}
+{% macro ticketAction(bookingId, label, icon, ticketId, action, status, confirm) %}
+    <li>
+        <form method="post" action="/admin/bookings/{{ bookingId }}">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="{{ action }}">
+            <input type="hidden" name="ticket_id" value="{{ ticketId }}">
+            {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+            <button
+                type="submit"
+                class="dropdown-item d-flex align-items-center gap-2"
+                {%- if confirm %} data-confirm="{{ confirm }}"{% endif %}
+            >
+                <i class="bi bi-{{ icon }}" aria-hidden="true"></i> {{ label }}
+            </button>
+        </form>
+    </li>
+{% endmacro %}
+
+{% macro ticketActions(bookingId, ticket, statuses) %}
+    {% set kind = ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type %}
+    <div class="dropdown">
+        {# `data-fixed-dropdown` -- `admin.js`'s `fixedStrategyDropdowns()`.
+           The toggle sits in a `position: sticky` cell (`.sticky-end`),
+           which becomes the containing block for Popper's default
+           `position: absolute` menu -- so the menu renders wherever that
+           cell's own box is, not next to the button that opened it. #}
+        <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" data-fixed-dropdown aria-expanded="false" aria-label="Actions for this ticket">
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {# Opens the modal below rather than submitting on its own --
+               the one menu item here that needs a field to type into
+               first, which a dropdown item cannot hold. #}
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#ticketNumberModal{{ ticket.id }}">
+                    <i class="bi bi-pencil" aria-hidden="true"></i> Edit number
+                </button>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            {% for status in statuses %}
+                {% if ticket.status != status %}
+                    {{ _self.ticketAction(
+                        bookingId, 'Mark as ' ~ status.label(), 'tag', ticket.id, 'ticket_status', status.value,
+                        'Mark this ' ~ kind ~ ' as ' ~ status.label() ~ '?'
+                    ) }}
+                {% endif %}
+            {% endfor %}
+            <li><hr class="dropdown-divider"></li>
+            {{ _self.ticketAction(
+                bookingId, 'Remove', 'trash', ticket.id, 'ticket_remove', null,
+                'Remove this ' ~ kind ~ ' for ' ~ ticket.passenger ~ '?'
+            ) }}
+        </ul>
+    </div>
+{% endmacro %}
+
+{# One modal per ticket rather than one shared modal repopulated by JS --
+   this panel's established shape for a form that needs a starting value
+   (`admin/article.html.twig`'s own per-field forms are all server-filled
+   too), and it is already true of `#ticketAddModal` below that nothing
+   here needs JS to work. #}
+{% macro ticketNumberModal(bookingId, ticket) %}
+    <div class="modal fade" id="ticketNumberModal{{ ticket.id }}" tabindex="-1" aria-labelledby="ticketNumberModalTitle{{ ticket.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketNumberModalTitle{{ ticket.id }}">Edit document number</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="ticketNumberForm{{ ticket.id }}" method="post" action="/admin/bookings/{{ bookingId }}">
+                    <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="ticket_number">
+                    <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                    <div class="modal-body">
+                        <label for="ticketNumberInput{{ ticket.id }}" class="form-label">
+                            {{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }} for {{ ticket.passenger }}
+                        </label>
+                        <input
+                            id="ticketNumberInput{{ ticket.id }}"
+                            name="document_number"
+                            type="text"
+                            class="form-control mono"
+                            value="{{ ticket.document_number }}"
+                            maxlength="20"
+                            required
+                        >
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
