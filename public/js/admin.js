@@ -147,6 +147,34 @@
     };
 
     /*
+    | A dropdown whose toggle sits in a `position: sticky` cell -- the
+    | tickets table's own actions column (G8.3, #338) -- opens in the wrong
+    | place with Bootstrap's default Popper strategy. `position: absolute`
+    | positions the menu against the nearest positioned ancestor, which is
+    | the sticky cell rather than the toggle itself, so the menu renders
+    | wherever that cell's own box happens to be instead of beside the
+    | button that opened it. `strategy: 'fixed'` positions against the
+    | viewport instead, which nothing in between can misdirect it to.
+    |
+    | Not a `data-bs-strategy` attribute: Bootstrap's `Dropdown.Default` has
+    | no such option, only `popperConfig`, which takes a function -- not
+    | something a data attribute can carry.
+    */
+    var fixedStrategyDropdowns = function () {
+        if (typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        document.querySelectorAll('[data-fixed-dropdown]').forEach(function (toggle) {
+            new bootstrap.Dropdown(toggle, {
+                popperConfig: function (defaultConfig) {
+                    return Object.assign({}, defaultConfig, { strategy: 'fixed' });
+                }
+            });
+        });
+    };
+
+    /*
     | The one queued message a redirect can carry (G3.1, #304). Bootstrap's
     | own `.toast`, already loaded and otherwise unused -- it does not show
     | itself, so this is the one line that does. Shown once: `Flash::take()`
@@ -578,6 +606,7 @@
 
     markdownPreview();
     confirmFirst();
+    fixedStrategyDropdowns();
     toasts();
     copyButtons();
     themeToggle();

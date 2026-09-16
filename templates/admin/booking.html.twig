@@ -128,7 +128,12 @@
 {% macro ticketActions(bookingId, ticket, statuses) %}
     {% set kind = ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type %}
     <div class="dropdown">
-        <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for this ticket">
+        {# `data-fixed-dropdown` -- `admin.js`'s `fixedStrategyDropdowns()`.
+           The toggle sits in a `position: sticky` cell (`.sticky-end`),
+           which becomes the containing block for Popper's default
+           `position: absolute` menu -- so the menu renders wherever that
+           cell's own box is, not next to the button that opened it. #}
+        <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" data-fixed-dropdown aria-expanded="false" aria-label="Actions for this ticket">
             <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">

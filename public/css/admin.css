@@ -818,6 +818,13 @@ a:hover { text-decoration: underline; }
    it is meant to keep visible. */
 .sticky-end { position: sticky; right: 0; background: var(--surface); }
 
+/* A sticky cell with a set `right` always opens its own stacking context, so
+   an open dropdown's `position: fixed` menu -- despite being positioned
+   against the viewport -- still paints inside that context, behind every
+   later row's own sticky cell. Raising the open row above its neighbours
+   only while its menu is open fixes that without touching the rest. */
+.sticky-end:has(.dropdown-menu.show) { z-index: 1051; }
+
 /* Icon + label + tone, for anything that used to be a bare Bootstrap
    `.badge`: a booking's state in a list row, a flight leg's stop count. Tone
    is emphasis, same rule as `.stat-card` -- every chip still prints its
