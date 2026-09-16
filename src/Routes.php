@@ -84,6 +84,9 @@ class Routes
         // One export for all three groups, since the history it reads is
         // already shared across them (G3.5, #308).
         '/admin/settings/export' => 'Admin@exportSettingsHistory',
+        // The command palette's own endpoint (G4.1, #312) -- JSON, listed in
+        // EXCLUDE_HEADER_FOOTER_ROUTES below the same way `/admin/preview` is.
+        '/admin/search' => 'Admin@search',
         '/admin/login' => 'Admin@login',
         '/admin/logout' => 'Admin@logout',
         // Markdown in, HTML out, for the editor's preview pane. Listed in
@@ -269,6 +272,7 @@ class Routes
      */
     public const array EXCLUDE_HEADER_FOOTER_ROUTES = [
         '#^/admin/preview$#',
+        '#^/admin/search$#',
         '#^/admin/bookings/export$#',
         '#^/admin/subscribers/export$#',
         '#^/admin/settings/export$#',

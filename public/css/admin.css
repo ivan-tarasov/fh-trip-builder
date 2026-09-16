@@ -512,6 +512,65 @@ a:hover { text-decoration: underline; }
 [aria-pressed="true"] .well__theme-icon--sun { display: none; }
 [aria-pressed="true"] .well__theme-icon--moon { display: inline-block; }
 
+/* The command palette (G4.1, #312) -- a search-bar-as-header modal rather
+   than the usual title-and-body shape, since the input is the only thing
+   worth a reader's attention until they have typed something. */
+.palette { overflow: hidden; }
+
+.palette__search {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-quiet);
+}
+
+.palette__input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1rem;
+}
+.palette__input:focus { outline: none; }
+.palette__input::placeholder { color: var(--ink-faint); }
+
+.palette__results { max-height: 22rem; overflow-y: auto; padding: .5rem 0; }
+
+.palette__group {
+  padding: .625rem 1.25rem .25rem;
+  font-size: .6875rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  padding: .625rem 1.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.palette__item:hover, .palette__item.is-active { background: var(--sunken); }
+.palette__item-icon { color: var(--ink-quiet); flex-shrink: 0; }
+.palette__item-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette__item-meta {
+  margin-left: auto;
+  padding-left: .75rem;
+  color: var(--ink-quiet);
+  font-size: .8125rem;
+  white-space: nowrap;
+}
+
+.palette__empty { padding: 2.5rem 1.25rem; text-align: center; color: var(--ink-quiet); font-size: .875rem; }
+
 /* Same pattern, the density toggle: `aria-pressed="true"` means compact is
    on (G3.6, #309). */
 .well__density-icon--compact { display: none; }

@@ -130,6 +130,34 @@ final class SubscriberRepositoryTest extends IntegrationTestCase
         self::assertSame(0, $this->subscribers()->removeMany([]));
     }
 
+    /** For the command palette (G4.1, #312) -- a substring match, newest first, capped. */
+    public function testSearchFindsAnAddressByASubstring(): void
+    {
+        $subscribers = $this->subscribers();
+        $subscribers->add($this->email('findme'));
+        $subscribers->add($this->email('other'));
+
+        $found = $subscribers->search('findme', 10);
+
+        self::assertCount(1, $found);
+        self::assertSame($this->email('findme'), $found[0]['email']);
+    }
+
+    public function testSearchRespectsItsLimit(): void
+    {
+        $subscribers = $this->subscribers();
+        $subscribers->add($this->email('cap-one'));
+        $subscribers->add($this->email('cap-two'));
+        $subscribers->add($this->email('cap-three'));
+
+        self::assertCount(2, $subscribers->search(self::SENTINEL . 'cap', 2));
+    }
+
+    public function testSearchWithNoMatchIsAnEmptyList(): void
+    {
+        self::assertSame([], $this->subscribers()->search(self::SENTINEL . 'nobody-here', 10));
+    }
+
     /** @return SubscriberRow|null */
     private static function findByEmail(SubscriberRepository $subscribers, string $email): ?array
     {

@@ -746,6 +746,174 @@
         });
     };
 
+    /*
+    | The command palette (G4.1, #312) -- `Ctrl`/`Cmd`+`K` from anywhere, or
+    | the search icon in the topbar, opens the same thing: a booking, a
+    | subscriber, a help-content article, without going to that thing's own
+    | list page first. Built on a shared Bootstrap modal -- the same
+    | primitive `#confirmModal` uses -- rather than a bespoke overlay, since
+    | correct focus trapping and Escape handling are exactly the kind of
+    | thing not worth re-implementing for one more component.
+    |
+    | Debounced like `markdownPreview()` above, and for the same reason: a
+    | request per keystroke is a request too many. Faster than that one's
+    | 500ms, because a palette that feels laggy defeats the point of it.
+    */
+    var commandPalette = function () {
+        var modalEl = document.getElementById('commandPalette');
+        var input = document.querySelector('[data-palette-input]');
+        var resultsEl = document.querySelector('[data-palette-results]');
+
+        if (!modalEl || !input || !resultsEl || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        var modal = new bootstrap.Modal(modalEl);
+        var items = [];
+        var activeIndex = -1;
+        var timer = null;
+        var inFlight = null;
+
+        var ICONS = {
+            'Booking': 'ticket-perforated',
+            'Subscriber': 'envelope',
+            'Help content': 'life-preserver'
+        };
+
+        var clear = function () {
+            resultsEl.innerHTML = '';
+            items = [];
+            activeIndex = -1;
+        };
+
+        var highlight = function (index) {
+            items.forEach(function (item) {
+                item.classList.remove('is-active');
+            });
+
+            if (index >= 0 && index < items.length) {
+                items[index].classList.add('is-active');
+                items[index].scrollIntoView({ block: 'nearest' });
+            }
+
+            activeIndex = index;
+        };
+
+        var render = function (list) {
+            clear();
+
+            if (list.length === 0) {
+                resultsEl.innerHTML = '<p class="palette__empty">No matches.</p>';
+
+                return;
+            }
+
+            var lastType = null;
+
+            list.forEach(function (result) {
+                if (result.type !== lastType) {
+                    var group = document.createElement('div');
+                    group.className = 'palette__group';
+                    group.textContent = result.type;
+                    resultsEl.appendChild(group);
+                    lastType = result.type;
+                }
+
+                var item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'palette__item';
+                item.setAttribute('role', 'option');
+                item.dataset.url = result.url;
+
+                var icon = document.createElement('i');
+                icon.className = 'bi bi-' + (ICONS[result.type] || 'search') + ' palette__item-icon';
+                icon.setAttribute('aria-hidden', 'true');
+                item.appendChild(icon);
+
+                var label = document.createElement('span');
+                label.className = 'palette__item-label';
+                label.textContent = result.label;
+                item.appendChild(label);
+
+                if (result.meta) {
+                    var meta = document.createElement('span');
+                    meta.className = 'palette__item-meta';
+                    meta.textContent = result.meta;
+                    item.appendChild(meta);
+                }
+
+                item.addEventListener('click', function () {
+                    window.location.href = result.url;
+                });
+
+                resultsEl.appendChild(item);
+                items.push(item);
+            });
+        };
+
+        var search = function (term) {
+            if (inFlight) {
+                inFlight.abort();
+            }
+
+            if (term === '') {
+                clear();
+
+                return;
+            }
+
+            inFlight = new AbortController();
+
+            fetch('/admin/search?q=' + encodeURIComponent(term), {
+                headers: { 'Accept': 'application/json' },
+                signal: inFlight.signal
+            }).then(function (response) {
+                return response.json();
+            }).then(function (json) {
+                render(json.results || []);
+            }).catch(function () {
+                // An aborted request is the normal case here: a faster
+                // keystroke arrived before this one's answer did.
+            });
+        };
+
+        input.addEventListener('input', function () {
+            window.clearTimeout(timer);
+            var term = input.value.trim();
+            timer = window.setTimeout(function () { search(term); }, 150);
+        });
+
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                highlight(Math.min(activeIndex + 1, items.length - 1));
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                highlight(Math.max(activeIndex - 1, 0));
+            } else if (event.key === 'Enter' && activeIndex >= 0) {
+                event.preventDefault();
+                window.location.href = items[activeIndex].dataset.url || '';
+            }
+        });
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            input.focus();
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', clear);
+
+        // The one place `Ctrl`/`Cmd` combine with a bare letter on this
+        // page: safe to catch from anywhere, unlike a bare key, because
+        // nothing a reader types into a field ever collides with holding
+        // a modifier down too.
+        document.addEventListener('keydown', function (event) {
+            if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                modal.show();
+            }
+        });
+    };
+
     markdownPreview();
     confirmFirst();
     fixedStrategyDropdowns();
@@ -757,4 +925,5 @@
     railToggle();
     charts();
     ajaxBookingForms();
+    commandPalette();
 }());
