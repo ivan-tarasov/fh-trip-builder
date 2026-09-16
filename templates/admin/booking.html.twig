@@ -440,86 +440,92 @@
 
         {% set passenger_type_labels = {'A': 'Adult', 'C': 'Child', 'I': 'Infant'} %}
 
-        {# The fields live in the modal below; this form only carries the
-           booking-wide hidden ones, and the modal's own inputs name it via
-           `form="ticketAddForm"` rather than being its descendants -- the
-           same split `subscribers.html.twig`'s bulk-remove form already
-           uses for inputs that live in the table, not beside the form. #}
+        {# Both forms here carry only their booking-wide hidden fields;
+           their real inputs -- the modal's, and every per-row action
+           inside the table below -- name them via `form="..."` rather
+           than being their descendants. Not a style choice: the table
+           has its own `<form>` per row action (`ticketAction()`), and a
+           `<form>` wrapping content that contains more `<form>`s is
+           invalid HTML that browsers recover from unpredictably -- which
+           is exactly what "clicking Generate voided a ticket" was, from
+           an earlier version that wrapped the whole card in the generate
+           form (G8.3, #338). #}
         <form id="ticketAddForm" method="post" action="/admin/bookings/{{ extra.id }}">
             <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="ticket_add">
         </form>
 
-        <form method="post" action="/admin/bookings/{{ extra.id }}">
+        <form id="ticketGenerateForm" method="post" action="/admin/bookings/{{ extra.id }}">
             <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="ticket_generate">
+        </form>
 
-            <div class="card orchid-card mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
-                        <button
-                            type="submit"
-                            class="btn btn-sm btn-outline-secondary"
-                            data-confirm="Add a fake ticket for every passenger who doesn't have one yet?"
-                        >
-                            <i class="bi bi-magic me-1" aria-hidden="true"></i>Generate dummy tickets
-                        </button>
-                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ticketAddModal">
-                            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add
-                        </button>
-                    </div>
+        <div class="card orchid-card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                    <button
+                        type="submit"
+                        form="ticketGenerateForm"
+                        class="btn btn-sm btn-outline-secondary"
+                        data-confirm="Add a fake ticket for every passenger who doesn't have one yet?"
+                    >
+                        <i class="bi bi-magic me-1" aria-hidden="true"></i>Generate dummy tickets
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ticketAddModal">
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add
+                    </button>
+                </div>
 
-                    <div class="table-responsive">
-                        <table class="table orchid-table align-middle mb-0">
-                            {# Passenger type and document type read as separate
-                               facts, not a subtitle under something else -- each
-                               gets its own column. The actions column is pinned
-                               to the right edge of the scroll area (`.sticky-end`)
-                               rather than folded away to make room: this table
-                               already lost its actions once by scrolling out of
-                               view with no visible cue there was more to the
-                               right, and a narrower table is not worth that
-                               again. #}
-                            <thead>
+                <div class="table-responsive">
+                    <table class="table orchid-table align-middle mb-0">
+                        {# Passenger type and document type read as separate
+                           facts, not a subtitle under something else -- each
+                           gets its own column. The actions column is pinned
+                           to the right edge of the scroll area (`.sticky-end`)
+                           rather than folded away to make room: this table
+                           already lost its actions once by scrolling out of
+                           view with no visible cue there was more to the
+                           right, and a narrower table is not worth that
+                           again. #}
+                        <thead>
+                            <tr>
+                                <th scope="col">Passenger</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Document type</th>
+                                <th scope="col">Document number</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Issue date</th>
+                                <th scope="col" class="text-end sticky-end">&nbsp;</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
                                 <tr>
-                                    <th scope="col">Passenger</th>
-                                    <th scope="col">Type</th>
-                                    <th scope="col">Document type</th>
-                                    <th scope="col">Document number</th>
-                                    <th scope="col">Status</th>
-                                    <th scope="col">Issue date</th>
-                                    <th scope="col" class="text-end sticky-end">&nbsp;</th>
+                                    <td>{{ ticket.passenger }}</td>
+                                    <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
+                                    <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
+                                    <td class="mono">{{ ticket.document_number }}</td>
+                                    <td>
+                                        <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
+                                            {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
+                                        </span>
+                                    </td>
+                                    <td class="mono text-body-secondary">{{ ticket.issue_date|date('j M Y') }}</td>
+                                    {# Always visible, unlike the other row-action menus on this
+                                       panel -- there is no larger list to declutter here, and an
+                                       action a reader cannot see is one they will not find. #}
+                                    <td class="text-end sticky-end" style="width: 1%;">
+                                        {{ self.ticketActions(extra.id, ticket, ticket_statuses) }}
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {% for ticket in tickets %}
-                                    <tr>
-                                        <td>{{ ticket.passenger }}</td>
-                                        <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
-                                        <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
-                                        <td class="mono">{{ ticket.document_number }}</td>
-                                        <td>
-                                            <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
-                                                {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
-                                            </span>
-                                        </td>
-                                        <td class="mono text-body-secondary">{{ ticket.issue_date|date('j M Y') }}</td>
-                                        {# Always visible, unlike the other row-action menus on this
-                                           panel -- there is no larger list to declutter here, and an
-                                           action a reader cannot see is one they will not find. #}
-                                        <td class="text-end sticky-end" style="width: 1%;">
-                                            {{ self.ticketActions(extra.id, ticket, ticket_statuses) }}
-                                        </td>
-                                    </tr>
-                                {% else %}
-                                    <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                            {% else %}
+                                <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </form>
+        </div>
 
         <div class="modal fade" id="ticketAddModal" tabindex="-1" aria-labelledby="ticketAddModalTitle" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
