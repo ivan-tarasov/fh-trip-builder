@@ -423,25 +423,42 @@
                 </div>
             </form>
 
-            {% if remarks is empty %}
-                <p class="text-body-secondary small mb-0">No remarks yet.</p>
-            {% else %}
-                <div class="d-flex flex-column gap-2">
-                    {% for remark in remarks %}
-                        <div class="d-flex align-items-start gap-2">
-                            <span class="status-chip status-chip--{{ remark.tone ? remark.tone.chipClass() : 'muted' }} flex-shrink-0">
-                                {{ remark.tone ? remark.tone.label() : remark.raw_tone }}
-                            </span>
-                            <div class="min-w-0">
-                                <p class="mb-0">{{ remark.body }}</p>
-                                <p class="text-body-secondary small mb-0">
-                                    {{ remark.actor ? remark.actor.label() : 'somebody' }} &middot; {{ remark.created|date('j M Y, H:i') }}
-                                </p>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width: 1%;">Mark</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">By</th>
+                            <th scope="col">Remark</th>
+                            {# No actions yet -- append-only for now, and this
+                               is where one would go if that ever changes. #}
+                            <th scope="col" class="text-end">&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for remark in remarks %}
+                            <tr>
+                                <td>
+                                    <span class="status-chip status-chip--{{ remark.tone ? remark.tone.chipClass() : 'muted' }}">
+                                        {{ remark.tone ? remark.tone.label() : remark.raw_tone }}
+                                    </span>
+                                </td>
+                                <td class="mono text-body-secondary">{{ remark.created|date('j M Y, H:i') }}</td>
+                                <td class="text-body-secondary">{{ remark.actor ? remark.actor.label() : 'somebody' }}</td>
+                                <td>{{ remark.body }}</td>
+                                <td class="text-end row-actions" style="width: 1%;">
+                                    <button type="button" class="btn btn-icon" disabled aria-label="More actions (not available yet)" title="Not available yet">
+                                        <i class="bi bi-three-dots" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5" class="text-body-secondary">No remarks yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
