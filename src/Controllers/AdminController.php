@@ -294,7 +294,7 @@ class AdminController extends AbstractController
 
         $results = [];
 
-        foreach (new BookingRepository($this->connection())->search($term, self::SEARCH_LIMIT) as $row) {
+        foreach (new BookingRepository($this->connection())->filtered($term, null, null, null, self::SEARCH_LIMIT) as $row) {
             $results[] = [
                 'type' => 'Booking',
                 'label' => trim($row['reference']) ?: ('Booking ' . $row['id']),
@@ -378,12 +378,13 @@ class AdminController extends AbstractController
         // the term is the one thing on this page a stranger would control if
         // the guard above ever failed.
         $term = mb_substr(trim($this->request->query->str('q', '')), 0, 64);
+        $status = BookingStatus::tryFrom($this->request->query->str('status', ''));
+        $from = self::validDate($this->request->query->str('from', ''));
+        $to = self::validDate($this->request->query->str('to', ''));
         $page = max(1, (int) $this->request->query->str('page', '1'));
         $offset = ($page - 1) * self::PER_PAGE;
 
-        $rows = $term === ''
-            ? $bookings->recent(self::PER_PAGE, $offset)
-            : $bookings->search($term, self::PER_PAGE, $offset);
+        $rows = $bookings->filtered($term, $status, $from, $to, self::PER_PAGE, $offset);
 
         // Names and not just a count, which `countsFor()` would give: the same
         // one query answers both, and the column needs the names.
@@ -403,13 +404,35 @@ class AdminController extends AbstractController
 
         echo new TwigRenderer()->render('admin/bookings.html.twig', [
             'bookings' => $listed,
-            'total' => $term === '' ? $bookings->countAll() : $bookings->countMatching($term),
+            'total' => $bookings->countFiltered($term, $status, $from, $to),
             'term' => $term,
+            'status' => $status,
+            'statuses' => BookingStatus::cases(),
+            'from' => $from,
+            'to' => $to,
             'page' => $page,
             'per_page' => self::PER_PAGE,
             'range' => $range,
             'hero' => $this->hero($bookings, $range),
         ]);
+    }
+
+    /**
+     * A `from`/`to` filter value, or null for anything that is not really a
+     * date -- empty, malformed, or a calendar day that does not exist. A
+     * filter that silently matched everything for "2026-13-45" would be a
+     * filter that lied about what it did, the same reasoning `like()` gives
+     * for a raw `%`.
+     */
+    private static function validDate(string $value): ?string
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+        return $date !== false && $date->format('Y-m-d') === $value ? $value : null;
     }
 
     /**
@@ -529,13 +552,13 @@ class AdminController extends AbstractController
     }
 
     /**
-     * Every booking the current search matches, as a download.
+     * Every booking the current search and filters match, as a download.
      *
-     * `exportAll()`/`exportMatching()` and not `recent()`/`search()`: the
-     * term carries over, the page does not -- a CSV capped at 25 rows isn't
-     * an export (G3.5, #308). Columns mirror the list table exactly, not the
-     * detail page: no address, no phone, no date of birth, same restraint
-     * `bookings.html.twig` already documents for the list itself.
+     * `exportFiltered()` and not `filtered()`: every filter carries over, the
+     * page does not -- a CSV capped at 25 rows isn't an export (G3.5, #308).
+     * Columns mirror the list table exactly, not the detail page: no
+     * address, no phone, no date of birth, same restraint `bookings.html.twig`
+     * already documents for the list itself.
      */
     public function exportBookings(): void
     {
@@ -545,8 +568,11 @@ class AdminController extends AbstractController
 
         $bookings = new BookingRepository($this->connection());
         $term = mb_substr(trim($this->request->query->str('q', '')), 0, 64);
+        $status = BookingStatus::tryFrom($this->request->query->str('status', ''));
+        $from = self::validDate($this->request->query->str('from', ''));
+        $to = self::validDate($this->request->query->str('to', ''));
 
-        $rows = $term === '' ? $bookings->exportAll() : $bookings->exportMatching($term);
+        $rows = $bookings->exportFiltered($term, $status, $from, $to);
 
         $names = $rows === []
             ? []

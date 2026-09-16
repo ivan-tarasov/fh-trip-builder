@@ -80,7 +80,7 @@ final class BookingPanelTest extends IntegrationTestCase
 
         $ids = array_map(
             static fn(array $row): int => (int) $row['id'],
-            $this->bookings()->recent(200),
+            $this->bookings()->filtered('', null, null, null, 200),
         );
 
         $at = static fn(int $id): int|false => array_search($id, $ids, true);
@@ -98,8 +98,8 @@ final class BookingPanelTest extends IntegrationTestCase
         $this->insert('ZZB004', '2020-01-03 09:00:00');
         $this->insert('ZZB005', '2020-01-04 09:00:00');
 
-        $first = $this->bookings()->recent(1);
-        $second = $this->bookings()->recent(1, 1);
+        $first = $this->bookings()->filtered('', null, null, null, 1);
+        $second = $this->bookings()->filtered('', null, null, null, 1, 1);
 
         self::assertCount(1, $first);
         self::assertCount(1, $second);
@@ -108,15 +108,15 @@ final class BookingPanelTest extends IntegrationTestCase
 
     public function testTheCountMatchesTheTable(): void
     {
-        $before = $this->bookings()->countAll();
+        $before = $this->bookings()->countFiltered('', null, null, null);
         $this->insert('ZZB006');
 
-        self::assertSame($before + 1, $this->bookings()->countAll());
+        self::assertSame($before + 1, $this->bookings()->countFiltered('', null, null, null));
 
         /** @var int $count */
         $count = $this->connection()->fetchValue('SELECT COUNT(*) FROM bookings');
 
-        self::assertSame($count, $this->bookings()->countAll());
+        self::assertSame($count, $this->bookings()->countFiltered('', null, null, null));
     }
 
     private function insert(string $reference, string $created = '2020-06-01 12:00:00'): int

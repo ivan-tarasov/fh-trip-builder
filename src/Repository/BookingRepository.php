@@ -186,7 +186,7 @@ final readonly class BookingRepository
     }
 
     /**
-     * The most recent bookings, newest first, for the panel.
+     * The panel's own bookings list, filtered, newest first.
      *
      * **The first read here that is not scoped to one session**, and that is
      * the whole of what makes it new. Every other read answers "what has this
@@ -194,33 +194,109 @@ final readonly class BookingRepository
      * an operator looking one up is a different question and a different
      * responsibility (A3.8, #233).
      *
-     * `created` and not `departure_time`: the panel is asked about bookings in
-     * the order they were made, where the traveller's own list is about the
-     * order they will be flown.
+     * A term, a status, and a made-date range, every one of them optional and
+     * every one AND-ed against the others rather than combined into a query
+     * builder -- "a simple filter bar" (G4.2, #313). `created` and not
+     * `departure_time`, for the date range same as the ordering: the panel is
+     * asked about bookings in the order they were made, where the traveller's
+     * own list is about the order they will be flown.
      *
      * @return list<BookingRow>
      */
-    public function recent(int $limit, int $offset = 0): array
+    public function filtered(string $term, ?BookingStatus $status, ?string $from, ?string $to, int $limit, int $offset = 0): array
     {
+        [$where, $params] = self::filterClause($term, $status, $from, $to);
+
         /** @var list<BookingRow> $rows */
         $rows = $this->connection->fetchAll(
-            'SELECT * FROM ' . Table::Bookings->value
+            'SELECT b.* FROM ' . Table::Bookings->value . ' b' . $where
             // Id second, so two bookings made in the same second come back in a
             // fixed order rather than whichever the engine offers.
-            . ' ORDER BY created DESC, id DESC'
+            . ' ORDER BY b.created DESC, b.id DESC'
             . ' LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset),
+            $params,
         );
 
         return $rows;
     }
 
-    /** How many there are, so the panel can page through them. */
-    public function countAll(): int
+    /** How many `filtered()` would find in total, so the panel can page through them. */
+    public function countFiltered(string $term, ?BookingStatus $status, ?string $from, ?string $to): int
     {
+        [$where, $params] = self::filterClause($term, $status, $from, $to);
+
         /** @var int $count */
-        $count = $this->connection->fetchValue('SELECT COUNT(*) FROM ' . Table::Bookings->value);
+        $count = $this->connection->fetchValue(
+            'SELECT COUNT(*) FROM ' . Table::Bookings->value . ' b' . $where,
+            $params,
+        );
 
         return $count;
+    }
+
+    /**
+     * Every booking `filtered()` would find, with no page -- an export
+     * defeats its own point if it only ever hands back one page at a time
+     * (G3.5, #308).
+     *
+     * @return list<BookingRow>
+     */
+    public function exportFiltered(string $term, ?BookingStatus $status, ?string $from, ?string $to): array
+    {
+        [$where, $params] = self::filterClause($term, $status, $from, $to);
+
+        /** @var list<BookingRow> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT b.* FROM ' . Table::Bookings->value . ' b' . $where . ' ORDER BY b.created DESC, b.id DESC',
+            $params,
+        );
+
+        return $rows;
+    }
+
+    /**
+     * The `WHERE` clause `filtered()`/`countFiltered()`/`exportFiltered()`
+     * all share, and the params it needs bound in the same order.
+     *
+     * Half-open on the date range, `hero()`'s own `[$from, $to)` reasoning
+     * below: "to" means the start of the next day rather than the end of
+     * this one, which is what keeps a day's worth of `<=` fuss out of it.
+     *
+     * @return array{0: string, 1: list<string>}
+     */
+    private static function filterClause(string $term, ?BookingStatus $status, ?string $from, ?string $to): array
+    {
+        $conditions = [];
+        $params = [];
+
+        if ($term !== '') {
+            $like = self::like($term);
+            $conditions[] = '(b.reference LIKE ? OR b.contact_email LIKE ?'
+                . ' OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
+                . ' OR EXISTS ('
+                . '  SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
+                . '  WHERE p.booking_id = b.id'
+                . '   AND CONCAT(p.first_name, \' \', p.last_name) LIKE ?'
+                . ' ))';
+            array_push($params, $like, $like, $like, $like);
+        }
+
+        if ($status !== null) {
+            $conditions[] = 'b.status = ?';
+            $params[] = $status->value;
+        }
+
+        if ($from !== null) {
+            $conditions[] = 'b.created >= ?';
+            $params[] = $from . ' 00:00:00';
+        }
+
+        if ($to !== null) {
+            $conditions[] = 'b.created < ?';
+            $params[] = new DateTimeImmutable($to)->modify('+1 day')->format('Y-m-d') . ' 00:00:00';
+        }
+
+        return [$conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions), $params];
     }
 
     /**
@@ -260,110 +336,6 @@ final readonly class BookingRepository
             . ' SET status = ? WHERE id = ? AND status = ?',
             [$to->value, $bookingId, $from->value],
         );
-    }
-
-    /**
-     * Bookings matching a search, newest first.
-     *
-     * What an operator has in front of them when somebody calls: a reference
-     * off an email, a name, or the address they wrote from. The address is
-     * searched and never listed -- see `AdminController::bookings()` on what a
-     * list is for.
-     *
-     * `LIKE` with the term in the middle rather than a prefix, because a
-     * surname typed into a support ticket is as often the second word as the
-     * first. It scans; on a table this size that is nothing, and on one where
-     * it is not, this is where a full-text index would go.
-     *
-     * @return list<BookingRow>
-     */
-    public function search(string $term, int $limit, int $offset = 0): array
-    {
-        $like = self::like($term);
-
-        /** @var list<BookingRow> $rows */
-        $rows = $this->connection->fetchAll(
-            'SELECT b.* FROM ' . Table::Bookings->value . ' b'
-            . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
-            . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
-            . '  OR EXISTS ('
-            . '   SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
-            . '   WHERE p.booking_id = b.id'
-            . '    AND CONCAT(p.first_name, \' \', p.last_name) LIKE ?'
-            . '  )'
-            . ' ORDER BY b.created DESC, b.id DESC'
-            . ' LIMIT ' . max(1, $limit) . ' OFFSET ' . max(0, $offset),
-            [$like, $like, $like, $like],
-        );
-
-        return $rows;
-    }
-
-    /** How many bookings a search matches, for the pager. */
-    public function countMatching(string $term): int
-    {
-        $like = self::like($term);
-
-        /** @var int $count */
-        $count = $this->connection->fetchValue(
-            'SELECT COUNT(*) FROM ' . Table::Bookings->value . ' b'
-            . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
-            . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
-            . '  OR EXISTS ('
-            . '   SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
-            . '   WHERE p.booking_id = b.id'
-            . '    AND CONCAT(p.first_name, \' \', p.last_name) LIKE ?'
-            . '  )',
-            [$like, $like, $like, $like],
-        );
-
-        return $count;
-    }
-
-    /**
-     * Every booking, newest first, for an export with no search term.
-     *
-     * `recent()` without the page: an export defeats its own point if it
-     * only ever hands back one page at a time (G3.5, #308).
-     *
-     * @return list<BookingRow>
-     */
-    public function exportAll(): array
-    {
-        /** @var list<BookingRow> $rows */
-        $rows = $this->connection->fetchAll(
-            'SELECT * FROM ' . Table::Bookings->value . ' ORDER BY created DESC, id DESC',
-        );
-
-        return $rows;
-    }
-
-    /**
-     * Every booking a search matches, newest first, for an export.
-     *
-     * `search()` without the page, same reasoning as {@see exportAll()}.
-     *
-     * @return list<BookingRow>
-     */
-    public function exportMatching(string $term): array
-    {
-        $like = self::like($term);
-
-        /** @var list<BookingRow> $rows */
-        $rows = $this->connection->fetchAll(
-            'SELECT b.* FROM ' . Table::Bookings->value . ' b'
-            . ' WHERE b.reference LIKE ? OR b.contact_email LIKE ?'
-            . '  OR CONCAT(b.passenger_first, \' \', b.passenger_last) LIKE ?'
-            . '  OR EXISTS ('
-            . '   SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
-            . '   WHERE p.booking_id = b.id'
-            . '    AND CONCAT(p.first_name, \' \', p.last_name) LIKE ?'
-            . '  )'
-            . ' ORDER BY b.created DESC, b.id DESC',
-            [$like, $like, $like, $like],
-        );
-
-        return $rows;
     }
 
     /**
