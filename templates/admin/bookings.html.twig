@@ -132,8 +132,6 @@
         {% if term or status or from or to %}<a class="btn btn-outline-secondary btn-sm" href="/admin/bookings">Clear</a>{% endif %}
     </form>
 
-    <p class="text-body-secondary small text-end mb-3">{{ total }} {{ term or status or from or to ? 'found' : 'in all' }}</p>
-
     {% if (term or status or from or to) and bookings is empty %}
         <p class="notice">
             Nothing matches these filters. A search reads the reference, the
@@ -142,7 +140,7 @@
     {% else %}
         <div class="card orchid-card">
             <div class="table-responsive">
-                <table class="table orchid-table align-middle mb-0">
+                <table class="table orchid-table bookings-table align-middle mb-0">
                     <thead>
                         <tr>
                             <th scope="col">#</th>
@@ -221,35 +219,43 @@
                     </tbody>
                 </table>
             </div>
-        </div>
 
-        {% if total > per_page %}
-            {# The search and its filters survive paging, or page two of a
-               search is page two of everything and the operator loses what
-               they set. #}
-            {% set carry = filter_qs ? '&' ~ filter_qs : '' %}
-
-            <div class="d-flex align-items-center justify-content-between mt-3">
-                <span class="text-body-secondary small">
-                    {{ (page - 1) * per_page + 1 }}&ndash;{{ min(page * per_page, total) }} of {{ total }}
+            {# The list's own footer: Orchid's `.sales-pager` (`orders.html`),
+               structure and style only, renamed `.bookings-pager` -- always
+               present, so the count has a permanent home even on a page too
+               short to need pagination. #}
+            <div class="bookings-pager">
+                <span>
+                    {% if total > per_page %}
+                        {{ (page - 1) * per_page + 1 }}&ndash;{{ min(page * per_page, total) }} of {{ total }}
+                    {% else %}
+                        {{ total }} {{ term or status or from or to ? 'found' : 'in all' }}
+                    {% endif %}
                 </span>
 
-                <nav aria-label="Booking pagination">
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item{{ page > 1 ? '' : ' disabled' }}">
-                            <a class="page-link" href="/admin/bookings?page={{ page - 1 }}{{ carry }}"{{ page > 1 ? '' : ' tabindex="-1" aria-disabled="true"' }}>
-                                <i class="bi bi-chevron-left" aria-hidden="true"></i> Newer
-                            </a>
-                        </li>
-                        <li class="page-item{{ page * per_page < total ? '' : ' disabled' }}">
-                            <a class="page-link" href="/admin/bookings?page={{ page + 1 }}{{ carry }}"{{ page * per_page < total ? '' : ' tabindex="-1" aria-disabled="true"' }}>
-                                Older <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
+                {% if total > per_page %}
+                    {# The search and its filters survive paging, or page two
+                       of a search is page two of everything and the
+                       operator loses what they set. #}
+                    {% set carry = filter_qs ? '&' ~ filter_qs : '' %}
+
+                    <nav aria-label="Booking pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item{{ page > 1 ? '' : ' disabled' }}">
+                                <a class="page-link" href="/admin/bookings?page={{ page - 1 }}{{ carry }}"{{ page > 1 ? '' : ' tabindex="-1" aria-disabled="true"' }}>
+                                    <i class="bi bi-chevron-left" aria-hidden="true"></i> Newer
+                                </a>
+                            </li>
+                            <li class="page-item{{ page * per_page < total ? '' : ' disabled' }}">
+                                <a class="page-link" href="/admin/bookings?page={{ page + 1 }}{{ carry }}"{{ page * per_page < total ? '' : ' tabindex="-1" aria-disabled="true"' }}>
+                                    Older <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                {% endif %}
             </div>
-        {% endif %}
+        </div>
     {% endif %}
 {% endblock %}
 

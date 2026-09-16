@@ -1558,6 +1558,41 @@ a:hover { text-decoration: underline; }
   width: auto;
 }
 
+/* Orchid's own `.sales-pager` (`orders.html`), renamed: the count's
+   permanent home, flush under the table rather than a separate block
+   below the card. */
+.bookings-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .875rem 1.25rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-quiet);
+  font-size: .8125rem;
+  flex-wrap: wrap;
+}
+
+.bookings-pager .page-link {
+  border-radius: 8px !important;
+  margin: 0 2px;
+  font-size: .8125rem;
+  color: var(--ink);
+  border: 1px solid var(--rule);
+}
+
+/* Orchid's own `.inv-table` (`inventory.html`), the one thing `.orchid-table`
+   -- this panel's shared table dressing -- doesn't already give it: a
+   tinted head, rather than one that blends into the card. Scoped to this
+   table rather than folded into `.orchid-table` itself, which every other
+   admin list also uses. */
+.bookings-table thead th { background: var(--sunken); }
+
+.bookings-pager .page-item.active .page-link {
+  background: var(--signal);
+  border-color: var(--signal);
+}
+
 @media (max-width: 60em) {
   .editor { grid-template-columns: 1fr; }
   .well__body { padding: 1rem; }
