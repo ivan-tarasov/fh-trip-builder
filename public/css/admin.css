@@ -1102,15 +1102,13 @@ a:hover { text-decoration: underline; }
 
 /* =====================================================
    Bookings' analytics hero (G7.1, #332)
-   Orchid's own `.analytics-hero` (analytics.html), values read from
-   `analytics.css` rather than approximated. Unique to this page -- no
-   shared conventions with the rest of the panel, the same isolation
-   Orchid's own docblock claims for its `.analytics-` prefix. Always the
-   dark gradient treatment regardless of `data-theme`/`data-bs-theme`:
-   the source does the same (only three ink-adjacent variables move
-   under its own dark mode, the gradient itself never lightens), so a
-   light-mode visit to this page still sees a dark hero on purpose, not
-   by a missed override.
+   Orchid's own `.analytics-hero` shape (analytics.html): a signal-to-accent
+   gradient by default (light), Orchid's own fixed navy radial-gradient
+   restored for dark -- not derived from `--signal`, which reads too pale
+   as a background fill once dark mode lightens it for legibility as a
+   foreground colour elsewhere. Same two-path override every other themed
+   token here uses: the OS preference when nothing is stored, the
+   attribute when it is.
    ===================================================== */
 .bookings-hero {
   position: relative;
@@ -1119,8 +1117,18 @@ a:hover { text-decoration: underline; }
   padding: 1.75rem clamp(1.25rem, 3vw, 2.5rem) 1.5rem;
   border-radius: 22px;
   color: #f8fafc;
+  background: linear-gradient(135deg, var(--signal) 0%, var(--signal-accent) 100%);
+  box-shadow: 0 24px 60px -20px rgba(10, 18, 48, .45);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .bookings-hero {
+    background: radial-gradient(140% 100% at 0% 0%, #182058 0%, #0a1230 55%, #050914 100%);
+  }
+}
+
+:root[data-theme="dark"] .bookings-hero {
   background: radial-gradient(140% 100% at 0% 0%, #182058 0%, #0a1230 55%, #050914 100%);
-  box-shadow: 0 24px 60px -20px rgba(10, 18, 48, .55);
 }
 
 .bookings-hero__decor { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
