@@ -13,6 +13,7 @@ use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
 use TripBuilder\BookingStatus;
 use TripBuilder\Csrf;
+use TripBuilder\DocumentType;
 use TripBuilder\Flash;
 use TripBuilder\FlashTone;
 use TripBuilder\Helper;
@@ -26,6 +27,7 @@ use TripBuilder\Repository\BookingEventRepository;
 use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRemarkRepository;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Repository\BookingTicketRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\DashboardRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
@@ -34,6 +36,7 @@ use TripBuilder\Repository\SettingsRepository;
 use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Schedule;
 use TripBuilder\Settings;
+use TripBuilder\TicketStatus;
 use TripBuilder\View\BookingPresenter;
 use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\Markdown;
@@ -81,6 +84,9 @@ class AdminController extends AbstractController
 
     /** A remark long enough for a real note and short enough to still read as one. */
     private const int REMARK_MAX_LENGTH = 2000;
+
+    /** Longer than any real ticket or EMD number needs, with room to spare. */
+    private const int DOCUMENT_NUMBER_MAX_LENGTH = 20;
 
     /** How many days back each named range covers. `all` has no entry -- it has no length to name. */
     private const array HERO_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90];
@@ -577,6 +583,9 @@ class AdminController extends AbstractController
             'log_from' => $events->startedAt(),
             'remarks' => new BookingRemarkRepository($this->connection())->forBooking($id),
             'remark_tones' => RemarkTone::cases(),
+            'tickets' => new BookingTicketRepository($this->connection())->forBooking($id),
+            'document_types' => DocumentType::cases(),
+            'ticket_statuses' => TicketStatus::cases(),
         ]);
     }
 
@@ -606,13 +615,33 @@ class AdminController extends AbstractController
             return;
         }
 
-        if ($this->request->body->str('action') === 'remark') {
+        $action = $this->request->body->str('action');
+
+        if ($action === 'remark') {
             $this->addRemark($id, $back);
 
             return;
         }
 
-        $change = match ($this->request->body->str('action')) {
+        if ($action === 'ticket_add') {
+            $this->addTicket($id, $back);
+
+            return;
+        }
+
+        if ($action === 'ticket_status') {
+            $this->setTicketStatus($id, $back);
+
+            return;
+        }
+
+        if ($action === 'ticket_remove') {
+            $this->removeTicket($id, $back);
+
+            return;
+        }
+
+        $change = match ($action) {
             'cancel' => [
                 'to' => BookingStatus::Cancelled,
                 'from' => BookingStatus::Confirmed,
@@ -678,6 +707,79 @@ class AdminController extends AbstractController
 
         new BookingRemarkRepository($this->connection())->record($id, BookingActor::Operator, $tone, $body);
         Flash::set('Remark added.');
+        $this->bounce($back);
+    }
+
+    /**
+     * Add a travel document by hand.
+     *
+     * The passenger dropdown only ever offers this booking's own travellers,
+     * but a tampered POST could name somebody else's -- checked against a
+     * fresh read of `booking_passengers` rather than trusted from the form,
+     * the same caution `BookingTicketRepository::setStatus()`/`remove()`
+     * apply to an existing row.
+     */
+    private function addTicket(int $id, string $back): void
+    {
+        $passengerId = (int) $this->request->body->str('booking_passenger_id');
+        $type = DocumentType::tryFrom($this->request->body->str('document_type'));
+        $number = trim($this->request->body->str('document_number'));
+        $issueDate = date_create_immutable($this->request->body->str('issue_date') ?: 'invalid');
+
+        $passengers = new BookingPassengerRepository($this->connection())->forBooking($id);
+        $belongsHere = in_array($passengerId, array_column($passengers, 'id'), true);
+
+        if (!$belongsHere || $type === null || $number === '' || $issueDate === false) {
+            Flash::set('A ticket needs a passenger, a document type, a number and a real issue date.', FlashTone::Error);
+            $this->bounce($back);
+
+            return;
+        }
+
+        if (mb_strlen($number) > self::DOCUMENT_NUMBER_MAX_LENGTH) {
+            Flash::set(sprintf('%d characters at most.', self::DOCUMENT_NUMBER_MAX_LENGTH), FlashTone::Error);
+            $this->bounce($back);
+
+            return;
+        }
+
+        new BookingTicketRepository($this->connection())->create(
+            $passengerId,
+            $type,
+            $number,
+            TicketStatus::Issued,
+            $issueDate->format('Y-m-d'),
+        );
+        Flash::set('Ticket added.');
+        $this->bounce($back);
+    }
+
+    /** Change one document's status, scoped to this booking. */
+    private function setTicketStatus(int $id, string $back): void
+    {
+        $ticketId = (int) $this->request->body->str('ticket_id');
+        $status = TicketStatus::tryFrom($this->request->body->str('status'));
+
+        if ($status !== null && new BookingTicketRepository($this->connection())->setStatus($ticketId, $id, $status) > 0) {
+            Flash::set(sprintf('Ticket marked %s.', strtolower($status->label())));
+        } else {
+            Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
+        }
+
+        $this->bounce($back);
+    }
+
+    /** Remove one document, scoped to this booking. */
+    private function removeTicket(int $id, string $back): void
+    {
+        $ticketId = (int) $this->request->body->str('ticket_id');
+
+        if (new BookingTicketRepository($this->connection())->remove($ticketId, $id) > 0) {
+            Flash::set('Ticket removed.');
+        } else {
+            Flash::set('Nothing changed. This ticket may not exist any more.', FlashTone::Error);
+        }
+
         $this->bounce($back);
     }
 

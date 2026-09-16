@@ -102,6 +102,53 @@
     </div>
 {% endmacro %}
 
+{# One dropdown item, one form, one action -- three buttons cannot share a
+   submit. Same shape as `admin/content.html.twig`'s own `act()`/`menu()`
+   macros (a `.btn-icon` kebab, a `.dropdown-menu` of one-button forms), not
+   reused directly since that one posts to `/admin/content` with different
+   field names. #}
+{% macro ticketAction(bookingId, label, icon, ticketId, action, status, confirm) %}
+    <li>
+        <form method="post" action="/admin/bookings/{{ bookingId }}">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="{{ action }}">
+            <input type="hidden" name="ticket_id" value="{{ ticketId }}">
+            {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+            <button
+                type="submit"
+                class="dropdown-item d-flex align-items-center gap-2"
+                {%- if confirm %} data-confirm="{{ confirm }}"{% endif %}
+            >
+                <i class="bi bi-{{ icon }}" aria-hidden="true"></i> {{ label }}
+            </button>
+        </form>
+    </li>
+{% endmacro %}
+
+{% macro ticketActions(bookingId, ticket, statuses) %}
+    {% set kind = ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type %}
+    <div class="dropdown">
+        <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for this ticket">
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {% for status in statuses %}
+                {% if ticket.status != status %}
+                    {{ _self.ticketAction(
+                        bookingId, 'Mark as ' ~ status.label(), 'tag', ticket.id, 'ticket_status', status.value,
+                        'Mark this ' ~ kind ~ ' as ' ~ status.label() ~ '?'
+                    ) }}
+                {% endif %}
+            {% endfor %}
+            <li><hr class="dropdown-divider"></li>
+            {{ _self.ticketAction(
+                bookingId, 'Remove', 'trash', ticket.id, 'ticket_remove', null,
+                'Remove this ' ~ kind ~ ' for ' ~ ticket.passenger ~ '?'
+            ) }}
+        </ul>
+    </div>
+{% endmacro %}
+
 {# Drawn through `BookingPresenter`, the same shaper the traveller's own booking
    page uses -- so the itinerary, the money at its stored rate and the state read
    identically on both sides, which matters when the two are being compared down
@@ -206,14 +253,11 @@
                         <p class="detail-strip__value">{{ extra.language }}</p>
                     </div>
                 </div>
-                {# No tickets table yet -- this reads the same as the other
-                   uncaptured facts here rather than a count of zero as if
-                   one had been checked. Real rows land with G8.3 (#338). #}
                 <div class="detail-strip__item">
                     <span class="stat-card__icon"><i class="bi bi-ticket" aria-hidden="true"></i></span>
                     <div class="detail-strip__meta">
                         <p class="detail-strip__label">Tickets</p>
-                        <p class="detail-strip__value fw-normal text-body-secondary">—</p>
+                        <p class="detail-strip__value{{ tickets|length ? '' : ' fw-normal text-body-secondary' }}">{{ tickets|length ?: '—' }}</p>
                     </div>
                 </div>
                 {# Captured at checkout going forward -- a booking made
@@ -336,6 +380,86 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        {# Fake numbers -- this app has no real GDS or ticketing integration
+           behind it, so a document here is whatever the operator typed in,
+           not something a supplier issued (G8.3, #338). #}
+        <p class="band">Tickets</p>
+
+        {% set passenger_type_labels = {'A': 'Adult', 'C': 'Child', 'I': 'Infant'} %}
+
+        <div class="card orchid-card mb-3">
+            <div class="card-body">
+                <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-end mb-3">
+                    <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="ticket_add">
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label for="ticketPassenger" class="form-label small text-body-secondary">Passenger</label>
+                        <select id="ticketPassenger" name="booking_passenger_id" class="form-select form-select-sm">
+                            {% for passenger in passengers %}
+                                <option value="{{ passenger.id }}">{{ passenger.first_name }} {{ passenger.last_name }} ({{ passenger_type_labels[passenger.type]|default(passenger.type) }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-sm-3 col-md-2">
+                        <label for="ticketDocType" class="form-label small text-body-secondary">Document type</label>
+                        <select id="ticketDocType" name="document_type" class="form-select form-select-sm">
+                            {% for type in document_types %}
+                                <option value="{{ type.value }}">{{ type.label() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-sm-3 col-md-3">
+                        <label for="ticketNumber" class="form-label small text-body-secondary">Document number</label>
+                        <input id="ticketNumber" name="document_number" type="text" class="form-control form-control-sm" maxlength="20" required>
+                    </div>
+                    <div class="col-6 col-sm-3 col-md-2">
+                        <label for="ticketIssueDate" class="form-label small text-body-secondary">Issue date</label>
+                        <input id="ticketIssueDate" name="issue_date" type="date" class="form-control form-control-sm" value="{{ "now"|date("Y-m-d") }}" required>
+                    </div>
+                    <div class="col-6 col-sm-3 col-md-2">
+                        <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table orchid-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Passenger</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Document type</th>
+                                <th scope="col">Document number</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Issue date</th>
+                                <th scope="col" class="text-end">&nbsp;</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in tickets %}
+                                <tr>
+                                    <td>{{ ticket.passenger }}</td>
+                                    <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
+                                    <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
+                                    <td class="mono">{{ ticket.document_number }}</td>
+                                    <td>
+                                        <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
+                                            {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
+                                        </span>
+                                    </td>
+                                    <td class="mono text-body-secondary">{{ ticket.issue_date|date('j M Y') }}</td>
+                                    <td class="text-end row-actions" style="width: 1%;">
+                                        {{ self.ticketActions(extra.id, ticket, ticket_statuses) }}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
