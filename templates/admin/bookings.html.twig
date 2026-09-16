@@ -42,7 +42,7 @@
         <div class="bookings-hero__head">
             <div>
                 <h1 class="bookings-hero__title" id="bookingsHeroTitle">Bookings</h1>
-                <p class="bookings-hero__sub">Made, cancelled and booked value{{ range == 'all' ? ', all time.' : ', last ' ~ range ~ '.' }}</p>
+                <p class="bookings-hero__sub">Made, cancelled and booked value{{ range == 'all' ? ', all time.' : (range == '1d' ? ', today.' : ', last ' ~ range ~ '.') }}</p>
             </div>
 
             <div class="bookings-hero__actions">
@@ -51,7 +51,7 @@
                    themselves, the same reasoning the search box below
                    already gets for being a GET. #}
                 <div class="bookings-range" role="group" aria-label="Date range">
-                    {% for value, label in {'7d': '7d', '30d': '30d', '90d': '90d', 'all': 'All'} %}
+                    {% for value, label in {'1d': '1d', '7d': '7d', '30d': '30d', '90d': '90d', 'all': 'All'} %}
                         <a class="bookings-range__btn{{ range == value ? ' is-active' : '' }}"
                            href="/admin/bookings?range={{ value }}{{ term ? '&q=' ~ term|url_encode : '' }}"
                            {{ range == value ? 'aria-current="true"' : '' }}>{{ label }}</a>

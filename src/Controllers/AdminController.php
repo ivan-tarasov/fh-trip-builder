@@ -77,7 +77,7 @@ class AdminController extends AbstractController
     private const int PER_PAGE = 25;
 
     /** How many days back each named range covers. `all` has no entry -- it has no length to name. */
-    private const array HERO_RANGE_DAYS = ['7d' => 7, '30d' => 30, '90d' => 90];
+    private const array HERO_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90];
 
     /**
      * The dashboard.
