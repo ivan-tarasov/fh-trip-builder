@@ -14,13 +14,15 @@ use TripBuilder\Database\Table;
  * Live-verified against a real fetch: `id` is a plain `int` column and stays
  * `int`; `session_id`, `reference`, `status`, `contact_email`,
  * `contact_phone`, `passenger_first`, `passenger_last`, `passenger_gender`,
- * `currency` and `card_brand`/`card_last4` are non-nullable `varchar`/`char`;
- * `departure_time` and `passenger_dob` are nullable, `created` is not, and
- * all three come back `string`, not a `DateTime`; `flight_outbound` is a
- * non-nullable `json` column and `flight_return`/`fare_brand`/`fare_rules`
- * are nullable ones, all read back as the raw JSON `string`, not decoded;
- * `price_base`, `price_tax` and `currency_rate` are DECIMAL and stringify
- * like every other DECIMAL column in this codebase.
+ * `currency`, `language` and `card_brand`/`card_last4` are non-nullable
+ * `varchar`/`char`; `departure_time` and `passenger_dob` are nullable,
+ * `created` is not, and all three come back `string`, not a `DateTime`;
+ * `flight_outbound` is a non-nullable `json` column and `flight_return`/
+ * `fare_brand`/`fare_rules` are nullable ones, all read back as the raw JSON
+ * `string`, not decoded; `ip_address`/`city`/`country` are plain nullable
+ * `varchar`/`char`, not JSON; `price_base`, `price_tax` and `currency_rate`
+ * are DECIMAL and stringify like every other DECIMAL column in this
+ * codebase.
  *
  * @phpstan-type BookingRow array{
  *     id: int, session_id: string, departure_time: string|null,
@@ -33,6 +35,8 @@ use TripBuilder\Database\Table;
  *     price_base: string, price_tax: string,
  *     currency: string, currency_rate: string,
  *     card_brand: string, card_last4: string,
+ *     ip_address: string|null, city: string|null, country: string|null,
+ *     language: string,
  * }
  */
 final readonly class BookingRepository

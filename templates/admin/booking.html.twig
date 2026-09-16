@@ -235,6 +235,49 @@
             </div>
         </div>
 
+        <p class="band">Booking details</p>
+
+        <div class="card orchid-card mb-3">
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-body-secondary"><i class="bi bi-cash me-2" aria-hidden="true"></i>Currency</td>
+                            <td class="mono">
+                                {{ extra.currency }}{% if extra.currency_name %} <span class="text-body-secondary">&middot; {{ extra.currency_name }}</span>{% endif %}
+                            </td>
+                        </tr>
+                        {# No tickets table yet -- this is honest about that
+                           rather than showing a count of zero as if one had
+                           been checked. Real rows land with G8.3 (#338). #}
+                        <tr>
+                            <td class="text-body-secondary"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>Documents</td>
+                            <td class="text-body-secondary">Not tracked yet</td>
+                        </tr>
+                        <tr>
+                            <td class="text-body-secondary"><i class="bi bi-translate me-2" aria-hidden="true"></i>Language</td>
+                            <td>{{ extra.language }}</td>
+                        </tr>
+                        {# Captured at checkout going forward -- a booking made
+                           before this shipped has nothing here, the same as
+                           any column added mid-life (G8.1, #336). #}
+                        <tr>
+                            <td class="text-body-secondary"><i class="bi bi-geo-alt me-2" aria-hidden="true"></i>IP address</td>
+                            <td class="mono">{{ extra.ip_address ?: '—' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-body-secondary"><i class="bi bi-building me-2" aria-hidden="true"></i>City</td>
+                            <td>{{ extra.city ?: '—' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-body-secondary"><i class="bi bi-flag me-2" aria-hidden="true"></i>Country</td>
+                            <td>{{ extra.country_name ?: (extra.country ?: '—') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <p class="band">Travelling</p>
 
         <div class="card orchid-card mb-3">

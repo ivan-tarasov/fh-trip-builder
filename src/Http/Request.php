@@ -108,6 +108,25 @@ final readonly class Request
     }
 
     /**
+     * Where the visitor's own address geolocates to, by Cloudflare's own
+     * reckoning -- `CF-IPCountry`, added to every request that reaches this
+     * origin the same way `CF-Connecting-IP` is, and free of a lookup this
+     * app would otherwise have nowhere to make.
+     *
+     * `XX` (Cloudflare could not tell) and `T1` (Tor) are its own sentinels
+     * for "no answer", not real codes, so both come back null rather than
+     * being stored as if they were a country (G8.1, #336).
+     */
+    public function country(): ?string
+    {
+        $stated = strtoupper($this->header('cf-ipcountry') ?? '');
+
+        return preg_match('/^[A-Z]{2}$/', $stated) === 1 && !in_array($stated, ['XX', 'T1'], true)
+            ? $stated
+            : null;
+    }
+
+    /**
      * The path, without the query string and without a trailing slash -- `/`
      * for the root. This is what the router matches and what a form posts back
      * to, so both read the same value.

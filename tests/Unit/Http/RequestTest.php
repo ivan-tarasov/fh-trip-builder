@@ -237,4 +237,33 @@ final class RequestTest extends TestCase
             self::from(['cf-connecting-ip' => '2001:db8::8a2e:370:7334'], '172.68.0.1')->clientIp(),
         );
     }
+
+    public function testTheCountryIsWhatCloudflareSays(): void
+    {
+        self::assertSame('FR', self::from(['cf-ipcountry' => 'FR'], '172.68.0.1')->country());
+    }
+
+    public function testALowercaseCountryStillReads(): void
+    {
+        self::assertSame('DE', self::from(['cf-ipcountry' => 'de'], '172.68.0.1')->country());
+    }
+
+    /**
+     * `XX` and `T1` are Cloudflare's own sentinels for "could not tell" and
+     * "Tor", not real countries -- storing either would read as an answer.
+     */
+    public function testCloudflaresOwnSentinelsReadAsNoAnswer(): void
+    {
+        foreach (['XX', 'T1', '', 'USA', '1'] as $value) {
+            self::assertNull(
+                self::from(['cf-ipcountry' => $value], '172.68.0.1')->country(),
+                sprintf('%s should not have read as a country', var_export($value, true)),
+            );
+        }
+    }
+
+    public function testNoHeaderAtAllIsNoAnswer(): void
+    {
+        self::assertNull(self::from([], '172.68.0.1')->country());
+    }
 }

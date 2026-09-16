@@ -283,6 +283,53 @@ return [
             'comment' => false,
         ],
         [
+            // 45 characters is the longest an IPv6 literal can be written.
+            'name' => 'ip_address',
+            'type' => 'varchar',
+            'length' => 45,
+            'default' => null,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => 'Where the checkout request came from (G8.1, #336)',
+        ],
+        [
+            // No IP-to-city source anywhere in this app, so this is always
+            // null for now -- the column exists for whichever provider is
+            // added later (G8.1, #336).
+            'name' => 'city',
+            'type' => 'varchar',
+            'length' => 128,
+            'default' => null,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
+            // Cloudflare's own edge geolocation, the same two-letter shape as
+            // the `billing_country` form field -- real for every request that
+            // reaches this app, since every one of them arrives via Cloudflare.
+            'name' => 'country',
+            'type' => 'char',
+            'length' => 2,
+            'charset' => 'ascii',
+            'default' => null,
+            'nullable' => true,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
+            // Every booking so far genuinely was in English -- there is no
+            // language switcher on the public site yet, so the default is the
+            // truth rather than a guess (same reasoning as `currency`'s CAD).
+            'name' => 'language',
+            'type' => 'varchar',
+            'length' => 32,
+            'default' => 'English',
+            'nullable' => false,
+            'auto_inc' => false,
+            'comment' => false,
+        ],
+        [
             'name' => 'created',
             'type' => 'datetime',
             'length' => null,

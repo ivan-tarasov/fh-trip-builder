@@ -46,6 +46,54 @@ final class BookingRepositoryTest extends IntegrationTestCase
         ];
     }
 
+    /**
+     * A booking that says nothing about IP, city, country or language reads
+     * back with the same truth every booking made before those columns
+     * existed has: English, and nothing on where it came from (G8.1, #336).
+     */
+    public function testUncapturedOriginDefaultsToEnglishAndNothingElse(): void
+    {
+        $repo = new BookingRepository($this->connection());
+        $session = 'test-' . uniqid();
+
+        $id = $repo->create(self::booking($session));
+
+        try {
+            $row = $repo->find($id);
+
+            self::assertNotNull($row);
+            self::assertSame('English', $row['language']);
+            self::assertNull($row['ip_address']);
+            self::assertNull($row['city']);
+            self::assertNull($row['country']);
+        } finally {
+            $this->connection()->execute('DELETE FROM bookings WHERE session_id = ?', [$session]);
+        }
+    }
+
+    public function testOriginColumnsRoundTripWhatCheckoutCaptured(): void
+    {
+        $repo = new BookingRepository($this->connection());
+        $session = 'test-' . uniqid();
+
+        $id = $repo->create(self::booking($session, [
+            'ip_address' => '203.0.113.9',
+            'city' => null,
+            'country' => 'FR',
+            'language' => 'English',
+        ]));
+
+        try {
+            $row = $repo->find($id);
+
+            self::assertNotNull($row);
+            self::assertSame('203.0.113.9', $row['ip_address']);
+            self::assertSame('FR', $row['country']);
+        } finally {
+            $this->connection()->execute('DELETE FROM bookings WHERE session_id = ?', [$session]);
+        }
+    }
+
     public function testForSessionReturnsEmptyForUnknownSession(): void
     {
         $bookings = (new BookingRepository($this->connection()))
