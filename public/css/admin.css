@@ -825,6 +825,53 @@ a:hover { text-decoration: underline; }
    only while its menu is open fixes that without touching the rest. */
 .sticky-end:has(.dropdown-menu.show) { z-index: 1051; }
 
+/* A block's own title, inside the card rather than a `<p class="band">`
+   above it -- Orchid's `.sales-card__head`/`.sales-card__title`
+   (`payments.html`, `assets/css/pages/sales-lists.css`), renamed for reuse
+   across every block on this page rather than one page's own transaction
+   list (G8.5, #340). */
+.block-head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.block-head__title { margin: 0; font-size: .95rem; font-weight: 700; }
+
+/* A tabbed switch between two views of the same block's own content --
+   Orchid's `todo-filter-tabs` shape (`todo.html`), an underline rather than
+   Bootstrap's boxed `.nav-tabs` look. Left as plain `.nav` markup rather
+   than `.nav-tabs`: Bootstrap's tab JS only looks for `data-bs-toggle="tab"`
+   and does not care which nav class carries it, and starting from a class
+   with no default styling of its own is less to override than fighting
+   `.nav-tabs`'s built-in borders and background (G8.5, #340). */
+.block-tabs {
+  display: flex;
+  gap: .25rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+.block-tabs .nav-link {
+  border: 0;
+  background: transparent;
+  padding: .625rem .75rem;
+  color: var(--ink-quiet);
+  font-size: .8125rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.block-tabs .nav-link.active {
+  color: var(--signal);
+  border-bottom-color: var(--signal);
+  font-weight: 600;
+  background: transparent;
+}
+.block-tabs .nav-link:hover:not(.active) { color: var(--ink); }
+
 /* Icon + label + tone, for anything that used to be a bare Bootstrap
    `.badge`: a booking's state in a list row, a flight leg's stop count. Tone
    is emphasis, same rule as `.stat-card` -- every chip still prints its

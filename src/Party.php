@@ -124,6 +124,23 @@ final readonly class Party
     }
 
     /**
+     * One passenger's own share of a per-adult price, keyed the way
+     * `booking_passengers.type` stores it ('A'/'C'/'I') rather than by the
+     * party-level counts the rest of this class works in -- the one thing a
+     * per-passenger breakdown needs that a party total does not (G8.5, #340).
+     *
+     * @return array{base: float, tax: float}
+     */
+    public static function shareFor(string $type): array
+    {
+        return match ($type) {
+            'C' => ['base' => self::CHILD_FARE, 'tax' => self::CHILD_TAX],
+            'I' => ['base' => self::INFANT_FARE, 'tax' => self::INFANT_TAX],
+            default => ['base' => 1.0, 'tax' => 1.0],
+        };
+    }
+
+    /**
      * "2 adults, 1 child" -- what the price is for, in the words the form used.
      */
     public function label(): string

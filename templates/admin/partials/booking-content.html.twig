@@ -143,9 +143,8 @@
         </div>
     </div>
 
-    <p class="band">Who to contact</p>
-
     <div class="card orchid-card mb-3">
+        {{ self.blockHeader('person-lines-fill', 'Who to contact') }}
         <div class="table-responsive">
             <table class="table orchid-table align-middle mb-0">
                 <tbody>
@@ -189,9 +188,8 @@
         </div>
     </div>
 
-    <p class="band">Travelling</p>
-
     <div class="card orchid-card mb-3">
+        {{ self.blockHeader('people', 'Travelling', booking.passengers|length ~ (booking.passengers|length == 1 ? ' passenger' : ' passengers')) }}
         <div class="table-responsive">
             <table class="table orchid-table align-middle mb-0">
                 <thead>
@@ -242,8 +240,6 @@
     {# Fake numbers -- this app has no real GDS or ticketing integration
        behind it, so a document here is whatever the operator typed in,
        not something a supplier issued (G8.3, #338). #}
-    <p class="band">Tickets</p>
-
     {% set passenger_type_labels = {'A': 'Adult', 'C': 'Child', 'I': 'Infant'} %}
 
     {# Both forms here carry only their booking-wide hidden fields;
@@ -267,6 +263,7 @@
     </form>
 
     <div class="card orchid-card mb-3">
+        {{ self.blockHeader('ticket-perforated', 'Tickets', tickets|length ~ (tickets|length == 1 ? ' ticket' : ' tickets')) }}
         <div class="card-body">
             <div class="d-flex justify-content-end align-items-center gap-2 mb-3">
                 <button
@@ -380,48 +377,107 @@
         {{ self.ticketNumberModal(extra.id, ticket) }}
     {% endfor %}
 
-    <p class="band">The trip</p>
-
     {{ self.legs(booking.outbound, 'Outbound') }}
     {% if booking.return %}{{ self.legs(booking.return, 'Return') }}{% endif %}
 
-    <p class="band">What was paid</p>
+    {# One root block for everything about the money, rather than a card
+       each for the total and the per-passenger split -- the two are the
+       same figures at two levels of detail, not two different facts about
+       the booking, so they switch by tab rather than stack (G8.5, #340).
 
-    {# Base fare and tax were already on the presenter (`price_base`,
+       Base fare and tax were already on the presenter (`price_base`,
        `price_tax`) but this page only ever printed their sum -- splitting
        them is real data this page was leaving on the table, not a new
        field invented for the redesign. #}
     <div class="card orchid-card mb-3">
-        <div class="table-responsive">
-            <table class="table orchid-table align-middle mb-0">
-                <tbody>
-                    <tr>
-                        <td class="text-body-secondary">Base fare</td>
-                        <td class="mono">{{ money.whole(booking.price_base) }}</td>
-                    </tr>
-                    <tr>
-                        <td class="text-body-secondary">Taxes and fees</td>
-                        <td class="mono">{{ money.whole(booking.price_tax) }}</td>
-                    </tr>
-                    <tr class="is-total">
-                        <td>Total</td>
-                        <td class="mono">{% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}—{% endif %}</td>
-                    </tr>
-                    <tr><td class="text-body-secondary">Fare</td><td>{{ booking.fare_brand ?: '—' }}</td></tr>
-                    <tr>
-                        <td class="text-body-secondary">Card</td>
-                        {# Every digit this site has ever held. No card number is
-                           stored anywhere, which is what a receipt shows too. #}
-                        <td class="mono">
-                            {% if extra.card_last4 %}
-                                {{ booking.card_brand }} &middot;&middot;&middot;&middot; {{ extra.card_last4 }}
+        {{ self.blockHeader('cash-stack', 'What was paid') }}
+
+        <ul class="nav block-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="paidSummaryTab" data-bs-toggle="tab" data-bs-target="#paidSummaryPane" type="button" role="tab" aria-controls="paidSummaryPane" aria-selected="true">Summary</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="paidBreakdownTab" data-bs-toggle="tab" data-bs-target="#paidBreakdownPane" type="button" role="tab" aria-controls="paidBreakdownPane" aria-selected="false">Per passenger</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="paidSummaryPane" role="tabpanel" aria-labelledby="paidSummaryTab">
+                <div class="table-responsive">
+                    <table class="table orchid-table align-middle mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-body-secondary">Base fare</td>
+                                <td class="mono">{{ money.whole(booking.price_base) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Taxes and fees</td>
+                                <td class="mono">{{ money.whole(booking.price_tax) }}</td>
+                            </tr>
+                            <tr class="is-total">
+                                <td>Total</td>
+                                <td class="mono">{% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}—{% endif %}</td>
+                            </tr>
+                            <tr><td class="text-body-secondary">Fare</td><td>{{ booking.fare_brand ?: '—' }}</td></tr>
+                            <tr>
+                                <td class="text-body-secondary">Card</td>
+                                {# Every digit this site has ever held. No card number is
+                                   stored anywhere, which is what a receipt shows too. #}
+                                <td class="mono">
+                                    {% if extra.card_last4 %}
+                                        {{ booking.card_brand }} &middot;&middot;&middot;&middot; {{ extra.card_last4 }}
+                                    {% else %}
+                                        &mdash;
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {# `bookings.price_base`/`price_tax` are the party's total, not a
+               per-passenger one -- reconstructed by `BookingPresenter`, not
+               stored anywhere, by distributing the total back out with the
+               same weights checkout applied to arrive at it in the first place
+               (`Party::apply()`). Order date and paid date are the same
+               instant twice, not two different facts: checkout books and
+               charges in one step, and there is no separate "paid" column to
+               read a different one from. #}
+            <div class="tab-pane fade" id="paidBreakdownPane" role="tabpanel" aria-labelledby="paidBreakdownTab">
+                <div class="table-responsive">
+                    <table class="table orchid-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Created by</th>
+                                <th scope="col">Order date</th>
+                                <th scope="col">Paid date</th>
+                                <th scope="col">Passenger</th>
+                                <th scope="col">Currency</th>
+                                <th scope="col">Base fare</th>
+                                <th scope="col">Tax</th>
+                                <th scope="col">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in booking.payment_breakdown %}
+                                <tr>
+                                    <td class="text-body-secondary">{{ payment_created_by ? payment_created_by.label() : '—' }}</td>
+                                    <td class="mono text-body-secondary">{{ booking.created|date('j M Y, H:i') }}</td>
+                                    <td class="mono text-body-secondary">{{ booking.created|date('j M Y, H:i') }}</td>
+                                    <td>{{ row.passenger }}</td>
+                                    <td class="text-body-secondary">{{ extra.currency }}</td>
+                                    <td class="mono">{{ money.whole(row.base) }}</td>
+                                    <td class="mono">{{ money.whole(row.tax) }}</td>
+                                    <td class="mono">{{ money.whole(row.total) }}</td>
+                                </tr>
                             {% else %}
-                                &mdash;
-                            {% endif %}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                                <tr><td colspan="8" class="text-body-secondary">No passengers on file to break the payment down by.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -432,9 +488,8 @@
        the drawing differs: that page uses Font Awesome, which this panel
        does not load (A3.5, A10.1), so Bootstrap Icons stand in for it here
        (G8.4, #339). #}
-    <p class="band">Fare rules</p>
-
     <div class="card orchid-card mb-3">
+        {{ self.blockHeader('shield-check', 'Fare rules') }}
         <div class="card-body">
             {% if booking.fare_rules %}
                 <ul class="list-unstyled mb-0">
@@ -460,9 +515,8 @@
    edit or delete after the fact is not a trustworthy one. Newest first,
    unlike the log's own timeline -- this is a running note an operator
    wants the latest of without scrolling past the rest. #}
-<p class="band">Remarks</p>
-
 <div class="card orchid-card mb-3">
+    {{ self.blockHeader('chat-square-text', 'Remarks', remarks|length ~ (remarks|length == 1 ? ' remark' : ' remarks')) }}
     <div class="card-body">
         <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-start mb-3">
             <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
@@ -553,9 +607,8 @@
     'ticket_number_changed': 'signal', 'ticket_removed': 'bad',
 } %}
 
-<p class="band">Booking log</p>
-
 <div class="card orchid-card">
+    {{ self.blockHeader('clock-history', 'Booking log', log|length ~ (log|length == 1 ? ' event' : ' events')) }}
     <div class="card-body py-1">
         {% for line in log %}
             {% set tone = line.event ? log_tones[line.event.value]|default('') : '' %}

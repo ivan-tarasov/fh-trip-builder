@@ -388,4 +388,63 @@ final class BookingPresenterTest extends TestCase
 
         self::assertSame('Ada Lovelace + 1', $booking['passenger_summary']);
     }
+
+    public function testAPartyOfOneGetsTheWholeTotal(): void
+    {
+        $booking = self::card(self::row(), [
+            [
+                'id' => 1, 'booking_id' => 100001, 'position' => 0, 'type' => 'A',
+                'first_name' => 'Ada', 'last_name' => 'Lovelace', 'dob' => '1990-01-01', 'gender' => 'F',
+            ],
+        ]);
+
+        self::assertCount(1, $booking['payment_breakdown']);
+        self::assertSame('Ada Lovelace', $booking['payment_breakdown'][0]['passenger']);
+        self::assertSame('900', $booking['payment_breakdown'][0]['base']['whole']);
+        self::assertSame('100', $booking['payment_breakdown'][0]['tax']['whole']);
+        self::assertSame('1,000', $booking['payment_breakdown'][0]['total']['whole']);
+    }
+
+    /**
+     * Reconstructed from the same weights checkout applied to reach the
+     * stored total (`Party::apply()`), not a fresh assumption -- a child
+     * pays three quarters of an adult's base fare and all of the tax, and
+     * the two rows still have to sum back to exactly what the booking's own
+     * total column says.
+     */
+    public function testAMixedPartySplitsByTheSameWeightsCheckoutApplied(): void
+    {
+        $booking = self::card(self::row(['price_base' => '700.00', 'price_tax' => '80.00']), [
+            [
+                'id' => 1, 'booking_id' => 100001, 'position' => 0, 'type' => 'A',
+                'first_name' => 'Ada', 'last_name' => 'Lovelace', 'dob' => '1990-01-01', 'gender' => 'F',
+            ],
+            [
+                'id' => 2, 'booking_id' => 100001, 'position' => 1, 'type' => 'C',
+                'first_name' => 'Grace', 'last_name' => 'Lovelace', 'dob' => '2018-01-01', 'gender' => 'F',
+            ],
+        ]);
+
+        $rows = $booking['payment_breakdown'];
+
+        self::assertCount(2, $rows);
+        // fareShare() is 1.75 for one adult and one child, so the per-seat
+        // base is 700 / 1.75 = 400: the adult gets it whole, the child 75%.
+        self::assertSame('400', $rows[0]['base']['whole']);
+        self::assertSame('300', $rows[1]['base']['whole']);
+        // Both pay full tax -- a child occupies a seat.
+        self::assertSame('40', $rows[0]['tax']['whole']);
+        self::assertSame('40', $rows[1]['tax']['whole']);
+
+        self::assertSame(
+            780,
+            self::wholeUnits($rows[0]['total']) + self::wholeUnits($rows[1]['total']),
+            'the rows must sum to the booking\'s own stored total',
+        );
+    }
+
+    public function testNoPassengersMeansNoBreakdownToDraw(): void
+    {
+        self::assertSame([], self::card(self::row())['payment_breakdown']);
+    }
 }

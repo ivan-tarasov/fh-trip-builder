@@ -551,6 +551,7 @@ class AdminController extends AbstractController
         $booking = new BookingPresenter()->booking($row, $passengers);
         $events = new BookingEventRepository($this->connection());
         $counts = $travellers->bookingCountsFor($passengers);
+        $log = $events->forBooking($id);
 
         return [
             'booking' => $booking,
@@ -595,7 +596,7 @@ class AdminController extends AbstractController
                     => $counts[BookingPassengerRepository::keyFor($passenger)] ?? 1,
                 $passengers,
             ),
-            'log' => $events->forBooking($id),
+            'log' => $log,
             // When the log itself began, so a booking with no events can say
             // why rather than reading as one nothing ever happened to.
             'log_from' => $events->startedAt(),
@@ -604,6 +605,11 @@ class AdminController extends AbstractController
             'tickets' => new BookingTicketRepository($this->connection())->forBooking($id),
             'document_types' => DocumentType::cases(),
             'ticket_statuses' => TicketStatus::cases(),
+            // Who created the booking, for the payment breakdown -- off the
+            // log's own `Booked` line rather than a new column, and unknown
+            // rather than assumed for a booking older than the log itself
+            // (same honesty the log's own empty state already uses).
+            'payment_created_by' => self::bookedBy($log),
         ];
     }
 
@@ -1028,6 +1034,24 @@ class AdminController extends AbstractController
     private static function fakeTicketNumber(): string
     {
         return sprintf('%03d%010d', random_int(1, 999), random_int(0, 9999999999));
+    }
+
+    /**
+     * Who made the booking, read off its own `BookingEvent::Booked` line --
+     * null when the row predates the log, same as every other fact this
+     * page only knows from it (G8.5, #340).
+     *
+     * @param list<array{event: ?BookingEvent, raw: string, actor: ?BookingActor, note: string, at: string}> $log
+     */
+    private static function bookedBy(array $log): ?BookingActor
+    {
+        foreach ($log as $line) {
+            if ($line['event'] === BookingEvent::Booked) {
+                return $line['actor'];
+            }
+        }
+
+        return null;
     }
 
     /**
