@@ -106,6 +106,20 @@ final class BookingTicketRepositoryTest extends IntegrationTestCase
         self::assertSame([], $this->tickets()->forBooking($id));
     }
 
+    public function testPassengersWithoutTicketsFindsOnlyThoseWithNone(): void
+    {
+        $withTicket = $this->insert('ZZT008');
+        $withoutTicket = $this->insert('ZZT009');
+
+        $withTicketPassenger = $this->firstPassengerId($withTicket);
+        $withoutTicketPassenger = $this->firstPassengerId($withoutTicket);
+
+        $this->tickets()->create($withTicketPassenger, DocumentType::Ticket, '5555555555555', TicketStatus::Issued, '2026-01-15');
+
+        self::assertSame([], $this->tickets()->passengersWithoutTickets($withTicket));
+        self::assertSame([$withoutTicketPassenger], $this->tickets()->passengersWithoutTickets($withoutTicket));
+    }
+
     /**
      * A document type this version does not know is printed, not hidden --
      * same reasoning as an unrecognised `BookingEvent` in the log.

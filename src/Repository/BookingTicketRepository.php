@@ -90,6 +90,24 @@ final readonly class BookingTicketRepository
         ], $rows);
     }
 
+    /**
+     * The booking's own passengers who hold no document at all -- who the
+     * "generate dummy tickets" button actually has work to do for.
+     *
+     * @return list<int> booking_passenger_id
+     */
+    public function passengersWithoutTickets(int $bookingId): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT p.id FROM ' . Table::BookingPassengers->value . ' p'
+            . ' LEFT JOIN ' . Table::BookingTickets->value . ' t ON t.booking_passenger_id = p.id'
+            . ' WHERE p.booking_id = ? AND t.id IS NULL',
+            [$bookingId],
+        );
+
+        return array_column($rows, 'id');
+    }
+
     public function setStatus(int $id, int $bookingId, TicketStatus $status): int
     {
         return $this->connection->execute(

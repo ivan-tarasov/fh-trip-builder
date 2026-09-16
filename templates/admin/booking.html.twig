@@ -390,75 +390,117 @@
 
         {% set passenger_type_labels = {'A': 'Adult', 'C': 'Child', 'I': 'Infant'} %}
 
-        <div class="card orchid-card mb-3">
-            <div class="card-body">
-                <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-end mb-3">
-                    <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
-                    <input type="hidden" name="action" value="ticket_add">
-                    <div class="col-12 col-sm-6 col-md-3">
-                        <label for="ticketPassenger" class="form-label small text-body-secondary">Passenger</label>
-                        <select id="ticketPassenger" name="booking_passenger_id" class="form-select form-select-sm">
-                            {% for passenger in passengers %}
-                                <option value="{{ passenger.id }}">{{ passenger.first_name }} {{ passenger.last_name }} ({{ passenger_type_labels[passenger.type]|default(passenger.type) }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-6 col-sm-3 col-md-2">
-                        <label for="ticketDocType" class="form-label small text-body-secondary">Document type</label>
-                        <select id="ticketDocType" name="document_type" class="form-select form-select-sm">
-                            {% for type in document_types %}
-                                <option value="{{ type.value }}">{{ type.label() }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-6 col-sm-3 col-md-3">
-                        <label for="ticketNumber" class="form-label small text-body-secondary">Document number</label>
-                        <input id="ticketNumber" name="document_number" type="text" class="form-control form-control-sm" maxlength="20" required>
-                    </div>
-                    <div class="col-6 col-sm-3 col-md-2">
-                        <label for="ticketIssueDate" class="form-label small text-body-secondary">Issue date</label>
-                        <input id="ticketIssueDate" name="issue_date" type="date" class="form-control form-control-sm" value="{{ "now"|date("Y-m-d") }}" required>
-                    </div>
-                    <div class="col-6 col-sm-3 col-md-2">
-                        <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
-                    </div>
-                </form>
+        {# The fields live in the modal below; this form only carries the
+           booking-wide hidden ones, and the modal's own inputs name it via
+           `form="ticketAddForm"` rather than being its descendants -- the
+           same split `subscribers.html.twig`'s bulk-remove form already
+           uses for inputs that live in the table, not beside the form. #}
+        <form id="ticketAddForm" method="post" action="/admin/bookings/{{ extra.id }}">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="ticket_add">
+        </form>
 
-                <div class="table-responsive">
-                    <table class="table orchid-table align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th scope="col">Passenger</th>
-                                <th scope="col">Type</th>
-                                <th scope="col">Document type</th>
-                                <th scope="col">Document number</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Issue date</th>
-                                <th scope="col" class="text-end">&nbsp;</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for ticket in tickets %}
+        <form method="post" action="/admin/bookings/{{ extra.id }}">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="ticket_generate">
+
+            <div class="card orchid-card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                        <button
+                            type="submit"
+                            class="btn btn-sm btn-outline-secondary"
+                            data-confirm="Add a fake ticket for every passenger who doesn't have one yet?"
+                        >
+                            <i class="bi bi-magic me-1" aria-hidden="true"></i>Generate dummy tickets
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ticketAddModal">
+                            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table orchid-table align-middle mb-0">
+                            <thead>
                                 <tr>
-                                    <td>{{ ticket.passenger }}</td>
-                                    <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
-                                    <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
-                                    <td class="mono">{{ ticket.document_number }}</td>
-                                    <td>
-                                        <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
-                                            {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
-                                        </span>
-                                    </td>
-                                    <td class="mono text-body-secondary">{{ ticket.issue_date|date('j M Y') }}</td>
-                                    <td class="text-end row-actions" style="width: 1%;">
-                                        {{ self.ticketActions(extra.id, ticket, ticket_statuses) }}
-                                    </td>
+                                    <th scope="col">Passenger</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Document type</th>
+                                    <th scope="col">Document number</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Issue date</th>
+                                    <th scope="col" class="text-end">&nbsp;</th>
                                 </tr>
-                            {% else %}
-                                <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {% for ticket in tickets %}
+                                    <tr>
+                                        <td>{{ ticket.passenger }}</td>
+                                        <td class="text-body-secondary">{{ ticket.passenger_type }}</td>
+                                        <td>{{ ticket.document_type ? ticket.document_type.label() : ticket.raw_document_type }}</td>
+                                        <td class="mono">{{ ticket.document_number }}</td>
+                                        <td>
+                                            <span class="status-chip status-chip--{{ ticket.status ? ticket.status.chipClass() : 'muted' }}">
+                                                {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
+                                            </span>
+                                        </td>
+                                        <td class="mono text-body-secondary">{{ ticket.issue_date|date('j M Y') }}</td>
+                                        {# Always visible, unlike the other row-action menus on this
+                                           panel -- there is no larger list to declutter here, and an
+                                           action a reader cannot see is one they will not find. #}
+                                        <td class="text-end" style="width: 1%;">
+                                            {{ self.ticketActions(extra.id, ticket, ticket_statuses) }}
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="7" class="text-body-secondary">No tickets yet.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="modal fade" id="ticketAddModal" tabindex="-1" aria-labelledby="ticketAddModalTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="ticketAddModalTitle">Add a ticket</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="ticketPassenger" class="form-label">Passenger</label>
+                            <select id="ticketPassenger" name="booking_passenger_id" form="ticketAddForm" class="form-select">
+                                {% for passenger in passengers %}
+                                    <option value="{{ passenger.id }}">{{ passenger.first_name }} {{ passenger.last_name }} ({{ passenger_type_labels[passenger.type]|default(passenger.type) }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label for="ticketDocType" class="form-label">Document type</label>
+                                <select id="ticketDocType" name="document_type" form="ticketAddForm" class="form-select">
+                                    {% for type in document_types %}
+                                        <option value="{{ type.value }}">{{ type.label() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="ticketIssueDate" class="form-label">Issue date</label>
+                                <input id="ticketIssueDate" name="issue_date" form="ticketAddForm" type="date" class="form-control" value="{{ "now"|date("Y-m-d") }}" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="ticketNumber" class="form-label">Document number</label>
+                            <input id="ticketNumber" name="document_number" form="ticketAddForm" type="text" class="form-control" maxlength="20" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="ticketAddForm" class="btn btn-primary">Add ticket</button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -641,6 +641,12 @@ class AdminController extends AbstractController
             return;
         }
 
+        if ($action === 'ticket_generate') {
+            $this->generateTickets($id, $back);
+
+            return;
+        }
+
         $change = match ($action) {
             'cancel' => [
                 'to' => BookingStatus::Cancelled,
@@ -781,6 +787,34 @@ class AdminController extends AbstractController
         }
 
         $this->bounce($back);
+    }
+
+    /**
+     * Add one fake ticket for every passenger who holds no document yet.
+     *
+     * Always a `Ticket`, never a random pick between that and `EMD` --
+     * every passenger needs at least a ticket to fly, and inventing a mix
+     * nobody asked for would just be noise on top of a fake number.
+     */
+    private function generateTickets(int $id, string $back): void
+    {
+        $tickets = new BookingTicketRepository($this->connection());
+        $missing = $tickets->passengersWithoutTickets($id);
+
+        foreach ($missing as $passengerId) {
+            $tickets->create($passengerId, DocumentType::Ticket, self::fakeTicketNumber(), TicketStatus::Issued, date('Y-m-d'));
+        }
+
+        Flash::set($missing === []
+            ? 'Every passenger already has a ticket.'
+            : sprintf('%d dummy ticket(s) added.', count($missing)));
+        $this->bounce($back);
+    }
+
+    /** A number that reads like a real e-ticket number and is not one. */
+    private static function fakeTicketNumber(): string
+    {
+        return sprintf('%03d%010d', random_int(1, 999), random_int(0, 9999999999));
     }
 
     /**
