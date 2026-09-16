@@ -138,6 +138,19 @@ return [
             'auto_inc' => false,
             'comment' => false,
         ],
+        [
+            'name' => 'daily_counted_on',
+            'type' => 'date',
+            'length' => null,
+            'default' => false,
+            'nullable' => true,
+            'auto_inc' => false,
+            // The day this hash last bumped `search_daily_counts` -- so a
+            // route searched ten times in one day (nine of them a filter
+            // re-applying the same search) counts as one day's search, not
+            // ten (G7.1, #332).
+            'comment' => 'Last day this hash bumped search_daily_counts',
+        ],
     ],
 
 ];

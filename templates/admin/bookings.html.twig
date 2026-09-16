@@ -3,33 +3,11 @@
 
 {% set admin_section = 'bookings' %}
 
+{# The hero below is this page's title -- there is no second, plainer one
+   above it (G7.1, #332). #}
+{% set page_header = false %}
+
 {% block title %}Bookings{% endblock %}
-
-{% block description %}<p class="well__description">Every booking made on the site, searchable by reference, name or address.</p>{% endblock %}
-
-{% block tools %}
-    {# A GET and not a POST, so a search can be linked, refreshed and paged.
-       The cost is that the term lands in the access log, which is why the box
-       is offered for a reference, a name and an address and nothing finer. #}
-    <form class="d-flex" method="get" action="/admin/bookings" role="search">
-        <label class="visually-hidden" for="find">Search bookings</label>
-        <div class="input-group input-group-sm">
-            <span class="input-group-text bg-transparent"><i class="bi bi-search" aria-hidden="true"></i></span>
-            <input id="find" type="search" class="form-control" name="q" value="{{ term }}" placeholder="Reference, name or address" autocomplete="off">
-            <button class="btn btn-outline-secondary" type="submit">Search</button>
-            {% if term %}<a class="btn btn-outline-secondary" href="/admin/bookings">Clear</a>{% endif %}
-        </div>
-    </form>
-
-    <span class="text-body-secondary small">{{ total }} {{ term ? 'found' : 'in all' }}</span>
-
-    {# The search term carries over -- exporting page two of a search should
-       not quietly become exporting everything (G3.5, #308). Pagination does
-       not: this is every matching row, not just the current page. #}
-    <a class="btn btn-sm btn-outline-secondary" href="/admin/bookings/export{{ term ? '?q=' ~ term|url_encode : '' }}">
-        <i class="bi bi-download" aria-hidden="true"></i> Export CSV
-    </a>
-{% endblock %}
 
 {# What this list shows is a decision, and it has been taken twice.
 
@@ -47,6 +25,88 @@
    birth, no card. Those stay on the page for the one booking somebody opened,
    where looking at them was a deliberate act (G1.8, #233). #}
 {% block content %}
+    {# Orchid's own dark hero (`analytics.html`), real numbers in place of
+       its fake ones -- made, cancelled, gross cost and a search-to-book
+       ratio, each with its own day-by-day chart. Dropped: the "LIVE · N
+       visitors online" eyebrow (nothing here tracks a live visitor) and
+       the Share button (nowhere to share to in a one-operator panel).
+       Export moves in from the old toolbar rather than sitting twice on
+       the page (G7.1, #332). #}
+    <section class="bookings-hero" aria-labelledby="bookingsHeroTitle">
+        <div class="bookings-hero__decor" aria-hidden="true">
+            <span class="bookings-hero__grid"></span>
+            <span class="bookings-hero__orb bookings-hero__orb--a"></span>
+            <span class="bookings-hero__orb bookings-hero__orb--b"></span>
+        </div>
+
+        <div class="bookings-hero__head">
+            <div>
+                <h1 class="bookings-hero__title" id="bookingsHeroTitle">Bookings</h1>
+                <p class="bookings-hero__sub">Made, cancelled and booked value{{ range == 'all' ? ', all time.' : (range == '1d' ? ', today.' : ', last ' ~ range ~ '.') }}</p>
+            </div>
+
+            <div class="bookings-hero__actions">
+                {# A real link per pill, not a client-side re-render -- a
+                   range is a URL somebody can reload, bookmark or send to
+                   themselves, the same reasoning the search box below
+                   already gets for being a GET. #}
+                <div class="bookings-range" role="group" aria-label="Date range">
+                    {% for value, label in {'1d': '1d', '7d': '7d', '30d': '30d', '90d': '90d', 'all': 'All'} %}
+                        <a class="bookings-range__btn{{ range == value ? ' is-active' : '' }}"
+                           href="/admin/bookings?range={{ value }}{{ term ? '&q=' ~ term|url_encode : '' }}"
+                           {{ range == value ? 'aria-current="true"' : '' }}>{{ label }}</a>
+                    {% endfor %}
+                </div>
+
+                <a class="bookings-btn-primary" href="/admin/bookings/export{{ term ? '?q=' ~ term|url_encode : '' }}">
+                    <i class="bi bi-download" aria-hidden="true"></i>Export
+                </a>
+            </div>
+        </div>
+
+        <div class="bookings-hero__kpis">
+            {% for card in hero %}
+                <div class="bookings-hero__kpi">
+                    <div class="bookings-hero__kpi-head">
+                        <span class="bookings-hero__kpi-label">{{ card.label }}</span>
+                        <span class="bookings-hero__kpi-value">{{ card.display }}</span>
+                        {% if card.delta %}
+                            <span class="bookings-hero__kpi-delta bookings-hero__kpi-delta--{{ card.delta.good ? 'up' : 'down' }}">
+                                <i class="bi bi-arrow-{{ card.delta.pct >= 0 ? 'up' : 'down' }}-right" aria-hidden="true"></i>
+                                {{ card.delta.pct|abs|number_format(1) }}%
+                            </span>
+                        {% else %}
+                            <span class="bookings-hero__kpi-delta bookings-hero__kpi-delta--flat">n/a</span>
+                        {% endif %}
+                    </div>
+                    <div class="bookings-hero__kpi-chart">
+                        <canvas class="js-chart" data-chart="sparkline" data-tone="{{ card.tone }}"
+                                data-points="{{ card.points|json_encode }}" aria-label="{{ card.label }} trend"></canvas>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {# The list's own toolbar -- unaffected by the hero's range, which is
+       about the numbers above, not which rows are listed below. #}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        {# A GET and not a POST, so a search can be linked, refreshed and paged.
+           The cost is that the term lands in the access log, which is why the box
+           is offered for a reference, a name and an address and nothing finer. #}
+        <form class="d-flex" method="get" action="/admin/bookings" role="search">
+            <label class="visually-hidden" for="find">Search bookings</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-transparent"><i class="bi bi-search" aria-hidden="true"></i></span>
+                <input id="find" type="search" class="form-control" name="q" value="{{ term }}" placeholder="Reference, name or address" autocomplete="off">
+                <button class="btn btn-outline-secondary" type="submit">Search</button>
+                {% if term %}<a class="btn btn-outline-secondary" href="/admin/bookings">Clear</a>{% endif %}
+            </div>
+        </form>
+
+        <span class="text-body-secondary small">{{ total }} {{ term ? 'found' : 'in all' }}</span>
+    </div>
+
     {% if term and bookings is empty %}
         <p class="notice">
             Nothing matches <strong>{{ term }}</strong>. A search reads the
@@ -164,4 +224,11 @@
             </div>
         {% endif %}
     {% endif %}
+{% endblock %}
+
+{# A second page that needs Chart.js, not a second copy of it -- the
+   Overview page already carries this same tag for the one chart it had
+   before this one existed (G7.1, #332). #}
+{% block scripts %}
+    <script src="{{ asset(config('site.directory.js') ~ '/chart.umd.min.js') }}" defer></script>
 {% endblock %}

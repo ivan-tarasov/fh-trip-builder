@@ -26,11 +26,13 @@ use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\DashboardRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
+use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Repository\SettingsRepository;
 use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Schedule;
 use TripBuilder\Settings;
 use TripBuilder\View\BookingPresenter;
+use TripBuilder\View\ItineraryPresenter;
 use TripBuilder\View\Markdown;
 use TripBuilder\View\TwigRenderer;
 use Twig\Error\Error;
@@ -73,6 +75,9 @@ class AdminController extends AbstractController
 
     /** Bookings to a page. Enough to scan, few enough to read. */
     private const int PER_PAGE = 25;
+
+    /** How many days back each named range covers. `all` has no entry -- it has no length to name. */
+    private const array HERO_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90];
 
     /**
      * The dashboard.
@@ -293,13 +298,126 @@ class AdminController extends AbstractController
             $listed[] = $this->listed($row, $names[$row['id']] ?? []);
         }
 
+        $range = $this->request->query->str('range', '30d');
+        $range = $range === 'all' || array_key_exists($range, self::HERO_RANGE_DAYS) ? $range : '30d';
+
         echo new TwigRenderer()->render('admin/bookings.html.twig', [
             'bookings' => $listed,
             'total' => $term === '' ? $bookings->countAll() : $bookings->countMatching($term),
             'term' => $term,
             'page' => $page,
             'per_page' => self::PER_PAGE,
+            'range' => $range,
+            'hero' => $this->hero($bookings, $range),
         ]);
+    }
+
+    /**
+     * The four hero cards: made, cancelled, gross cost, and a
+     * search-to-book ratio, each with its own day-by-day trend.
+     *
+     * @return list<array{
+     *     key: string, label: string, display: string, tone: string,
+     *     delta: array{pct: float, good: bool}|null, points: array<string, int|float>,
+     * }>
+     */
+    private function hero(BookingRepository $bookings, string $range): array
+    {
+        $searches = new SearchRepository($this->connection());
+
+        // Exclusive: `[$from, $to)` never needs a day's worth of `<=` fuss.
+        $to = new DateTimeImmutable('tomorrow');
+        $days = self::HERO_RANGE_DAYS[$range] ?? null;
+
+        // `all` starts a year back rather than from null, so every query
+        // below stays a plain `DateTimeImmutable` with nothing nullable to
+        // check. Not this app's actual earliest possible row (there is no
+        // real ceiling on how old a booking could be) -- a chart spanning
+        // decades to show a few months of real data is a flat line with a
+        // bump at the end, which answers nothing a shorter one does not.
+        $from = $days === null ? $to->modify('-1 year') : $to->modify("-{$days} days");
+        $prevFrom = $days === null ? null : $from->modify("-{$days} days");
+        $prevTo = $from;
+
+        $made = $bookings->madeCount($from, $to);
+        $cancelled = $bookings->cancelledCount($from, $to);
+        $cost = $bookings->totalCost($from, $to);
+        $searchTotal = $searches->total($from, $to);
+        $ratio = $searchTotal > 0 ? ($made / $searchTotal) * 100 : 0.0;
+
+        $prevMade = $prevFrom !== null ? $bookings->madeCount($prevFrom, $prevTo) : null;
+        $prevCancelled = $prevFrom !== null ? $bookings->cancelledCount($prevFrom, $prevTo) : null;
+        $prevCost = $prevFrom !== null ? $bookings->totalCost($prevFrom, $prevTo) : null;
+
+        if ($prevFrom !== null) {
+            $prevSearchTotal = $searches->total($prevFrom, $prevTo);
+            $prevRatio = $prevSearchTotal > 0 ? ($prevMade / $prevSearchTotal) * 100 : null;
+        } else {
+            $prevRatio = null;
+        }
+
+        $madeByDay = $bookings->dailyMadeCounts($from, $to);
+        $searchesByDay = $searches->dailyCounts($from, $to);
+
+        $ratioByDay = [];
+
+        foreach ($madeByDay as $date => $madeThatDay) {
+            $searchedThatDay = $searchesByDay[$date] ?? 0;
+            $ratioByDay[$date] = $searchedThatDay > 0 ? ($madeThatDay / $searchedThatDay) * 100 : 0;
+        }
+
+        return [
+            [
+                'key' => 'made',
+                'label' => 'Made',
+                'display' => number_format($made),
+                'tone' => 'good',
+                'delta' => self::delta($made, $prevMade),
+                'points' => $madeByDay,
+            ],
+            [
+                'key' => 'cancelled',
+                'label' => 'Cancelled',
+                'display' => number_format($cancelled),
+                'tone' => 'bad',
+                'delta' => self::delta($cancelled, $prevCancelled, upIsGood: false),
+                'points' => $bookings->dailyCancelledCounts($from, $to),
+            ],
+            [
+                'key' => 'cost',
+                'label' => 'Total cost',
+                'display' => new ItineraryPresenter()->priceParts($cost)['text'],
+                'tone' => 'neutral',
+                'delta' => self::delta($cost, $prevCost),
+                'points' => $bookings->dailyCostSums($from, $to),
+            ],
+            [
+                'key' => 'ratio',
+                'label' => 'Search-to-book',
+                'display' => number_format($ratio, 1) . '%',
+                'tone' => 'good',
+                'delta' => self::delta($ratio, $prevRatio),
+                'points' => $ratioByDay,
+            ],
+        ];
+    }
+
+    /**
+     * How far `$current` moved from `$previous`, or null when there is no
+     * previous period to compare against (`all`, or a period that started
+     * at zero -- a move off zero has no percentage, only an origin).
+     *
+     * @return array{pct: float, good: bool}|null
+     */
+    private static function delta(int|float $current, int|float|null $previous, bool $upIsGood = true): ?array
+    {
+        if ($previous === null || $previous == 0) {
+            return null;
+        }
+
+        $pct = (($current - $previous) / $previous) * 100;
+
+        return ['pct' => $pct, 'good' => $upIsGood ? $pct >= 0 : $pct <= 0];
     }
 
     /**
