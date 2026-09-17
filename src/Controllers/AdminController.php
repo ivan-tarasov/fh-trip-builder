@@ -98,7 +98,7 @@ class AdminController extends AbstractController
     private const array HERO_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90];
 
     /** The `searches()` page's own range names -- a year, not `all`: nothing here needs an unbounded query. */
-    private const array SEARCH_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '365d' => 365];
+    private const array SEARCH_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90, '180d' => 180, '365d' => 365];
 
     /** More than Overview's own top five, still short enough to read in one screen. */
     private const int SEARCHES_RANKING_LIMIT = 20;
@@ -226,6 +226,8 @@ class AdminController extends AbstractController
                 '1d' => 'today',
                 '7d' => 'in the last 7 days',
                 '30d' => 'in the last 30 days',
+                '90d' => 'in the last 90 days',
+                '180d' => 'in the last 6 months',
                 '365d' => 'in the last year',
             },
             'total' => number_format($searches->total($from, $to)),

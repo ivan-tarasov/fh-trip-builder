@@ -897,6 +897,7 @@ a:hover { text-decoration: underline; }
    theme-following surface, so it reads off this app's own tokens instead. */
 .searches-range {
     display: inline-flex;
+    flex-wrap: wrap;
     padding: 3px;
     background: var(--sunken);
     border: 1px solid var(--rule);

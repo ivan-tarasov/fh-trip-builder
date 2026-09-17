@@ -16,7 +16,7 @@
        shows: filtering it by this range would answer a question this
        data cannot honestly answer (G16, #369). #}
     <div class="searches-range" role="group" aria-label="Date range">
-        {% for value, label in {'1d': '1 day', '7d': '7 days', '30d': '30 days', '365d': 'Year'} %}
+        {% for value, label in {'1d': '1 day', '7d': '7 days', '30d': '30 days', '90d': '90 days', '180d': '6 months', '365d': 'Year'} %}
             <a class="searches-range__btn{{ range == value ? ' is-active' : '' }}"
                href="/admin/searches?range={{ value }}"
                {{ range == value ? 'aria-current="true"' : '' }}>{{ label }}</a>
