@@ -154,9 +154,11 @@ jobs:
       # leaving the suite to fail confusingly on data it changed.
       #
       # Read-only where a flag offers it, and genuinely destructive nowhere:
-      # `airside:prune` and `db:prune` list unless given --force, and
+      # `airside:prune` and `db:prune` list unless given --force,
       # `flights:cleaning` deletes flights that have already departed, of which
-      # a freshly generated database has none.
+      # a freshly generated database has none, and `alerts:check` never asks
+      # Mailtrap for anything unless a route is actually being watched, which
+      # nothing here seeds.
       - name: Every noah command runs
         run: |
           set -euo pipefail
@@ -171,6 +173,7 @@ jobs:
           php noah flights:cleaning --no-ansi
           php noah db:prune --no-ansi
           php noah schedule:run --pretend --no-ansi
+          php noah alerts:check --no-ansi
 
           # Writes a real dump, which is the only way to find out whether
           # mysqldump is reachable and the credentials file is accepted. The

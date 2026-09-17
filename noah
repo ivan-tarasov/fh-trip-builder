@@ -28,6 +28,7 @@ use Symfony\Component\Console\Application;
 use TripBuilder\Noah\Admin\Password as AdminPassword;
 use TripBuilder\Noah\Airside\Import as AirsideImport;
 use TripBuilder\Noah\Airside\Prune as AirsidePrune;
+use TripBuilder\Noah\Alerts\Check as AlertsCheck;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Backup as DatabaseBackup;
@@ -266,6 +267,18 @@ try {
     */
 
     $application->add(new ScheduleRun());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Route watch alerts
+    |--------------------------------------------------------------------------
+    |
+    | Not on the schedule itself (C6, #155) -- add it from /admin/schedule if
+    | you want it running, the same way any other job is. Nothing seeds it in.
+    |
+    */
+
+    $application->add(new AlertsCheck());
 
     /*
     |--------------------------------------------------------------------------

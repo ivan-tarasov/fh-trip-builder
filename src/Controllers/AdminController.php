@@ -127,6 +127,7 @@ class AdminController extends AbstractController
         'articles:import',
         'airside:import',
         'airside:prune',
+        'alerts:check',
     ];
 
     /** Flags and values only -- what a real command's arguments look like. */
