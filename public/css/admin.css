@@ -815,6 +815,12 @@ a:hover { text-decoration: underline; }
     bottom: 0;
     left: 0;
     z-index: 0;
+    /* Rounded on its own right edge too, not just clipped by the row's
+       `overflow: hidden` -- Orchid's own bg span carries the row's full
+       `border-radius` even where that edge sits inside the row, so the
+       highlight reads as a rounded bar rather than a slab with a flat
+       cut where it happens to end. */
+    border-radius: 12px;
     /* `--signal-soft` (built for a small icon-chip fill) read as barely
        there stretched across a whole row -- Orchid's own two-tone
        violet-to-cyan wash, at its own real opacity, is the visible
@@ -851,8 +857,15 @@ a:hover { text-decoration: underline; }
     font-variant-numeric: tabular-nums;
     text-align: right;
     white-space: nowrap;
+    /* Each row is its own grid (Orchid's own `.analytics-page-row` is too),
+       so nothing shares a column across rows the way a table's would --
+       without a floor, a row's own "auto" track only ever fits that row's
+       own text, and the count/last-searched/button read as loose text
+       rather than columns the moment two rows' lengths differ. */
+    min-width: 44px;
 }
 .searches-row__metric--count { color: var(--ink); font-weight: 700; }
+.searches-row__metric--last { min-width: 96px; }
 @media (max-width: 575.98px) {
     .searches-row { grid-template-columns: 24px 1fr auto auto; }
     .searches-row__metric--last { display: none; }
