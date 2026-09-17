@@ -134,6 +134,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('canonical_path', $this->layout->canonicalPath(...)));
         $this->twig->addFunction(new TwigFunction('indexable', $this->layout->indexable(...)));
         $this->twig->addFunction(new TwigFunction('in_section', $this->layout->inSection(...)));
+        $this->twig->addFunction(new TwigFunction('admin_attention_count', $this->layout->adminAttentionCount(...)));
         $this->twig->addFunction(new TwigFunction('csrf_token', $this->layout->csrfToken(...)));
         $this->twig->addFunction(new TwigFunction('csrf_field', $this->layout->csrfField(...)));
         // Read-once: `take()` clears the session the moment it is called, so a
