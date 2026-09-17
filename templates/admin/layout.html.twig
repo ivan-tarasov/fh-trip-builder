@@ -218,15 +218,16 @@
                     <i class="bi bi-moon-stars-fill well__theme-icon well__theme-icon--moon" aria-hidden="true"></i>
                 </button>
 
-                {# The other half of "a user menu" (G6.1, #329). Scoped to
-                   Sign out for now -- Profile/Settings/Billing/Help Center
-                   wait for the user-profile work itself, which is still
-                   ahead. There is no accounts table this could read a
-                   name/role/email from -- "one password, one session flag,
-                   no accounts table" (`AdminController`, A3.2, #100) -- so
-                   all three, and the avatar, are `config('meta.author')`,
-                   the same block the public footer's own credit line
-                   already reads (G6.4, #348). #}
+                {# The other half of "a user menu" (G6.1, #329). Settings and
+                   Billing/Help Center still wait -- Settings already has its
+                   own rail entry, and there is no billing or help desk here
+                   to link to. Profile is G9 (#350): there is no accounts
+                   table to read a name/role/email from -- "one password, one
+                   session flag, no accounts table" (`AdminController`, A3.2,
+                   #100) -- so all three, and the avatar, are
+                   `config('meta.author')`, the same block the public
+                   footer's own credit line already reads (G6.4, #348), now
+                   editable from the Profile page itself. #}
                 <div class="dropdown">
                     <button type="button" class="btn btn-icon well__user" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu">
                         <img class="well__user-avatar" src="{{ config('meta.author.avatar') }}" width="32" height="32" alt="">
@@ -243,6 +244,11 @@
                                 <p class="mb-0 fw-semibold">{{ config('meta.author.name') }}</p>
                                 <small class="text-body-secondary">{{ config('meta.author.email') }}</small>
                             </div>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="/admin/profile">
+                                <i class="bi bi-person" aria-hidden="true"></i> Profile
+                            </a>
                         </li>
                         <li>
                             <form method="post" action="/admin/logout">

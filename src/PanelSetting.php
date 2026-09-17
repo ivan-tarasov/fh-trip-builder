@@ -39,6 +39,17 @@ enum PanelSetting: string
     case MetaKeywords = 'meta.keywords';
     case MapStyle = 'maps.static.style';
 
+    // The operator's own identity (G9, #350) -- shown in the topbar user
+    // menu and the public site's footer credit line (G6.4, #348), and
+    // recoverable the same way every other field here is, rather than a
+    // `.env` var with no way to edit it back (`ADMIN_PASSWORD_HASH`'s own
+    // precedent is for a value with no in-app edit flow at all, which is
+    // not what this is).
+    case ProfileName = 'meta.author.name';
+    case ProfileEmail = 'meta.author.email';
+    case ProfileRole = 'meta.author.role';
+    case ProfileAvatar = 'meta.author.avatar';
+
     public function group(): string
     {
         return match ($this) {
@@ -47,6 +58,7 @@ enum PanelSetting: string
             self::NightFromHour, self::NightToHour, self::GulfCountries => 'Search rules',
             self::AppName, self::MetaDescription, self::MetaKeywords => 'Site identity',
             self::MapStyle => 'Map',
+            self::ProfileName, self::ProfileEmail, self::ProfileRole, self::ProfileAvatar => 'Profile',
         };
     }
 
@@ -65,6 +77,10 @@ enum PanelSetting: string
             self::MetaDescription => 'Meta description',
             self::MetaKeywords => 'Meta keywords',
             self::MapStyle => 'Map style',
+            self::ProfileName => 'Name',
+            self::ProfileEmail => 'Email address',
+            self::ProfileRole => 'Role',
+            self::ProfileAvatar => 'Avatar URL',
         };
     }
 
@@ -89,6 +105,10 @@ enum PanelSetting: string
             self::MetaDescription => 'The line a search result shows under the page title.',
             self::MetaKeywords => 'One per line. Most search engines ignore this today.',
             self::MapStyle => 'A Mapbox style, written as "username/style-id".',
+            self::ProfileName => 'Shown in the topbar user menu and the public site\'s footer credit.',
+            self::ProfileEmail => 'Shown in the topbar user menu and the page \'author\' meta tag.',
+            self::ProfileRole => 'Shown under the name in the topbar user menu.',
+            self::ProfileAvatar => 'A photo URL -- this app has no image upload, so a link is what it takes.',
         };
     }
 
@@ -120,7 +140,11 @@ enum PanelSetting: string
             return rtrim(rtrim(sprintf('%.2f', $value), '0'), '.');
         }
 
-        if ($this === self::AppName || $this === self::MetaDescription || $this === self::MapStyle) {
+        if (
+            $this === self::AppName || $this === self::MetaDescription || $this === self::MapStyle
+            || $this === self::ProfileName || $this === self::ProfileEmail
+            || $this === self::ProfileRole || $this === self::ProfileAvatar
+        ) {
             /** @var string $value */
             return $value;
         }
@@ -147,7 +171,8 @@ enum PanelSetting: string
 
         return match ($this) {
             self::MaxDetourRatio => filter_var(trim($raw), FILTER_VALIDATE_FLOAT),
-            self::AppName, self::MetaDescription, self::MapStyle => trim($raw),
+            self::AppName, self::MetaDescription, self::MapStyle,
+            self::ProfileName, self::ProfileEmail, self::ProfileRole, self::ProfileAvatar => trim($raw),
             default => filter_var(trim($raw), FILTER_VALIDATE_INT),
         };
     }
@@ -165,10 +190,31 @@ enum PanelSetting: string
             self::NightFromHour, self::NightToHour
                 => !is_int($parsed) || $parsed < 0 || $parsed > 23 ? 'Needs an hour from 0 to 23.' : null,
             self::GulfCountries => self::firstNotTwoLetters($parsed),
-            self::AppName, self::MetaDescription, self::MapStyle
+            self::AppName, self::MetaDescription, self::MapStyle,
+            self::ProfileName, self::ProfileRole
                 => $parsed === '' ? 'Cannot be empty.' : null,
             self::MetaKeywords => null,
+            self::ProfileEmail => self::invalidEmail($parsed),
+            self::ProfileAvatar => self::invalidUrl($parsed),
         };
+    }
+
+    private static function invalidEmail(mixed $parsed): ?string
+    {
+        if (!is_string($parsed) || $parsed === '') {
+            return 'Cannot be empty.';
+        }
+
+        return filter_var($parsed, FILTER_VALIDATE_EMAIL) === false ? 'Enter a valid email address.' : null;
+    }
+
+    private static function invalidUrl(mixed $parsed): ?string
+    {
+        if (!is_string($parsed) || $parsed === '') {
+            return 'Cannot be empty.';
+        }
+
+        return filter_var($parsed, FILTER_VALIDATE_URL) === false ? 'Enter a valid URL.' : null;
     }
 
     private static function firstNotTwoLetters(mixed $parsed): ?string

@@ -606,6 +606,13 @@ a:hover { text-decoration: underline; }
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(15, 18, 32, .1);
+  /* Bootstrap's own dropdown colors otherwise: a border a shade flatter
+     than `--rule` and a hover tint too faint against `--surface` to read
+     as a hover at all. Every other component in this panel is on this
+     app's own tokens; this one was missed. */
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--ink);
 }
 .well__user-menu-header {
   display: flex;
@@ -614,10 +621,15 @@ a:hover { text-decoration: underline; }
   padding: .875rem 1rem;
   border-bottom: 1px solid var(--rule);
 }
+.well__user-menu-header small { font-size: .75rem; }
 .well__user-menu .well__user-avatar { width: 40px; height: 40px; }
 
-.well__user-menu .dropdown-item { padding: .55rem 1rem; font-size: .875rem; }
+.well__user-menu .dropdown-item { padding: .55rem 1rem; font-size: .875rem; color: var(--ink); }
 .well__user-menu .dropdown-item i { font-size: 1rem; width: 20px; }
+.well__user-menu .dropdown-item:hover,
+.well__user-menu .dropdown-item:focus { background: var(--sunken); color: var(--ink); text-decoration: none; }
+.well__user-menu .dropdown-item.text-danger:hover,
+.well__user-menu .dropdown-item.text-danger:focus { color: var(--bad); }
 
 /* Same pattern, the density toggle: `aria-pressed="true"` means compact is
    on (G3.6, #309). */
@@ -1591,6 +1603,90 @@ a:hover { text-decoration: underline; }
 .bookings-pager .page-item.active .page-link {
   background: var(--signal);
   border-color: var(--signal);
+}
+
+/* Orchid's own `account-settings.html` -- `.settings-shell`/`.settings-nav`/
+   `.settings-panel`/`.settings-section`, structure and style, for the
+   profile page (G9, #350). Token names renamed into this app's own
+   vocabulary; the active-pill gradient and icon-chip tint are kept as
+   Orchid's own indigo/violet, the same call `.bookings-btn-primary` already
+   made for its own gradient rather than flattening it to `--signal`. */
+.settings-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 90px;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: .5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+
+.settings-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .7rem .85rem;
+  border-radius: 12px;
+  color: var(--ink);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background .18s ease, color .18s ease;
+}
+
+.settings-nav .nav-link i {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, .12);
+  color: #6366f1;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.settings-nav .nav-link:hover { background: var(--sunken); }
+
+.settings-nav .nav-link.active {
+  background: linear-gradient(120deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+}
+
+.settings-nav .nav-link.active i { background: rgba(255, 255, 255, .2); color: #fff; }
+
+.settings-panel {
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 1.5rem;
+}
+
+.settings-panel__head { margin-bottom: 1.25rem; }
+.settings-panel__title { font-weight: 700; margin: 0 0 .25rem; }
+.settings-panel__desc { color: var(--ink-quiet); margin: 0; font-size: .9rem; }
+
+.settings-section + .settings-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.settings-section__title { font-weight: 600; margin: 0 0 .75rem; font-size: .95rem; }
+
+.profile-photo__preview { width: 72px; height: 72px; }
+
+@media (max-width: 991.98px) {
+  .settings-shell { grid-template-columns: 1fr; }
+  .settings-nav { position: static; flex-direction: row; overflow-x: auto; }
 }
 
 @media (max-width: 60em) {
