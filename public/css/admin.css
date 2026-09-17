@@ -781,6 +781,11 @@ a:hover { text-decoration: underline; }
 .stat-card--bad .stat-card__icon { background: var(--bad-soft); color: var(--bad); }
 .stat-card--bad .stat-card__value { color: var(--bad); }
 
+/* The value text's own warning icon (G5.4, #357) -- the same pairing
+   `.status-chip` already gives every other state indicator in the
+   panel, so red is never the only thing saying "bad". */
+.stat-card__warn-icon { font-size: 1.1rem; margin-right: .25rem; vertical-align: -.05em; }
+
 .orchid-chart-wrap { position: relative; width: 100%; }
 .orchid-chart-wrap--md { height: 12rem; }
 

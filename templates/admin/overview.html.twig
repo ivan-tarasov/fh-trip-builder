@@ -91,7 +91,10 @@
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="min-w-0">
                                 <p class="stat-card__label">{{ state.label }}</p>
-                                <h3 class="stat-card__value">{{ state.value }}</h3>
+                                <h3 class="stat-card__value">
+                                    {% if state.tone.value == 'bad' %}<i class="bi bi-exclamation-triangle-fill stat-card__warn-icon" aria-hidden="true"></i>{% endif %}
+                                    {{ state.value }}
+                                </h3>
                             </div>
                             <span class="stat-card__icon"><i class="bi bi-{{ icons[state.label] }}" aria-hidden="true"></i></span>
                         </div>
