@@ -815,7 +815,13 @@ a:hover { text-decoration: underline; }
     bottom: 0;
     left: 0;
     z-index: 0;
-    background: linear-gradient(90deg, var(--signal-soft) 0%, transparent 100%);
+    /* `--signal-soft` (built for a small icon-chip fill) read as barely
+       there stretched across a whole row -- Orchid's own two-tone
+       violet-to-cyan wash, at its own real opacity, is the visible
+       version this was meant to be. */
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--signal) 18%, transparent) 0%,
+        color-mix(in srgb, var(--signal-accent) 10%, transparent) 100%);
 }
 .searches-row__rank {
     font-size: .78rem;
