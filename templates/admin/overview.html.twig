@@ -48,14 +48,18 @@
 } %}
 
 {% block content %}
-    <p class="band">What needs attention</p>
-
     {# "What should I do next" ahead of "is it running" (G5.2, #317) --
        the same four states below, but only the ones that are not fine,
        plus the one booking signal that already existed per booking and
        nowhere across all of them. Additive: the tiles below still answer
-       the health question this list is drawn from. #}
+       the health question this list is drawn from.
+
+       The whole band disappears when there is nothing in it (G5.4,
+       #357) -- a list that only ever said "nothing needs attention" was
+       a line worth not reading twice. #}
     {% if attention|length > 0 %}
+        <p class="band">What needs attention</p>
+
         <div class="mb-4" role="list" aria-label="What needs attention">
             {% for item in attention %}
                 <div class="ui-notif-card{{ not loop.first ? ' mt-3' : '' }}" role="listitem">
@@ -70,12 +74,6 @@
                 </div>
             {% endfor %}
         </div>
-    {% else %}
-        <div class="card orchid-card mb-4">
-            <div class="card-body">
-                <p class="text-body-secondary mb-0">Nothing needs attention right now.</p>
-            </div>
-        </div>
     {% endif %}
 
     <p class="band">Is it running</p>
@@ -88,8 +86,8 @@
     <div class="row g-3 mb-4">
         {% for state in states %}
             <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card orchid-card stat-card stat-card--{{ state.tone.value }} h-100 d-flex flex-column">
-                    <div class="card-body pb-2">
+                <div class="card orchid-card stat-card stat-card--{{ state.tone.value }} h-100">
+                    <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="min-w-0">
                                 <p class="stat-card__label">{{ state.label }}</p>
@@ -99,16 +97,6 @@
                         </div>
                         <p class="stat-card__note">{{ state.note }}</p>
                     </div>
-
-                    {# The one real sparkline on this page: `currency_rates` is
-                       an actual per-day table, unlike everything else here --
-                       see `DashboardRepository::rateTrend()`. #}
-                    {% if state.label == 'Rates' and rate_trend|length > 1 %}
-                        <div class="stat-card__spark">
-                            <canvas class="js-chart" data-chart="sparkline"
-                                    data-points="{{ rate_trend|json_encode }}"></canvas>
-                        </div>
-                    {% endif %}
                 </div>
             </div>
         {% endfor %}
@@ -149,7 +137,7 @@
                "What needs attention"'s own schedule-driven items link to. #}
             <div class="card orchid-card">
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0" aria-labelledby="schedule-heading">
+                    <table class="table orchid-table align-middle mb-0" aria-labelledby="schedule-heading">
                         <thead>
                             <tr>
                                 <th scope="col">Command</th>
@@ -166,13 +154,13 @@
                                     <td class="mono text-body-secondary">{{ task.age }}</td>
                                     <td>
                                         {% if task.exit is null %}
-                                            <span class="badge text-bg-secondary">never</span>
+                                            <span class="status-chip status-chip--muted"><i class="bi bi-dash-circle" aria-hidden="true"></i>never</span>
                                         {% elseif task.stale %}
-                                            <span class="badge text-bg-danger">late</span>
+                                            <span class="status-chip status-chip--bad"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>late</span>
                                         {% elseif task.exit == 0 %}
-                                            <span class="badge text-bg-success">ok</span>
+                                            <span class="status-chip status-chip--good"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>ok</span>
                                         {% else %}
-                                            <span class="badge text-bg-danger">exit {{ task.exit }}</span>
+                                            <span class="status-chip status-chip--bad"><i class="bi bi-x-circle-fill" aria-hidden="true"></i>exit {{ task.exit }}</span>
                                         {% endif %}
                                     </td>
                                 </tr>
