@@ -412,15 +412,19 @@
     | The Diagnostics page's own test-send form, answered by fetch() instead
     | of a reload -- the same reasoning ajaxBookingForms() gives, simpler
     | because nothing else on this page changes when a check runs, so there
-    | is no HTML to swap in, only the one toast.
+    | is no HTML to swap in.
     |
     | The button disables and grows a spinner for the run's whole length --
     | without it, a second click before the first send lands would be a
     | second real email out.
     |
-    | Logged to the console at each step: this calls a real third party over
-    | the network, and "it did nothing" is otherwise a dead end to debug from
-    | the page alone.
+    | Answered two ways at once, on purpose: the toast is the same glance-able
+    | nudge every other admin form gives, and `.js-diagnostic-console` is a
+    | second, visible log beside the form itself -- a toast is gone in a few
+    | seconds, and this page exists precisely so an operator can read back
+    | what the run before last actually said. Also logged to the real
+    | console: this calls a third party over the network, and "it did
+    | nothing" is otherwise a dead end to debug from the page alone.
     */
     var diagnosticsForm = function () {
         var form = document.querySelector('.js-diagnostic-form');
@@ -433,6 +437,29 @@
         var spinner = submit.querySelector('.spinner-border');
         var label = submit.querySelector('.js-diagnostic-label');
         var originalLabel = label.textContent;
+        var out = form.parentElement.querySelector('.js-diagnostic-console');
+        var empty = out ? out.querySelector('.js-diagnostic-console-empty') : null;
+
+        // A line in the visible log -- timestamped, so a run can be told
+        // apart from the one before it without relying on scroll order alone.
+        var logLine = function (text, kind) {
+            if (!out) {
+                return;
+            }
+
+            if (empty) {
+                empty.remove();
+                empty = null;
+            }
+
+            var line = document.createElement('p');
+            var stamp = new Date().toLocaleTimeString();
+
+            line.className = 'diagnostic-console__line diagnostic-console__line--' + kind;
+            line.textContent = '[' + stamp + '] ' + text;
+            out.appendChild(line);
+            out.scrollTop = out.scrollHeight;
+        };
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();
@@ -440,6 +467,7 @@
             var check = form.querySelector('[name="check"]').value;
 
             console.log('[diagnostics] running "' + check + '"…');
+            logLine('Running "' + check + '"…', 'quiet');
 
             submit.disabled = true;
             spinner.classList.remove('d-none');
@@ -455,9 +483,11 @@
                 });
             }).then(function (result) {
                 console.log('[diagnostics] "' + check + '" answered ' + result.status, result.json);
+                logLine(result.json.message, result.json.tone === 'success' ? 'ok' : 'error');
                 showToast(result.json.message, result.json.tone);
             }).catch(function (error) {
                 console.log('[diagnostics] "' + check + '" request failed', error);
+                logLine('That did not work: ' + error, 'error');
                 showToast('That did not work. Try again in a moment.', 'danger');
             }).finally(function () {
                 submit.disabled = false;

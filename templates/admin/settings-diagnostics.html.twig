@@ -50,6 +50,15 @@
                     </button>
                 </div>
             </form>
+
+            {# A visible log, not only a toast -- a toast is gone in a few
+               seconds and this page exists precisely for an operator to
+               read what a check actually said. `role="log"`/`aria-live`,
+               the same reasoning the schedule form's own status line gives,
+               so a screen reader hears each run as it lands. #}
+            <div class="diagnostic-console js-diagnostic-console mt-3" role="log" aria-live="polite" aria-label="Diagnostic output">
+                <p class="diagnostic-console__line diagnostic-console__line--empty js-diagnostic-console-empty">Nothing run yet.</p>
+            </div>
         </div>
     </div>
 {% endblock %}
