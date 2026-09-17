@@ -233,6 +233,18 @@ final class RoutesTest extends TestCase
         self::assertNull(Routes::resolve('/admin/schedule/job/42/extra'));
     }
 
+    /**
+     * A GET renders the whole page, which is why this is not excluded
+     * outright -- but a POST answers `fetch()` with JSON that has no
+     * doctype for `wrapped()`'s own check to catch, the same reasoning
+     * `/admin/bookings/{id}` already needed (G8.3, #338).
+     */
+    public function testDiagnosticsWritesItsOwnBytesForFetch(): void
+    {
+        self::assertSame('Admin@settingsDiagnostics', Routes::resolve('/admin/settings/diagnostics'));
+        self::assertTrue(Routes::emitsOwnPayload('/admin/settings/diagnostics'));
+    }
+
     public function testEveryDynamicRouteIsAValidPatternNamingAnAction(): void
     {
         foreach (Routes::DYNAMIC_ROUTES as $pattern => $route) {

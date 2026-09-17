@@ -299,6 +299,12 @@ class Routes
         // has no doctype to be caught by that check and was landing inside the
         // public layout as escaped text (G8.3, #338).
         '#^/admin/bookings/\d+$#',
+        // The same reasoning as that one: a GET here renders a whole page
+        // through `admin/settings-diagnostics.html.twig`, which already
+        // carries its own `{% extends %}` -- this is for the POST half,
+        // `AdminController::respondDiagnostic()` answering `fetch()` with
+        // JSON that has no doctype for `wrapped()`'s own check to catch.
+        '#^/admin/settings/diagnostics$#',
         '#^/my/bookings/\d+/calendar$#',
         '#^/sitemap\.xml$#',
         '#^/robots\.txt$#',

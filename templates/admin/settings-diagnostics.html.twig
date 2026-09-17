@@ -29,7 +29,7 @@
                 </p>
             {% endif %}
 
-            <form method="post" action="/admin/settings/diagnostics" class="row g-2 align-items-end">
+            <form method="post" action="/admin/settings/diagnostics" class="row g-2 align-items-end js-diagnostic-form">
                 <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
                 <input type="hidden" name="check" value="mailtrap">
 
@@ -40,7 +40,14 @@
                 </div>
 
                 <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Send test email</button>
+                    {# The spinner sits inside the button it disables, the same
+                       pairing Bootstrap's own docs use -- disabled reads as
+                       "already handled" without it, and busy without a label
+                       reads as broken. #}
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" aria-hidden="true"></span>
+                        <span class="js-diagnostic-label">Send test email</span>
+                    </button>
                 </div>
             </form>
         </div>

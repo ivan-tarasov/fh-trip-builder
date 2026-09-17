@@ -409,6 +409,65 @@
     };
 
     /*
+    | The Diagnostics page's own test-send form, answered by fetch() instead
+    | of a reload -- the same reasoning ajaxBookingForms() gives, simpler
+    | because nothing else on this page changes when a check runs, so there
+    | is no HTML to swap in, only the one toast.
+    |
+    | The button disables and grows a spinner for the run's whole length --
+    | without it, a second click before the first send lands would be a
+    | second real email out.
+    |
+    | Logged to the console at each step: this calls a real third party over
+    | the network, and "it did nothing" is otherwise a dead end to debug from
+    | the page alone.
+    */
+    var diagnosticsForm = function () {
+        var form = document.querySelector('.js-diagnostic-form');
+
+        if (!form) {
+            return;
+        }
+
+        var submit = form.querySelector('[type="submit"]');
+        var spinner = submit.querySelector('.spinner-border');
+        var label = submit.querySelector('.js-diagnostic-label');
+        var originalLabel = label.textContent;
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var check = form.querySelector('[name="check"]').value;
+
+            console.log('[diagnostics] running "' + check + '"…');
+
+            submit.disabled = true;
+            spinner.classList.remove('d-none');
+            label.textContent = 'Sending…';
+
+            fetch(form.getAttribute('action'), {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: new FormData(form)
+            }).then(function (response) {
+                return response.json().then(function (json) {
+                    return { ok: response.ok, status: response.status, json: json };
+                });
+            }).then(function (result) {
+                console.log('[diagnostics] "' + check + '" answered ' + result.status, result.json);
+                showToast(result.json.message, result.json.tone);
+            }).catch(function (error) {
+                console.log('[diagnostics] "' + check + '" request failed', error);
+                showToast('That did not work. Try again in a moment.', 'danger');
+            }).finally(function () {
+                submit.disabled = false;
+                spinner.classList.add('d-none');
+                label.textContent = originalLabel;
+            });
+        });
+    };
+
+    /*
     | Copy a booking reference, a session id, an email onto the clipboard
     | (G3.3, #306) -- read aloud or pasted elsewhere constantly, and until
     | now only ever selectable by hand. The icon itself is the confirmation,
@@ -1115,4 +1174,5 @@
     ajaxBookingForms();
     commandPalette();
     recordRecentBooking();
+    diagnosticsForm();
 }());

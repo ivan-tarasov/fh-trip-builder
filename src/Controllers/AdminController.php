@@ -1803,11 +1803,18 @@ class AdminController extends AbstractController
         ]);
     }
 
+    /**
+     * A redirect carrying a flash for a plain form post, or JSON for the
+     * page's own script -- `wantsJson()` is the same `Accept` check
+     * `respondBooking()` already answers to. No HTML to re-render here,
+     * unlike that one: nothing else on this page changes when a check runs.
+     */
     private function runDiagnostic(): void
     {
+        $asJson = $this->wantsJson();
+
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
-            Flash::set('That form went stale. Try again.', FlashTone::Error);
-            $this->bounce('/admin/settings/diagnostics');
+            $this->respondDiagnostic($asJson, 'That form went stale. Try again.', FlashTone::Error);
 
             return;
         }
@@ -1817,8 +1824,25 @@ class AdminController extends AbstractController
             default => [false, 'Not a real check.'],
         };
 
-        Flash::set($message, $ok ? FlashTone::Success : FlashTone::Error);
-        $this->bounce('/admin/settings/diagnostics');
+        $this->respondDiagnostic($asJson, $message, $ok ? FlashTone::Success : FlashTone::Error);
+    }
+
+    private function respondDiagnostic(bool $asJson, string $message, FlashTone $tone): void
+    {
+        if (!$asJson) {
+            Flash::set($message, $tone);
+            $this->bounce('/admin/settings/diagnostics');
+
+            return;
+        }
+
+        header('Content-type: application/json; charset=utf-8');
+        http_response_code(($tone === FlashTone::Success ? HttpStatus::Ok : HttpStatus::UnprocessableEntity)->value);
+        echo json_encode([
+            'status' => $tone === FlashTone::Success ? 'ok' : 'error',
+            'message' => $message,
+            'tone' => $tone->bootstrapClass(),
+        ]);
     }
 
     /**
