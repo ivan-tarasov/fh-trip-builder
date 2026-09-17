@@ -127,6 +127,21 @@ final readonly class Request
     }
 
     /**
+     * The visitor's city, by the same reckoning as `country()` --
+     * `cf-ipcity`, added by Cloudflare's "Add visitor location headers"
+     * transform. `VisitorLocation` reads this header's neighbours but
+     * deliberately not this one, for a lookup that needs to match a city by
+     * name; this is read for plain display, where that ambiguity does not
+     * apply.
+     */
+    public function city(): ?string
+    {
+        $stated = trim($this->header('cf-ipcity') ?? '');
+
+        return $stated !== '' ? $stated : null;
+    }
+
+    /**
      * The path, without the query string and without a trailing slash -- `/`
      * for the root. This is what the router matches and what a form posts back
      * to, so both read the same value.

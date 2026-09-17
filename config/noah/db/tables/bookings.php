@@ -293,9 +293,10 @@ return [
             'comment' => 'Where the checkout request came from (G8.1, #336)',
         ],
         [
-            // No IP-to-city source anywhere in this app, so this is always
-            // null for now -- the column exists for whichever provider is
-            // added later (G8.1, #336).
+            // Cloudflare's own edge geolocation, the same source as
+            // `country()` -- `cf-ipcity`, read for plain display and nothing
+            // that matches on it (see `Request::city()`'s own comment). Null
+            // wherever the edge said nothing usable, same as `country`.
             'name' => 'city',
             'type' => 'varchar',
             'length' => 128,
