@@ -129,24 +129,22 @@ final readonly class Mailtrap
      */
     public function send(string $toEmail, string $subject, string $text): void
     {
-        $fields = [
+        // Sandbox vs real is decided entirely by which URL this POSTs to --
+        // confirmed against Mailtrap's own docs, which document no
+        // request-body field for it. The `sandbox` flag their official SDKs
+        // take is a client-side config option that picks this same URL
+        // internally; it never reaches the wire as JSON, so there is
+        // nothing to carry here beyond the path itself.
+        $path = $this->sandboxInboxId === null
+            ? self::SEND_PATH
+            : self::SEND_PATH . '/' . $this->sandboxInboxId;
+
+        $payload = json_encode([
             'from' => ['email' => $this->fromEmail, 'name' => $this->fromName],
             'to' => [['email' => $toEmail]],
             'subject' => $subject,
             'text' => $text,
-        ];
-
-        // The sandbox id is a path segment, and `isSandbox` rides along in
-        // the body beside it -- both only ever present together, and never
-        // at all on a `fromEnvironment()` send.
-        $path = self::SEND_PATH;
-
-        if ($this->sandboxInboxId !== null) {
-            $path .= '/' . $this->sandboxInboxId;
-            $fields['isSandbox'] = true;
-        }
-
-        $payload = json_encode($fields);
+        ]);
 
         // Only false on a value this array literal cannot produce -- an
         // unencodable string, a resource, a cycle. Guarded so curl is never
