@@ -785,6 +785,18 @@ a:hover { text-decoration: underline; }
   color: var(--ink-quiet);
 }
 
+/* A tile that actually leads somewhere (G20, #378) -- most do not, since
+   most of the eight have no page to link to yet. `color: inherit` and
+   no underline because the card's own children already set their colour;
+   left as a plain `<div>` this rule never applies. */
+.stat-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .18s ease;
+}
+.stat-card-link:hover { border-color: var(--signal); text-decoration: none; }
+
 /* The tones. Colour is emphasis here and never the whole message -- every
    card prints its state in words too, so none of this is load-bearing.
    Bad is the one exception that also colours its own value text (G5.4,
