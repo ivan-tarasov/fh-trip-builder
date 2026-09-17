@@ -112,6 +112,12 @@ class AdminController extends AbstractController
             return;
         }
 
+        if ($this->request->isPost()) {
+            $this->removeSearchRoute();
+
+            return;
+        }
+
         $dashboard = new DashboardRepository($this->connection());
         $schedule = $this->schedule();
 
@@ -139,6 +145,37 @@ class AdminController extends AbstractController
             // trust a green tile.
             'read_at' => date('j M, H:i'),
         ]);
+    }
+
+    /**
+     * "Most searched"'s own undo -- a route that should never have reached
+     * the count it did (no rate limit existed on `search_count` until G13,
+     * #362) stays inflated forever unless an operator can clear it.
+     */
+    private function removeSearchRoute(): void
+    {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
+            $this->bounce('/admin');
+
+            return;
+        }
+
+        $from = strtoupper($this->request->body->str('from'));
+        $to = strtoupper($this->request->body->str('to'));
+        $removed = new SearchRepository($this->connection())->removeRoute($from, $to);
+
+        if ($removed > 0) {
+            new AdminEventRepository($this->connection())->record(
+                AdminEventResource::Search,
+                $from . '-' . $to,
+                AdminEvent::Removed,
+                $from . ' → ' . $to,
+            );
+        }
+
+        Flash::set('Removed ' . $from . ' → ' . $to . ' from Most searched.');
+        $this->bounce('/admin');
     }
 
     /**

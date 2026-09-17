@@ -17,6 +17,7 @@ enum AdminEventResource: string
     case Article = 'article';
     case Category = 'category';
     case Subscriber = 'subscriber';
+    case Search = 'search';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum AdminEventResource: string
             self::Article => 'Article',
             self::Category => 'Category',
             self::Subscriber => 'Subscriber',
+            self::Search => 'Search',
         };
     }
 }

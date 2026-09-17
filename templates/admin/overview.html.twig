@@ -179,15 +179,43 @@
         <div class="col-12 col-xl-6">
             <p class="band">Most searched</p>
 
-            {# The one real chart on this page besides the sparkline: five
-               real counts, ranked -- not a trend, which the data cannot
-               answer (see `DashboardRepository::topSearches()`). #}
+            {# Orchid's own Top Landing Pages (analytics.html,
+               `.analytics-page-row`) -- structure and layout as shown: a
+               rank, a two-line main cell, a bold count, a highlight bar
+               sized to the count itself (real, comparative data, see
+               `DashboardRepository::topSearches()`, not a decoration).
+               The trend pill has nothing to read -- `search` has no
+               history to compare a count against -- so its slot carries
+               the one real action this list needs instead: removing a
+               route that reached its count before rate limiting existed
+               on `search_count` (G13, #362). #}
             <div class="card orchid-card">
                 <div class="card-body">
                     {% if searches|length > 0 %}
-                        <div class="orchid-chart-wrap orchid-chart-wrap--md">
-                            <canvas class="js-chart" data-chart="searches" data-rows="{{ searches|json_encode }}"></canvas>
-                        </div>
+                        <ul class="searches-list list-unstyled mb-0" role="list" aria-label="Most searched routes">
+                            {% for row in searches %}
+                                <li class="searches-row" role="listitem">
+                                    <span class="searches-row__bg" style="width: {{ row.bar }}%;" aria-hidden="true"></span>
+                                    <span class="searches-row__rank">{{ '%02d'|format(loop.index) }}</span>
+                                    <div class="searches-row__main">
+                                        <span class="searches-row__route">{{ row.from }} → {{ row.to }}</span>
+                                        <span class="searches-row__cities">{{ row.from_name }} → {{ row.to_name }}</span>
+                                    </div>
+                                    <span class="searches-row__metric searches-row__metric--count">{{ row.count }}</span>
+                                    <span class="searches-row__metric searches-row__metric--last">{{ row.last_ago }}</span>
+                                    <form method="post" action="/admin" class="mb-0">
+                                        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="from" value="{{ row.from }}">
+                                        <input type="hidden" name="to" value="{{ row.to }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                aria-label="Remove {{ row.from }} → {{ row.to }} from Most searched"
+                                                data-confirm="Remove {{ row.from }} → {{ row.to }} from Most searched? This cannot be undone.">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
                     {% else %}
                         <p class="text-body-secondary mb-0">Nobody has searched yet.</p>
                     {% endif %}
@@ -241,20 +269,14 @@
         </div>
     </div>
 
-    {# Said here rather than only drawn: the searches chart is a ranking of
-       five real counts, not a trend -- `search` has no per-day history to
-       draw one from, and a line that looked like it could would be
-       inventing it (see `DashboardRepository::topSearches()`). #}
+    {# Said here rather than only drawn: nothing on this page is charted any
+       more -- the "Most searched" bar behind each route is sized to that
+       route's own count, not drawn from a trend `search` has no per-day
+       history to answer (see `DashboardRepository::topSearches()`). #}
     <p class="field__hint">
-        One ranking and one real sparkline on this page, and nothing else charted:
-        most of what is above has no stored history to draw a trend from.
+        Nothing is charted on this page: most of what is above has no stored
+        history to draw a trend from, and a line or a bar that looked like it
+        could would be inventing one.
         This session ends after {{ idle_minutes|default(60) }} minutes without a page here.
     </p>
-{% endblock %}
-
-{# The library and nothing else -- `admin.js`'s own `charts()` reads the
-   `.js-chart` canvases, the same file every page already loads, so this is
-   the only extra request the one page that needs it pays. #}
-{% block scripts %}
-    <script src="{{ asset(config('site.directory.js') ~ '/chart.umd.min.js') }}" defer></script>
 {% endblock %}

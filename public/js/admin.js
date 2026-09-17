@@ -700,8 +700,6 @@
 
         var style = getComputedStyle(document.documentElement);
         var signal = style.getPropertyValue('--signal').trim();
-        var quiet = style.getPropertyValue('--ink-quiet').trim();
-        var rule = style.getPropertyValue('--rule').trim();
 
         canvases.forEach(function (canvas) {
             if (canvas.dataset.chart === 'sparkline') {
@@ -713,8 +711,6 @@
                 // that never follows it.
                 var tone = HERO_SPARKLINE_TONES[canvas.dataset.tone];
                 sparkline(canvas, tone || signal);
-            } else if (canvas.dataset.chart === 'searches') {
-                searchesChart(canvas, signal, quiet, rule);
             }
         });
     };
@@ -750,46 +746,6 @@
                 scales: {
                     x: { display: false },
                     y: { display: false }
-                }
-            }
-        });
-    };
-
-    /*
-    | Five real counts, ranked -- not a trend, which `search` cannot answer
-    | (see `DashboardRepository::topSearches()`). Horizontal, so a route code
-    | reads left to right the way it is written.
-    */
-    var searchesChart = function (canvas, colour, mutedColour, gridColour) {
-        var rows = JSON.parse(canvas.dataset.rows || '[]');
-
-        new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: rows.map(function (row) { return row.from + ' → ' + row.to; }),
-                datasets: [{
-                    data: rows.map(function (row) { return row.count; }),
-                    backgroundColor: colour,
-                    borderRadius: 4,
-                    maxBarThickness: 22
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: { color: mutedColour, precision: 0 },
-                        grid: { color: gridColour }
-                    },
-                    y: {
-                        ticks: { color: mutedColour },
-                        grid: { display: false }
-                    }
                 }
             }
         });
