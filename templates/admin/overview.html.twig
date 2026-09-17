@@ -56,9 +56,9 @@
        nowhere across all of them. Additive: the tiles below still answer
        the health question this list is drawn from. #}
     {% if attention|length > 0 %}
-        <div class="mb-4">
+        <div class="mb-4" role="list" aria-label="What needs attention">
             {% for item in attention %}
-                <div class="ui-notif-card{{ not loop.first ? ' mt-3' : '' }}">
+                <div class="ui-notif-card{{ not loop.first ? ' mt-3' : '' }}" role="listitem">
                     <span class="ui-notif-card__icon {{ tone_chip[item.tone.value] }}"><i class="bi bi-{{ item.icon }}" aria-hidden="true"></i></span>
                     <div class="flex-grow-1 min-w-0">
                         <p class="mb-0 fw-semibold">{{ item.title }}</p>
@@ -142,14 +142,14 @@
 
     <div class="row g-3 mb-4">
         <div class="col-12 col-xl-6" id="schedule">
-            <p class="band">What ran, and when</p>
+            <p class="band" id="schedule-heading">What ran, and when</p>
 
             {# The dense surface. The strip above summarises this; this is what an
                operator actually reads when the summary is not green -- and where
                "What needs attention"'s own schedule-driven items link to. #}
             <div class="card orchid-card">
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0">
+                    <table class="table table-sm align-middle mb-0" aria-labelledby="schedule-heading">
                         <thead>
                             <tr>
                                 <th scope="col">Command</th>

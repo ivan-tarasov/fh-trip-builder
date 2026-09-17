@@ -95,7 +95,7 @@
            still worth seeing while looking at Search rules, and filtering
            this by group would need a fourth column nobody asked for. #}
         <div class="d-flex align-items-center justify-content-between mt-4">
-            <p class="band mb-0">Recent changes</p>
+            <p class="band mb-0" id="history-heading">Recent changes</p>
 
             {# The export reads the full log, not the twenty rows below --
                an audit trail capped at twenty isn't one (G3.5, #308). #}
@@ -106,7 +106,7 @@
 
         <div class="card orchid-card">
             <div class="table-responsive">
-                <table class="table orchid-table align-middle mb-0">
+                <table class="table orchid-table align-middle mb-0" aria-labelledby="history-heading">
                     <thead>
                         <tr>
                             <th scope="col">Setting</th>

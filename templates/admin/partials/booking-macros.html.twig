@@ -11,9 +11,13 @@
    rather than a bespoke header written out seven times. `count` is the
    same trailing "16 transactions" that page prints -- only supplied where
    a block already has one clean number to show (G8.5, #340). #}
-{% macro blockHeader(icon, title, count) %}
+{# `id`, when given, names the block for a table below it to point at with
+   `aria-labelledby` -- a sighted reader already reads this heading as the
+   table's title; a screen reader's own table-navigation command otherwise
+   never sees it, since nothing before now linked the two (G5.3, #318). #}
+{% macro blockHeader(icon, title, count, id) %}
     <div class="block-head">
-        <h6 class="block-head__title"><i class="bi bi-{{ icon }} me-2" aria-hidden="true"></i>{{ title }}</h6>
+        <h6 class="block-head__title"{{ id ? ' id="' ~ id ~ '"' }}><i class="bi bi-{{ icon }} me-2" aria-hidden="true"></i>{{ title }}</h6>
         {% if count is not null %}<span class="text-body-secondary small">{{ count }}</span>{% endif %}
     </div>
 {% endmacro %}
@@ -54,7 +58,7 @@
             <span class="status-chip status-chip--muted">{{ direction.stops_label }}</span>
         </div>
         <div class="table-responsive">
-            <table class="table orchid-table align-middle mb-0">
+            <table class="table orchid-table align-middle mb-0" aria-label="{{ label }} flights">
                 <thead>
                     <tr>
                         <th scope="col">Flight</th>

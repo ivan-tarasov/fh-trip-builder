@@ -34,7 +34,7 @@
            toggles `d-none`/`d-flex` rather than the `hidden` attribute,
            which a `.d-flex` utility class would otherwise silently outrank. #}
         <div class="d-none align-items-center justify-content-between gap-2 mb-2" data-bulk-bar>
-            <span class="text-body-secondary small" data-bulk-count></span>
+            <span class="text-body-secondary small" data-bulk-count aria-live="polite"></span>
             <button type="submit" form="bulkRemoveForm" class="btn btn-sm btn-outline-danger"
                     data-confirm="Remove the selected addresses from the fare-alert list?">
                 Remove selected
@@ -43,7 +43,7 @@
 
         <div class="card orchid-card">
             <div class="table-responsive">
-                <table class="table orchid-table align-middle mb-0" data-bulk-table>
+                <table class="table orchid-table align-middle mb-0" data-bulk-table aria-label="Fare-alert subscribers">
                     <thead>
                         <tr>
                             <th scope="col" style="width: 1%;">

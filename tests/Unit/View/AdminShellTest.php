@@ -205,6 +205,15 @@ final class AdminShellTest extends TestCase
     /**
      * Token => Orchid's own light and dark values for it.
      *
+     * **`--good`/`--bad`'s light value is the one deliberate exception.**
+     * Orchid's own `#10B981`/`#EF4444` measured at 2.54:1 and 3.76:1 as
+     * plain text against `--surface` -- neither clears WCAG AA's 4.5:1,
+     * and both read worse still against their own `-soft` chip background
+     * (G5.3, #318). Darkened rather than matched: this is the one place
+     * "adopt Orchid as-is" loses to a hard accessibility requirement Orchid
+     * itself did not meet. The dark value is untouched -- it already
+     * cleared 4.5:1 comfortably.
+     *
      * @return iterable<string, array{string, string, string}>
      */
     public static function orchidColours(): iterable
@@ -218,8 +227,8 @@ final class AdminShellTest extends TestCase
             '--ink-quiet' => ['#6B7385', '#8891A8'],
             '--signal' => ['#4F46E5', '#818CF8'],
             '--signal-accent' => ['#22D3EE', '#22D3EE'],
-            '--good' => ['#10B981', '#34D399'],
-            '--bad' => ['#EF4444', '#F87171'],
+            '--good' => ['#0C7A4E', '#34D399'],
+            '--bad' => ['#D01414', '#F87171'],
         ];
 
         foreach ($tokens as $token => [$light, $dark]) {

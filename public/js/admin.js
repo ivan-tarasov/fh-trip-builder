@@ -276,6 +276,15 @@
 
             event.preventDefault();
 
+            // A submit from inside `#ticketAddModal`/`#ticketNumberModal{id}`
+            // is about to destroy that modal's own DOM node along with the
+            // rest of `#booking-content` -- see the comment further down for
+            // what that costs Bootstrap's own cleanup. It also costs focus:
+            // nothing left holding it moves it anywhere, so a keyboard user
+            // silently lands back on `<body>` (G5.3, #318). Recorded here,
+            // before the node it would be found on is gone.
+            var modalWasOpen = form.closest('.modal.show') !== null;
+
             // `innerHTML` does not preserve scroll on its own: the container
             // goes briefly empty as the browser parses the replacement, the
             // document is shorter for that instant, and the scroll position
@@ -322,6 +331,15 @@
                     document.body.classList.remove('modal-open');
                     document.body.style.removeProperty('overflow');
                     document.body.style.removeProperty('padding-right');
+
+                    // Focus went nowhere when the modal's own node was
+                    // destroyed above -- landing it on the refreshed content
+                    // itself is a real destination, the same reasoning
+                    // `<main id="main" tabindex="-1">` already gives its own
+                    // skip link.
+                    if (modalWasOpen) {
+                        content.focus();
+                    }
                 }
 
                 fixedStrategyDropdowns();
@@ -551,6 +569,7 @@
     var railToggle = function () {
         var rail = document.getElementById('adminRail');
         var backdrop = document.querySelector('.rail-backdrop');
+        var well = document.querySelector('.well');
 
         if (!rail) {
             return;
@@ -559,15 +578,36 @@
         var MOBILE_BREAKPOINT = 992;
         var COLLAPSED_KEY = 'tb-admin-rail-collapsed';
 
+        // Who to give focus back to on close -- whichever toggle button
+        // actually opened the drawer, not always the same one on a page
+        // with more than one (G5.3, #318).
+        var opener = null;
+
         var isMobile = function () {
             return window.innerWidth < MOBILE_BREAKPOINT;
         };
 
-        var openMobile = function () {
+        var openMobile = function (trigger) {
             rail.classList.add('is-open');
 
             if (backdrop) {
                 backdrop.classList.add('is-visible');
+            }
+
+            // Everything the drawer now covers stops being reachable by
+            // Tab too, the same way a native `<dialog>` would -- without
+            // this, a keyboard user could tab straight past the open
+            // drawer into content it is visually sitting on top of.
+            if (well) {
+                well.inert = true;
+            }
+
+            opener = trigger || null;
+
+            var closeButton = rail.querySelector('button[data-rail-close]');
+
+            if (closeButton) {
+                closeButton.focus();
             }
         };
 
@@ -576,6 +616,15 @@
 
             if (backdrop) {
                 backdrop.classList.remove('is-visible');
+            }
+
+            if (well) {
+                well.inert = false;
+            }
+
+            if (opener) {
+                opener.focus();
+                opener = null;
             }
         };
 
@@ -597,7 +646,7 @@
         document.querySelectorAll('[data-rail-toggle]').forEach(function (button) {
             button.addEventListener('click', function () {
                 if (isMobile()) {
-                    rail.classList.contains('is-open') ? closeMobile() : openMobile();
+                    rail.classList.contains('is-open') ? closeMobile() : openMobile(button);
                 } else {
                     toggleDesktopCollapse();
                 }
@@ -834,16 +883,22 @@
             resultsEl.innerHTML = '';
             items = [];
             activeIndex = -1;
+            input.removeAttribute('aria-activedescendant');
         };
 
         var highlight = function (index) {
             items.forEach(function (item) {
                 item.classList.remove('is-active');
+                item.setAttribute('aria-selected', 'false');
             });
 
             if (index >= 0 && index < items.length) {
                 items[index].classList.add('is-active');
+                items[index].setAttribute('aria-selected', 'true');
                 items[index].scrollIntoView({ block: 'nearest' });
+                input.setAttribute('aria-activedescendant', items[index].id);
+            } else {
+                input.removeAttribute('aria-activedescendant');
             }
 
             activeIndex = index;
@@ -872,7 +927,9 @@
                 var item = document.createElement('button');
                 item.type = 'button';
                 item.className = 'palette__item';
+                item.id = 'palette-option-' + items.length;
                 item.setAttribute('role', 'option');
+                item.setAttribute('aria-selected', 'false');
                 item.dataset.url = result.url;
 
                 var icon = document.createElement('i');
