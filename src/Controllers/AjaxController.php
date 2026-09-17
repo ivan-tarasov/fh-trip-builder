@@ -21,6 +21,7 @@ use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\PostRepository;
 use TripBuilder\Repository\PostVoteRepository;
 use TripBuilder\Repository\RoutePriceRepository;
+use TripBuilder\Repository\RouteWatchRepository;
 use TripBuilder\Repository\SubscriberRepository;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\Voter;
@@ -35,6 +36,12 @@ class AjaxController extends AbstractController
 
     /** The same, for a vote cast with no scripting. */
     private const string VOTE_NOTICE = 'article_vote_notice';
+
+    /** The same, for watching a route with no scripting. */
+    private const string WATCH_ROUTE_NOTICE = 'route_watch_notice';
+
+    /** Above the top of any real fare here -- a real price wide of this is a typo, not a threshold. */
+    private const float THRESHOLD_MAX = 100000.0;
 
     /** @var array{booking_id: int} */
     private array $get;
@@ -372,6 +379,82 @@ class AjaxController extends AbstractController
     }
 
     /**
+     * Watch one route for a price, from the form on its own page (C6, #155).
+     *
+     * Economy only and no cabin field: the route page itself is always
+     * `CabinClass::Economy` (`RouteController`), so offering a choice the
+     * page cannot back up would be a lie the form told on its behalf.
+     *
+     * Registering twice for the same address and route updates the threshold
+     * rather than adding a second watch -- `RouteWatchRepository::subscribe()`'s
+     * own upsert, the same reasoning `subscribers.email` being UNIQUE
+     * already gives the general list.
+     */
+    public function watchRoute(): void
+    {
+        $asJson = str_contains((string) $this->request->header('Accept'), 'application/json');
+
+        if ($failure = $this->guardFailure(RateLimit::WatchRoute)) {
+            [$code, $message] = $failure;
+            $this->answerWatchRoute($asJson, $code, ['status' => 'error', 'message' => $message], 'bad');
+
+            return;
+        }
+
+        $email = trim($this->request->body->str('email'));
+        $from = strtoupper($this->request->body->str('from'));
+        $to = strtoupper($this->request->body->str('to'));
+        $threshold = filter_var($this->request->body->str('threshold'), FILTER_VALIDATE_FLOAT);
+
+        // Checked here and not only in the browser: the form is one way to
+        // reach this, not the only one.
+        $error = match (true) {
+            $email === '' || mb_strlen($email) > self::EMAIL_MAX || !filter_var($email, FILTER_VALIDATE_EMAIL)
+                => 'That does not look like an email address.',
+            !self::isCode($from) || !self::isCode($to) || $from === $to
+                => 'That does not look like a real route.',
+            $threshold === false || $threshold <= 0 || $threshold > self::THRESHOLD_MAX
+                => 'Give a real price to watch for.',
+            default => null,
+        };
+
+        if ($error !== null) {
+            $this->answerWatchRoute($asJson, HttpStatus::UnprocessableEntity, [
+                'status' => 'error',
+                'message' => $error,
+            ], 'bad');
+
+            return;
+        }
+
+        try {
+            new RouteWatchRepository($this->connection())
+                ->subscribe($email, $from, $to, CabinClass::Economy, (float) $threshold);
+        } catch (Throwable $e) {
+            // The reason goes to the log, not to the page: a visitor cannot act
+            // on it and a database error is not theirs to read.
+            Log::error('Watch route failed: ' . $e->getMessage());
+            $this->answerWatchRoute($asJson, HttpStatus::InternalServerError, [
+                'status' => 'error',
+                'message' => 'That did not work. Try again in a moment.',
+            ], 'bad');
+
+            return;
+        }
+
+        $this->answerWatchRoute($asJson, HttpStatus::Ok, [
+            'status' => 'ok',
+            'message' => sprintf(
+                "Done. We'll email %s if %s to %s drops under %s CAD.",
+                $email,
+                $from,
+                $to,
+                number_format((float) $threshold, 2),
+            ),
+        ], 'good');
+    }
+
+    /**
      * Record whether an article helped, from the thumbs on a help page.
      *
      * Reachable two ways, like /ajax/subscribe and for the same reason: the
@@ -636,6 +719,25 @@ class AjaxController extends AbstractController
         // Redirect rather than render: a POST left in history is a POST the
         // browser offers to send again on every back button.
         $this->bounce($this->returnTo() . '#fare-alerts', HttpStatus::SeeOther);
+    }
+
+    /** @param array{status: string, message: string} $payload */
+    private function answerWatchRoute(bool $asJson, HttpStatus $code, array $payload, string $tone): void
+    {
+        if ($asJson) {
+            header('Content-type: application/json; charset=utf-8');
+            http_response_code($code->value);
+            echo json_encode($payload);
+
+            return;
+        }
+
+        $_SESSION[self::WATCH_ROUTE_NOTICE] = [
+            'tone' => $tone,
+            'message' => $payload['message'],
+        ];
+
+        $this->bounce($this->returnTo() . '#watch-route', HttpStatus::SeeOther);
     }
 
     /**

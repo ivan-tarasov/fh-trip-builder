@@ -5800,6 +5800,88 @@ body:has(main.article) .breadcrumbs__list {
   opacity: .8;
 }
 
+/* ---------- Watch this route (C6, #155) ----------
+   Same shape as the footer's own fare-alert form, on a light surface rather
+   than the dark footer band, so its own tone colours are the light-context
+   pairing (--brand-success / --brand-danger) rather than the *-on-dark one. */
+.route-watch {
+  padding: 1.25rem;
+  background-color: var(--surface);
+  border-radius: .75rem;
+}
+
+.route-watch__text {
+  margin: 0 0 .875rem;
+  color: var(--ink-secondary);
+  font-size: .875rem;
+}
+
+.route-watch__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.route-watch__input {
+  height: 2.5rem;
+  padding: 0 .75rem;
+  color: var(--ink-body);
+  font-size: .875rem;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+}
+
+.route-watch__input::placeholder { color: var(--ink-faint); }
+
+.route-watch__input.js-watch-route-email { flex: 1 1 12rem; min-width: 0; }
+
+.route-watch__threshold {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: .375rem;
+}
+
+.route-watch__threshold-prefix { color: var(--ink-muted); }
+
+.route-watch__input--threshold { width: 6rem; }
+
+.route-watch__submit {
+  flex: 0 0 auto;
+  height: 2.5rem;
+  padding: 0 1rem;
+  color: var(--on-brand);
+  font-size: .875rem;
+  font-weight: 600;
+  background-color: var(--brand-accent-fill);
+  border-radius: .5rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .route-watch__submit:hover { background-color: var(--brand-accent-fill-700); }
+}
+
+.route-watch__submit:active { transform: scale(.97); }
+
+.route-watch__submit:disabled {
+  opacity: .6;
+  cursor: default;
+  transform: none;
+}
+
+.route-watch__note {
+  margin: .625rem 0 0;
+  font-size: .8125rem;
+}
+
+.route-watch__note:empty { display: none; }
+
+.route-watch__note[data-tone="good"]  { color: var(--brand-success); }
+.route-watch__note[data-tone="bad"]   { color: var(--brand-danger); }
+.route-watch__note[data-tone="quiet"] { color: var(--ink-muted); }
+
 /* ---------- The currency switcher ---------- */
 
 .currency { position: relative; }

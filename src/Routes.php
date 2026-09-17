@@ -152,6 +152,7 @@ class Routes
         '/ajax/cancel-booking' => 'Ajax@cancelBooking',
         '/ajax/day-prices' => 'Ajax@dayPrices',
         '/ajax/subscribe' => 'Ajax@subscribe',
+        '/ajax/watch-route' => 'Ajax@watchRoute',
 
     ];
 

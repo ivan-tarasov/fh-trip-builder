@@ -769,6 +769,16 @@ final class LayoutData
     }
 
     /**
+     * The answer to watching a route with no scripting, once (C6, #155).
+     *
+     * @return array{tone: string, message: string}|null
+     */
+    public function routeWatchNotice(): ?array
+    {
+        return self::oneShotNotice('route_watch_notice');
+    }
+
+    /**
      * Read a session notice and clear it in the same breath.
      *
      * Shared by both callers rather than written twice. The clearing is the
