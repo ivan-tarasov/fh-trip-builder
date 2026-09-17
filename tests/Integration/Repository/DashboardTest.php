@@ -156,6 +156,26 @@ final class DashboardTest extends IntegrationTestCase
     }
 
     /**
+     * `bar` is the count relative to the top row -- real, comparative data
+     * behind the highlight in each row, not a decoration.
+     */
+    public function testMostSearchedBarIsRelativeToTheTopRow(): void
+    {
+        $searches = $this->dashboard()->topSearches(5);
+
+        if ($searches === []) {
+            self::markTestSkipped('nothing has been searched on this install');
+        }
+
+        self::assertSame(100, $searches[0]['bar'], 'the top row is its own 100%');
+
+        foreach ($searches as $row) {
+            self::assertGreaterThanOrEqual(0, $row['bar']);
+            self::assertLessThanOrEqual(100, $row['bar']);
+        }
+    }
+
+    /**
      * Every scheduled command is on the page, including the ones that have
      * never run.
      *

@@ -9,6 +9,7 @@ use Throwable;
 use TripBuilder\Cron;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
+use TripBuilder\Helper;
 use TripBuilder\Horizon;
 use TripBuilder\View\Tone;
 
@@ -40,7 +41,7 @@ use TripBuilder\View\Tone;
  * INT column comes back `string`, same as `CityRepository`'s aggregates, not
  * the `int` the existing `(int)` cast might suggest it already was.
  *
- * @phpstan-type TopSearchRow array{from_code: string, to_code: string, runs: string, last: string}
+ * @phpstan-type TopSearchRow array{from_code: string, to_code: string, from_name: string, to_name: string, runs: string, last: string}
  */
 final readonly class DashboardRepository
 {
@@ -254,23 +255,35 @@ final readonly class DashboardRepository
      * like it could would be inventing one -- but five real counts, ranked
      * against each other, are not that line.
      *
-     * @return list<array{from: string, to: string, count: int, last: string}>
+     * `bar` is the count relative to the top row (100 for the row itself,
+     * 0 for a route with no runs at all) -- real, comparative data rather
+     * than a decoration, so it can carry a highlight behind the row
+     * without inventing anything the row's own number does not already say.
+     *
+     * @return list<array{from: string, to: string, from_name: string, to_name: string, count: int, last_ago: string, bar: int}>
      */
     public function topSearches(int $limit): array
     {
         /** @var list<TopSearchRow> $rows */
         $rows = $this->connection->fetchAll(
-            'SELECT from_code, to_code, SUM(search_count) AS runs, MAX(last_search) AS last'
+            'SELECT from_code, to_code, MAX(from_name) AS from_name, MAX(to_name) AS to_name,'
+            . ' SUM(search_count) AS runs, MAX(last_search) AS last'
             . ' FROM ' . Table::Search->value
             . ' GROUP BY from_code, to_code'
             . ' ORDER BY runs DESC, last DESC LIMIT ' . max(1, $limit),
         );
 
+        // Sorted by `runs` DESC already, so the first row is the top one.
+        $top = $rows === [] ? 0 : (int) $rows[0]['runs'];
+
         return array_map(static fn(array $row): array => [
             'from' => (string) $row['from_code'],
             'to' => (string) $row['to_code'],
+            'from_name' => (string) $row['from_name'],
+            'to_name' => (string) $row['to_name'],
             'count' => (int) $row['runs'],
-            'last' => (string) $row['last'],
+            'last_ago' => Helper::elapsed((string) $row['last']),
+            'bar' => $top > 0 ? (int) round((int) $row['runs'] / $top * 100) : 0,
         ], $rows);
     }
 

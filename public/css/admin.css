@@ -786,8 +786,71 @@ a:hover { text-decoration: underline; }
    panel, so red is never the only thing saying "bad". */
 .stat-card__warn-icon { font-size: 1.1rem; margin-right: .25rem; vertical-align: -.05em; }
 
-.orchid-chart-wrap { position: relative; width: 100%; }
-.orchid-chart-wrap--md { height: 12rem; }
+/* "Most searched" -- Orchid's own Top Landing Pages (analytics.html,
+   `.analytics-page-row`), renamed into this app's own vocabulary the way
+   `.bookings-hero` renamed `.analytics-hero` (G7.1, #332). The rank, the
+   two-line main cell, the bold count and the highlight bar sized to it
+   are all real data (`DashboardRepository::topSearches()`) -- the trend
+   pill Orchid's own row carries has nothing to read here, since `search`
+   has no history to compare a count against, so that slot carries the
+   one real action this list needs instead: removing a route that
+   reached its count before rate limiting existed on `search_count`
+   (G13, #362). No load animation on the bar, or the JS that would drive
+   one -- every other chart on this page already disables animation. */
+.searches-list { margin: 0; display: flex; flex-direction: column; gap: .375rem; }
+.searches-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px 1fr auto auto auto;
+    align-items: center;
+    gap: .875rem;
+    padding: .625rem .75rem;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.searches-row > * { position: relative; z-index: 1; }
+.searches-row__bg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+    background: linear-gradient(90deg, var(--signal-soft) 0%, transparent 100%);
+}
+.searches-row__rank {
+    font-size: .78rem;
+    font-weight: 800;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+}
+.searches-row__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.searches-row__route {
+    font-family: var(--mono);
+    font-size: .78rem;
+    color: var(--signal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.searches-row__cities {
+    font-size: .82rem;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.searches-row__metric {
+    font-size: .78rem;
+    color: var(--ink-quiet);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+.searches-row__metric--count { color: var(--ink); font-weight: 700; }
+@media (max-width: 575.98px) {
+    .searches-row { grid-template-columns: 24px 1fr auto auto; }
+    .searches-row__metric--last { display: none; }
+}
 
 /* A row of small facts, one `.stat-card__icon` chip each, side by side
    inside a single card rather than a table -- Orchid's own deals KPI strip
