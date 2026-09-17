@@ -222,4 +222,22 @@ final readonly class SearchRepository
 
         return (int) $sum;
     }
+
+    /**
+     * Every row for one route, gone.
+     *
+     * An operator's undo for a count that should not have been reachable in
+     * the first place -- `search_count` had no rate limit until G13 (#362),
+     * so a route already inflated by a bot or a refresh loop stays inflated
+     * forever unless something can clear it. Exact match on both codes: the
+     * chart groups by direction, so `NYC -> LON` and `LON -> NYC` are two
+     * rows and removing one must not touch the other.
+     */
+    public function removeRoute(string $fromCode, string $toCode): int
+    {
+        return $this->connection->execute(
+            'DELETE FROM ' . Table::Search->value . ' WHERE from_code = ? AND to_code = ?',
+            [$fromCode, $toCode],
+        );
+    }
 }

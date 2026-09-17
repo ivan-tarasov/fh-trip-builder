@@ -188,6 +188,27 @@
                         <div class="orchid-chart-wrap orchid-chart-wrap--md">
                             <canvas class="js-chart" data-chart="searches" data-rows="{{ searches|json_encode }}"></canvas>
                         </div>
+
+                        {# A route that reached its count with no rate limit
+                           in place (G13, #362, before this existed) stays
+                           inflated forever unless an operator can clear it. #}
+                        <ul class="list-unstyled mb-0 mt-3" role="list" aria-label="Remove a searched route">
+                            {% for row in searches %}
+                                <li class="d-flex justify-content-between align-items-center gap-2{{ not loop.last ? ' mb-1' : '' }}" role="listitem">
+                                    <span class="text-truncate">{{ row.from }} → {{ row.to }}</span>
+                                    <form method="post" action="/admin" class="d-flex align-items-center gap-2 mb-0">
+                                        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="from" value="{{ row.from }}">
+                                        <input type="hidden" name="to" value="{{ row.to }}">
+                                        <span class="stat-card__note text-nowrap mono">{{ row.count }}</span>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                data-confirm="Remove {{ row.from }} → {{ row.to }} from Most searched? This cannot be undone.">
+                                            Remove
+                                        </button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
                     {% else %}
                         <p class="text-body-secondary mb-0">Nobody has searched yet.</p>
                     {% endif %}

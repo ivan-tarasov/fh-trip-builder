@@ -175,4 +175,40 @@ final class SearchRepositoryTest extends IntegrationTestCase
             $connection->execute('UPDATE search_daily_counts SET count = count - 1 WHERE search_date = CURDATE()');
         }
     }
+
+    public function testRemoveRouteDeletesEveryRowForThatPair(): void
+    {
+        $connection = $this->connection();
+        $repo = new SearchRepository($connection);
+        $hashA = 'test-' . uniqid();
+        $hashB = 'test-' . uniqid();
+
+        try {
+            // Two different searches for the same route -- both should go.
+            $repo->record($hashA, 'ZZ1', 'Testville', 'ZZ2', 'Testburg', '2026-09-15', '2026-09-22', 'roundtrip', CabinClass::Economy);
+            $repo->record($hashB, 'ZZ1', 'Testville', 'ZZ2', 'Testburg', '2026-11-01', null, 'oneway', CabinClass::Business);
+
+            self::assertSame(2, $repo->removeRoute('ZZ1', 'ZZ2'));
+            self::assertNull($repo->findByHash($hashA));
+            self::assertNull($repo->findByHash($hashB));
+        } finally {
+            $connection->execute('DELETE FROM search WHERE hash IN (?, ?)', [$hashA, $hashB]);
+        }
+    }
+
+    public function testRemoveRouteLeavesTheReverseDirectionAlone(): void
+    {
+        $connection = $this->connection();
+        $repo = new SearchRepository($connection);
+        $hash = 'test-' . uniqid();
+
+        try {
+            $repo->record($hash, 'ZZ1', 'Testville', 'ZZ2', 'Testburg', '2026-09-15', '2026-09-22', 'roundtrip', CabinClass::Economy);
+
+            self::assertSame(0, $repo->removeRoute('ZZ2', 'ZZ1'));
+            self::assertNotNull($repo->findByHash($hash));
+        } finally {
+            $connection->execute('DELETE FROM search WHERE hash = ?', [$hash]);
+        }
+    }
 }
