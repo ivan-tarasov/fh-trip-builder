@@ -17,6 +17,8 @@ use TripBuilder\BookingStatus;
 use TripBuilder\Cron;
 use TripBuilder\Csrf;
 use TripBuilder\DocumentType;
+use TripBuilder\Env;
+use TripBuilder\EnvKey;
 use TripBuilder\Flash;
 use TripBuilder\FlashTone;
 use TripBuilder\Helper;
@@ -1796,7 +1798,9 @@ class AdminController extends AbstractController
             return;
         }
 
-        echo new TwigRenderer()->render('admin/settings-diagnostics.html.twig', []);
+        echo new TwigRenderer()->render('admin/settings-diagnostics.html.twig', [
+            'mailtrap_sandboxed' => Env::get(EnvKey::MailtrapSandboxInboxId) !== '',
+        ]);
     }
 
     private function runDiagnostic(): void
@@ -1827,6 +1831,12 @@ class AdminController extends AbstractController
      * whatever it names: a missing `MAILTRAP_API_TOKEN`, an unverified
      * domain, Mailtrap's own refusal.
      *
+     * Sandbox first, real send only as the fallback when none is configured
+     * -- `Mailtrap::sandbox()`'s own contract, not a choice made here.
+     * `MAILTRAP_SANDBOX_INBOX_ID` is meant to stay unset on a production
+     * server, so this page sending for real there is the intended
+     * behaviour, not a gap.
+     *
      * @return array{0: bool, 1: string}
      */
     private function testMailtrap(): array
@@ -1838,7 +1848,9 @@ class AdminController extends AbstractController
         }
 
         try {
-            Mailtrap::fromEnvironment()->send(
+            $mailer = Mailtrap::sandbox() ?? Mailtrap::fromEnvironment();
+
+            $mailer->send(
                 $to,
                 'Trip Builder: Mailtrap test',
                 "This is a test email from the admin panel's Diagnostics page. "
@@ -1848,7 +1860,9 @@ class AdminController extends AbstractController
             return [false, 'Mailtrap test failed: ' . $e->getMessage()];
         }
 
-        return [true, 'Sent. Check ' . $to . "'s inbox, or Mailtrap's own logs."];
+        return $mailer->sandboxInboxId === null
+            ? [true, 'Sent for real. Check ' . $to . "'s inbox, or Mailtrap's own logs."]
+            : [true, 'Sent to sandbox #' . $mailer->sandboxInboxId . ' -- ' . $to . ' received nothing.'];
     }
 
     /**

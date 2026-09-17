@@ -15,11 +15,19 @@
     <div class="card orchid-card">
         <div class="card-body">
             <h2 class="h5 mb-1">Mailtrap</h2>
-            <p class="field__hint mb-3">
-                Sends one real email through the account <code>MAILTRAP_API_TOKEN</code> and
-                <code>MAILTRAP_FROM_EMAIL</code> name. This is what <code>alerts:check</code> (C6, #155)
-                sends through when a watched route drops under its threshold.
-            </p>
+            {% if mailtrap_sandboxed %}
+                <p class="field__hint mb-3">
+                    Sends to the sandbox <code>MAILTRAP_SANDBOX_INBOX_ID</code> names -- captured there,
+                    never delivered. Unset that key to make this button send for real instead.
+                </p>
+            {% else %}
+                <p class="field__hint mb-3">
+                    Sends one real email through the account <code>MAILTRAP_API_TOKEN</code> and
+                    <code>MAILTRAP_FROM_EMAIL</code> name -- the same one <code>alerts:check</code>
+                    (C6, #155) sends real alerts through. Set <code>MAILTRAP_SANDBOX_INBOX_ID</code>
+                    to make this button send to a sandbox instead.
+                </p>
+            {% endif %}
 
             <form method="post" action="/admin/settings/diagnostics" class="row g-2 align-items-end">
                 <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
