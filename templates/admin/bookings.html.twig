@@ -1,6 +1,7 @@
 {% extends 'admin/layout.html.twig' %}
 {% import 'partials/money.html.twig' as money %}
 {% import 'admin/partials/time-macros.html.twig' as time %}
+{% import 'admin/partials/notif-card-macros.html.twig' as notif %}
 
 {% set admin_section = 'bookings' %}
 
@@ -34,7 +35,15 @@
     {% if status %}{% set filter_parts = filter_parts|merge(['status=' ~ status.value]) %}{% endif %}
     {% if from %}{% set filter_parts = filter_parts|merge(['from=' ~ from]) %}{% endif %}
     {% if to %}{% set filter_parts = filter_parts|merge(['to=' ~ to]) %}{% endif %}
+    {% if missing_ticket %}{% set filter_parts = filter_parts|merge(['missing_ticket=1']) %}{% endif %}
     {% set filter_qs = filter_parts|join('&') %}
+
+    {# Suppressed once the filter below is already showing only these --
+       see `AdminController::bookings()` for why (G18, #376). #}
+    {% if missing_ticket_alert %}
+        <p class="band">What needs attention</p>
+        {{ notif.card(missing_ticket_alert, false, 'mb-4') }}
+    {% endif %}
 
     {# Orchid's own dark hero (`analytics.html`), real numbers in place of
        its fake ones -- made, cancelled, gross cost and a search-to-book
@@ -130,10 +139,10 @@
         <input id="filterTo" type="date" name="to" class="form-control form-control-sm" value="{{ to }}" title="Booked to">
 
         <button class="btn btn-outline-secondary btn-sm" type="submit">Search</button>
-        {% if term or status or from or to %}<a class="btn btn-outline-secondary btn-sm" href="/admin/bookings">Clear</a>{% endif %}
+        {% if term or status or from or to or missing_ticket %}<a class="btn btn-outline-secondary btn-sm" href="/admin/bookings">Clear</a>{% endif %}
     </form>
 
-    {% if (term or status or from or to) and bookings is empty %}
+    {% if (term or status or from or to or missing_ticket) and bookings is empty %}
         <p class="notice">
             Nothing matches these filters. A search reads the reference, the
             travellers' names and the address the booking was made from.
@@ -232,7 +241,7 @@
                     {% if total > per_page %}
                         {{ (page - 1) * per_page + 1 }}&ndash;{{ min(page * per_page, total) }} of {{ total }}
                     {% else %}
-                        {{ total }} {{ term or status or from or to ? 'found' : 'in all' }}
+                        {{ total }} {{ term or status or from or to or missing_ticket ? 'found' : 'in all' }}
                     {% endif %}
                 </span>
 

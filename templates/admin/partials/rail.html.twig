@@ -30,16 +30,18 @@
     </div>
 
     <div class="rail__body">
-        {# One count, read once -- every item below shares it rather than
-           each asking `admin_attention_count()` again (G17, #375). #}
+        {# One count each, read once -- every item below shares its own
+           rather than asking again (G17, #375). #}
         {% set attention_count = admin_attention_count() %}
+        {% set missing_ticket_count = bookings_missing_ticket_count() %}
 
         {# Orchid's own tone palette, the same `-subtle`/solid convention
            `.status-chip` and the "What needs attention" notif cards
            already use -- a rail badge is one more place reading it, not
-           a new one (G17, #375). Only `warn` has a user yet; the rest
-           exist so the next indicator is a line in an item's own `badge`,
-           not a new mechanism. #}
+           a new one (G17, #375). Only `warn` has a tone in use so far
+           (Overview and Bookings both, G18, #376); the rest exist so the
+           next indicator is a line in an item's own `badge`, not a new
+           mechanism. #}
         {% set badge_tones = {
             'warn': 'bg-warning-subtle text-warning',
             'bad': 'bg-danger-subtle text-danger',
@@ -68,7 +70,13 @@
                     } : null
                 },
                 { 'href': '/admin/searches', 'label': 'Searches', 'icon': 'search', 'match': 'searches' },
-                { 'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings' },
+                {
+                    'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings',
+                    'badge': missing_ticket_count > 0 ? {
+                        'tone': 'warn', 'value': missing_ticket_count,
+                        'label': missing_ticket_count == 1 ? 'booking needs a ticket' : 'bookings need a ticket'
+                    } : null
+                },
                 { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'match': 'subscribers' },
                 { 'href': '/admin/content', 'label': 'Help content', 'icon': 'journal-text', 'match': 'content' },
                 {

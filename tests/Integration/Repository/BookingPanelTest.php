@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace TripBuilder\Tests\Integration\Repository;
 
+use TripBuilder\DocumentType;
+use TripBuilder\Repository\BookingPassengerRepository;
 use TripBuilder\Repository\BookingRepository;
+use TripBuilder\Repository\BookingTicketRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
+use TripBuilder\TicketStatus;
 
 /**
  * The first reads of this table that are not scoped to one session.
@@ -67,6 +71,45 @@ final class BookingPanelTest extends IntegrationTestCase
     }
 
     /**
+     * `missing_ticket` matches a booking with at least one passenger and no
+     * ticket for them -- the same "needs a ticket" reading
+     * `BookingTicketRepository::bookingsNeedingTickets()` already gives,
+     * restated as a filter on the list itself (G18, #376).
+     */
+    public function testMissingTicketFindsOnlyTheBookingWithoutOne(): void
+    {
+        $connection = $this->connection();
+        $passengers = new BookingPassengerRepository($connection);
+        $tickets = new BookingTicketRepository($connection);
+
+        $noTicket = $this->insert('ZZB007');
+        $hasTicket = $this->insert('ZZB008');
+
+        $passengers->createFor($noTicket, [
+            ['type' => 'A', 'first_name' => 'Zz', 'last_name' => 'Notickets', 'dob' => '1990-01-01', 'gender' => 'M'],
+        ]);
+        $passengers->createFor($hasTicket, [
+            ['type' => 'A', 'first_name' => 'Zz', 'last_name' => 'Hastickets', 'dob' => '1990-01-01', 'gender' => 'M'],
+        ]);
+
+        $ticketedPassengerId = (int) $passengers->forBooking($hasTicket)[0]['id'];
+        $tickets->create($ticketedPassengerId, DocumentType::Ticket, 'ZZ-TICKET-1', TicketStatus::Issued, '2020-06-01');
+
+        try {
+            $ids = array_map(
+                static fn(array $row): int => (int) $row['id'],
+                $this->bookings()->filtered('', null, null, null, true, 50),
+            );
+
+            self::assertContains($noTicket, $ids, 'the ticketless booking should have matched');
+            self::assertNotContains($hasTicket, $ids, 'the ticketed booking should not have matched');
+        } finally {
+            $connection->execute('DELETE FROM booking_tickets WHERE booking_passenger_id = ?', [$ticketedPassengerId]);
+            $connection->execute('DELETE FROM booking_passengers WHERE booking_id IN (?, ?)', [$noTicket, $hasTicket]);
+        }
+    }
+
+    /**
      * Newest first, by when it was made.
      *
      * The traveller's own list is ordered by departure, because that is the
@@ -80,7 +123,7 @@ final class BookingPanelTest extends IntegrationTestCase
 
         $ids = array_map(
             static fn(array $row): int => (int) $row['id'],
-            $this->bookings()->filtered('', null, null, null, 200),
+            $this->bookings()->filtered('', null, null, null, false, 200),
         );
 
         $at = static fn(int $id): int|false => array_search($id, $ids, true);
@@ -98,8 +141,8 @@ final class BookingPanelTest extends IntegrationTestCase
         $this->insert('ZZB004', '2020-01-03 09:00:00');
         $this->insert('ZZB005', '2020-01-04 09:00:00');
 
-        $first = $this->bookings()->filtered('', null, null, null, 1);
-        $second = $this->bookings()->filtered('', null, null, null, 1, 1);
+        $first = $this->bookings()->filtered('', null, null, null, false, 1);
+        $second = $this->bookings()->filtered('', null, null, null, false, 1, 1);
 
         self::assertCount(1, $first);
         self::assertCount(1, $second);
@@ -108,15 +151,15 @@ final class BookingPanelTest extends IntegrationTestCase
 
     public function testTheCountMatchesTheTable(): void
     {
-        $before = $this->bookings()->countFiltered('', null, null, null);
+        $before = $this->bookings()->countFiltered('', null, null, null, false);
         $this->insert('ZZB006');
 
-        self::assertSame($before + 1, $this->bookings()->countFiltered('', null, null, null));
+        self::assertSame($before + 1, $this->bookings()->countFiltered('', null, null, null, false));
 
         /** @var int $count */
         $count = $this->connection()->fetchValue('SELECT COUNT(*) FROM bookings');
 
-        self::assertSame($count, $this->bookings()->countFiltered('', null, null, null));
+        self::assertSame($count, $this->bookings()->countFiltered('', null, null, null, false));
     }
 
     private function insert(string $reference, string $created = '2020-06-01 12:00:00'): int
