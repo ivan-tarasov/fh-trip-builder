@@ -9,6 +9,7 @@ namespace TripBuilder\Database;
  */
 enum Table: string
 {
+    case AdminEvents = 'admin_events';
     case Aircraft = 'aircraft';
     case AircraftCabins = 'aircraft_cabins';
     case Airlines = 'airlines';

@@ -113,6 +113,36 @@ final readonly class SubscriberRepository
     }
 
     /**
+     * The address behind each id, before it is removed.
+     *
+     * The panel's own removal log (G5.1, #316) wants the address, and a row
+     * that is about to be deleted is the only place left to read it from.
+     *
+     * @param list<int> $ids
+     * @return array<int, string>
+     */
+    public function emailsFor(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var list<array{id: int, email: string}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT id, email FROM ' . Table::Subscribers->value . ' WHERE id IN (' . self::placeholders($ids) . ')',
+            $ids,
+        );
+
+        $emails = [];
+
+        foreach ($rows as $row) {
+            $emails[$row['id']] = $row['email'];
+        }
+
+        return $emails;
+    }
+
+    /**
      * Take one address off the list.
      *
      * True when a row was actually removed, so a caller can tell a stale id
