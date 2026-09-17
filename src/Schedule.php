@@ -10,9 +10,13 @@ use RuntimeException;
 /**
  * What runs without anybody asking, and whether it is due.
  *
- * The schedule is `config/noah/schedule.php`, in git, written in crontab
- * notation. The server holds one line and no knowledge of what it is for
- * (E16, #167).
+ * The schedule is the `scheduled_jobs` table, edited from `/admin/schedule`
+ * -- before G19 (#377) it was `config/noah/schedule.php`, a static file in
+ * git, and changing it meant a pull request and a deploy. The server still
+ * holds one cron line and no knowledge of what it is for (E16, #167); this
+ * class still knows nothing about the database itself, built instead from
+ * whatever rows `fromRows()` is handed, so it stays as easy to test as it
+ * was when those rows came from a required file.
  *
  * Crontab and not a vocabulary of its own. It is the notation everybody
  * already reads, cPanel's editor is these five fields in this order, and a
@@ -52,22 +56,10 @@ final readonly class Schedule
      */
     public function __construct(private array $tasks) {}
 
-    public static function fromConfig(string $file): self
-    {
-        /** @var mixed $rows */
-        $rows = require $file;
-
-        if (!is_array($rows)) {
-            throw new RuntimeException($file . ' must return an array of tasks.');
-        }
-
-        return self::fromRows($rows);
-    }
-
     /**
-     * Build from plain rows -- a required file's own array, or (soon)
-     * a database repository's. Either way, each row needs only the five
-     * `Cron::FIELDS` and a `command`.
+     * Build from plain rows -- a required file's own array, or
+     * `ScheduledJobRepository::allEnabled()`'s. Either way, each row needs
+     * only the five `Cron::FIELDS` and a `command`.
      *
      * @param iterable<mixed> $rows
      */

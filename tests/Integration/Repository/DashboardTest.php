@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Integration\Repository;
 
 use DateTimeImmutable;
-use TripBuilder\Helper;
 use TripBuilder\Repository\DashboardRepository;
+use TripBuilder\Repository\ScheduledJobRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Schedule;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
@@ -282,7 +282,7 @@ final class DashboardTest extends IntegrationTestCase
      */
     private function schedule(): array
     {
-        $schedule = Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php');
+        $schedule = Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled());
 
         return [
             'health' => $schedule->health(

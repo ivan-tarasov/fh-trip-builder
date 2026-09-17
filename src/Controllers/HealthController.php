@@ -10,6 +10,7 @@ use TripBuilder\Clock;
 use TripBuilder\Health;
 use TripBuilder\Helper;
 use TripBuilder\Log;
+use TripBuilder\Repository\ScheduledJobRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Schedule;
 
@@ -64,7 +65,7 @@ final class HealthController extends AbstractController
     private function schedule(): array
     {
         try {
-            return Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php')
+            return Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled())
                 ->health(new DateTimeImmutable(), new ScheduleRunRepository($this->connection())->all());
         } catch (Throwable $e) {
             Log::error('Health check could not read the schedule: ' . $e->getMessage());

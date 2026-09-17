@@ -33,6 +33,7 @@ use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\BookingTicketRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\DashboardRepository;
+use TripBuilder\Repository\ScheduledJobRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Repository\SettingsRepository;
@@ -125,7 +126,7 @@ class AdminController extends AbstractController
         }
 
         $dashboard = new DashboardRepository($this->connection());
-        $schedule = $this->schedule();
+        $schedule = $this->scheduleHealth();
 
         echo new TwigRenderer()->render('admin/overview.html.twig', [
             // "What should I do next" (G5.2, #317), ahead of "is it
@@ -247,10 +248,10 @@ class AdminController extends AbstractController
      *
      * @return array{health: array<string, array{age: string, stale: bool}>, tasks: list<array{command: string, cron: \TripBuilder\Cron}>}
      */
-    private function schedule(): array
+    private function scheduleHealth(): array
     {
         try {
-            $schedule = Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php');
+            $schedule = Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled());
 
             return [
                 'health' => $schedule->health(

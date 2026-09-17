@@ -7,6 +7,7 @@ namespace TripBuilder;
 use DateTimeImmutable;
 use Throwable;
 use TripBuilder\Database\Connection;
+use TripBuilder\Repository\ScheduledJobRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 
 /**
@@ -53,8 +54,9 @@ final readonly class ScheduleWatch
             }
 
             $now = new DateTimeImmutable();
-            $schedule = Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php');
-            $records = new ScheduleRunRepository(Connection::fromEnv())->all();
+            $connection = Connection::fromEnv();
+            $schedule = Schedule::fromRows(new ScheduledJobRepository($connection)->allEnabled());
+            $records = new ScheduleRunRepository($connection)->all();
 
             foreach ($schedule->health($now, $records) as $command => $task) {
                 if ($task['stale']) {

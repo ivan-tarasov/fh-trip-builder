@@ -270,52 +270,37 @@ the schedule lives in this repository — see below.
 
 ## Scheduled Work
 
-**The server has one cron line. What runs and when is `config/noah/schedule.php`.**
+**The server has one cron line. What runs and when is the `scheduled_jobs`
+table, edited from `/admin/schedule`.**
 
 ```
 * * * * * cd /path/to/fh-trip-builder && php noah schedule:run >> ~/logs/schedule.log 2>&1
 ```
 
-```php
-use TripBuilder\Cron;
-use TripBuilder\Schedule;
-
-return [
-    [
-        Cron::MINUTE      => 0,
-        Cron::HOUR        => 3,
-        Cron::DAY         => Cron::EVERY,
-        Cron::MONTH       => Cron::EVERY,
-        Cron::WEEKDAY     => Cron::EVERY,
-        Schedule::COMMAND => 'currency:rates',
-    ],
-];
-```
-
-Five named fields — minute, hour, day, month, weekday — the same five in the
-same order as cPanel's editor, so the two can be read against each other
-without counting positions — and in crontab order, when before what, so an
-entry reads down the page the way a crontab line reads across it. All five are
-required and none defaults to `*`: a
-schedule where forgetting the day field turns a monthly task into a daily one
-is a schedule that reads correctly while doing something else.
-
-Constants rather than strings throughout — a mistyped `Cron::MINTUE` is a fatal
-error on the line that wrote it, where a mistyped `'mintue'` is a missing key
-reported from somewhere else. `*`, a number, `a-b`, a
-comma-separated list, and any of those with `/step`. Names (`MON`), the
-`@daily` aliases and the `? L W #` extensions are not implemented, and a
-schedule using one is refused when it loads rather than quietly read as
+A job is a command from a fixed list (nothing that could wipe data or run
+itself), plus five crontab fields — minute, hour, day, month, weekday — the
+same five in the same order as cPanel's editor, so the two can be read
+against each other without counting positions. All five are required and
+none defaults to `*`: a schedule where forgetting the day field turns a
+monthly task into a daily one is a schedule that reads correctly while doing
 something else.
+
+`*`, a number, `a-b`, a comma-separated list, and any of those with `/step`.
+Names (`MON`), the `@daily` aliases and the `? L W #` extensions are not
+implemented, and a schedule using one is refused when it is saved rather than
+quietly read as something else.
 
 **A missed occurrence is caught up rather than skipped**, which is the one way
 this differs from a real crontab: a tick lost to a deploy or a reboot is picked
 up on the next one instead of costing a day.
 
-Before this the crontab was the only record of what this application runs
-unattended, so a rebuilt server or a reset hosting panel took the schedule with
-it and nothing here said what had been lost. Adding a task is now a pull
-request.
+Before G19 (#377) the schedule was `config/noah/schedule.php`, a static file
+in git — before *that* the crontab was the only record of what this
+application runs unattended, so a rebuilt server or a reset hosting panel took
+the schedule with it and nothing said what had been lost. Editing it meant a
+pull request and a deploy. The database moved the schedule off the server
+without putting it back behind one: an edit from `/admin/schedule` takes
+effect on the very next tick.
 
 A task is due when nothing has run since the moment it was last supposed to, so
 a tick missed by a deploy or a reboot catches up on the next one instead of
@@ -328,10 +313,11 @@ retention stops applying, together, and nothing says so.
 
 Two things watch for that. `schedule_runs` records when each command last
 *started* and when it last *worked* — a command failing every night has a fresh
-first and a rotting second — and `/health` reports the age of the second. And
-because a broken crontab does not stop page requests, an ordinary request
-checks the same thing at most once an hour and writes a line to the log when
-something has stopped:
+first and a rotting second — and `/health` reports the age of the second.
+`schedule_run_history` keeps every attempt rather than only the latest one, and
+`/admin/schedule` links each job to its own. And because a broken crontab does
+not stop page requests, an ordinary request checks the same thing at most once
+an hour and writes a line to the log when something has stopped:
 
 ```
 [19ba8457] Scheduled command `currency:rates` last worked 4d ago. Is cron still running `schedule:run`?
