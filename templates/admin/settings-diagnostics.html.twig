@@ -1,0 +1,40 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% set admin_section = 'settings-diagnostics' %}
+
+{% block title %}Diagnostics{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/settings">Settings</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Diagnostics</li>
+{% endblock %}
+
+{% block description %}<p class="well__description">Real checks against real integrations, run on demand.</p>{% endblock %}
+
+{% block content %}
+    <div class="card orchid-card">
+        <div class="card-body">
+            <h2 class="h5 mb-1">Mailtrap</h2>
+            <p class="field__hint mb-3">
+                Sends one real email through the account <code>MAILTRAP_API_TOKEN</code> and
+                <code>MAILTRAP_FROM_EMAIL</code> name. This is what <code>alerts:check</code> (C6, #155)
+                sends through when a watched route drops under its threshold.
+            </p>
+
+            <form method="post" action="/admin/settings/diagnostics" class="row g-2 align-items-end">
+                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="check" value="mailtrap">
+
+                <div class="col-12 col-sm-6 col-md-4">
+                    <label for="mailtrap-to" class="form-label">Send the test to</label>
+                    <input id="mailtrap-to" name="to" type="email" class="form-control" required
+                           placeholder="you@example.com" autocapitalize="off" spellcheck="false">
+                </div>
+
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Send test email</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

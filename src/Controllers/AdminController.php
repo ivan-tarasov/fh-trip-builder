@@ -22,6 +22,7 @@ use TripBuilder\FlashTone;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
+use TripBuilder\Mail\Mailtrap;
 use TripBuilder\PanelSetting;
 use TripBuilder\RemarkTone;
 use TripBuilder\Repository\AdminEventRepository;
@@ -1769,6 +1770,85 @@ class AdminController extends AbstractController
     public function settingsMap(): void
     {
         $this->settingsGroup('Map');
+    }
+
+    /**
+     * A settings child of its own rather than a fourth `PanelSetting` group:
+     * a diagnostic is something run, not a field that is saved, and the two
+     * do not share a template honestly.
+     *
+     * One check exists today (Mailtrap). Adding another is a case in
+     * `runDiagnostic()`'s `match` and a form of its own in the template --
+     * deliberately not a registry or an interface for the one check this
+     * page has.
+     *
+     * @throws Exception|Error
+     */
+    public function settingsDiagnostics(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->runDiagnostic();
+
+            return;
+        }
+
+        echo new TwigRenderer()->render('admin/settings-diagnostics.html.twig', []);
+    }
+
+    private function runDiagnostic(): void
+    {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
+            $this->bounce('/admin/settings/diagnostics');
+
+            return;
+        }
+
+        [$ok, $message] = match ($this->request->body->str('check')) {
+            'mailtrap' => $this->testMailtrap(),
+            default => [false, 'Not a real check.'],
+        };
+
+        Flash::set($message, $ok ? FlashTone::Success : FlashTone::Error);
+        $this->bounce('/admin/settings/diagnostics');
+    }
+
+    /**
+     * Send one real email through Mailtrap and say exactly what happened.
+     *
+     * The failure message is shown, not logged and hidden -- unlike a public
+     * endpoint's own errors (`AjaxController::subscribe()` and its
+     * siblings), which stay in the log because a visitor cannot act on one.
+     * This page exists for the operator to read that message and fix
+     * whatever it names: a missing `MAILTRAP_API_TOKEN`, an unverified
+     * domain, Mailtrap's own refusal.
+     *
+     * @return array{0: bool, 1: string}
+     */
+    private function testMailtrap(): array
+    {
+        $to = trim($this->request->body->str('to'));
+
+        if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return [false, 'Give a real email address to send the test to.'];
+        }
+
+        try {
+            Mailtrap::fromEnvironment()->send(
+                $to,
+                'Trip Builder: Mailtrap test',
+                "This is a test email from the admin panel's Diagnostics page. "
+                . 'If you are reading this, Mailtrap is configured correctly.',
+            );
+        } catch (Throwable $e) {
+            return [false, 'Mailtrap test failed: ' . $e->getMessage()];
+        }
+
+        return [true, 'Sent. Check ' . $to . "'s inbox, or Mailtrap's own logs."];
     }
 
     /**

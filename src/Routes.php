@@ -89,6 +89,7 @@ class Routes
         '/admin/settings' => 'Admin@settings',
         '/admin/settings/site-identity' => 'Admin@settingsSiteIdentity',
         '/admin/settings/map' => 'Admin@settingsMap',
+        '/admin/settings/diagnostics' => 'Admin@settingsDiagnostics',
         // One export for all three groups, since the history it reads is
         // already shared across them (G3.5, #308).
         '/admin/settings/export' => 'Admin@exportSettingsHistory',
