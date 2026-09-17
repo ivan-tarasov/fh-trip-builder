@@ -71,6 +71,63 @@ final readonly class DashboardRepository
     }
 
     /**
+     * What actually needs a look, rather than the four states in words
+     * (G5.2, #317) -- "is it running" answered as a list of the things
+     * that are not, plus the one business signal that already existed per
+     * booking but nowhere across all of them.
+     *
+     * Empty means exactly that: nothing here needs attention right now,
+     * which the template says outright rather than drawing an empty list.
+     *
+     * @param array<string, array{age: string, stale: bool}> $schedule
+     * @return list<array{label: string, tone: Tone}>
+     */
+    public function attention(array $schedule): array
+    {
+        $items = [];
+
+        if ($schedule === []) {
+            $items[] = ['label' => 'The schedule could not be read', 'tone' => Tone::Quiet];
+        } else {
+            foreach ($schedule as $command => $task) {
+                if ($task['stale']) {
+                    $items[] = ['label' => $command . ' has not run on time', 'tone' => Tone::Bad];
+                }
+            }
+        }
+
+        $reach = $this->flightReach();
+
+        if ($reach['tone'] !== Tone::Good) {
+            $items[] = ['label' => 'Flights only reach ' . $reach['value'] . ' (' . $reach['note'] . ')', 'tone' => $reach['tone']];
+        }
+
+        $rates = $this->ratesState();
+
+        if ($rates['tone'] !== Tone::Good) {
+            $items[] = ['label' => 'Currency rates are ' . $rates['value'] . ' (' . $rates['note'] . ')', 'tone' => $rates['tone']];
+        }
+
+        $database = $this->databaseState();
+
+        if ($database['tone'] !== Tone::Good) {
+            $items[] = ['label' => 'Database ' . $database['note'], 'tone' => $database['tone']];
+        }
+
+        $unticketed = new BookingTicketRepository($this->connection)->bookingsNeedingTickets();
+
+        if ($unticketed > 0) {
+            $items[] = [
+                'label' => $unticketed . ' confirmed ' . ($unticketed === 1 ? 'booking' : 'bookings')
+                    . ' still ' . ($unticketed === 1 ? 'needs' : 'need') . ' a ticket',
+                'tone' => Tone::Warn,
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
      * The counts: how much of each thing there is.
      *
      * A null value means the table is empty, and the panel says "none yet"

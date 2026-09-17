@@ -31,7 +31,45 @@
     'On the fare list': 'bell'
 } %}
 
+{# The same three tones `states` below already wears, read as a word an
+   operator would actually reach for rather than the enum's own name
+   (G5.2, #317). #}
+{% set attention_badge = {
+    'bad': 'text-bg-danger',
+    'warn': 'text-bg-warning',
+    'quiet': 'text-bg-secondary'
+} %}
+{% set attention_label = {
+    'bad': 'Attention',
+    'warn': 'Watch',
+    'quiet': 'Unknown'
+} %}
+
 {% block content %}
+    <p class="band">What needs attention</p>
+
+    {# "What should I do next" ahead of "is it running" (G5.2, #317) --
+       the same four states below, but only the ones that are not fine,
+       plus the one booking signal that already existed per booking and
+       nowhere across all of them. Additive: the tiles below still answer
+       the health question this list is drawn from. #}
+    <div class="card orchid-card mb-4">
+        <div class="card-body">
+            {% if attention|length > 0 %}
+                <ul class="list-unstyled mb-0">
+                    {% for item in attention %}
+                        <li class="d-flex align-items-center justify-content-between gap-2{{ not loop.last ? ' mb-2' : '' }}">
+                            <span>{{ item.label }}</span>
+                            <span class="badge {{ attention_badge[item.tone.value] }}">{{ attention_label[item.tone.value] }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-body-secondary mb-0">Nothing needs attention right now.</p>
+            {% endif %}
+        </div>
+    </div>
+
     <p class="band">Is it running</p>
 
     {# States, not numbers: "is it running" is not a quantity. Every card
