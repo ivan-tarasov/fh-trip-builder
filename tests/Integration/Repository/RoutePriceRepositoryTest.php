@@ -414,4 +414,57 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
             [$from, $to],
         );
     }
+
+    /**
+     * `cheapest()` (C6, #155) reads `route_day_price` directly rather than
+     * through a build, so these insert rows straight into it -- the same
+     * table `read()` above is tested against, on a route these fixtures own
+     * rather than one built from flights.
+     */
+    public function testCheapestFindsTheLowestTotalAndItsDay(): void
+    {
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(10), 100.00, 20.00);
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(20), 60.00, 15.00);
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(30), 90.00, 10.00);
+
+        try {
+            $cheapest = $this->prices->cheapest('ZZQ', 'ZZR', self::CABIN, $this->since);
+
+            self::assertNotNull($cheapest);
+            self::assertSame(self::day(20), $cheapest['depart_date']);
+            self::assertSame(60.00, $cheapest['base']);
+            self::assertSame(15.00, $cheapest['tax']);
+        } finally {
+            $this->forget('ZZQ', 'ZZR');
+        }
+    }
+
+    public function testCheapestIgnoresDaysBeforeSince(): void
+    {
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(-5), 1.00, 0.00);
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(10), 50.00, 10.00);
+
+        try {
+            $cheapest = $this->prices->cheapest('ZZQ', 'ZZR', self::CABIN, $this->since);
+
+            self::assertNotNull($cheapest);
+            self::assertSame(self::day(10), $cheapest['depart_date']);
+        } finally {
+            $this->forget('ZZQ', 'ZZR');
+        }
+    }
+
+    public function testCheapestIsNullWithNoRows(): void
+    {
+        self::assertNull($this->prices->cheapest('ZZQ', 'ZZR', self::CABIN, $this->since));
+    }
+
+    private function insertDayPrice(string $from, string $to, string $date, float $base, float $tax): void
+    {
+        $this->connection()->execute(
+            'INSERT INTO route_day_price (from_code, to_code, cabin, depart_date, price_base, price_tax)'
+            . ' VALUES (?, ?, ?, ?, ?, ?)',
+            [$from, $to, self::CABIN->value, $date, $base, $tax],
+        );
+    }
 }
