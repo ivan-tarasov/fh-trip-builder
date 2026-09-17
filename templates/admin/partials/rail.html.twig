@@ -34,6 +34,7 @@
            rather than asking again (G17, #375). #}
         {% set attention_count = admin_attention_count() %}
         {% set missing_ticket_count = bookings_missing_ticket_count() %}
+        {% set schedule_issue_count = schedule_issue_count() %}
 
         {# Orchid's own tone palette, the same `-subtle`/solid convention
            `.status-chip` and the "What needs attention" notif cards
@@ -69,7 +70,13 @@
                         'label': attention_count == 1 ? 'thing needs attention' : 'things need attention'
                     } : null
                 },
-                { 'href': '/admin/schedule', 'label': 'Schedule', 'icon': 'clock-history', 'match': 'schedule' },
+                {
+                    'href': '/admin/schedule', 'label': 'Schedule', 'icon': 'clock-history', 'match': 'schedule',
+                    'badge': schedule_issue_count > 0 ? {
+                        'tone': 'warn', 'value': schedule_issue_count,
+                        'label': schedule_issue_count == 1 ? 'job is late' : 'jobs are late'
+                    } : null
+                },
                 { 'href': '/admin/searches', 'label': 'Searches', 'icon': 'search', 'match': 'searches' },
                 {
                     'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings',

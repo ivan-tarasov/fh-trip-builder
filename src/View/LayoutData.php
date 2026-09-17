@@ -193,6 +193,25 @@ final class LayoutData
         }
     }
 
+    /**
+     * How many enabled jobs are stale or have never run -- the Schedule
+     * rail item's own badge, the same reasoning `bookingsMissingTicketCount()`
+     * gives: `adminAttentionCount()` already folds this into Overview's
+     * total, but the item that is actually about the schedule should be
+     * able to say so without a detour through Overview (G19, #377).
+     */
+    public function scheduleIssueCount(): int
+    {
+        try {
+            $health = Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled())
+                ->health(new DateTimeImmutable(), new ScheduleRunRepository($this->connection())->all());
+
+            return count(array_filter($health, static fn(array $task): bool => $task['stale']));
+        } catch (Throwable) {
+            return 0;
+        }
+    }
+
     public function csrfToken(): string
     {
         return Csrf::token();
