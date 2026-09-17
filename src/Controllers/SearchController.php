@@ -15,6 +15,7 @@ use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\Input;
+use TripBuilder\Http\RateLimit;
 use TripBuilder\Log;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\FareBrandRepository;
@@ -461,6 +462,12 @@ class SearchController extends AbstractController
         // Prevent too many counts from one user: only the first page of a
         // search counts, so paging and re-filtering do not inflate it.
         if ($this->get[self::GET_SHOWN] != self::FIRST_SLICE) {
+            return;
+        }
+
+        // Guards the write below, not the search itself -- an over-the-limit
+        // client still sees its results, the count just stops moving.
+        if ($this->isOverLimit(RateLimit::Search)) {
             return;
         }
 

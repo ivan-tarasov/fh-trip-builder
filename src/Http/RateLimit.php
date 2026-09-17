@@ -17,6 +17,11 @@ namespace TripBuilder\Http;
  *
  * The fourth writes nothing and guards the admin sign-in, where the thing
  * being spent is guesses at a password rather than rows in a table.
+ *
+ * The fifth guards a write nobody chose to make on purpose: every search
+ * results page bumps `search_count`, and unlike the others this one does
+ * not block the action it sits behind -- a client over the limit still
+ * sees its results, it just stops adding to the count.
  */
 enum RateLimit: string
 {
@@ -24,6 +29,7 @@ enum RateLimit: string
     case Vote = 'vote';
     case Checkout = 'checkout';
     case AdminLogin = 'admin_login';
+    case Search = 'search';
 
     /**
      * Requests one client may make in one hour.
@@ -48,6 +54,12 @@ enum RateLimit: string
             // tries an hour is generous for them and useless to anybody
             // guessing (A3.2, #100).
             self::AdminLogin => 10,
+
+            // A real shopper comparing routes and dates by hand does not
+            // reload the same results page every few seconds; a script
+            // hammering one popular route does. This only gates the count,
+            // so it can afford to be generous.
+            self::Search => 100,
         };
     }
 
