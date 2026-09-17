@@ -3057,6 +3057,10 @@
         const submit = form.querySelector('[type="submit"]');
         const from = form.querySelector('[name="from"]').value;
         const to = form.querySelector('[name="to"]').value;
+        // Only the search page's popup sends this -- the route page is
+        // always economy and never carries the field at all.
+        const cabinField = form.querySelector('[name="cabin"]');
+        const cabin = cabinField ? cabinField.value : '';
 
         const say = (message, tone) => {
             note.textContent = message;
@@ -3096,6 +3100,7 @@
                     email: email.value.trim(),
                     from: from,
                     to: to,
+                    ...(cabin ? {cabin: cabin} : {}),
                     threshold: threshold.value
                 })
             })

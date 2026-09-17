@@ -1,0 +1,68 @@
+{# "Watch this route", as a popup rather than a form sitting open in the
+   results -- the search page's own version of `route/blocks/watch.html.twig`.
+   Posts to the same `/ajax/watch-route` endpoint and reuses its JS handler
+   (`.js-watch-route`), but carries the cabin actually being searched, since a
+   business or first fare is a different watch from an economy one on the
+   same route -- the route page never needed this because it is always
+   economy. #}
+<div class="modal fade" id="watch-route-modal" tabindex="-1"
+     aria-labelledby="watch-route-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content js-watch-route" id="watch-route"
+              action="/ajax/watch-route" method="post" novalidate
+              aria-labelledby="watch-route-modal-title">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_to" value="{{ current_page() }}">
+            <input type="hidden" name="from" value="{{ depart_code }}">
+            <input type="hidden" name="to" value="{{ arrive_code }}">
+            <input type="hidden" name="cabin" value="{{ cabin.value }}">
+
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h5 mb-1" id="watch-route-modal-title">Watch this route</h2>
+                    {# depart_city/arrive_city already carry their code in
+                       parens -- "Montreal (YUL)" -- the same string the
+                       results heading above this modal prints. #}
+                    <p class="small text-muted mb-0">
+                        {{ depart_city }}
+                        <i class="fas fa-arrow-right px-1" aria-hidden="true"></i>
+                        {{ arrive_city }}
+                        {% if cabin.value != 'economy' %}&middot; {{ cabin.label() }}{% endif %}
+                    </p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="route-watch__text">
+                    Tell us the price you want and we'll email you the day this route beats it.
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label" for="watch-route-modal-email">Email address</label>
+                    <input class="form-control js-watch-route-email" id="watch-route-modal-email"
+                           type="email" name="email" required autocomplete="email"
+                           placeholder="you@example.com">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label" for="watch-route-modal-threshold">Price to watch for, in CAD</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input class="form-control js-watch-route-threshold" id="watch-route-modal-threshold"
+                               type="number" name="threshold" min="1" max="100000" step="1"
+                               inputmode="numeric" required
+                               placeholder="{{ cheapest_total is not null ? cheapest_total|round(0, 'floor') : '' }}">
+                    </div>
+                </div>
+
+                <p class="route-watch__note js-watch-route-note mb-0" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Watch this route</button>
+            </div>
+        </form>
+    </div>
+</div>

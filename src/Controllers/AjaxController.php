@@ -379,14 +379,17 @@ class AjaxController extends AbstractController
     }
 
     /**
-     * Watch one route for a price, from the form on its own page (C6, #155).
+     * Watch one route for a price, from the route page or the search page's
+     * own popup (C6, #155; search page's own form added after).
      *
-     * Economy only and no cabin field: the route page itself is always
-     * `CabinClass::Economy` (`RouteController`), so offering a choice the
-     * page cannot back up would be a lie the form told on its behalf.
+     * The route page sends no `cabin` field -- that page is always
+     * `CabinClass::Economy` (`RouteController`), so `fromRequest()`'s own
+     * fallback is what it relies on. The search page sends the cabin actually
+     * being searched, since a business or first fare is a different watch
+     * from an economy one on the same route.
      *
-     * Registering twice for the same address and route updates the threshold
-     * rather than adding a second watch -- `RouteWatchRepository::subscribe()`'s
+     * Registering twice for the same address, route and cabin updates the
+     * threshold rather than adding a second watch -- `RouteWatchRepository::subscribe()`'s
      * own upsert, the same reasoning `subscribers.email` being UNIQUE
      * already gives the general list.
      */
@@ -404,6 +407,7 @@ class AjaxController extends AbstractController
         $email = trim($this->request->body->str('email'));
         $from = strtoupper($this->request->body->str('from'));
         $to = strtoupper($this->request->body->str('to'));
+        $cabin = CabinClass::fromRequest($this->request->body->nullableStr('cabin'));
         $threshold = filter_var($this->request->body->str('threshold'), FILTER_VALIDATE_FLOAT);
 
         // Checked here and not only in the browser: the form is one way to
@@ -429,7 +433,7 @@ class AjaxController extends AbstractController
 
         try {
             new RouteWatchRepository($this->connection())
-                ->subscribe($email, $from, $to, CabinClass::Economy, (float) $threshold);
+                ->subscribe($email, $from, $to, $cabin, (float) $threshold);
         } catch (Throwable $e) {
             // The reason goes to the log, not to the page: a visitor cannot act
             // on it and a database error is not theirs to read.
@@ -445,10 +449,11 @@ class AjaxController extends AbstractController
         $this->answerWatchRoute($asJson, HttpStatus::Ok, [
             'status' => 'ok',
             'message' => sprintf(
-                "Done. We'll email %s if %s to %s drops under %s CAD.",
+                "Done. We'll email %s if %s to %s%s drops under %s CAD.",
                 $email,
                 $from,
                 $to,
+                $cabin === CabinClass::Economy ? '' : ' in ' . $cabin->label(),
                 number_format((float) $threshold, 2),
             ),
         ], 'good');

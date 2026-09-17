@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TripBuilder\Tests\Unit\View;
 
 use PHPUnit\Framework\TestCase;
+use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\SearchUrl;
 use TripBuilder\View\TwigRenderer;
@@ -40,6 +41,15 @@ final class StepHeaderRenderTest extends TestCase
             'total_flights_text' => '55 options',
             'depart_date_label' => $search->depart,
             'return_date_label' => $search->return,
+            // The "Watch this route" button beside the title (C6, #155): not
+            // this test's own concern, but the template needs them to render
+            // at all once step is not 3.
+            'depart_code' => 'YUL',
+            'arrive_code' => 'LHR',
+            'depart_city' => 'Montreal',
+            'arrive_city' => 'London',
+            'cabin' => CabinClass::Economy,
+            'cheapest_total' => null,
         ]);
 
         // Decoded, so the assertions can be written the way the line reads. The
