@@ -266,4 +266,19 @@ final class RequestTest extends TestCase
     {
         self::assertNull(self::from([], '172.68.0.1')->country());
     }
+
+    public function testTheCityIsWhatCloudflareSays(): void
+    {
+        self::assertSame('Montréal', self::from(['cf-ipcity' => 'Montréal'], '172.68.0.1')->city());
+    }
+
+    public function testAnEmptyCityHeaderIsNoAnswer(): void
+    {
+        self::assertNull(self::from(['cf-ipcity' => ''], '172.68.0.1')->city());
+    }
+
+    public function testNoCityHeaderAtAllIsNoAnswer(): void
+    {
+        self::assertNull(self::from([], '172.68.0.1')->city());
+    }
 }
