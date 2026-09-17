@@ -74,4 +74,51 @@ final readonly class ScheduleRunRepository
             [$exit, $exit, $at, $command],
         );
     }
+
+    /**
+     * Open a new row in the real, per-run history -- unlike `started()`
+     * above, never an upsert: every call is a separate attempt (G19, #377).
+     *
+     * Returns the row's id so `historyFinished()` can be told which one to
+     * close, since nothing else here ties a start to its own finish.
+     */
+    public function historyStarted(string $command, string $at): int
+    {
+        return $this->connection->insert(
+            'INSERT INTO ' . Table::ScheduleRunHistory->value . ' (command, started_at) VALUES (?, ?)',
+            [$command, $at],
+        );
+    }
+
+    /**
+     * Close the row `historyStarted()` opened.
+     *
+     * A row that never reaches this -- `finished_at` and `exit_code` both
+     * still null -- is a run that was killed or crashed, visible in the
+     * history rather than silently missing from it.
+     */
+    public function historyFinished(int $id, int $exit, string $at): void
+    {
+        $this->connection->execute(
+            'UPDATE ' . Table::ScheduleRunHistory->value . ' SET exit_code = ?, finished_at = ? WHERE id = ?',
+            [$exit, $at, $id],
+        );
+    }
+
+    /**
+     * One command's most recent attempts, newest first.
+     *
+     * @return list<array{started_at: string, finished_at: ?string, exit_code: ?int}>
+     */
+    public function historyFor(string $command, int $limit = 50): array
+    {
+        /** @var list<array{started_at: string, finished_at: ?string, exit_code: ?int}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT started_at, finished_at, exit_code FROM ' . Table::ScheduleRunHistory->value
+            . ' WHERE command = ? ORDER BY started_at DESC, id DESC LIMIT ' . max(1, $limit),
+            [$command],
+        );
+
+        return $rows;
+    }
 }

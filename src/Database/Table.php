@@ -37,7 +37,9 @@ enum Table: string
     case RateLimits = 'rate_limits';
     case RouteDayPrice = 'route_day_price';
     case RoutePriceBuild = 'route_price_build';
+    case ScheduledJobs = 'scheduled_jobs';
     case ScheduleRuns = 'schedule_runs';
+    case ScheduleRunHistory = 'schedule_run_history';
     case Search = 'search';
     case SearchCandidates = 'search_candidates';
     case SearchDailyCounts = 'search_daily_counts';

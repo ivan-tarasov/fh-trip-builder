@@ -61,6 +61,18 @@ final readonly class Schedule
             throw new RuntimeException($file . ' must return an array of tasks.');
         }
 
+        return self::fromRows($rows);
+    }
+
+    /**
+     * Build from plain rows -- a required file's own array, or (soon)
+     * a database repository's. Either way, each row needs only the five
+     * `Cron::FIELDS` and a `command`.
+     *
+     * @param iterable<mixed> $rows
+     */
+    public static function fromRows(iterable $rows): self
+    {
         $tasks = [];
 
         foreach ($rows as $row) {
