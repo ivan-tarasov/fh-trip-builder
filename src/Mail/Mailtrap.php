@@ -21,10 +21,8 @@ use TripBuilder\Settings;
  */
 final readonly class Mailtrap
 {
-    private const string SEND_ENDPOINT = 'https://send.api.mailtrap.io/api/send';
-
-    /** `%s` is the sandbox's numeric id. */
-    private const string SANDBOX_ENDPOINT = 'https://sandbox.api.mailtrap.io/api/send/%s';
+    /** The one path both the transactional and Sandbox Send APIs share -- only the host differs. */
+    private const string SEND_PATH = '/api/send';
 
     private const int TIMEOUT_SECONDS = 30;
     private const int CONNECT_TIMEOUT_SECONDS = 10;
@@ -40,6 +38,8 @@ final readonly class Mailtrap
         private string $apiToken,
         private string $fromEmail,
         private string $fromName,
+        /** Already the exact URL to POST to -- the sandbox id, if any, is folded in by `sandbox()`. */
+        private string $endpoint,
         /** Null sends for real. Set only by `sandbox()`, never by `fromEnvironment()` (C6.1, #155). */
         public ?string $sandboxInboxId = null,
     ) {}
@@ -51,17 +51,15 @@ final readonly class Mailtrap
      * `S3::fromEnvironment()` gives: a caller that forgot to set them should
      * see why nothing sent, not a silent no-op.
      *
-     * **Never reads `MailtrapSandboxInboxId`.** This is what `alerts:check`
-     * sends real alerts through, and a real alert must not be able to end
-     * up in a sandbox because that key happened to be set on the server --
-     * see `sandbox()`, the one and only place it is read.
+     * **Never reads `MailtrapSandboxInboxId` or `MailtrapSandboxHost`.** This
+     * is what `alerts:check` sends real alerts through, and a real alert
+     * must not be able to end up in a sandbox because those keys happened
+     * to be set on the server -- see `sandbox()`, the one and only place
+     * either is read.
      */
     public static function fromEnvironment(): self
     {
-        $missing = array_values(array_filter(
-            [EnvKey::MailtrapApiToken, EnvKey::MailtrapFromEmail],
-            static fn(EnvKey $key): bool => Env::get($key) === '',
-        ));
+        $missing = self::missing([EnvKey::MailtrapApiToken, EnvKey::MailtrapFromEmail, EnvKey::MailtrapSendHost]);
 
         if ($missing !== []) {
             throw new RuntimeException(sprintf(
@@ -74,6 +72,7 @@ final readonly class Mailtrap
             Env::get(EnvKey::MailtrapApiToken),
             Env::get(EnvKey::MailtrapFromEmail),
             (string) Settings::get('app.name'),
+            'https://' . Env::get(EnvKey::MailtrapSendHost) . self::SEND_PATH,
         );
     }
 
@@ -83,9 +82,13 @@ final readonly class Mailtrap
      * Null when no sandbox is configured, rather than throwing: "not
      * configured" and "configured wrong" are different problems, and only
      * the caller knows whether the first one means "fall back to a real
-     * send" or "refuse". A sandbox id with no token or from address still
-     * throws, the same as `fromEnvironment()` -- that combination can only
-     * be a mistake, never an intentional "no sandbox".
+     * send" or "refuse". A sandbox id with no token, from address or
+     * sandbox host still throws, the same as `fromEnvironment()` -- that
+     * combination can only be a mistake, never an intentional "no sandbox".
+     *
+     * The id is a path segment on the Sandbox Send API, not a query
+     * parameter -- folded in here so `send()` itself never needs to know a
+     * sandbox id exists.
      */
     public static function sandbox(): ?self
     {
@@ -95,10 +98,7 @@ final readonly class Mailtrap
             return null;
         }
 
-        $missing = array_values(array_filter(
-            [EnvKey::MailtrapApiToken, EnvKey::MailtrapFromEmail],
-            static fn(EnvKey $key): bool => Env::get($key) === '',
-        ));
+        $missing = self::missing([EnvKey::MailtrapApiToken, EnvKey::MailtrapFromEmail, EnvKey::MailtrapSandboxHost]);
 
         if ($missing !== []) {
             throw new RuntimeException(sprintf(
@@ -111,8 +111,18 @@ final readonly class Mailtrap
             Env::get(EnvKey::MailtrapApiToken),
             Env::get(EnvKey::MailtrapFromEmail),
             (string) Settings::get('app.name'),
+            'https://' . Env::get(EnvKey::MailtrapSandboxHost) . self::SEND_PATH . '/' . $inboxId,
             $inboxId,
         );
+    }
+
+    /**
+     * @param list<EnvKey> $keys
+     * @return list<EnvKey>
+     */
+    private static function missing(array $keys): array
+    {
+        return array_values(array_filter($keys, static fn(EnvKey $key): bool => Env::get($key) === ''));
     }
 
     /**
@@ -138,11 +148,7 @@ final readonly class Mailtrap
             throw new RuntimeException('Could not encode the request to Mailtrap.');
         }
 
-        $endpoint = $this->sandboxInboxId === null
-            ? self::SEND_ENDPOINT
-            : sprintf(self::SANDBOX_ENDPOINT, $this->sandboxInboxId);
-
-        $handle = curl_init($endpoint);
+        $handle = curl_init($this->endpoint);
 
         if ($handle === false) {
             throw new RuntimeException('Could not start a request to Mailtrap.');

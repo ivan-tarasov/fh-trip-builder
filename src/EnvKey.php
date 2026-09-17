@@ -50,6 +50,15 @@ enum EnvKey: string
     /** Must be on a domain verified in Mailtrap, or every send is refused (C6, #155). */
     case MailtrapFromEmail = 'MAILTRAP_FROM_EMAIL';
     /**
+     * The transactional Send API's own host -- read by
+     * `Mailtrap::fromEnvironment()` only. Just the host: the `https://` and
+     * `/api/send` either side of it are identical for the sandbox host
+     * below, so only the part that actually differs lives here.
+     */
+    case MailtrapSendHost = 'MAILTRAP_SEND_HOST';
+    /** The Sandbox Send API's own host -- read by `Mailtrap::sandbox()` only. */
+    case MailtrapSandboxHost = 'MAILTRAP_SANDBOX_HOST';
+    /**
      * A Sandbox's numeric id, for the Diagnostics test send only -- read by
      * `Mailtrap::sandbox()` and nothing else. `Mailtrap::fromEnvironment()`,
      * what `alerts:check` actually sends real alerts through, never reads
