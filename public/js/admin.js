@@ -678,10 +678,10 @@
     };
 
     /*
-    | The dashboard's two real charts -- a sparkline on the Rates card and a
-    | ranking of the five most-searched routes. Only `Chart` global exists at
-    | all on the one page that loads `chart.umd.min.js`, so every other page
-    | hits the guard and returns (G2.2, #288).
+    | Two real charts -- the bookings hero's sparklines and the Searches
+    | page's own volume trend (G16, #369). Only `Chart` global exists at all
+    | on a page that loads `chart.umd.min.js`, so every other page hits the
+    | guard and returns (G2.2, #288).
     |
     | Colours read from the page's own tokens rather than being written here
     | a second time, so a chart drawn in the dark palette does not need its
@@ -700,6 +700,8 @@
 
         var style = getComputedStyle(document.documentElement);
         var signal = style.getPropertyValue('--signal').trim();
+        var quiet = style.getPropertyValue('--ink-quiet').trim();
+        var rule = style.getPropertyValue('--rule').trim();
 
         canvases.forEach(function (canvas) {
             if (canvas.dataset.chart === 'sparkline') {
@@ -711,6 +713,8 @@
                 // that never follows it.
                 var tone = HERO_SPARKLINE_TONES[canvas.dataset.tone];
                 sparkline(canvas, tone || signal);
+            } else if (canvas.dataset.chart === 'volume') {
+                volumeChart(canvas, signal, quiet, rule);
             }
         });
     };
@@ -746,6 +750,48 @@
                 scales: {
                     x: { display: false },
                     y: { display: false }
+                }
+            }
+        });
+    };
+
+    /*
+    | Real per-day counts (`SearchRepository::dailyCounts()`, G7.1, #332) --
+    | axes, gridlines and a tooltip, unlike the sparkline above, because this
+    | one is read for its actual values rather than just its shape.
+    */
+    var volumeChart = function (canvas, colour, mutedColour, gridColour) {
+        var series = JSON.parse(canvas.dataset.series || '{}');
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: Object.keys(series),
+                datasets: [{
+                    data: Object.values(series),
+                    borderColor: colour,
+                    backgroundColor: colour,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: .3,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        ticks: { color: mutedColour, maxRotation: 0, autoSkipPadding: 16 },
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: mutedColour, precision: 0 },
+                        grid: { color: gridColour }
+                    }
                 }
             }
         });

@@ -74,6 +74,10 @@ class Routes
         '/admin/bookings/export' => 'Admin@exportBookings',
         '/admin/subscribers' => 'Admin@subscribers',
         '/admin/subscribers/export' => 'Admin@exportSubscribers',
+        // A drill-down from Overview's "Most searched", not a rail
+        // destination -- plural, since `/admin/search` singular below is
+        // already the command palette's own JSON endpoint (G16, #369).
+        '/admin/searches' => 'Admin@searches',
         // Settings is a rail parent with two more children below it, each
         // its own address the same way -- Search rules kept `/admin/settings`
         // itself, the same idiom Orchid's own expandable parent link uses

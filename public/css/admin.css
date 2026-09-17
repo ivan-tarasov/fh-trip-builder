@@ -731,6 +731,21 @@ a:hover { text-decoration: underline; }
 
 .band ~ .band { margin-top: 1.5rem; }
 
+/* A band's own drill-down, Orchid's `.analytics-tile__link` (analytics.html)
+   adopted for this app's own tokens -- used once so far, Overview's "Most
+   searched" pointing at the full `searches()` page (G16, #369). */
+.band-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--signal);
+  text-decoration: none;
+  margin-bottom: .5rem;
+}
+.band-link:hover { color: var(--signal-accent); }
+
 .stamp { color: var(--ink-quiet); font-size: .75rem; }
 
 /*
@@ -785,6 +800,9 @@ a:hover { text-decoration: underline; }
    `.status-chip` already gives every other state indicator in the
    panel, so red is never the only thing saying "bad". */
 .stat-card__warn-icon { font-size: 1.1rem; margin-right: .25rem; vertical-align: -.05em; }
+
+.orchid-chart-wrap { position: relative; width: 100%; }
+.orchid-chart-wrap--md { height: 12rem; }
 
 /* "Most searched" -- Orchid's own Top Landing Pages (analytics.html,
    `.analytics-page-row`), renamed into this app's own vocabulary the way
@@ -870,6 +888,36 @@ a:hover { text-decoration: underline; }
     .searches-row { grid-template-columns: 24px 1fr auto auto; }
     .searches-row__metric--last { display: none; }
 }
+
+/* The `searches()` page's own range switcher (G16, #369) -- same shape as
+   `.bookings-range` (real `<a>` links, full reload, `is-active` +
+   `aria-current`), but that one lives inside a hero band that is always
+   dark regardless of the panel's own toggle, so its fixed white/rgba
+   values would go low-contrast here. This sits on an ordinary
+   theme-following surface, so it reads off this app's own tokens instead. */
+.searches-range {
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: 3px;
+    background: var(--sunken);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    margin-bottom: 1rem;
+}
+.searches-range__btn {
+    padding: .35rem .8rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-quiet);
+    font-weight: 700;
+    font-size: .75rem;
+    letter-spacing: .02em;
+    text-decoration: none;
+    transition: background .18s ease, color .18s ease;
+}
+.searches-range__btn:hover { color: var(--ink); }
+.searches-range__btn.is-active { background: var(--surface); color: var(--signal); box-shadow: 0 2px 8px rgba(15, 18, 32, .08); }
 
 /* A row of small facts, one `.stat-card__icon` chip each, side by side
    inside a single card rather than a table -- Orchid's own deals KPI strip
