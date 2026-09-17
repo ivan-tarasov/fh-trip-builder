@@ -1,5 +1,6 @@
 {% import 'partials/money.html.twig' as money %}
 {% import 'admin/partials/booking-macros.html.twig' as self %}
+{% import 'admin/partials/time-macros.html.twig' as time %}
 
 {# `{% block content %}`'s own body, pulled out so a POST can hand the exact
    same markup back to `fetch()` instead of a redirect -- every action on
@@ -39,7 +40,7 @@
                             {{ booking.reference ?: 'none issued' }}
                             {{ self.copyButton(booking.reference, 'reference') }}
                         </h3>
-                        <p class="stat-card__note">made {{ booking.created|date('j M Y, H:i') }} &middot; {{ extra.made_ago }}</p>
+                        <p class="stat-card__note">made {{ time.stamp(booking.created, 'datetime') }} &middot; {{ extra.made_ago }}</p>
                     </div>
                 </div>
             </div>
@@ -313,6 +314,11 @@
                                         {{ ticket.status ? ticket.status.label() : ticket.raw_status }}
                                     </span>
                                 </td>
+                                {# A plain `DATE` column, no time of day -- there is no
+                                   instant here to convert, only a calendar day, and
+                                   shifting one by a timezone offset risks landing on
+                                   the wrong day rather than a correctly local time
+                                   (G12, #360). Left as the server's own reading. #}
                                 <td class="mono text-body-secondary">{{ ticket.issue_date|date('j M Y') }}</td>
                                 {# Always visible, unlike the other row-action menus on this
                                    panel -- there is no larger list to declutter here, and an
@@ -463,8 +469,8 @@
                             {% for row in booking.payment_breakdown %}
                                 <tr>
                                     <td class="text-body-secondary">{{ payment_created_by ? payment_created_by.label() : '—' }}</td>
-                                    <td class="mono text-body-secondary">{{ booking.created|date('j M Y, H:i') }}</td>
-                                    <td class="mono text-body-secondary">{{ booking.created|date('j M Y, H:i') }}</td>
+                                    <td class="mono text-body-secondary">{{ time.stamp(booking.created, 'datetime') }}</td>
+                                    <td class="mono text-body-secondary">{{ time.stamp(booking.created, 'datetime') }}</td>
                                     <td>{{ row.passenger }}</td>
                                     <td class="text-body-secondary">{{ extra.currency }}</td>
                                     <td class="mono">{{ money.whole(row.base) }}</td>
@@ -565,7 +571,7 @@
                                     {{ remark.tone ? remark.tone.label() : remark.raw_tone }}
                                 </span>
                             </td>
-                            <td class="mono text-body-secondary">{{ remark.created|date('j M Y, H:i') }}</td>
+                            <td class="mono text-body-secondary">{{ time.stamp(remark.created, 'datetime') }}</td>
                             <td class="text-body-secondary">{{ remark.actor ? remark.actor.label() : 'somebody' }}</td>
                             <td>{{ remark.body }}</td>
                             <td class="text-end row-actions" style="width: 1%;">
@@ -613,7 +619,7 @@
         {% for line in log %}
             {% set tone = line.event ? log_tones[line.event.value]|default('') : '' %}
             <div class="log-row">
-                <span class="log-row__time mono text-body-secondary">{{ line.at|date('j M Y, H:i') }}</span>
+                <span class="log-row__time mono text-body-secondary">{{ time.stamp(line.at, 'datetime') }}</span>
                 <span class="log-row__dot{{ tone ? ' log-row__dot--' ~ tone : '' }}"></span>
                 <span class="log-row__msg">
                     {{ line.event ? line.event.label() : line.raw }}
@@ -623,7 +629,7 @@
             </div>
         {% else %}
             <div class="log-row">
-                <span class="log-row__time mono text-body-secondary">{{ extra.made|date('j M Y, H:i') }}</span>
+                <span class="log-row__time mono text-body-secondary">{{ time.stamp(extra.made, 'datetime') }}</span>
                 <span class="log-row__dot log-row__dot--signal"></span>
                 <span class="log-row__msg">
                     Booked
@@ -639,7 +645,7 @@
     <p class="text-body-secondary small mt-2">
         {% if log_from %}
             Nothing has been recorded against this booking. The log has been
-            running since {{ log_from|date('j M Y') }}, so anything that
+            running since {{ time.stamp(log_from, 'date') }}, so anything that
             happened to this one before then was not written down.
         {% else %}
             Nothing has been recorded against any booking yet. The log starts

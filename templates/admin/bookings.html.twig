@@ -1,5 +1,6 @@
 {% extends 'admin/layout.html.twig' %}
 {% import 'partials/money.html.twig' as money %}
+{% import 'admin/partials/time-macros.html.twig' as time %}
 
 {% set admin_section = 'bookings' %}
 
@@ -188,11 +189,18 @@
                                         <span class="text-body-secondary">will not build</span>
                                     {% endif %}
                                 </td>
-                                {# A DateTimeImmutable off the presenter, not a string. #}
+                                {# A DateTimeImmutable off the presenter, not a string.
+                                   Left in UTC on purpose, not run through `time.stamp()`
+                                   below -- this is the flight's own local departure time
+                                   at the airport, not an instant, and converting it to
+                                   the operator's timezone would show the wrong time for
+                                   the flight rather than a differently-zoned right one
+                                   (G12, #360; the same distinction `OneFrameTest` guards
+                                   in SQL). #}
                                 <td class="mono text-body-secondary">
                                     {% if booking.departs %}{{ booking.departs|date('j M Y') }}{% else %}&mdash;{% endif %}
                                 </td>
-                                <td class="mono text-body-secondary">{{ booking.created|date('j M Y') }}</td>
+                                <td class="mono text-body-secondary">{{ time.stamp(booking.created, 'date') }}</td>
                                 {# The date says when, this says how long. Scanning a
                                    list, the second is the question being asked -- its
                                    own column rather than a second line under the

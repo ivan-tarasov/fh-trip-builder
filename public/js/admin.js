@@ -192,6 +192,58 @@
     };
 
     /*
+    | Every admin timestamp is rendered UTC server-side, deliberately (G12,
+    | #360's own template comment has the reasoning) -- this rewrites each
+    | one's text to the browser's own local zone, the only place that is
+    | known with no accounts table to store a preference in. The UTC
+    | reading it replaces was already correct, just not local, so a page
+    | with JS disabled or blocked still shows a real, honest time.
+    |
+    | `en-GB`, not the visitor's own locale: only the zone should change --
+    | the panel's own day-month-year, 24-hour style should not vary by who
+    | is reading it.
+    */
+    var LOCAL_TIME_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    var localizeTimestampsPad = function (n) {
+        return n < 10 ? '0' + n : String(n);
+    };
+
+    var localizeTimestamps = function () {
+        document.querySelectorAll('time[data-local]').forEach(function (el) {
+            var flavor = el.dataset.local;
+            var iso = el.getAttribute('datetime');
+
+            if (!iso) {
+                return;
+            }
+
+            var instant = new Date(iso);
+
+            if (isNaN(instant.getTime())) {
+                return;
+            }
+
+            // A `Date`'s own getters already read the runtime's local
+            // timezone -- no `Intl` needed, and no locale quirk (`en-GB`
+            // gives September as "Sept", not the three letters every date
+            // server-side already uses) to keep in step by hand.
+            var day = instant.getDate();
+            var month = LOCAL_TIME_MONTHS[instant.getMonth()];
+            var year = instant.getFullYear();
+            var time = localizeTimestampsPad(instant.getHours()) + ':' + localizeTimestampsPad(instant.getMinutes());
+
+            if (flavor === 'date') {
+                el.textContent = day + ' ' + month + ' ' + year;
+            } else if (flavor === 'freshness') {
+                el.textContent = day + ' ' + month + ', ' + time;
+            } else if (flavor === 'datetime') {
+                el.textContent = day + ' ' + month + ' ' + year + ', ' + time;
+            }
+        });
+    };
+
+    /*
     | The same toast, built by hand for an answer `ajaxBookingForms()` gets
     | back from `fetch()` rather than a queued flash -- there is nothing in
     | the session for `flash()` to have written into the page, since the
@@ -315,6 +367,11 @@
                 if (tools !== null && typeof json.tools_html === 'string') {
                     tools.innerHTML = json.tools_html;
                 }
+
+                // Neither swap runs through the page's own load-time init --
+                // a timestamp just written into either one would otherwise
+                // sit in UTC until the next full page load.
+                localizeTimestamps();
 
                 // A submit from inside `#ticketNumberModal{id}` or
                 // `#ticketAddModal` just destroyed the open modal's own DOM
@@ -1048,6 +1105,7 @@
     confirmFirst();
     fixedStrategyDropdowns();
     toasts();
+    localizeTimestamps();
     copyButtons();
     themeToggle();
     densityToggle();
