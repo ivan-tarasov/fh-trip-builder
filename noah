@@ -257,10 +257,11 @@ try {
     | The schedule
     |--------------------------------------------------------------------------
     |
-    | The only thing cron calls. What runs and when is config/noah/schedule.php,
-    | in git, so a rebuilt server does not take the schedule with it (E16, #167).
+    | The only thing cron calls. What runs and when is the scheduled_jobs table,
+    | edited from /admin/schedule (G19, #377) -- so a rebuilt server does not
+    | take the schedule with it (E16, #167).
     |
-    |     0,15,30,45 * * * * cd /path/to/fh-trip-builder && php noah schedule:run
+    |     * * * * * cd /path/to/fh-trip-builder && php noah schedule:run
     |
     */
 

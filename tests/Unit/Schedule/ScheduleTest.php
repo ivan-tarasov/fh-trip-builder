@@ -6,12 +6,8 @@ namespace TripBuilder\Tests\Unit\Schedule;
 
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use RuntimeException;
-use SplFileInfo;
 use TripBuilder\Cron;
-use TripBuilder\Helper;
 use TripBuilder\Schedule;
 
 /**
@@ -20,11 +16,14 @@ use TripBuilder\Schedule;
  * Everything here is pure: a clock passed in, a set of records passed in. The
  * thing being protected is a decision made at 03:00 by a process nobody
  * watches, so it has to be checkable at any hour by a test that does not wait.
+ *
+ * `Schedule::fromRows()`'s own refusals are tested here, against a plain
+ * array -- reading the real, DB-backed schedule and checking every scheduled
+ * command actually exists is `ScheduledJobRepositoryTest`'s job, an
+ * integration test, since both need a real `scheduled_jobs` table.
  */
 final class ScheduleTest extends TestCase
 {
-    private const string CONFIG = '/config/noah/schedule.php';
-
     /**
      * @param list<array{command: string, at: string}> $tasks
      */
@@ -143,7 +142,7 @@ final class ScheduleTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessageMatches('/not something this understands/');
 
-        Schedule::fromConfig(self::fixture([self::fields('currency:rates', weekday: 'MON')]));
+        Schedule::fromRows([self::fields('currency:rates', weekday: 'MON')]);
     }
 
     /**
@@ -161,7 +160,7 @@ final class ScheduleTest extends TestCase
         $fields = self::fields('currency:rates');
         unset($fields[Cron::DAY]);
 
-        Schedule::fromConfig(self::fixture([$fields]));
+        Schedule::fromRows([$fields]);
     }
 
     /**
@@ -183,60 +182,6 @@ final class ScheduleTest extends TestCase
             Cron::WEEKDAY => $weekday,
             Schedule::COMMAND => $command,
         ];
-    }
-
-    /**
-     * Every scheduled command is a command that exists.
-     *
-     * This is the failure this whole design invites: a typo in the config is
-     * not a syntax error, not a test failure and not a deploy failure -- it is
-     * a command that silently never runs, discovered weeks later by noticing
-     * that rates are stale. Checked against the `AsCommand` names on disk.
-     */
-    public function testEveryScheduledCommandExists(): void
-    {
-        $registered = [];
-
-        foreach (self::filesUnder(Helper::getRootDir() . '/src/Noah') as $file) {
-            if (preg_match("/name: '([^']+)'/", (string) file_get_contents($file), $found) === 1) {
-                $registered[] = $found[1];
-            }
-        }
-
-        self::assertNotEmpty($registered, 'No commands were found to check against.');
-
-        foreach (Schedule::fromConfig(Helper::getRootDir() . self::CONFIG)->tasks() as $task) {
-            $name = explode(' ', $task['command'])[0];
-
-            self::assertContains($name, $registered, sprintf(
-                '`%s` is scheduled and does not exist. It would fail every night, quietly.',
-                $name,
-            ));
-        }
-    }
-
-    public function testTheRealScheduleLoads(): void
-    {
-        $tasks = Schedule::fromConfig(Helper::getRootDir() . self::CONFIG)->tasks();
-
-        self::assertNotEmpty($tasks);
-    }
-
-    /** @return list<string> */
-    private static function filesUnder(string $directory): array
-    {
-        $found = [];
-
-        /** @var iterable<SplFileInfo> $files */
-        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
-
-        foreach ($files as $file) {
-            if ($file->isFile() && $file->getExtension() === 'php') {
-                $found[] = $file->getPathname();
-            }
-        }
-
-        return $found;
     }
 
     /**
@@ -348,26 +293,5 @@ final class ScheduleTest extends TestCase
             new DateTimeImmutable('2026-09-12 14:30:05'),
             ['alerts:check' => ['last_run_at' => '2026-09-12 14:15:59']],
         ));
-    }
-
-    /**
-     * @param list<array<string, mixed>> $tasks
-     */
-    private static function fixture(array $tasks): string
-    {
-        $path = sys_get_temp_dir() . '/schedule-' . uniqid() . '.php';
-        $body = "<?php\n\nuse TripBuilder\\Cron;\nuse TripBuilder\\Schedule;\n\nreturn [\n";
-
-        foreach ($tasks as $task) {
-            $body .= '    [';
-            foreach ($task as $key => $value) {
-                $body .= sprintf("'%s' => %s, ", $key, var_export($value, true));
-            }
-            $body .= "],\n";
-        }
-
-        file_put_contents($path, $body . "];\n");
-
-        return $path;
     }
 }

@@ -1,0 +1,58 @@
+{% extends 'admin/layout.html.twig' %}
+{% import 'admin/partials/time-macros.html.twig' as time %}
+
+{% set admin_section = 'schedule' %}
+
+{% block title %}{{ command }} history{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/schedule">Schedule</a></li>
+    <li class="breadcrumb-item active" aria-current="page">History</li>
+{% endblock %}
+
+{% block description %}<p class="well__description mono">{{ command }}</p>{% endblock %}
+{% block tools %}<a class="btn btn-outline-secondary btn-sm" href="/admin/schedule">Back</a>{% endblock %}
+
+{% block content %}
+    {% if runs|length == 0 %}
+        <p class="text-body-secondary">Nothing has run yet.</p>
+    {% else %}
+        <div class="card orchid-card">
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0" aria-label="Run history for {{ command }}">
+                    <thead>
+                        <tr>
+                            <th scope="col">Started</th>
+                            <th scope="col">Finished</th>
+                            <th scope="col">Exit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                            <tr>
+                                <td class="mono">{{ time.stamp(run.started_at) }}</td>
+                                <td class="mono text-body-secondary">
+                                    {{ run.finished_at ? time.stamp(run.finished_at) : '—' }}
+                                </td>
+                                <td>
+                                    {% if run.exit_code is null %}
+                                        {# Still running, or the process was killed before it could report --
+                                           the two look identical from here, so the wording says only what is
+                                           known rather than guessing which one this is. #}
+                                        <span class="status-chip status-chip--muted"><i class="bi bi-hourglass-split" aria-hidden="true"></i>no exit recorded</span>
+                                    {% elseif run.exit_code == 0 %}
+                                        <span class="status-chip status-chip--good"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>ok</span>
+                                    {% else %}
+                                        <span class="status-chip status-chip--bad"><i class="bi bi-x-circle-fill" aria-hidden="true"></i>exit {{ run.exit_code }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="field__hint">The last {{ runs|length }} attempt{{ runs|length == 1 ? '' : 's' }}, newest first.</p>
+    {% endif %}
+{% endblock %}

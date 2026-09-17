@@ -10,9 +10,12 @@ return [
     | When each scheduled command last started, when it last worked, and what it
     | said. One row per command, written by `schedule:run`.
     |
-    | The schedule itself is not here -- that is `config/noah/schedule.php`, in
-    | git, which is the whole point of E16 (#167). This table is only what
-    | happened.
+    | The schedule itself is not here -- that is `scheduled_jobs`, edited from
+    | `/admin/schedule` (G19, #377; before that `config/noah/schedule.php`, in
+    | git, which was the whole point of E16, #167). This table is only what
+    | happened, one row per command. `schedule_run_history` (G19) keeps every
+    | attempt; this one keeps only the latest, which is what `Schedule::due()`
+    | and `health()` both need.
     |
     | `last_run_at` and `last_success_at` are two columns on purpose, and the
     | difference is the entire value of the table.

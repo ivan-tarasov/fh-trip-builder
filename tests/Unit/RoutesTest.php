@@ -218,6 +218,21 @@ final class RoutesTest extends TestCase
         self::assertTrue(Routes::emitsOwnPayload('/admin/preview'));
     }
 
+    /**
+     * The schedule's own editor, addressed by id rather than by slug -- a
+     * job has no name of its own to be one (G19, #377).
+     */
+    public function testTheScheduleEditorAnswersWithAndWithoutAnId(): void
+    {
+        self::assertSame('Admin@schedule', Routes::resolve('/admin/schedule'));
+        self::assertSame('Admin@scheduleJob', Routes::resolve('/admin/schedule/job'));
+        self::assertSame('Admin@scheduleJob', Routes::resolve('/admin/schedule/job/42'));
+        self::assertSame('Admin@scheduleHistory', Routes::resolve('/admin/schedule/history'));
+
+        self::assertNull(Routes::resolve('/admin/schedule/job/abc'));
+        self::assertNull(Routes::resolve('/admin/schedule/job/42/extra'));
+    }
+
     public function testEveryDynamicRouteIsAValidPatternNamingAnAction(): void
     {
         foreach (Routes::DYNAMIC_ROUTES as $pattern => $route) {

@@ -81,10 +81,11 @@ final readonly class DashboardRepository
      * which the template says outright rather than drawing an empty list.
      *
      * Every item names the one place on this page (or in the panel) that
-     * already explains it further -- `#schedule` for anything a scheduled
-     * command drives, the bookings list for an unticketed one -- rather
-     * than a button that goes nowhere real. `Database` gets none: nothing
-     * in the panel says more about a clock than this card already does.
+     * already explains it further -- `/admin/schedule` for anything a
+     * scheduled command drives, the bookings list for an unticketed one --
+     * rather than a button that goes nowhere real. `Database` gets none:
+     * nothing in the panel says more about a clock than this card already
+     * does.
      *
      * @param array<string, array{age: string, stale: bool}> $schedule
      * @return list<array{title: string, subtitle: string, icon: string, tone: Tone, action: ?array{label: string, href: string}}>
@@ -92,7 +93,7 @@ final readonly class DashboardRepository
     public function attention(array $schedule): array
     {
         $items = [];
-        $scheduleAction = ['label' => 'View schedule', 'href' => '#schedule'];
+        $scheduleAction = ['label' => 'View schedule', 'href' => '/admin/schedule'];
 
         if ($schedule === []) {
             $items[] = [

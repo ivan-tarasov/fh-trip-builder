@@ -13,8 +13,8 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
-use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
+use TripBuilder\Repository\ScheduledJobRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Schedule;
 
@@ -30,10 +30,12 @@ use TripBuilder\Schedule;
  *
  *     * * * * * cd /path/to/fh-trip-builder && php noah schedule:run >> ~/logs/schedule.log 2>&1
  *
- * Everything else lives in `config/noah/schedule.php`, which is in git, which
- * is the point: before this the crontab was the only record of what this
- * application runs on a schedule, so a rebuilt server took it with it and
- * nothing here said what had been lost (E16, #167).
+ * Everything else lives in the `scheduled_jobs` table, edited from
+ * `/admin/schedule` (G19, #377) -- before that it was `config/noah/schedule.php`,
+ * in git, so a pull request was the only record of what this application runs
+ * on a schedule. The point survives the move: a rebuilt server still cannot
+ * lose the schedule with it, because it was never on the server to begin with
+ * (E16, #167).
  *
  * **This returns SUCCESS even when a task fails.** A non-zero exit here would
  * mean cron mailing the operator about a broken `currency:rates` and, worse,
@@ -61,7 +63,7 @@ final class Run extends AbstractCommand
         $now = new DateTimeImmutable();
 
         try {
-            $schedule = Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php');
+            $schedule = Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled());
             $runs = new ScheduleRunRepository($this->connection());
             $due = $schedule->due($now, $runs->all());
         } catch (Throwable $e) {
@@ -136,6 +138,7 @@ final class Run extends AbstractCommand
         // pick up something still going, and a task whose process is killed
         // must not retry every quarter hour until somebody notices.
         $runs->started($command, new DateTimeImmutable()->format('Y-m-d H:i:s'));
+        $historyId = $runs->historyStarted($command, new DateTimeImmutable()->format('Y-m-d H:i:s'));
 
         try {
             $application = $this->getApplication();
@@ -159,7 +162,9 @@ final class Run extends AbstractCommand
             $this->io->error(sprintf('%s threw: %s', $command, $e->getMessage()));
         }
 
-        $runs->finished($command, $exit, new DateTimeImmutable()->format('Y-m-d H:i:s'));
+        $at = new DateTimeImmutable()->format('Y-m-d H:i:s');
+        $runs->finished($command, $exit, $at);
+        $runs->historyFinished($historyId, $exit, $at);
 
         $this->formatOutput(
             $command,

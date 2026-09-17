@@ -28,6 +28,7 @@ final class ScheduleRunRepositoryTest extends IntegrationTestCase
         }
 
         $this->connection()->execute('DELETE FROM schedule_runs WHERE command LIKE ?', ['zz:%']);
+        $this->connection()->execute('DELETE FROM schedule_run_history WHERE command LIKE ?', ['zz:%']);
     }
 
     private function runs(): ScheduleRunRepository
@@ -98,5 +99,56 @@ final class ScheduleRunRepositoryTest extends IntegrationTestCase
 
         self::assertSame(1, $count);
         self::assertSame('2026-09-13 03:00:00', $runs->all()[self::COMMAND]['last_run_at']);
+    }
+
+    /**
+     * Unlike `started()` above, every history entry is its own row -- real
+     * per-run history is the whole point of it (G19, #377).
+     */
+    public function testEveryAttemptIsItsOwnHistoryRow(): void
+    {
+        $runs = $this->runs();
+        $first = $runs->historyStarted(self::COMMAND, '2026-09-12 03:00:00');
+        $runs->historyFinished($first, 0, '2026-09-12 03:00:09');
+
+        $second = $runs->historyStarted(self::COMMAND, '2026-09-13 03:00:00');
+        $runs->historyFinished($second, 1, '2026-09-13 03:00:02');
+
+        self::assertNotSame($first, $second, 'the second start reused the first row');
+
+        $history = $runs->historyFor(self::COMMAND);
+
+        self::assertCount(2, $history);
+        // Newest first.
+        self::assertSame('2026-09-13 03:00:00', $history[0]['started_at']);
+        self::assertSame(1, $history[0]['exit_code']);
+        self::assertSame('2026-09-12 03:00:00', $history[1]['started_at']);
+        self::assertSame(0, $history[1]['exit_code']);
+    }
+
+    /**
+     * A row `historyFinished()` never reached still reads -- a crashed or
+     * still-running attempt is visible in the history rather than silently
+     * missing from it.
+     */
+    public function testAnUnfinishedAttemptStillReadsAsARow(): void
+    {
+        $runs = $this->runs();
+        $runs->historyStarted(self::COMMAND, '2026-09-12 03:00:00');
+
+        $history = $runs->historyFor(self::COMMAND);
+
+        self::assertCount(1, $history);
+        self::assertNull($history[0]['finished_at']);
+        self::assertNull($history[0]['exit_code']);
+    }
+
+    public function testHistoryForOnlyReadsItsOwnCommand(): void
+    {
+        $runs = $this->runs();
+        $runs->historyStarted(self::COMMAND, '2026-09-12 03:00:00');
+        $runs->historyStarted('zz:other', '2026-09-12 03:00:00');
+
+        self::assertCount(1, $runs->historyFor(self::COMMAND));
     }
 }

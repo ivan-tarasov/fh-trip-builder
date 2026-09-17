@@ -1,0 +1,90 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% set admin_section = 'schedule' %}
+
+{% block title %}{{ id ? 'Edit job' : 'New job' }}{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/schedule">Schedule</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ block('title') }}</li>
+{% endblock %}
+
+{% block tools %}<a class="btn btn-outline-secondary btn-sm" href="/admin/schedule">Back</a>{% endblock %}
+
+{% block content %}
+    {% if error %}
+        <p class="notice notice--bad" role="alert" aria-live="assertive">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="/admin/schedule/job{{ id ? '/' ~ id : '' }}">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+
+        <div class="card orchid-card mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="command_base" class="form-label">Command</label>
+                        <select id="command_base" name="command_base" class="form-select" required>
+                            {% for option in commands %}
+                                <option value="{{ option }}"{{ job.command_base == option ? ' selected' : '' }}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="field__hint">Only what this panel already knows how to run unattended.</p>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label for="arguments" class="form-label">Arguments</label>
+                        <input id="arguments" name="arguments" type="text" class="form-control mono" maxlength="190"
+                               value="{{ job.arguments }}" autocapitalize="off" spellcheck="false"
+                               placeholder="e.g. --force, or 10000 --level">
+                        <p class="field__hint">Optional. Whatever flags that command takes.</p>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <label for="minute" class="form-label">Minute</label>
+                        <input id="minute" name="minute" type="text" class="form-control mono" required
+                               value="{{ job.minute }}" autocapitalize="off" spellcheck="false">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label for="hour" class="form-label">Hour</label>
+                        <input id="hour" name="hour" type="text" class="form-control mono" required
+                               value="{{ job.hour }}" autocapitalize="off" spellcheck="false">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label for="day" class="form-label">Day</label>
+                        <input id="day" name="day" type="text" class="form-control mono" required
+                               value="{{ job.day }}" autocapitalize="off" spellcheck="false">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label for="month" class="form-label">Month</label>
+                        <input id="month" name="month" type="text" class="form-control mono" required
+                               value="{{ job.month }}" autocapitalize="off" spellcheck="false">
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <label for="weekday" class="form-label">Weekday</label>
+                        <input id="weekday" name="weekday" type="text" class="form-control mono" required
+                               value="{{ job.weekday }}" autocapitalize="off" spellcheck="false">
+                    </div>
+
+                    <div class="col-6 col-md-9 d-flex align-items-end">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="enabled" name="enabled" value="1"
+                                   {{ job.enabled ? 'checked' : '' }}>
+                            <label class="form-check-label" for="enabled">Run this job</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <p class="field__hint">
+                            Crontab notation: <code>*</code>, a number, <code>a-b</code>, a comma-separated
+                            list, or any of those with <code>/step</code>. All five fields are required.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+{% endblock %}

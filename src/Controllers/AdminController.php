@@ -14,6 +14,7 @@ use TripBuilder\AdminEventResource;
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
 use TripBuilder\BookingStatus;
+use TripBuilder\Cron;
 use TripBuilder\Csrf;
 use TripBuilder\DocumentType;
 use TripBuilder\Flash;
@@ -33,6 +34,7 @@ use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\BookingTicketRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\DashboardRepository;
+use TripBuilder\Repository\ScheduledJobRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\Repository\SettingsRepository;
@@ -104,6 +106,33 @@ class AdminController extends AbstractController
     private const int SEARCHES_RANKING_LIMIT = 20;
 
     /**
+     * What a scheduled job is allowed to run (G19, #377).
+     *
+     * Not the full 16 `noah` commands -- `db:clear` wipes tables, `app:install`
+     * and `db:migrate` are one-time operations a schedule would repeat forever,
+     * `schedule:run` is the scheduler itself, and `admin:password` is an
+     * interactive prompt that does nothing when run unattended. Picking from
+     * "every registered command" would put a destructive one in the same
+     * dropdown as a currency refresh.
+     */
+    private const array SCHEDULABLE_COMMANDS = [
+        'currency:rates',
+        'db:prune',
+        'db:backup',
+        'flights:add',
+        'flights:cleaning',
+        'flights:reprice',
+        'flights:cabins',
+        'flights:realign',
+        'articles:import',
+        'airside:import',
+        'airside:prune',
+    ];
+
+    /** Flags and values only -- what a real command's arguments look like. */
+    private const string ARGUMENTS_PATTERN = '/^[A-Za-z0-9 _.=,-]*$/';
+
+    /**
      * The dashboard.
      *
      * An operations page and not a business one, which was measured rather than
@@ -125,7 +154,7 @@ class AdminController extends AbstractController
         }
 
         $dashboard = new DashboardRepository($this->connection());
-        $schedule = $this->schedule();
+        $schedule = $this->scheduleHealth();
 
         echo new TwigRenderer()->render('admin/overview.html.twig', [
             // "What should I do next" (G5.2, #317), ahead of "is it
@@ -245,12 +274,16 @@ class AdminController extends AbstractController
      * `HealthController` already asks it this way -- a second opinion here
      * would be a second thing to keep in step.
      *
-     * @return array{health: array<string, array{age: string, stale: bool}>, tasks: list<array{command: string, cron: \TripBuilder\Cron}>}
+     * Named apart from the public `schedule()` route action below it, which
+     * answers a different question (the schedule itself, edited) rather than
+     * this one (is it healthy, read-only, for the dashboard).
+     *
+     * @return array{health: array<string, array{age: string, stale: bool}>, tasks: list<array{command: string, cron: Cron}>}
      */
-    private function schedule(): array
+    private function scheduleHealth(): array
     {
         try {
-            $schedule = Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php');
+            $schedule = Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled());
 
             return [
                 'health' => $schedule->health(
@@ -370,6 +403,317 @@ class AdminController extends AbstractController
         }
 
         $this->categoryForm($category);
+    }
+
+    /**
+     * The live schedule -- every job, its status, and a history link. Also
+     * takes the list's own small POSTs: enable, disable, remove -- the same
+     * shape as `content()`'s show/hide/move.
+     */
+    public function schedule(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->scheduleAct();
+
+            return;
+        }
+
+        echo new TwigRenderer()->render('admin/schedule.html.twig', [
+            'jobs' => $this->scheduleJobRows(new ScheduledJobRepository($this->connection())->all()),
+        ]);
+    }
+
+    /**
+     * One job's form, and the saving of it. Mirrors `category()`: no id in
+     * the path is a new job, an id is that job.
+     *
+     * @throws Exception|Error
+     */
+    public function scheduleJob(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $jobs = new ScheduledJobRepository($this->connection());
+        $id = $this->scheduledJobIdFromPath();
+
+        if ($this->request->isPost()) {
+            $this->saveScheduleJob($jobs, $id);
+
+            return;
+        }
+
+        $job = $id === null ? null : $jobs->find($id);
+
+        if ($id !== null && $job === null) {
+            $this->notFound();
+
+            return;
+        }
+
+        $split = self::splitCommand($job['command'] ?? '');
+
+        $this->scheduleJobForm($id, [
+            'command_base' => $split['base'],
+            'arguments' => $split['arguments'],
+            'minute' => $job['minute'] ?? Cron::EVERY,
+            'hour' => $job['hour'] ?? Cron::EVERY,
+            'day' => $job['day'] ?? Cron::EVERY,
+            'month' => $job['month'] ?? Cron::EVERY,
+            'weekday' => $job['weekday'] ?? Cron::EVERY,
+            'enabled' => $job['enabled'] ?? true,
+        ]);
+    }
+
+    /**
+     * One command's real run history, newest first.
+     *
+     * @throws Exception|Error
+     */
+    public function scheduleHistory(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        $command = $this->request->query->str('command');
+
+        if ($command === '') {
+            $this->notFound();
+
+            return;
+        }
+
+        $runs = new ScheduleRunRepository($this->connection())->historyFor($command, 50);
+
+        echo new TwigRenderer()->render('admin/schedule-history.html.twig', [
+            'command' => $command,
+            'runs' => array_map(static fn(array $row): array => [
+                'started_at' => new DateTimeImmutable($row['started_at']),
+                'finished_at' => $row['finished_at'] === null ? null : new DateTimeImmutable($row['finished_at']),
+                'exit_code' => $row['exit_code'],
+            ], $runs),
+        ]);
+    }
+
+    /**
+     * Every job as the list page shows it: its own cron read as an
+     * expression, plus the same age/exit/stale reading Overview's table
+     * gives -- built straight from `Schedule::health()` rather than through
+     * `DashboardRepository::schedule()`, which only ever sees the enabled
+     * jobs `Run.php` would and this page needs the disabled ones too.
+     *
+     * @param list<array{id: int, command: string, minute: string, hour: string, day: string, month: string, weekday: string, enabled: bool}> $rows
+     * @return list<array{id: int, command: string, cron: string, enabled: bool, age: string, exit: ?int, stale: bool}>
+     */
+    private function scheduleJobRows(array $rows): array
+    {
+        $schedule = Schedule::fromRows($rows);
+        $records = new ScheduleRunRepository($this->connection())->all();
+        $health = $schedule->health(new DateTimeImmutable(), $records);
+
+        $expressions = [];
+
+        foreach ($schedule->tasks() as $task) {
+            $expressions[$task['command']] = $task['cron']->expression();
+        }
+
+        $built = [];
+
+        foreach ($rows as $job) {
+            $seen = $health[$job['command']] ?? ['age' => 'never', 'stale' => true];
+
+            $built[] = [
+                'id' => $job['id'],
+                'command' => $job['command'],
+                'cron' => $expressions[$job['command']],
+                'enabled' => $job['enabled'],
+                'age' => $seen['age'],
+                'exit' => isset($records[$job['command']]) ? $records[$job['command']]['last_exit'] : null,
+                'stale' => $seen['stale'],
+            ];
+        }
+
+        return $built;
+    }
+
+    /**
+     * The list's own small POSTs: enable, disable, remove.
+     */
+    private function scheduleAct(): void
+    {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
+            $this->bounce('/admin/schedule');
+
+            return;
+        }
+
+        $id = $this->request->body->int('id');
+        $action = $this->request->body->str('action');
+        $jobs = new ScheduledJobRepository($this->connection());
+        $job = $jobs->find($id);
+
+        if ($job === null || !in_array($action, ['enable', 'disable', 'remove'], true)) {
+            Flash::set('Nothing changed. That was not a real job.', FlashTone::Error);
+            $this->bounce('/admin/schedule');
+
+            return;
+        }
+
+        match ($action) {
+            'enable' => $jobs->setEnabled($id, true),
+            'disable' => $jobs->setEnabled($id, false),
+            'remove' => $jobs->remove($id),
+        };
+
+        new AdminEventRepository($this->connection())->record(
+            AdminEventResource::Schedule,
+            $job['command'],
+            $action === 'remove' ? AdminEvent::Removed : AdminEvent::Edited,
+            $job['command'],
+        );
+
+        Flash::set(match ($action) {
+            'enable' => 'Job enabled.',
+            'disable' => 'Job disabled.',
+            'remove' => 'Job removed.',
+        });
+        $this->bounce('/admin/schedule');
+    }
+
+    private function saveScheduleJob(ScheduledJobRepository $jobs, ?int $id): void
+    {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            $this->scheduleJobForm($id, $this->postedScheduleJob(), 'That form went stale. Try again.');
+
+            return;
+        }
+
+        $posted = $this->postedScheduleJob();
+        $command = $posted['arguments'] === ''
+            ? $posted['command_base']
+            : $posted['command_base'] . ' ' . $posted['arguments'];
+
+        $error = match (true) {
+            !in_array($posted['command_base'], self::SCHEDULABLE_COMMANDS, true)
+                => 'Pick one of the commands this can actually run.',
+            $posted['arguments'] !== '' && preg_match(self::ARGUMENTS_PATTERN, $posted['arguments']) !== 1
+                => 'Arguments can only use letters, digits, spaces, and - _ . = ,',
+            $jobs->commandExists($command, $id)
+                => 'There is already a job for that exact command and arguments.',
+            default => null,
+        };
+
+        if ($error === null) {
+            try {
+                Cron::fromFields([
+                    Cron::MINUTE => $posted['minute'],
+                    Cron::HOUR => $posted['hour'],
+                    Cron::DAY => $posted['day'],
+                    Cron::MONTH => $posted['month'],
+                    Cron::WEEKDAY => $posted['weekday'],
+                ], $command);
+            } catch (RuntimeException $e) {
+                $error = $e->getMessage();
+            }
+        }
+
+        if ($error !== null) {
+            $this->scheduleJobForm($id, $posted, $error);
+
+            return;
+        }
+
+        if ($id === null) {
+            $jobs->create(
+                $command,
+                $posted['minute'],
+                $posted['hour'],
+                $posted['day'],
+                $posted['month'],
+                $posted['weekday'],
+                $posted['enabled'],
+            );
+        } else {
+            $jobs->update(
+                $id,
+                $command,
+                $posted['minute'],
+                $posted['hour'],
+                $posted['day'],
+                $posted['month'],
+                $posted['weekday'],
+                $posted['enabled'],
+            );
+        }
+
+        new AdminEventRepository($this->connection())
+            ->record(AdminEventResource::Schedule, $command, AdminEvent::Edited, $command);
+
+        Flash::set($id === null ? 'Job created.' : 'Job saved.');
+        $this->bounce('/admin/schedule');
+    }
+
+    /**
+     * @return array{command_base: string, arguments: string, minute: string, hour: string, day: string, month: string, weekday: string, enabled: bool}
+     */
+    private function postedScheduleJob(): array
+    {
+        $body = $this->request->body;
+
+        return [
+            'command_base' => $body->str('command_base'),
+            'arguments' => trim($body->str('arguments')),
+            'minute' => trim($body->str('minute')),
+            'hour' => trim($body->str('hour')),
+            'day' => trim($body->str('day')),
+            'month' => trim($body->str('month')),
+            'weekday' => trim($body->str('weekday')),
+            'enabled' => $body->str('enabled') !== '',
+        ];
+    }
+
+    /**
+     * @param array{command_base: string, arguments: string, minute: string, hour: string, day: string, month: string, weekday: string, enabled: bool} $job
+     * @throws Exception|Error
+     */
+    private function scheduleJobForm(?int $id, array $job, ?string $error = null): void
+    {
+        echo new TwigRenderer()->render('admin/schedule-job.html.twig', [
+            'id' => $id,
+            'job' => $job,
+            'commands' => self::SCHEDULABLE_COMMANDS,
+            'error' => $error,
+        ]);
+    }
+
+    /**
+     * @return array{base: string, arguments: string}
+     */
+    private static function splitCommand(string $command): array
+    {
+        $parts = explode(' ', $command, 2);
+
+        return ['base' => $parts[0], 'arguments' => $parts[1] ?? ''];
+    }
+
+    /**
+     * The id in the address, or null where there is none and this is a new
+     * job being written. One path segment deeper than `slugFromPath()`'s own
+     * `/admin/category(/{slug})?` -- this route is `/admin/schedule/job(/{id})?`.
+     */
+    private function scheduledJobIdFromPath(): ?int
+    {
+        $parts = explode('/', trim($this->request->path(), '/'));
+        $last = end($parts);
+
+        return count($parts) > 3 && ctype_digit($last) ? (int) $last : null;
     }
 
     /**

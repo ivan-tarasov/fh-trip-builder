@@ -1,0 +1,91 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% set admin_section = 'schedule' %}
+
+{% block title %}Schedule{% endblock %}
+{% block description %}<p class="well__description">What runs without anybody asking, and when.</p>{% endblock %}
+{% block tools %}<a class="btn btn-primary btn-sm" href="/admin/schedule/job">Add job</a>{% endblock %}
+
+{# One form per action, the same shape `content()`'s own dropdown uses --
+   three buttons cannot share a submit, and a form posting back to this same
+   page is what stops a refresh repeating the last move (G19, #377). #}
+{% macro act(label, icon, id, action, confirm) %}
+    <li>
+        <form method="post" action="/admin/schedule">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="id" value="{{ id }}">
+            <input type="hidden" name="action" value="{{ action }}">
+            <button type="submit" class="dropdown-item d-flex align-items-center gap-2"
+                    {%- if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+                <i class="bi bi-{{ icon }}" aria-hidden="true"></i> {{ label }}
+            </button>
+        </form>
+    </li>
+{% endmacro %}
+
+{% block content %}
+    {% if jobs|length == 0 %}
+        <p class="text-body-secondary">Nothing is scheduled yet.</p>
+    {% else %}
+        <div class="card orchid-card">
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0" aria-label="Scheduled jobs">
+                    <thead>
+                        <tr>
+                            <th scope="col">Command</th>
+                            <th scope="col">Cron</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in jobs %}
+                            <tr>
+                                <td class="mono">
+                                    <a href="/admin/schedule/job/{{ job.id }}">{{ job.command }}</a>
+                                </td>
+                                <td class="mono text-body-secondary">{{ job.cron }}</td>
+                                <td>
+                                    {% if not job.enabled %}
+                                        <span class="status-chip status-chip--muted"><i class="bi bi-pause-circle" aria-hidden="true"></i>disabled</span>
+                                    {% elseif job.exit is null %}
+                                        <span class="status-chip status-chip--muted"><i class="bi bi-dash-circle" aria-hidden="true"></i>never</span>
+                                    {% elseif job.stale %}
+                                        <span class="status-chip status-chip--bad"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>late</span>
+                                    {% elseif job.exit == 0 %}
+                                        <span class="status-chip status-chip--good"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>ok</span>
+                                    {% else %}
+                                        <span class="status-chip status-chip--bad"><i class="bi bi-x-circle-fill" aria-hidden="true"></i>exit {{ job.exit }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for {{ job.command }}">
+                                            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item d-flex align-items-center gap-2" href="/admin/schedule/job/{{ job.id }}"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a></li>
+                                            <li><a class="dropdown-item d-flex align-items-center gap-2" href="/admin/schedule/history?command={{ job.command|url_encode }}"><i class="bi bi-clock-history" aria-hidden="true"></i> History</a></li>
+                                            {% if job.enabled %}
+                                                {{ _self.act('Disable', 'pause-circle', job.id, 'disable', null) }}
+                                            {% else %}
+                                                {{ _self.act('Enable', 'play-circle', job.id, 'enable', null) }}
+                                            {% endif %}
+                                            {{ _self.act('Remove', 'trash', job.id, 'remove', 'Remove ' ~ job.command ~ '? It stops running immediately.') }}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+    <p class="field__hint">
+        A job can only run one of the commands this panel already knows how to
+        run unattended. Adding one takes effect on the next tick, not on the
+        next deploy.
+    </p>
+{% endblock %}
