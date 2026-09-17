@@ -149,6 +149,7 @@
                             <th scope="col">Route</th>
                             <th scope="col">Departs</th>
                             <th scope="col">Made</th>
+                            <th scope="col">Ago</th>
                             <th scope="col">Total</th>
                             <th scope="col">State</th>
                         </tr>
@@ -169,17 +170,11 @@
                                 <td>
                                     {{ booking.lead ?: '—' }}
                                     {% if booking.others is not empty %}
-                                        <span class="badge text-bg-secondary fw-normal">+{{ booking.others|length }}</span>
-                                        {# Named rather than counted only: an operator
-                                           looking for the child on a family booking is
-                                           looking for a name that is not the lead's. #}
-                                        <span class="text-body-secondary small d-block">
-                                            {% if booking.others|length > 2 %}
-                                                with {{ booking.others|slice(0, 2)|join(', ') }} and {{ booking.others|length - 2 }} more
-                                            {% else %}
-                                                with {{ booking.others|join(', ') }}
-                                            {% endif %}
-                                        </span>
+                                        {# The names themselves stay one click away, on the
+                                           booking's own page -- a badge is what keeps this
+                                           row one line; a title is what keeps the count
+                                           honest about there being more than a number. #}
+                                        <span class="badge text-bg-secondary fw-normal" title="with {{ booking.others|join(', ') }}">+{{ booking.others|length }}</span>
                                     {% endif %}
                                 </td>
                                 <td class="mono">
@@ -197,12 +192,12 @@
                                 <td class="mono text-body-secondary">
                                     {% if booking.departs %}{{ booking.departs|date('j M Y') }}{% else %}&mdash;{% endif %}
                                 </td>
-                                <td class="mono">
-                                    {{ booking.created|date('j M Y') }}
-                                    {# The date says when, this says how long. Scanning a
-                                       list, the second is the question being asked. #}
-                                    <span class="text-body-secondary small d-block">{{ booking.made_ago }}</span>
-                                </td>
+                                <td class="mono text-body-secondary">{{ booking.created|date('j M Y') }}</td>
+                                {# The date says when, this says how long. Scanning a
+                                   list, the second is the question being asked -- its
+                                   own column rather than a second line under the
+                                   first, so the row stays one line. #}
+                                <td class="mono text-body-secondary">{{ booking.made_ago }}</td>
                                 <td class="mono">
                                     {% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}&mdash;{% endif %}
                                 </td>
@@ -214,7 +209,7 @@
                                 </td>
                             </tr>
                         {% else %}
-                            <tr><td colspan="8" class="text-body-secondary">Nobody has booked anything yet.</td></tr>
+                            <tr><td colspan="9" class="text-body-secondary">Nobody has booked anything yet.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
