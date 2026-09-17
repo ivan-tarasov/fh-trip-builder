@@ -30,6 +30,23 @@
     </div>
 
     <div class="rail__body">
+        {# One count, read once -- every item below shares it rather than
+           each asking `admin_attention_count()` again (G17, #375). #}
+        {% set attention_count = admin_attention_count() %}
+
+        {# Orchid's own tone palette, the same `-subtle`/solid convention
+           `.status-chip` and the "What needs attention" notif cards
+           already use -- a rail badge is one more place reading it, not
+           a new one (G17, #375). Only `warn` has a user yet; the rest
+           exist so the next indicator is a line in an item's own `badge`,
+           not a new mechanism. #}
+        {% set badge_tones = {
+            'warn': 'bg-warning-subtle text-warning',
+            'bad': 'bg-danger-subtle text-danger',
+            'good': 'bg-success-subtle text-success',
+            'info': 'bg-primary-subtle text-primary'
+        } %}
+
         {# Settings is the one item with children -- Orchid's own expandable-
            parent pattern for "Dashboard" (Bootstrap's stock Collapse, no
            bespoke JS), grafted onto the panel's real page-per-section
@@ -37,10 +54,19 @@
            A flat item still needs only `match`; a parent needs `group` (what
            `admin_section` is checked to *start with*, so it stays expanded
            and lit across all three of its children) and its own `children`
-           list, each a flat item in its own right. #}
+           list, each a flat item in its own right. An optional `badge`
+           ({tone, value, label}) draws a count at the item's own right
+           edge -- `label` is read to a screen reader instead of the bare
+           number, since "8" alone says nothing (G17, #375). #}
         <ul class="rail__list">
             {% for item in [
-                { 'href': '/admin', 'label': 'Overview', 'icon': 'speedometer2', 'match': 'overview' },
+                {
+                    'href': '/admin', 'label': 'Overview', 'icon': 'speedometer2', 'match': 'overview',
+                    'badge': attention_count > 0 ? {
+                        'tone': 'warn', 'value': attention_count,
+                        'label': attention_count == 1 ? 'thing needs attention' : 'things need attention'
+                    } : null
+                },
                 { 'href': '/admin/searches', 'label': 'Searches', 'icon': 'search', 'match': 'searches' },
                 { 'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings' },
                 { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'match': 'subscribers' },
@@ -85,6 +111,9 @@
                            {{ current ? 'aria-current="page"' : '' }}>
                             <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
                             <span>{{ item.label }}</span>
+                            {% if item.badge is defined and item.badge %}
+                                <span class="badge {{ badge_tones[item.badge.tone] }} ms-auto" aria-label="{{ item.badge.value }} {{ item.badge.label }}">{{ item.badge.value }}</span>
+                            {% endif %}
                         </a>
                     </li>
                 {% endif %}

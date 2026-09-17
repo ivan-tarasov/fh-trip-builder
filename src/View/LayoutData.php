@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\View;
 
+use DateTimeImmutable;
 use Exception;
 use Throwable;
 use TripBuilder\ArticleRating;
@@ -20,9 +21,12 @@ use TripBuilder\Repository\ArticleVoteRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\CurrencyRateRepository;
+use TripBuilder\Repository\DashboardRepository;
 use TripBuilder\Repository\RouteRepository;
+use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\RouteAddress;
 use TripBuilder\Routes;
+use TripBuilder\Schedule;
 use TripBuilder\Timer;
 
 /**
@@ -148,6 +152,27 @@ final class LayoutData
     public function inSection(string $path): bool
     {
         return Breadcrumbs::covers($path, $this->currentPage());
+    }
+
+    /**
+     * How many things Overview's own "What needs attention" list would
+     * show right now -- the rail's own badge (G17, #375) reads this
+     * rather than the list Overview's own `AdminController::index()`
+     * already builds, since the rail renders on every admin page, not
+     * just that one. The same four checks `DashboardRepository::attention()`
+     * already runs; a database that will not answer costs the badge, not
+     * the page, the same fallback every other count on this class gives.
+     */
+    public function adminAttentionCount(): int
+    {
+        try {
+            $health = Schedule::fromConfig(Helper::getRootDir() . '/config/noah/schedule.php')
+                ->health(new DateTimeImmutable(), new ScheduleRunRepository($this->connection())->all());
+
+            return count(new DashboardRepository($this->connection())->attention($health));
+        } catch (Throwable) {
+            return 0;
+        }
     }
 
     public function csrfToken(): string
