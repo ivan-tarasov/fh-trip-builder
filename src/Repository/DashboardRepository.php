@@ -275,24 +275,6 @@ final readonly class DashboardRepository
     }
 
     /**
-     * USD against CAD, the last month -- the sparkline on the Rates card.
-     *
-     * One currency and not the full list: a stat card carries one story.
-     * `CurrencyRateRepository::history()` already keeps real daily history
-     * for this and says as much in its own docblock -- "a chart wants its
-     * points, not its calendar" -- it was just never read anywhere (G2.2,
-     * #288).
-     *
-     * @return array<string, float> rate_date => units per 1 CAD, oldest
-     *   first; empty on an install nothing has ever been fetched for,
-     *   not thirty invented points
-     */
-    public function rateTrend(): array
-    {
-        return new CurrencyRateRepository($this->connection)->history('USD', 30);
-    }
-
-    /**
      * @param array<string, array{age: string, stale: bool}> $schedule
      * @return array{label: string, value: string, note: string, tone: Tone}
      */

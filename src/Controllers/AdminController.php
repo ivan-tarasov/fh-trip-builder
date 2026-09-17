@@ -126,7 +126,6 @@ class AdminController extends AbstractController
             'schedule' => $dashboard->schedule($schedule['health'], $schedule['tasks']),
             'content' => $dashboard->content(),
             'searches' => $dashboard->topSearches(5),
-            'rate_trend' => $dashboard->rateTrend(),
             // "Did I already fix this" (G5.1, #316): content edits and a
             // removed fare-alert address, the two things this panel wrote
             // with nothing to show for it until now.

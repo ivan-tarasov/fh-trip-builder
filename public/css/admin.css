@@ -771,13 +771,20 @@ a:hover { text-decoration: underline; }
 }
 
 /* The tones. Colour is emphasis here and never the whole message -- every
-   card prints its state in words too, so none of this is load-bearing. */
+   card prints its state in words too, so none of this is load-bearing.
+   Bad is the one exception that also colours its own value text (G5.4,
+   #357): a late schedule or an empty flight table is the one state this
+   page needs to be unmissable about, where good/warn stay understated on
+   purpose -- "everything is fine" does not need to shout. */
 .stat-card--good .stat-card__icon { background: var(--good-soft); color: var(--good); }
 .stat-card--warn .stat-card__icon { background: var(--signal-soft); color: var(--signal); }
 .stat-card--bad .stat-card__icon { background: var(--bad-soft); color: var(--bad); }
+.stat-card--bad .stat-card__value { color: var(--bad); }
 
-.stat-card__spark { position: relative; height: 4.5rem; margin-top: .5rem; }
-.stat-card__spark canvas { width: 100% !important; height: 100% !important; display: block; }
+/* The value text's own warning icon (G5.4, #357) -- the same pairing
+   `.status-chip` already gives every other state indicator in the
+   panel, so red is never the only thing saying "bad". */
+.stat-card__warn-icon { font-size: 1.1rem; margin-right: .25rem; vertical-align: -.05em; }
 
 .orchid-chart-wrap { position: relative; width: 100%; }
 .orchid-chart-wrap--md { height: 12rem; }
