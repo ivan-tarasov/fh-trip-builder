@@ -1,0 +1,28 @@
+{#
+    Every admin timestamp is rendered UTC server-side
+    (`date_default_timezone_set('UTC')`, `public/index.php`), deliberately --
+    it is what keeps every date in the panel agreeing with every other one.
+    What an operator actually wants to read is their own local time, and the
+    only place that is known is the browser already showing them the page
+    (G12, #360) -- there is no accounts table to store a preference in, and
+    a stored one would be wrong the moment the same operator opened the
+    panel from a second device.
+
+    Each `<time>` carries the real UTC instant in its own `datetime`
+    attribute and the honest UTC reading as its text -- correct with no
+    JS at all, just not local -- and `admin.js`'s `localizeTimestamps()`
+    rewrites that text to the browser's own zone once the page has loaded.
+    `en-GB` there, not the visitor's own locale: only the zone should
+    change, not whether a date reads day-first or month-first.
+#}
+{% macro stamp(value, flavor) %}
+    {%- if not value -%}
+        &mdash;
+    {%- elseif flavor == 'date' -%}
+        <time datetime="{{ value|date('c') }}" data-local="date">{{ value|date('j M Y') }}</time>
+    {%- elseif flavor == 'freshness' -%}
+        <time datetime="{{ value|date('c') }}" data-local="freshness">{{ value|date('j M, H:i') }}</time>
+    {%- else -%}
+        <time datetime="{{ value|date('c') }}" data-local="datetime">{{ value|date('j M Y, H:i') }}</time>
+    {%- endif -%}
+{% endmacro %}

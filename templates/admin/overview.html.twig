@@ -1,5 +1,6 @@
 {% extends 'admin/layout.html.twig' %}
 {% import 'admin/partials/searches-macros.html.twig' as searches_list %}
+{% import 'admin/partials/time-macros.html.twig' as time %}
 
 {% set admin_section = 'overview' %}
 
@@ -17,7 +18,7 @@
 {# When every figure was read. Nothing on this page is cached -- a dashboard
    reporting a cached number is reporting on the cache -- so saying when it was
    read is what lets somebody trust a green tile (G1.6, #231). #}
-{% block tools %}<span class="stamp">read {{ read_at }}</span>{% endblock %}
+{% block tools %}<span class="stamp">read {{ time.stamp(read_at, 'freshness') }}</span>{% endblock %}
 
 {# One icon per label, presentation only -- `DashboardRepository` has no
    reason to know what glyph its own reading wears (G2.2, #288). #}

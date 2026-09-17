@@ -148,8 +148,10 @@ class AdminController extends AbstractController
             // What the research calls freshness transparency, and what this
             // page needs because none of it is cached: every figure was read
             // when the page was drawn, and saying so is what lets somebody
-            // trust a green tile.
-            'read_at' => date('j M, H:i'),
+            // trust a green tile. A real object, not a pre-formatted string
+            // -- the template needs both the UTC reading and the instant
+            // itself, to show a visitor's own local time (G12, #360).
+            'read_at' => new DateTimeImmutable(),
         ]);
     }
 

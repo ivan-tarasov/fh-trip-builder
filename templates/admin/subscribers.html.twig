@@ -1,4 +1,5 @@
 {% extends 'admin/layout.html.twig' %}
+{% import 'admin/partials/time-macros.html.twig' as time %}
 
 {% set admin_section = 'subscribers' %}
 
@@ -61,7 +62,7 @@
                                     <input type="checkbox" class="form-check-input" form="bulkRemoveForm" name="ids[]" value="{{ subscriber.id }}" data-bulk-checkbox aria-label="Select {{ subscriber.email }}">
                                 </td>
                                 <td>{{ subscriber.email }}</td>
-                                <td class="mono text-body-secondary">{{ subscriber.subscribed_at|date('j M Y') }}</td>
+                                <td class="mono text-body-secondary">{{ time.stamp(subscriber.subscribed_at, 'date') }}</td>
                                 <td class="text-end row-actions" style="width: 1%;">
                                     <form method="post" action="/admin/subscribers">
                                         <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
