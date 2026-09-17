@@ -47,10 +47,29 @@ final class DashboardTest extends IntegrationTestCase
 
         $named = array_filter(
             $this->dashboard()->attention($schedule),
-            static fn(array $item): bool => str_ends_with($item['label'], 'has not run on time'),
+            static fn(array $item): bool => str_ends_with($item['title'], 'has not run on time'),
         );
 
         self::assertCount(count($late), $named);
+    }
+
+    /**
+     * Every item is a real notification card (G5.2, #317): a title, a
+     * subtitle, an icon, and -- when it has one -- an action that actually
+     * points somewhere.
+     */
+    public function testEveryAttentionItemHasWhatTheCardNeeds(): void
+    {
+        foreach ($this->dashboard()->attention($this->schedule()['health']) as $item) {
+            self::assertNotSame('', $item['title']);
+            self::assertNotSame('', $item['subtitle']);
+            self::assertNotSame('', $item['icon']);
+
+            if ($item['action'] !== null) {
+                self::assertNotSame('', $item['action']['label']);
+                self::assertNotSame('', $item['action']['href']);
+            }
+        }
     }
 
     public function testTheStripSaysFourThingsAndSaysThemInWords(): void

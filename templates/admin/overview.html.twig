@@ -31,18 +31,20 @@
     'On the fare list': 'bell'
 } %}
 
-{# The same three tones `states` below already wears, read as a word an
-   operator would actually reach for rather than the enum's own name
-   (G5.2, #317). #}
-{% set attention_badge = {
-    'bad': 'text-bg-danger',
-    'warn': 'text-bg-warning',
-    'quiet': 'text-bg-secondary'
+{# Orchid's own notification card (`ui-cards.html`, `#notif`) -- structure
+   and style exactly as shown: an icon chip, a title and a muted subtitle,
+   an action button. The three tones `states` below already wears map onto
+   its icon-chip/button colours rather than inventing new ones (G5.2,
+   #317). #}
+{% set tone_chip = {
+    'bad': 'bg-danger-subtle text-danger',
+    'warn': 'bg-warning-subtle text-warning',
+    'quiet': 'bg-secondary-subtle text-secondary'
 } %}
-{% set attention_label = {
-    'bad': 'Attention',
-    'warn': 'Watch',
-    'quiet': 'Unknown'
+{% set tone_btn = {
+    'bad': 'btn-danger',
+    'warn': 'btn-warning',
+    'quiet': 'btn-outline-secondary'
 } %}
 
 {% block content %}
@@ -53,22 +55,28 @@
        plus the one booking signal that already existed per booking and
        nowhere across all of them. Additive: the tiles below still answer
        the health question this list is drawn from. #}
-    <div class="card orchid-card mb-4">
-        <div class="card-body">
-            {% if attention|length > 0 %}
-                <ul class="list-unstyled mb-0">
-                    {% for item in attention %}
-                        <li class="d-flex align-items-center justify-content-between gap-2{{ not loop.last ? ' mb-2' : '' }}">
-                            <span>{{ item.label }}</span>
-                            <span class="badge {{ attention_badge[item.tone.value] }}">{{ attention_label[item.tone.value] }}</span>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="text-body-secondary mb-0">Nothing needs attention right now.</p>
-            {% endif %}
+    {% if attention|length > 0 %}
+        <div class="mb-4">
+            {% for item in attention %}
+                <div class="ui-notif-card{{ not loop.first ? ' mt-3' : '' }}">
+                    <span class="ui-notif-card__icon {{ tone_chip[item.tone.value] }}"><i class="bi bi-{{ item.icon }}" aria-hidden="true"></i></span>
+                    <div class="flex-grow-1 min-w-0">
+                        <p class="mb-0 fw-semibold">{{ item.title }}</p>
+                        <small class="text-body-secondary">{{ item.subtitle }}</small>
+                    </div>
+                    {% if item.action %}
+                        <a class="btn btn-sm {{ tone_btn[item.tone.value] }}" href="{{ item.action.href }}">{{ item.action.label }}</a>
+                    {% endif %}
+                </div>
+            {% endfor %}
         </div>
-    </div>
+    {% else %}
+        <div class="card orchid-card mb-4">
+            <div class="card-body">
+                <p class="text-body-secondary mb-0">Nothing needs attention right now.</p>
+            </div>
+        </div>
+    {% endif %}
 
     <p class="band">Is it running</p>
 
@@ -133,11 +141,12 @@
     </div>
 
     <div class="row g-3 mb-4">
-        <div class="col-12 col-xl-6">
+        <div class="col-12 col-xl-6" id="schedule">
             <p class="band">What ran, and when</p>
 
             {# The dense surface. The strip above summarises this; this is what an
-               operator actually reads when the summary is not green. #}
+               operator actually reads when the summary is not green -- and where
+               "What needs attention"'s own schedule-driven items link to. #}
             <div class="card orchid-card">
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">

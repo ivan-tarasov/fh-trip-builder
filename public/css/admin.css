@@ -160,6 +160,15 @@ code, .mono { font-family: var(--mono); }
 a { color: var(--signal); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* An `<a class="btn">` is a button first: this rule's own `a:hover` above
+   outranks Bootstrap's plain `.btn { text-decoration: none }` by
+   specificity, which is what put an underline back on every anchor
+   styled as a button in the panel, not just the notification cards'
+   (G5.2, #317) -- the same fix already scoped to `.rail__item`/
+   `.well__user-menu .dropdown-item`, generalised here because a button's
+   own text never underlines regardless of which page it is on. */
+.btn:hover, .btn:focus { text-decoration: none; }
+
 /* Visible and on the signal colour, because a panel is keyboard territory. */
 :focus-visible {
   outline: 2px solid var(--signal);
@@ -1687,6 +1696,30 @@ a:hover { text-decoration: underline; }
 @media (max-width: 991.98px) {
   .settings-shell { grid-template-columns: 1fr; }
   .settings-nav { position: static; flex-direction: row; overflow-x: auto; }
+}
+
+/* Orchid's own notification card (`ui-cards.html`, `#notif`), structure
+   and style -- the Overview page's "What needs attention" list (G5.2,
+   #317). */
+.ui-notif-card {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  padding: 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.ui-notif-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.1rem;
 }
 
 @media (max-width: 60em) {

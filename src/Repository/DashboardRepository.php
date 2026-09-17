@@ -79,19 +79,38 @@ final readonly class DashboardRepository
      * Empty means exactly that: nothing here needs attention right now,
      * which the template says outright rather than drawing an empty list.
      *
+     * Every item names the one place on this page (or in the panel) that
+     * already explains it further -- `#schedule` for anything a scheduled
+     * command drives, the bookings list for an unticketed one -- rather
+     * than a button that goes nowhere real. `Database` gets none: nothing
+     * in the panel says more about a clock than this card already does.
+     *
      * @param array<string, array{age: string, stale: bool}> $schedule
-     * @return list<array{label: string, tone: Tone}>
+     * @return list<array{title: string, subtitle: string, icon: string, tone: Tone, action: ?array{label: string, href: string}}>
      */
     public function attention(array $schedule): array
     {
         $items = [];
+        $scheduleAction = ['label' => 'View schedule', 'href' => '#schedule'];
 
         if ($schedule === []) {
-            $items[] = ['label' => 'The schedule could not be read', 'tone' => Tone::Quiet];
+            $items[] = [
+                'title' => 'The schedule could not be read',
+                'subtitle' => 'Nothing was read from the crontab',
+                'icon' => 'clock-history',
+                'tone' => Tone::Quiet,
+                'action' => $scheduleAction,
+            ];
         } else {
             foreach ($schedule as $command => $task) {
                 if ($task['stale']) {
-                    $items[] = ['label' => $command . ' has not run on time', 'tone' => Tone::Bad];
+                    $items[] = [
+                        'title' => $command . ' has not run on time',
+                        'subtitle' => $task['age'] === 'never' ? 'Never run yet' : 'Last ran ' . $task['age'] . ' ago',
+                        'icon' => 'clock-history',
+                        'tone' => Tone::Bad,
+                        'action' => $scheduleAction,
+                    ];
                 }
             }
         }
@@ -99,28 +118,49 @@ final readonly class DashboardRepository
         $reach = $this->flightReach();
 
         if ($reach['tone'] !== Tone::Good) {
-            $items[] = ['label' => 'Flights only reach ' . $reach['value'] . ' (' . $reach['note'] . ')', 'tone' => $reach['tone']];
+            $items[] = [
+                'title' => 'Flights only reach ' . $reach['value'],
+                'subtitle' => ucfirst($reach['note']),
+                'icon' => 'calendar-range',
+                'tone' => $reach['tone'],
+                'action' => $scheduleAction,
+            ];
         }
 
         $rates = $this->ratesState();
 
         if ($rates['tone'] !== Tone::Good) {
-            $items[] = ['label' => 'Currency rates are ' . $rates['value'] . ' (' . $rates['note'] . ')', 'tone' => $rates['tone']];
+            $items[] = [
+                'title' => 'Currency rates are ' . $rates['value'],
+                'subtitle' => $rates['note'],
+                'icon' => 'currency-exchange',
+                'tone' => $rates['tone'],
+                'action' => $scheduleAction,
+            ];
         }
 
         $database = $this->databaseState();
 
         if ($database['tone'] !== Tone::Good) {
-            $items[] = ['label' => 'Database ' . $database['note'], 'tone' => $database['tone']];
+            $items[] = [
+                'title' => 'Database clock is out of step',
+                'subtitle' => ucfirst($database['note']),
+                'icon' => 'hdd-network',
+                'tone' => $database['tone'],
+                'action' => null,
+            ];
         }
 
         $unticketed = new BookingTicketRepository($this->connection)->bookingsNeedingTickets();
 
         if ($unticketed > 0) {
             $items[] = [
-                'label' => $unticketed . ' confirmed ' . ($unticketed === 1 ? 'booking' : 'bookings')
+                'title' => $unticketed . ' confirmed ' . ($unticketed === 1 ? 'booking' : 'bookings')
                     . ' still ' . ($unticketed === 1 ? 'needs' : 'need') . ' a ticket',
+                'subtitle' => 'Before the traveller checks in',
+                'icon' => 'ticket-perforated',
                 'tone' => Tone::Warn,
+                'action' => ['label' => 'Review bookings', 'href' => '/admin/bookings?status=confirmed'],
             ];
         }
 
