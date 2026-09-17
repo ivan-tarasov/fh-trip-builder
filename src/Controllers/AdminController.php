@@ -405,7 +405,7 @@ class AdminController extends AbstractController
 
         $results = [];
 
-        foreach (new BookingRepository($this->connection())->filtered($term, null, null, null, self::SEARCH_LIMIT) as $row) {
+        foreach (new BookingRepository($this->connection())->filtered($term, null, null, null, false, self::SEARCH_LIMIT) as $row) {
             $results[] = [
                 'type' => 'Booking',
                 'label' => trim($row['reference']) ?: ('Booking ' . $row['id']),
@@ -492,10 +492,11 @@ class AdminController extends AbstractController
         $status = BookingStatus::tryFrom($this->request->query->str('status', ''));
         $from = self::validDate($this->request->query->str('from', ''));
         $to = self::validDate($this->request->query->str('to', ''));
+        $missingTicket = $this->request->query->str('missing_ticket', '') === '1';
         $page = max(1, (int) $this->request->query->str('page', '1'));
         $offset = ($page - 1) * self::PER_PAGE;
 
-        $rows = $bookings->filtered($term, $status, $from, $to, self::PER_PAGE, $offset);
+        $rows = $bookings->filtered($term, $status, $from, $to, $missingTicket, self::PER_PAGE, $offset);
 
         // Names and not just a count, which `countsFor()` would give: the same
         // one query answers both, and the column needs the names.
@@ -515,16 +516,24 @@ class AdminController extends AbstractController
 
         echo new TwigRenderer()->render('admin/bookings.html.twig', [
             'bookings' => $listed,
-            'total' => $bookings->countFiltered($term, $status, $from, $to),
+            'total' => $bookings->countFiltered($term, $status, $from, $to, $missingTicket),
             'term' => $term,
             'status' => $status,
             'statuses' => BookingStatus::cases(),
             'from' => $from,
             'to' => $to,
+            'missing_ticket' => $missingTicket,
             'page' => $page,
             'per_page' => self::PER_PAGE,
             'range' => $range,
             'hero' => $this->hero($bookings, $range),
+            // Suppressed once the filter itself is already showing only
+            // these -- pointing at a filter the operator is already
+            // looking through would be telling them something they can
+            // already see (G18, #376).
+            'missing_ticket_alert' => $missingTicket
+                ? null
+                : new DashboardRepository($this->connection())->unticketedBookingsAlert(),
         ]);
     }
 
@@ -682,8 +691,9 @@ class AdminController extends AbstractController
         $status = BookingStatus::tryFrom($this->request->query->str('status', ''));
         $from = self::validDate($this->request->query->str('from', ''));
         $to = self::validDate($this->request->query->str('to', ''));
+        $missingTicket = $this->request->query->str('missing_ticket', '') === '1';
 
-        $rows = $bookings->exportFiltered($term, $status, $from, $to);
+        $rows = $bookings->exportFiltered($term, $status, $from, $to, $missingTicket);
 
         $names = $rows === []
             ? []

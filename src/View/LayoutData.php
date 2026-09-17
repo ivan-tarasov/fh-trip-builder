@@ -18,6 +18,7 @@ use TripBuilder\Repository\AirlineRepository;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
+use TripBuilder\Repository\BookingTicketRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\CurrencyRateRepository;
@@ -170,6 +171,22 @@ final class LayoutData
                 ->health(new DateTimeImmutable(), new ScheduleRunRepository($this->connection())->all());
 
             return count(new DashboardRepository($this->connection())->attention($health));
+        } catch (Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * How many confirmed bookings still have a passenger with no ticket --
+     * Bookings' own rail badge (G17's mechanism, second real use, G18,
+     * #376), read the same way `adminAttentionCount()` is: a count the
+     * rail can ask for on any admin page, not just the one that already
+     * builds it for its own reasons.
+     */
+    public function bookingsMissingTicketCount(): int
+    {
+        try {
+            return new BookingTicketRepository($this->connection())->bookingsNeedingTickets();
         } catch (Throwable) {
             return 0;
         }

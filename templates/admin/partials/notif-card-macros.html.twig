@@ -1,0 +1,30 @@
+{#
+    Orchid's own notification card (`ui-cards.html`, `#notif`) -- structure
+    and style exactly as shown: an icon chip, a title and a muted subtitle,
+    an action button. Started on Overview's own "What needs attention" list
+    (G5.2, #317); shared here once Bookings needed the identical single-card
+    shape for its own missing-ticket signal (G18, #376) rather than a second
+    copy of the markup.
+#}
+{% macro card(item, list_item, extra_class) %}
+    {% set tone_chip = {
+        'bad': 'bg-danger-subtle text-danger',
+        'warn': 'bg-warning-subtle text-warning',
+        'quiet': 'bg-secondary-subtle text-secondary'
+    } %}
+    {% set tone_btn = {
+        'bad': 'btn-danger',
+        'warn': 'btn-warning',
+        'quiet': 'btn-outline-secondary'
+    } %}
+    <div class="ui-notif-card{{ extra_class ? ' ' ~ extra_class : '' }}"{{ list_item ? ' role="listitem"' }}>
+        <span class="ui-notif-card__icon {{ tone_chip[item.tone.value] }}"><i class="bi bi-{{ item.icon }}" aria-hidden="true"></i></span>
+        <div class="flex-grow-1 min-w-0">
+            <p class="mb-0 fw-semibold">{{ item.title }}</p>
+            <small class="text-body-secondary">{{ item.subtitle }}</small>
+        </div>
+        {% if item.action %}
+            <a class="btn btn-sm {{ tone_btn[item.tone.value] }}" href="{{ item.action.href }}">{{ item.action.label }}</a>
+        {% endif %}
+    </div>
+{% endmacro %}

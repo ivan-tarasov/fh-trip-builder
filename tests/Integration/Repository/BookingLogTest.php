@@ -149,14 +149,14 @@ final class BookingLogTest extends IntegrationTestCase
         ]);
 
         self::assertTrue(
-            self::containsId($this->bookings()->filtered('Zzchild Zzsurname', null, null, null, 50), $id),
+            self::containsId($this->bookings()->filtered('Zzchild Zzsurname', null, null, null, false, 50), $id),
             'the child did not find it',
         );
         self::assertTrue(
-            self::containsId($this->bookings()->filtered('ZZL005', null, null, null, 50), $id),
+            self::containsId($this->bookings()->filtered('ZZL005', null, null, null, false, 50), $id),
             'the reference did not find it',
         );
-        self::assertGreaterThan(0, $this->bookings()->countFiltered('ZZL005', null, null, null));
+        self::assertGreaterThan(0, $this->bookings()->countFiltered('ZZL005', null, null, null, false));
     }
 
     /**
@@ -170,8 +170,8 @@ final class BookingLogTest extends IntegrationTestCase
     {
         $this->insert('ZZL006');
 
-        self::assertSame(0, $this->bookings()->countFiltered('%', null, null, null));
-        self::assertSame(0, $this->bookings()->countFiltered('ZZL00_', null, null, null));
+        self::assertSame(0, $this->bookings()->countFiltered('%', null, null, null, false));
+        self::assertSame(0, $this->bookings()->countFiltered('ZZL00_', null, null, null, false));
     }
 
     /**

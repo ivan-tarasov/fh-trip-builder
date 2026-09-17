@@ -152,20 +152,40 @@ final readonly class DashboardRepository
             ];
         }
 
-        $unticketed = new BookingTicketRepository($this->connection)->bookingsNeedingTickets();
+        $unticketedAlert = $this->unticketedBookingsAlert();
 
-        if ($unticketed > 0) {
-            $items[] = [
-                'title' => $unticketed . ' confirmed ' . ($unticketed === 1 ? 'booking' : 'bookings')
-                    . ' still ' . ($unticketed === 1 ? 'needs' : 'need') . ' a ticket',
-                'subtitle' => 'Before the traveller checks in',
-                'icon' => 'ticket-perforated',
-                'tone' => Tone::Warn,
-                'action' => ['label' => 'Review bookings', 'href' => '/admin/bookings?status=confirmed'],
-            ];
+        if ($unticketedAlert !== null) {
+            $items[] = $unticketedAlert;
         }
 
         return $items;
+    }
+
+    /**
+     * The one item `attention()` gives a confirmed booking still missing a
+     * ticket -- its own method now, so the Bookings page's own banner can
+     * ask for exactly this one thing rather than filtering it back out of
+     * the full list (G18, #376). The action links straight to the filter
+     * that shows only these, not just the status.
+     *
+     * @return array{title: string, subtitle: string, icon: string, tone: Tone, action: array{label: string, href: string}}|null
+     */
+    public function unticketedBookingsAlert(): ?array
+    {
+        $unticketed = new BookingTicketRepository($this->connection)->bookingsNeedingTickets();
+
+        if ($unticketed === 0) {
+            return null;
+        }
+
+        return [
+            'title' => $unticketed . ' confirmed ' . ($unticketed === 1 ? 'booking' : 'bookings')
+                . ' still ' . ($unticketed === 1 ? 'needs' : 'need') . ' a ticket',
+            'subtitle' => 'Before the traveller checks in',
+            'icon' => 'ticket-perforated',
+            'tone' => Tone::Warn,
+            'action' => ['label' => 'Review bookings', 'href' => '/admin/bookings?status=confirmed&missing_ticket=1'],
+        ];
     }
 
     /**

@@ -194,18 +194,19 @@ final readonly class BookingRepository
      * an operator looking one up is a different question and a different
      * responsibility (A3.8, #233).
      *
-     * A term, a status, and a made-date range, every one of them optional and
-     * every one AND-ed against the others rather than combined into a query
-     * builder -- "a simple filter bar" (G4.2, #313). `created` and not
-     * `departure_time`, for the date range same as the ordering: the panel is
-     * asked about bookings in the order they were made, where the traveller's
-     * own list is about the order they will be flown.
+     * A term, a status, a made-date range, and whether a ticket is still
+     * missing, every one of them optional and every one AND-ed against
+     * the others rather than combined into a query builder -- "a simple
+     * filter bar" (G4.2, #313). `created` and not `departure_time`, for
+     * the date range same as the ordering: the panel is asked about
+     * bookings in the order they were made, where the traveller's own
+     * list is about the order they will be flown.
      *
      * @return list<BookingRow>
      */
-    public function filtered(string $term, ?BookingStatus $status, ?string $from, ?string $to, int $limit, int $offset = 0): array
+    public function filtered(string $term, ?BookingStatus $status, ?string $from, ?string $to, bool $missingTicket, int $limit, int $offset = 0): array
     {
-        [$where, $params] = self::filterClause($term, $status, $from, $to);
+        [$where, $params] = self::filterClause($term, $status, $from, $to, $missingTicket);
 
         /** @var list<BookingRow> $rows */
         $rows = $this->connection->fetchAll(
@@ -221,9 +222,9 @@ final readonly class BookingRepository
     }
 
     /** How many `filtered()` would find in total, so the panel can page through them. */
-    public function countFiltered(string $term, ?BookingStatus $status, ?string $from, ?string $to): int
+    public function countFiltered(string $term, ?BookingStatus $status, ?string $from, ?string $to, bool $missingTicket): int
     {
-        [$where, $params] = self::filterClause($term, $status, $from, $to);
+        [$where, $params] = self::filterClause($term, $status, $from, $to, $missingTicket);
 
         /** @var int $count */
         $count = $this->connection->fetchValue(
@@ -241,9 +242,9 @@ final readonly class BookingRepository
      *
      * @return list<BookingRow>
      */
-    public function exportFiltered(string $term, ?BookingStatus $status, ?string $from, ?string $to): array
+    public function exportFiltered(string $term, ?BookingStatus $status, ?string $from, ?string $to, bool $missingTicket): array
     {
-        [$where, $params] = self::filterClause($term, $status, $from, $to);
+        [$where, $params] = self::filterClause($term, $status, $from, $to, $missingTicket);
 
         /** @var list<BookingRow> $rows */
         $rows = $this->connection->fetchAll(
@@ -264,7 +265,7 @@ final readonly class BookingRepository
      *
      * @return array{0: string, 1: list<string>}
      */
-    private static function filterClause(string $term, ?BookingStatus $status, ?string $from, ?string $to): array
+    private static function filterClause(string $term, ?BookingStatus $status, ?string $from, ?string $to, bool $missingTicket): array
     {
         $conditions = [];
         $params = [];
@@ -294,6 +295,19 @@ final readonly class BookingRepository
         if ($to !== null) {
             $conditions[] = 'b.created < ?';
             $params[] = new DateTimeImmutable($to)->modify('+1 day')->format('Y-m-d') . ' 00:00:00';
+        }
+
+        if ($missingTicket) {
+            // At least one passenger with no ticket row at all -- the same
+            // "needs a ticket" `BookingTicketRepository::bookingsNeedingTickets()`
+            // already counts, restated as an `EXISTS` rather than a
+            // top-level join, since this clause sits beside the others
+            // rather than owning the query's own `FROM` (G18, #376).
+            $conditions[] = 'EXISTS ('
+                . '  SELECT 1 FROM ' . Table::BookingPassengers->value . ' p'
+                . '  LEFT JOIN ' . Table::BookingTickets->value . ' t ON t.booking_passenger_id = p.id'
+                . '  WHERE p.booking_id = b.id AND t.id IS NULL'
+                . ' )';
         }
 
         return [$conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions), $params];
