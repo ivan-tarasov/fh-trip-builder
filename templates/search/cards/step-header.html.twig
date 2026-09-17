@@ -45,7 +45,13 @@
         </p>
     </div>
     {% if step != 3 %}
-        <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+        {# `.btn-outline-ink`, not `.btn-primary`/`.btn-ink`: this button
+           does not move the booking forward and it does not change what
+           the list below shows, the two things this page's own button
+           colours are reserved for -- see the comment above `.btn-ink` in
+           main.css. Same family "Search flights" already uses as a quiet
+           secondary action elsewhere on the site. #}
+        <button type="button" class="btn btn-sm btn-outline-ink flex-shrink-0"
                 data-bs-toggle="modal" data-bs-target="#watch-route-modal">
             <i class="fas fa-bell pe-1" aria-hidden="true"></i> Watch this route
         </button>
