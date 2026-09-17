@@ -148,9 +148,13 @@
                     placeholder="Search bookings, subscribers, help content…"
                     aria-label="Search bookings, subscribers, help content"
                     autocomplete="off"
+                    role="combobox"
+                    aria-expanded="true"
+                    aria-controls="paletteResults"
+                    aria-autocomplete="list"
                 >
             </div>
-            <div class="palette__results" data-palette-results role="listbox" aria-label="Search results"></div>
+            <div class="palette__results" id="paletteResults" data-palette-results role="listbox" aria-label="Search results"></div>
         </div>
     </div>
 </div>

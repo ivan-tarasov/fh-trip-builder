@@ -59,7 +59,7 @@
                 <span class="icon-badge icon-badge--sm" aria-hidden="true"><i class="bi bi-folder2"></i></span>
 
                 <div class="flex-grow-1 min-w-0">
-                    <a class="fw-semibold text-decoration-none" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
+                    <a class="fw-semibold text-decoration-none" id="category-heading-{{ category.slug }}" href="/admin/category/{{ category.slug }}">{{ category.title }}</a>
                     <span class="mono text-body-secondary small ms-2">{{ category.slug }}</span>
                 </div>
 
@@ -81,7 +81,7 @@
 
             {% if rows %}
                 <div class="table-responsive">
-                    <table class="table orchid-table align-middle mb-0">
+                    <table class="table orchid-table align-middle mb-0" aria-labelledby="category-heading-{{ category.slug }}">
                         <thead>
                             <tr>
                                 <th scope="col">Article</th>
@@ -125,10 +125,10 @@
         <div class="card orchid-card mb-3">
             <div class="card-header d-flex align-items-center gap-2">
                 <span class="icon-badge icon-badge--sm icon-badge--warn" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
-                <span class="fw-semibold">Filed under a category that does not exist</span>
+                <span class="fw-semibold" id="orphans-heading">Filed under a category that does not exist</span>
             </div>
             <div class="table-responsive">
-                <table class="table orchid-table align-middle mb-0">
+                <table class="table orchid-table align-middle mb-0" aria-labelledby="orphans-heading">
                     <tbody>
                         {% for article in orphans %}
                             <tr>

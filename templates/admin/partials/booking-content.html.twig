@@ -144,12 +144,12 @@
     </div>
 
     <div class="card orchid-card mb-3">
-        {{ self.blockHeader('person-lines-fill', 'Who to contact') }}
+        {{ self.blockHeader('person-lines-fill', 'Who to contact', null, 'contact-heading') }}
         <div class="table-responsive">
-            <table class="table orchid-table align-middle mb-0">
+            <table class="table orchid-table align-middle mb-0" aria-labelledby="contact-heading">
                 <tbody>
                     <tr>
-                        <td class="text-body-secondary"><i class="bi bi-envelope me-2" aria-hidden="true"></i>Email</td>
+                        <th scope="row" class="text-body-secondary"><i class="bi bi-envelope me-2" aria-hidden="true"></i>Email</th>
                         <td class="mono">
                             <span class="d-inline-flex align-items-center gap-1">
                                 {% if booking.contact_email %}
@@ -162,7 +162,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="text-body-secondary"><i class="bi bi-telephone me-2" aria-hidden="true"></i>Phone</td>
+                        <th scope="row" class="text-body-secondary"><i class="bi bi-telephone me-2" aria-hidden="true"></i>Phone</th>
                         <td class="mono">
                             {% if booking.contact_phone %}
                                 <a href="tel:{{ booking.contact_phone }}">{{ booking.contact_phone }}</a>
@@ -175,7 +175,7 @@
                        of this table finds a booking -- so an operator chasing a
                        duplicate can see they came from one person, not two. #}
                     <tr>
-                        <td class="text-body-secondary"><i class="bi bi-fingerprint me-2" aria-hidden="true"></i>Session</td>
+                        <th scope="row" class="text-body-secondary"><i class="bi bi-fingerprint me-2" aria-hidden="true"></i>Session</th>
                         <td class="mono text-body-secondary">
                             <span class="d-inline-flex align-items-center gap-1">
                                 {{ extra.session ?: '—' }}
@@ -189,9 +189,9 @@
     </div>
 
     <div class="card orchid-card mb-3">
-        {{ self.blockHeader('people', 'Travelling', booking.passengers|length ~ (booking.passengers|length == 1 ? ' passenger' : ' passengers')) }}
+        {{ self.blockHeader('people', 'Travelling', booking.passengers|length ~ (booking.passengers|length == 1 ? ' passenger' : ' passengers'), 'travelling-heading') }}
         <div class="table-responsive">
-            <table class="table orchid-table align-middle mb-0">
+            <table class="table orchid-table align-middle mb-0" aria-labelledby="travelling-heading">
                 <thead>
                     <tr>
                         <th scope="col">Name</th>
@@ -263,7 +263,7 @@
     </form>
 
     <div class="card orchid-card mb-3">
-        {{ self.blockHeader('ticket-perforated', 'Tickets', tickets|length ~ (tickets|length == 1 ? ' ticket' : ' tickets')) }}
+        {{ self.blockHeader('ticket-perforated', 'Tickets', tickets|length ~ (tickets|length == 1 ? ' ticket' : ' tickets'), 'tickets-heading') }}
         <div class="card-body">
             <div class="d-flex justify-content-end align-items-center gap-2 mb-3">
                 <button
@@ -280,7 +280,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table orchid-table align-middle mb-0">
+                <table class="table orchid-table align-middle mb-0" aria-labelledby="tickets-heading">
                     {# Passenger type and document type read as separate
                        facts, not a subtitle under something else -- each
                        gets its own column. The actions column is pinned
@@ -404,23 +404,23 @@
         <div class="tab-content">
             <div class="tab-pane fade show active" id="paidSummaryPane" role="tabpanel" aria-labelledby="paidSummaryTab">
                 <div class="table-responsive">
-                    <table class="table orchid-table align-middle mb-0">
+                    <table class="table orchid-table align-middle mb-0" aria-label="Payment summary">
                         <tbody>
                             <tr>
-                                <td class="text-body-secondary">Base fare</td>
+                                <th scope="row" class="text-body-secondary">Base fare</th>
                                 <td class="mono">{{ money.whole(booking.price_base) }}</td>
                             </tr>
                             <tr>
-                                <td class="text-body-secondary">Taxes and fees</td>
+                                <th scope="row" class="text-body-secondary">Taxes and fees</th>
                                 <td class="mono">{{ money.whole(booking.price_tax) }}</td>
                             </tr>
                             <tr class="is-total">
-                                <td>Total</td>
+                                <th scope="row">Total</th>
                                 <td class="mono">{% if booking.price_total %}{{ money.whole(booking.price_total) }}{% else %}—{% endif %}</td>
                             </tr>
-                            <tr><td class="text-body-secondary">Fare</td><td>{{ booking.fare_brand ?: '—' }}</td></tr>
+                            <tr><th scope="row" class="text-body-secondary">Fare</th><td>{{ booking.fare_brand ?: '—' }}</td></tr>
                             <tr>
-                                <td class="text-body-secondary">Card</td>
+                                <th scope="row" class="text-body-secondary">Card</th>
                                 {# Every digit this site has ever held. No card number is
                                    stored anywhere, which is what a receipt shows too. #}
                                 <td class="mono">
@@ -446,7 +446,7 @@
                read a different one from. #}
             <div class="tab-pane fade" id="paidBreakdownPane" role="tabpanel" aria-labelledby="paidBreakdownTab">
                 <div class="table-responsive">
-                    <table class="table orchid-table align-middle mb-0">
+                    <table class="table orchid-table align-middle mb-0" aria-label="Per-passenger payment breakdown">
                         <thead>
                             <tr>
                                 <th scope="col">Created by</th>
@@ -516,7 +516,7 @@
    unlike the log's own timeline -- this is a running note an operator
    wants the latest of without scrolling past the rest. #}
 <div class="card orchid-card mb-3">
-    {{ self.blockHeader('chat-square-text', 'Remarks', remarks|length ~ (remarks|length == 1 ? ' remark' : ' remarks')) }}
+    {{ self.blockHeader('chat-square-text', 'Remarks', remarks|length ~ (remarks|length == 1 ? ' remark' : ' remarks'), 'remarks-heading') }}
     <div class="card-body">
         <form method="post" action="/admin/bookings/{{ extra.id }}" class="row g-2 align-items-start mb-3">
             <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
@@ -545,7 +545,7 @@
         </form>
 
         <div class="table-responsive">
-            <table class="table orchid-table align-middle mb-0">
+            <table class="table orchid-table align-middle mb-0" aria-labelledby="remarks-heading">
                 <thead>
                     <tr>
                         <th scope="col" style="width: 1%;">Mark</th>

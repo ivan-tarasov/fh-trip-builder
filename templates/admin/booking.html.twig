@@ -35,6 +35,7 @@
        page, and left alone by `ajaxBookingForms()` replacing the fragment's
        `innerHTML` after a cancel/reinstate. #}
     <div id="booking-content"
+         tabindex="-1"
          data-recent-booking-label="{{ extra.reference ?: 'Booking ' ~ extra.id }}"
          data-recent-booking-meta="{{ booking.passenger }}"
          data-recent-booking-url="/admin/bookings/{{ extra.id }}">
