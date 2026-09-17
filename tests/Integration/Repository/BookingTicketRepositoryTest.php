@@ -178,6 +178,23 @@ final class BookingTicketRepositoryTest extends IntegrationTestCase
         self::assertSame('ancillary', $lines[0]['raw_document_type']);
     }
 
+    /**
+     * The dashboard's own "what needs a look" signal (G5.2, #317): a fresh
+     * confirmed booking has an unticketed passenger and counts, and
+     * ticketing that one passenger takes it back off the count.
+     */
+    public function testBookingsNeedingTicketsCountsAConfirmedBookingWithAnUnticketedPassenger(): void
+    {
+        $before = $this->tickets()->bookingsNeedingTickets();
+        $id = $this->insert('ZZT014');
+
+        self::assertSame($before + 1, $this->tickets()->bookingsNeedingTickets());
+
+        $this->tickets()->create($this->firstPassengerId($id), DocumentType::Ticket, '9999999999999', TicketStatus::Issued, '2026-01-15');
+
+        self::assertSame($before, $this->tickets()->bookingsNeedingTickets());
+    }
+
     private function tickets(): BookingTicketRepository
     {
         return new BookingTicketRepository($this->connection());

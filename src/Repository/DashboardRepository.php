@@ -71,6 +71,103 @@ final readonly class DashboardRepository
     }
 
     /**
+     * What actually needs a look, rather than the four states in words
+     * (G5.2, #317) -- "is it running" answered as a list of the things
+     * that are not, plus the one business signal that already existed per
+     * booking but nowhere across all of them.
+     *
+     * Empty means exactly that: nothing here needs attention right now,
+     * which the template says outright rather than drawing an empty list.
+     *
+     * Every item names the one place on this page (or in the panel) that
+     * already explains it further -- `#schedule` for anything a scheduled
+     * command drives, the bookings list for an unticketed one -- rather
+     * than a button that goes nowhere real. `Database` gets none: nothing
+     * in the panel says more about a clock than this card already does.
+     *
+     * @param array<string, array{age: string, stale: bool}> $schedule
+     * @return list<array{title: string, subtitle: string, icon: string, tone: Tone, action: ?array{label: string, href: string}}>
+     */
+    public function attention(array $schedule): array
+    {
+        $items = [];
+        $scheduleAction = ['label' => 'View schedule', 'href' => '#schedule'];
+
+        if ($schedule === []) {
+            $items[] = [
+                'title' => 'The schedule could not be read',
+                'subtitle' => 'Nothing was read from the crontab',
+                'icon' => 'clock-history',
+                'tone' => Tone::Quiet,
+                'action' => $scheduleAction,
+            ];
+        } else {
+            foreach ($schedule as $command => $task) {
+                if ($task['stale']) {
+                    $items[] = [
+                        'title' => $command . ' has not run on time',
+                        'subtitle' => $task['age'] === 'never' ? 'Never run yet' : 'Last ran ' . $task['age'] . ' ago',
+                        'icon' => 'clock-history',
+                        'tone' => Tone::Bad,
+                        'action' => $scheduleAction,
+                    ];
+                }
+            }
+        }
+
+        $reach = $this->flightReach();
+
+        if ($reach['tone'] !== Tone::Good) {
+            $items[] = [
+                'title' => 'Flights only reach ' . $reach['value'],
+                'subtitle' => ucfirst($reach['note']),
+                'icon' => 'calendar-range',
+                'tone' => $reach['tone'],
+                'action' => $scheduleAction,
+            ];
+        }
+
+        $rates = $this->ratesState();
+
+        if ($rates['tone'] !== Tone::Good) {
+            $items[] = [
+                'title' => 'Currency rates are ' . $rates['value'],
+                'subtitle' => $rates['note'],
+                'icon' => 'currency-exchange',
+                'tone' => $rates['tone'],
+                'action' => $scheduleAction,
+            ];
+        }
+
+        $database = $this->databaseState();
+
+        if ($database['tone'] !== Tone::Good) {
+            $items[] = [
+                'title' => 'Database clock is out of step',
+                'subtitle' => ucfirst($database['note']),
+                'icon' => 'hdd-network',
+                'tone' => $database['tone'],
+                'action' => null,
+            ];
+        }
+
+        $unticketed = new BookingTicketRepository($this->connection)->bookingsNeedingTickets();
+
+        if ($unticketed > 0) {
+            $items[] = [
+                'title' => $unticketed . ' confirmed ' . ($unticketed === 1 ? 'booking' : 'bookings')
+                    . ' still ' . ($unticketed === 1 ? 'needs' : 'need') . ' a ticket',
+                'subtitle' => 'Before the traveller checks in',
+                'icon' => 'ticket-perforated',
+                'tone' => Tone::Warn,
+                'action' => ['label' => 'Review bookings', 'href' => '/admin/bookings?status=confirmed'],
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
      * The counts: how much of each thing there is.
      *
      * A null value means the table is empty, and the panel says "none yet"

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace TripBuilder\Repository;
 
+use TripBuilder\BookingStatus;
 use TripBuilder\Database\Connection;
 use TripBuilder\Database\Table;
 use TripBuilder\DocumentType;
@@ -113,6 +114,33 @@ final readonly class BookingTicketRepository
         );
 
         return array_column($rows, 'id');
+    }
+
+    /**
+     * How many confirmed bookings have at least one passenger with no
+     * ticket at all -- the dashboard's own "what needs a look" signal
+     * (G5.2, #317), across every booking rather than the one
+     * {@see passengersWithoutTickets()} checks.
+     *
+     * Cancelled bookings are left out; a departed one is not -- `bookings`
+     * carries no UTC twin of its own `departure_time` to compare against
+     * `NOW()` with (unlike `flights.departure_utc`), and there is no need
+     * for one here: `db:prune` already removes anything long departed, so
+     * a row still in the table is recent enough that an unticketed
+     * passenger on it is still worth a look.
+     */
+    public function bookingsNeedingTickets(): int
+    {
+        /** @var int $count */
+        $count = $this->connection->fetchValue(
+            'SELECT COUNT(DISTINCT b.id) FROM ' . Table::Bookings->value . ' b'
+            . ' JOIN ' . Table::BookingPassengers->value . ' p ON p.booking_id = b.id'
+            . ' LEFT JOIN ' . Table::BookingTickets->value . ' t ON t.booking_passenger_id = p.id'
+            . ' WHERE b.status = ? AND t.id IS NULL',
+            [BookingStatus::Confirmed->value],
+        );
+
+        return $count;
     }
 
     public function setStatus(int $id, int $bookingId, TicketStatus $status): int

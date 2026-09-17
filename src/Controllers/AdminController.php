@@ -116,6 +116,11 @@ class AdminController extends AbstractController
         $schedule = $this->schedule();
 
         echo new TwigRenderer()->render('admin/overview.html.twig', [
+            // "What should I do next" (G5.2, #317), ahead of "is it
+            // running": the same four states, but only the ones that
+            // are not fine, plus the one signal that already existed per
+            // booking but nowhere across all of them.
+            'attention' => $dashboard->attention($schedule['health']),
             'states' => $dashboard->states($schedule['health']),
             'counts' => $dashboard->counts(),
             'schedule' => $dashboard->schedule($schedule['health'], $schedule['tasks']),
