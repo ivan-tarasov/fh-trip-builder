@@ -158,6 +158,28 @@ final class SubscriberRepositoryTest extends IntegrationTestCase
         self::assertSame([], $this->subscribers()->search(self::SENTINEL . 'nobody-here', 10));
     }
 
+    /** For the removal log (G5.1, #316) -- read before the row is gone to log it. */
+    public function testEmailsForReadsTheAddressBeforeRemoval(): void
+    {
+        $subscribers = $this->subscribers();
+        $subscribers->add($this->email('logme'));
+
+        $row = self::findByEmail($subscribers, $this->email('logme'));
+        self::assertNotNull($row);
+
+        self::assertSame([$row['id'] => $this->email('logme')], $subscribers->emailsFor([$row['id']]));
+    }
+
+    public function testEmailsForWithNoIdsIsAnEmptyList(): void
+    {
+        self::assertSame([], $this->subscribers()->emailsFor([]));
+    }
+
+    public function testEmailsForSkipsAnIdThatIsNotThere(): void
+    {
+        self::assertSame([], $this->subscribers()->emailsFor([0]));
+    }
+
     /** @return SubscriberRow|null */
     private static function findByEmail(SubscriberRepository $subscribers, string $email): ?array
     {

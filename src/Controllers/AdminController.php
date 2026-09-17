@@ -9,6 +9,8 @@ use Exception;
 use RuntimeException;
 use Throwable;
 use TripBuilder\Admin;
+use TripBuilder\AdminEvent;
+use TripBuilder\AdminEventResource;
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
 use TripBuilder\BookingStatus;
@@ -21,6 +23,7 @@ use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\PanelSetting;
 use TripBuilder\RemarkTone;
+use TripBuilder\Repository\AdminEventRepository;
 use TripBuilder\Repository\ArticleCategoryRepository;
 use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\BookingEventRepository;
@@ -119,6 +122,13 @@ class AdminController extends AbstractController
             'content' => $dashboard->content(),
             'searches' => $dashboard->topSearches(5),
             'rate_trend' => $dashboard->rateTrend(),
+            // "Did I already fix this" (G5.1, #316): content edits and a
+            // removed fare-alert address, the two things this panel wrote
+            // with nothing to show for it until now.
+            'activity' => array_map(
+                self::activityLine(...),
+                new AdminEventRepository($this->connection())->recent(5),
+            ),
             // What the research calls freshness transparency, and what this
             // page needs because none of it is cached: every figure was read
             // when the page was drawn, and saying so is what lets somebody
@@ -1235,14 +1245,29 @@ class AdminController extends AbstractController
         }
 
         $subscribers = new SubscriberRepository($this->connection());
+        $events = new AdminEventRepository($this->connection());
         $raw = $this->request->body->raw('ids');
 
         if (is_array($raw)) {
             $ids = array_values(array_unique(array_map(intval(...), $raw)));
+            // Read before removing: the address is the one thing worth
+            // logging, and a deleted row cannot answer for itself afterwards.
+            $emails = $subscribers->emailsFor($ids);
             $removed = $subscribers->removeMany($ids);
+
+            foreach ($emails as $id => $email) {
+                $events->record(AdminEventResource::Subscriber, (string) $id, AdminEvent::Removed, $email);
+            }
+
             Flash::set($removed === 1 ? 'Removed from the fare-alert list.' : $removed . ' removed from the fare-alert list.');
         } else {
-            $subscribers->remove($this->request->body->int('id'));
+            $id = $this->request->body->int('id');
+            $email = $subscribers->emailsFor([$id])[$id] ?? null;
+
+            if ($subscribers->remove($id) && $email !== null) {
+                $events->record(AdminEventResource::Subscriber, (string) $id, AdminEvent::Removed, $email);
+            }
+
             Flash::set('Removed from the fare-alert list.');
         }
 
@@ -1592,6 +1617,28 @@ class AdminController extends AbstractController
     }
 
     /**
+     * One `admin_events` row, read as a sentence for the Overview page.
+     *
+     * `resource`/`event` fall back to their raw stored word when this
+     * version does not recognise them, the same reasoning
+     * {@see historyValue()} gives for a dropped `PanelSetting`.
+     *
+     * @param array{resource: ?AdminEventResource, resource_raw: string, resource_id: string, event: ?AdminEvent, event_raw: string, note: string, at: string} $event
+     * @return array{label: string, ago: string}
+     */
+    private static function activityLine(array $event): array
+    {
+        $resource = $event['resource']?->label() ?? ucfirst($event['resource_raw']);
+        $action = $event['event']?->label() ?? $event['event_raw'];
+        $note = $event['note'] !== '' ? ': ' . $event['note'] : '';
+
+        return [
+            'label' => $resource . ' ' . $action . $note,
+            'ago' => Helper::elapsed($event['at']),
+        ];
+    }
+
+    /**
      * The full change log, as a download -- one export for all three groups,
      * the same as the page's own "Recent changes" table reads across all of
      * them rather than filtering by which group is open. `history(null)`
@@ -1829,6 +1876,9 @@ class AdminController extends AbstractController
         // decision is made, so it makes it here.
         $articles->setEnabled($posted['slug'], $posted['enabled']);
 
+        new AdminEventRepository($this->connection())
+            ->record(AdminEventResource::Article, $posted['slug'], AdminEvent::Edited, $posted['title']);
+
         Flash::set($slug === null ? 'Article created.' : 'Article saved.');
         $this->bounce('/admin/content');
     }
@@ -1873,6 +1923,9 @@ class AdminController extends AbstractController
         );
 
         $categories->setEnabled($posted['slug'], $posted['enabled']);
+
+        new AdminEventRepository($this->connection())
+            ->record(AdminEventResource::Category, $posted['slug'], AdminEvent::Edited, $posted['title']);
 
         Flash::set($slug === null ? 'Category created.' : 'Category saved.');
         $this->bounce('/admin/content');
