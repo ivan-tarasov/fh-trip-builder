@@ -97,6 +97,12 @@ class AdminController extends AbstractController
     /** How many days back each named range covers. `all` has no entry -- it has no length to name. */
     private const array HERO_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90];
 
+    /** The `searches()` page's own range names -- a year, not `all`: nothing here needs an unbounded query. */
+    private const array SEARCH_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '365d' => 365];
+
+    /** More than Overview's own top five, still short enough to read in one screen. */
+    private const int SEARCHES_RANKING_LIMIT = 20;
+
     /**
      * The dashboard.
      *
@@ -113,7 +119,7 @@ class AdminController extends AbstractController
         }
 
         if ($this->request->isPost()) {
-            $this->removeSearchRoute();
+            $this->removeSearchRoute('/admin');
 
             return;
         }
@@ -151,12 +157,16 @@ class AdminController extends AbstractController
      * "Most searched"'s own undo -- a route that should never have reached
      * the count it did (no rate limit existed on `search_count` until G13,
      * #362) stays inflated forever unless an operator can clear it.
+     *
+     * Posted to from both Overview's own list and the full `searches()`
+     * page (G16, #369), so it bounces back to whichever one called it
+     * rather than always landing on `/admin`.
      */
-    private function removeSearchRoute(): void
+    private function removeSearchRoute(string $bounceTo): void
     {
         if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
             Flash::set('That form went stale. Try again.', FlashTone::Error);
-            $this->bounce('/admin');
+            $this->bounce($bounceTo);
 
             return;
         }
@@ -175,7 +185,53 @@ class AdminController extends AbstractController
         }
 
         Flash::set('Removed ' . $from . ' → ' . $to . ' from Most searched.');
-        $this->bounce('/admin');
+        $this->bounce($bounceTo);
+    }
+
+    /**
+     * The full ranking and a real total-volume trend, where Overview only
+     * has room for the top five.
+     *
+     * `search.search_count` is a lifetime total per route with no per-day
+     * history, so the range only ever changes the trend and its headline
+     * total -- both real, from `search_daily_counts` (G7.1, #332). The
+     * ranking below stays lifetime, the same numbers Overview shows,
+     * because filtering it by the range would answer a question this data
+     * cannot honestly answer (G16, #369).
+     */
+    public function searches(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->removeSearchRoute('/admin/searches');
+
+            return;
+        }
+
+        $range = $this->request->query->str('range', '7d');
+        $range = array_key_exists($range, self::SEARCH_RANGE_DAYS) ? $range : '7d';
+
+        // Exclusive: `[$from, $to)` never needs a day's worth of `<=` fuss.
+        $to = new DateTimeImmutable('tomorrow');
+        $from = $to->modify('-' . self::SEARCH_RANGE_DAYS[$range] . ' days');
+
+        $searches = new SearchRepository($this->connection());
+
+        echo new TwigRenderer()->render('admin/searches.html.twig', [
+            'range' => $range,
+            'range_label' => match ($range) {
+                '1d' => 'today',
+                '7d' => 'in the last 7 days',
+                '30d' => 'in the last 30 days',
+                '365d' => 'in the last year',
+            },
+            'total' => number_format($searches->total($from, $to)),
+            'daily' => $searches->dailyCounts($from, $to),
+            'top' => new DashboardRepository($this->connection())->topSearches(self::SEARCHES_RANKING_LIMIT),
+        ]);
     }
 
     /**

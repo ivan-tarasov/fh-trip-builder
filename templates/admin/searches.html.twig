@@ -1,0 +1,51 @@
+{% extends 'admin/layout.html.twig' %}
+{% import 'admin/partials/searches-macros.html.twig' as searches_list %}
+
+{% set admin_section = 'searches' %}
+
+{% block title %}Searches{% endblock %}
+
+{% block description %}<p class="well__description">How much people are searching, and what for.</p>{% endblock %}
+
+{% block content %}
+    {# `search.search_count` is a lifetime total per route with no per-day
+       history, so the range below only ever changes the trend and its
+       headline total -- both real, from `search_daily_counts`
+       (`SearchRepository::dailyCounts()`/`total()`, G7.1, #332). The
+       ranking further down stays lifetime, the same numbers Overview
+       shows: filtering it by this range would answer a question this
+       data cannot honestly answer (G16, #369). #}
+    <div class="searches-range" role="group" aria-label="Date range">
+        {% for value, label in {'1d': '1 day', '7d': '7 days', '30d': '30 days', '365d': 'Year'} %}
+            <a class="searches-range__btn{{ range == value ? ' is-active' : '' }}"
+               href="/admin/searches?range={{ value }}"
+               {{ range == value ? 'aria-current="true"' : '' }}>{{ label }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="card orchid-card mb-4">
+        <div class="card-body">
+            <p class="stat-card__label mb-1">Total searches</p>
+            <h3 class="stat-card__value mono mb-0">{{ total }}</h3>
+            <p class="stat-card__note mb-0">{{ range_label }}</p>
+
+            {% if daily|length > 1 %}
+                <div class="orchid-chart-wrap orchid-chart-wrap--md mt-3">
+                    <canvas class="js-chart" data-chart="volume" data-series="{{ daily|json_encode }}"></canvas>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <p class="band">Most searched</p>
+
+    <div class="card orchid-card">
+        <div class="card-body">
+            {{ searches_list.list(top, '/admin/searches') }}
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ asset(config('site.directory.js') ~ '/chart.umd.min.js') }}" defer></script>
+{% endblock %}

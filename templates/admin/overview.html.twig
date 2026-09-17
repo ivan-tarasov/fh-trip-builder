@@ -1,4 +1,5 @@
 {% extends 'admin/layout.html.twig' %}
+{% import 'admin/partials/searches-macros.html.twig' as searches_list %}
 
 {% set admin_section = 'overview' %}
 
@@ -177,7 +178,10 @@
         </div>
 
         <div class="col-12 col-xl-6">
-            <p class="band">Most searched</p>
+            <div class="d-flex align-items-baseline justify-content-between">
+                <p class="band mb-0">Most searched</p>
+                <a class="band-link" href="/admin/searches">See all <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+            </div>
 
             {# Orchid's own Top Landing Pages (analytics.html,
                `.analytics-page-row`) -- structure and layout as shown: a
@@ -188,37 +192,12 @@
                history to compare a count against -- so its slot carries
                the one real action this list needs instead: removing a
                route that reached its count before rate limiting existed
-               on `search_count` (G13, #362). #}
+               on `search_count` (G13, #362). The row markup itself is
+               `searches-macros.html.twig`'s `list()`, shared with the
+               full `searches()` page (G16, #369). #}
             <div class="card orchid-card">
                 <div class="card-body">
-                    {% if searches|length > 0 %}
-                        <ul class="searches-list list-unstyled mb-0" role="list" aria-label="Most searched routes">
-                            {% for row in searches %}
-                                <li class="searches-row" role="listitem">
-                                    <span class="searches-row__bg" style="width: {{ row.bar }}%;" aria-hidden="true"></span>
-                                    <span class="searches-row__rank">{{ '%02d'|format(loop.index) }}</span>
-                                    <div class="searches-row__main">
-                                        <span class="searches-row__route">{{ row.from }} → {{ row.to }}</span>
-                                        <span class="searches-row__cities">{{ row.from_name }} → {{ row.to_name }}</span>
-                                    </div>
-                                    <span class="searches-row__metric searches-row__metric--count">{{ row.count }}</span>
-                                    <span class="searches-row__metric searches-row__metric--last">{{ row.last_ago }}</span>
-                                    <form method="post" action="/admin" class="mb-0">
-                                        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
-                                        <input type="hidden" name="from" value="{{ row.from }}">
-                                        <input type="hidden" name="to" value="{{ row.to }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
-                                                aria-label="Remove {{ row.from }} → {{ row.to }} from Most searched"
-                                                data-confirm="Remove {{ row.from }} → {{ row.to }} from Most searched? This cannot be undone.">
-                                            <i class="bi bi-trash" aria-hidden="true"></i>
-                                        </button>
-                                    </form>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="text-body-secondary mb-0">Nobody has searched yet.</p>
-                    {% endif %}
+                    {{ searches_list.list(searches, '/admin') }}
                 </div>
             </div>
         </div>

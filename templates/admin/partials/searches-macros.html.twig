@@ -1,0 +1,35 @@
+{#
+    Shared between Overview's own top five and the full `searches()` page
+    (G16, #369) -- the same ranking and the same remove action, only the
+    row count and each page's own POST target differ.
+#}
+{% macro list(rows, action) %}
+    {% if rows|length > 0 %}
+        <ul class="searches-list list-unstyled mb-0" role="list" aria-label="Most searched routes">
+            {% for row in rows %}
+                <li class="searches-row" role="listitem">
+                    <span class="searches-row__bg" style="width: {{ row.bar }}%;" aria-hidden="true"></span>
+                    <span class="searches-row__rank">{{ '%02d'|format(loop.index) }}</span>
+                    <div class="searches-row__main">
+                        <span class="searches-row__route">{{ row.from }} → {{ row.to }}</span>
+                        <span class="searches-row__cities">{{ row.from_name }} → {{ row.to_name }}</span>
+                    </div>
+                    <span class="searches-row__metric searches-row__metric--count">{{ row.count }}</span>
+                    <span class="searches-row__metric searches-row__metric--last">{{ row.last_ago }}</span>
+                    <form method="post" action="{{ action }}" class="mb-0">
+                        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                        <input type="hidden" name="from" value="{{ row.from }}">
+                        <input type="hidden" name="to" value="{{ row.to }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                aria-label="Remove {{ row.from }} → {{ row.to }} from Most searched"
+                                data-confirm="Remove {{ row.from }} → {{ row.to }} from Most searched? This cannot be undone.">
+                            <i class="bi bi-trash" aria-hidden="true"></i>
+                        </button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-body-secondary mb-0">Nobody has searched yet.</p>
+    {% endif %}
+{% endmacro %}
