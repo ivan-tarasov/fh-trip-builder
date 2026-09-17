@@ -34,6 +34,18 @@
     'On the fare list': 'bell'
 } %}
 
+{# Only four of the eight tiles have anywhere to lead (G20, #378) --
+   Flights reach, Rates and Database have no page anywhere in the app.
+   A sibling of `icons` rather than a field on `state`/`count` themselves,
+   for the same reason `icons` already is one: `DashboardRepository` has
+   no reason to know what URL its own reading leads to (G2.2, #288). #}
+{% set links = {
+    'Schedule': '/admin/schedule',
+    'Searches': '/admin/searches',
+    'Bookings': '/admin/bookings',
+    'On the fare list': '/admin/subscribers'
+} %}
+
 {% block content %}
     {# "What should I do next" ahead of "is it running" (G5.2, #317) --
        the same four states below, but only the ones that are not fine,
@@ -63,8 +75,11 @@
        against. #}
     <div class="row g-3 mb-4">
         {% for state in states %}
+            {% set link = links[state.label] is defined ? links[state.label] : null %}
             <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card orchid-card stat-card stat-card--{{ state.tone.value }} h-100">
+                {% if link %}<a href="{{ link }}" class="card orchid-card stat-card stat-card--{{ state.tone.value }} stat-card-link h-100">
+                {% else %}<div class="card orchid-card stat-card stat-card--{{ state.tone.value }} h-100">
+                {% endif %}
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="min-w-0">
@@ -78,7 +93,7 @@
                         </div>
                         <p class="stat-card__note">{{ state.note }}</p>
                     </div>
-                </div>
+                {% if link %}</a>{% else %}</div>{% endif %}
             </div>
         {% endfor %}
     </div>
@@ -87,8 +102,11 @@
 
     <div class="row g-3 mb-4">
         {% for count in counts %}
+            {% set link = links[count.label] is defined ? links[count.label] : null %}
             <div class="col-12 col-sm-6 col-xl-3">
-                <div class="card orchid-card stat-card h-100">
+                {% if link %}<a href="{{ link }}" class="card orchid-card stat-card stat-card-link h-100">
+                {% else %}<div class="card orchid-card stat-card h-100">
+                {% endif %}
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="min-w-0">
@@ -104,7 +122,7 @@
                         </div>
                         <p class="stat-card__note">{{ count.note }}</p>
                     </div>
-                </div>
+                {% if link %}</a>{% else %}</div>{% endif %}
             </div>
         {% endfor %}
     </div>
