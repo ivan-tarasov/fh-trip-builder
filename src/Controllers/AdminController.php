@@ -39,6 +39,7 @@ use TripBuilder\Noah\Db\Backup as DatabaseBackup;
 use TripBuilder\Noah\Db\Prune as DatabasePrune;
 use TripBuilder\Noah\Flights\Cabins as CabinsFlights;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
+use TripBuilder\Noah\Flights\Explore as ExploreFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 use TripBuilder\Noah\Flights\Realign as RealignFlights;
 use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
@@ -155,6 +156,7 @@ class AdminController extends AbstractController
         RepriceFlights::NAME => RepriceFlights::class,
         CabinsFlights::NAME => CabinsFlights::class,
         RealignFlights::NAME => RealignFlights::class,
+        ExploreFlights::NAME => ExploreFlights::class,
         ArticlesImport::NAME => ArticlesImport::class,
         AirsideImport::NAME => AirsideImport::class,
         AirsidePrune::NAME => AirsidePrune::class,

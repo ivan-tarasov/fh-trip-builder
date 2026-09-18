@@ -38,6 +38,7 @@ use TripBuilder\Noah\Db\Migrate as DatabaseMigrate;
 use TripBuilder\Noah\Db\Prune as DatabasePrune;
 use TripBuilder\Noah\Flights\Cabins as CabinsFlights;
 use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
+use TripBuilder\Noah\Flights\Explore as ExploreFlights;
 use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 use TripBuilder\Noah\Flights\Realign as RealignFlights;
 use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
@@ -181,6 +182,19 @@ try {
     */
 
     $application->addCommand(new RealignFlights());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Explore Flights
+    |--------------------------------------------------------------------------
+    |
+    | Keeping route_day_price warm for the homepage's Explore cards, so a
+    | visitor never waits on the build a route's own calendar would otherwise
+    | trigger lazily.
+    |
+    */
+
+    $application->addCommand(new ExploreFlights());
 
     /*
     |--------------------------------------------------------------------------

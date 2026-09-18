@@ -459,6 +459,40 @@ final class RoutePriceRepositoryTest extends IntegrationTestCase
         self::assertNull($this->prices->cheapest('ZZQ', 'ZZR', self::CABIN, $this->since));
     }
 
+    /**
+     * `$until`, for the homepage's Explore cards (C8, #157): "this month",
+     * not whichever day in the whole cache turns out cheapest.
+     */
+    public function testCheapestIsBoundedByUntilWhenGiven(): void
+    {
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(10), 50.00, 10.00);
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(40), 5.00, 1.00);
+
+        try {
+            $cheapest = $this->prices->cheapest('ZZQ', 'ZZR', self::CABIN, $this->since, self::day(30));
+
+            self::assertNotNull($cheapest);
+            self::assertSame(self::day(10), $cheapest['depart_date'], 'the cheaper day outside until should not win');
+        } finally {
+            $this->forget('ZZQ', 'ZZR');
+        }
+    }
+
+    public function testCheapestWithNoUntilStillSeesEveryDay(): void
+    {
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(10), 50.00, 10.00);
+        $this->insertDayPrice('ZZQ', 'ZZR', self::day(40), 5.00, 1.00);
+
+        try {
+            $cheapest = $this->prices->cheapest('ZZQ', 'ZZR', self::CABIN, $this->since);
+
+            self::assertNotNull($cheapest);
+            self::assertSame(self::day(40), $cheapest['depart_date'], 'no until should not lose the cheaper, later day');
+        } finally {
+            $this->forget('ZZQ', 'ZZR');
+        }
+    }
+
     private function insertDayPrice(string $from, string $to, string $date, float $base, float $tax): void
     {
         $this->connection()->execute(

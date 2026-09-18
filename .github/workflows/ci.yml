@@ -170,6 +170,7 @@ jobs:
           php noah flights:cabins --dry-run --no-ansi
           php noah flights:realign --dry-run --no-ansi
           php noah flights:reprice --dry-run --no-ansi
+          php noah flights:explore --dry-run --no-ansi
           php noah flights:cleaning --no-ansi
           php noah db:prune --no-ansi
           php noah schedule:run --pretend --no-ansi

@@ -184,52 +184,65 @@ return [
     |
     */
 
+    // `code` is the city code C8 (#157) prices "Explore" cards against --
+    // matched against `airports.city_code` (via a fresh `grep`, not carried
+    // over from anywhere else), not curated for any other reason. `city`
+    // was misspelled "Tokio" until this fixed it alongside adding the code
+    // it would not have resolved against.
     'poi' => [
         [
             'country' => 'Turkey',
             'city' => 'Istanbul',
+            'code' => 'IST',
             'title' => 'Istanbul Delights: Points of Interest',
             'image' => 'istanbul.jpeg',
         ],
         [
             'country' => 'United States',
             'city' => 'Miami',
+            'code' => 'MIA',
             'title' => 'Exploring Miami’s Hidden Gems',
             'image' => 'miami-01.jpeg',
         ],
         [
             'country' => 'Canada',
             'city' => 'Montréal',
+            'code' => 'YMQ',
             'title' => 'Montreal Magic: Must-See Places',
             'image' => 'montreal-01.jpeg',
         ],
         [
             'country' => 'United States',
             'city' => 'New York',
+            'code' => 'NYC',
             'title' => 'New York City’s Top Attractions',
             'image' => 'new-york-01.jpeg',
         ],
         [
             'country' => 'France',
             'city' => 'Paris',
+            'code' => 'PAR',
             'title' => 'Parisian Delights: Must-Visit Places in Paris',
             'image' => 'paris-01.jpeg',
         ],
         [
             'country' => 'Brasil',
             'city' => 'Rio de Janeiro',
+            'code' => 'RIO',
             'title' => 'Discovering Rio de Janeiro: Iconic Landmarks',
             'image' => 'rio-de-janeiro-01.jpeg',
         ],
         [
             'country' => 'Australia',
             'city' => 'Sydney',
+            'code' => 'SYD',
             'title' => 'Sydney’s Spectacular Sights',
             'image' => 'sydney-01.jpeg',
         ],
         [
             'country' => 'Japan',
-            'city' => 'Tokio',
+            'city' => 'Tokyo',
+            'code' => 'TYO',
             'title' => 'Tokyo’s Iconic Destinations',
             'image' => 'tokio-01.jpeg',
         ],
