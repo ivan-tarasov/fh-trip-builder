@@ -82,6 +82,20 @@ final readonly class Request
     }
 
     /**
+     * Scheme and host, with nothing after it -- what an absolute URL on this
+     * page has to start with.
+     *
+     * Read off the request rather than a configured domain, the same
+     * reasoning `SitemapController::origin()` already gave its own copy of
+     * this: there is no configured domain anywhere in the app, so a request
+     * that asked example.com is told about example.com, whatever asked it.
+     */
+    public function origin(): string
+    {
+        return ($this->isSecure() ? 'https' : 'http') . '://' . ($this->header('Host') ?? 'localhost');
+    }
+
+    /**
      * Who is asking, as well as it can be known.
      *
      * `REMOTE_ADDR` is the edge and not the visitor. Every request to this app

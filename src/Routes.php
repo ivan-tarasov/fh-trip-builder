@@ -364,4 +364,19 @@ class Routes
         return self::$currentPage;
     }
 
+    // Same reasoning as `$currentPage` above -- read by the header's
+    // Open Graph/Twitter tags, which need an absolute URL and have no
+    // `Request` of their own to ask.
+    private static string $origin = 'http://localhost';
+
+    public static function setOrigin(string $origin): void
+    {
+        self::$origin = $origin;
+    }
+
+    public static function getOrigin(): string
+    {
+        return self::$origin;
+    }
+
 }

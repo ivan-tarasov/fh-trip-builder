@@ -132,6 +132,7 @@ final readonly class TwigRenderer
         $this->twig->addFunction(new TwigFunction('breadcrumb_jsonld', Breadcrumbs::structuredData(...)));
         $this->twig->addFunction(new TwigFunction('current_page', $this->layout->currentPage(...)));
         $this->twig->addFunction(new TwigFunction('canonical_path', $this->layout->canonicalPath(...)));
+        $this->twig->addFunction(new TwigFunction('origin', $this->layout->origin(...)));
         $this->twig->addFunction(new TwigFunction('indexable', $this->layout->indexable(...)));
         $this->twig->addFunction(new TwigFunction('in_section', $this->layout->inSection(...)));
         $this->twig->addFunction(new TwigFunction('admin_attention_count', $this->layout->adminAttentionCount(...)));
