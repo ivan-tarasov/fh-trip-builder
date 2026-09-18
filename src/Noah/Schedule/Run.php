@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\StringInput;
@@ -45,11 +46,24 @@ use TripBuilder\Schedule;
  * The one thing it does fail on is not being able to reach that table, because
  * then it cannot tell what is due, cannot record what it did, and would run
  * every task on every tick.
+ *
+ * The optional `job` argument is `/admin/schedule`'s own "Run now" --
+ * launched detached so a slow job does not hold the request open, landing
+ * back here rather than duplicating `runOne()`'s own start/finish
+ * bookkeeping in the controller. Named `job`, not `command` -- Symfony's own
+ * `Application` already owns an argument called `command` (which command to
+ * run), merged into every command's definition, so a second one under that
+ * name throws.
  */
 final class Run extends AbstractCommand
 {
     protected function configure(): void
     {
+        $this->addArgument(
+            'job',
+            InputArgument::OPTIONAL,
+            'Run this one command now instead of whatever is due.',
+        );
         $this->addOption(
             'pretend',
             null,
@@ -60,11 +74,19 @@ final class Run extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $runs = new ScheduleRunRepository($this->connection());
+        $requested = $input->getArgument('job');
+
+        if ($requested !== null) {
+            $this->runOne((string) $requested, $runs, $output);
+
+            return Command::SUCCESS;
+        }
+
         $now = new DateTimeImmutable();
 
         try {
             $schedule = Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled());
-            $runs = new ScheduleRunRepository($this->connection());
             $due = $schedule->due($now, $runs->all());
         } catch (Throwable $e) {
             $this->io->error($e->getMessage());

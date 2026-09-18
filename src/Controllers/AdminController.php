@@ -619,8 +619,21 @@ class AdminController extends AbstractController
         $jobs = new ScheduledJobRepository($this->connection());
         $job = $jobs->find($id);
 
-        if ($job === null || !in_array($action, ['enable', 'disable', 'remove'], true)) {
+        if ($job === null || !in_array($action, ['enable', 'disable', 'remove', 'run'], true)) {
             Flash::set('Nothing changed. That was not a real job.', FlashTone::Error);
+            $this->bounce('/admin/schedule');
+
+            return;
+        }
+
+        if ($action === 'run') {
+            $started = $this->runScheduledJobNow($job['command']);
+            Flash::set(
+                $started
+                    ? 'Started ' . $job['command'] . '. Check back in a moment.'
+                    : 'Could not start it -- this server does not allow running commands from a web request.',
+                $started ? FlashTone::Success : FlashTone::Error,
+            );
             $this->bounce('/admin/schedule');
 
             return;
@@ -761,6 +774,34 @@ class AdminController extends AbstractController
         $parts = explode(' ', $command, 2);
 
         return ['base' => $parts[0], 'arguments' => $parts[1] ?? ''];
+    }
+
+    /**
+     * `/admin/schedule`'s "Run now" -- the exact command a `scheduled_jobs`
+     * row already runs unattended, just sooner. Detached (`&`, output
+     * discarded) so a slow job (`flights:add` and `flights:reprice` can take
+     * minutes) does not hold this request open; `noah schedule:run <command>`
+     * records start/finish in `schedule_runs`/`schedule_run_history` itself,
+     * the same as a real tick, so "Last ran" and History pick it up once it
+     * is done.
+     *
+     * Returns false without starting anything when this PHP cannot run a
+     * process at all -- some hardened production pools disable `exec()` on
+     * the web SAPI on purpose, and that is worth a clear message rather than
+     * a silent no-op.
+     */
+    private function runScheduledJobNow(string $command): bool
+    {
+        $noah = dirname(__DIR__, 2) . '/noah';
+        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+
+        if (in_array('exec', $disabled, true) || !is_executable($noah)) {
+            return false;
+        }
+
+        exec(sprintf('%s schedule:run %s > /dev/null 2>&1 &', escapeshellarg($noah), escapeshellarg($command)));
+
+        return true;
     }
 
     /**
