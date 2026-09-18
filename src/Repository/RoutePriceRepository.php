@@ -83,25 +83,22 @@ final readonly class RoutePriceRepository
 
     /**
      * The single cheapest upcoming day on a route, all-in -- what
-     * `alerts:check` (C6, #155) compares a watch's threshold against, and
-     * what the homepage's Explore cards (C8, #157) show bounded to "this
-     * month" via `$until`.
+     * `alerts:check` (C6, #155) compares a watch's threshold against.
      *
      * Ordered rather than aggregated: `MIN(price_base + price_tax)` alone
      * would answer the cheapest total but lose which day it fell on, and the
-     * day is worth keeping even though `alerts:check` does not read it.
+     * day is worth keeping even though nothing reads it yet.
      *
      * @return array{depart_date: string, base: float, tax: float}|null
      */
-    public function cheapest(string $from, string $to, CabinClass $cabin, string $since, ?string $until = null): ?array
+    public function cheapest(string $from, string $to, CabinClass $cabin, string $since): ?array
     {
         /** @var RouteDayPriceRow|null $row */
         $row = $this->connection->fetchOne(
             'SELECT depart_date, price_base, price_tax FROM ' . Table::RouteDayPrice->value
             . ' WHERE from_code = ? AND to_code = ? AND cabin = ? AND depart_date >= ?'
-            . ($until === null ? '' : ' AND depart_date < ?')
             . ' ORDER BY (price_base + price_tax) ASC LIMIT 1',
-            $until === null ? [$from, $to, $cabin->value, $since] : [$from, $to, $cabin->value, $since, $until],
+            [$from, $to, $cabin->value, $since],
         );
 
         if ($row === null) {

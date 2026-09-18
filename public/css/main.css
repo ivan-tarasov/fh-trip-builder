@@ -1516,6 +1516,28 @@ button {
   .hero-cards { margin-top: -2.5rem; }
 }
 
+/* One of the three hero-cards, now always a real link (C8, #157) rather than
+   a plain heading some of the time -- so it needs a hover affordance a plain
+   heading never did. */
+@media (hover: hover) and (pointer: fine) {
+  .poi:hover .poi__price { text-decoration-color: currentColor; }
+}
+
+/* Priced like `.fare__price` reads everywhere else on this site -- large and
+   bold, not a footnote in a `<small>` -- because on a photo the price is what
+   is being sold, not a caption under it. White rather than `--ink-body`:
+   this sits on the same dark photo overlay as the rest of the card's text,
+   never on the page's own background, so it does not need either palette's
+   ink token. */
+.poi__price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color var(--dur-fast) ease;
+}
+
 /* Holds the tray's height while the tray is up in the header, so nothing below
    it moves when it leaves. The height itself is written by global.js from the
    tray's own.

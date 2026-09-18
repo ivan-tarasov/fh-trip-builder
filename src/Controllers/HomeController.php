@@ -8,10 +8,11 @@ use Exception;
 use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
+use TripBuilder\Helper;
 use TripBuilder\Repository\AirportRepository;
-use TripBuilder\Repository\RoutePriceRepository;
+use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\SearchRepository;
-use TripBuilder\SearchUrl;
 use TripBuilder\View\RecentSearches;
 use TripBuilder\View\SuggestedOrigin;
 use TripBuilder\View\TwigRenderer;
@@ -20,12 +21,12 @@ use TripBuilder\VisitorLocation;
 class HomeController extends AbstractController
 {
     /**
-     * "This month" for the Explore price on a POI card (C8, #157) -- the
-     * same idea `AjaxController`'s calendar window scales up from, just
-     * narrow enough that "you can afford this month" stays true rather than
-     * quietly meaning "sometime in the next three".
+     * Origin cities per side, domestic and international combined -- the
+     * same shortlist size `CityController::FARE_ORIGINS` uses for its own
+     * "cheap tickets" strip, since a POI card is asking the same question
+     * for one fewer reason to answer it twice.
      */
-    private const int EXPLORE_WINDOW_DAYS = 30;
+    private const int ORIGIN_LIMIT = 8;
 
     /**
      * @throws Exception|\Twig\Error\Error
@@ -80,7 +81,7 @@ class HomeController extends AbstractController
 
         echo new TwigRenderer()->renderPage('index/view.html.twig', [
             'today_date' => date('Y-m-d'),
-            'poi_cards' => self::withExplorePrices($poi, $origin, $this->connection()),
+            'poi_cards' => self::withCheapestFares($poi, $this->connection()),
             'top_searches' => $topSearches,
             // Everywhere a search can start or end. Small enough to ship whole,
             // which is what lets the form filter in the browser.
@@ -102,13 +103,22 @@ class HomeController extends AbstractController
     }
 
     /**
-     * This month's cheapest fare and a link to it, on whichever POI cards
-     * can show one -- C8 (#157).
+     * The cheapest direct fare into each POI card, from wherever the market
+     * actually is -- C8 (#157), redesigned away from a personal origin
+     * after two problems with that version: it went stale the moment
+     * somebody typed a different "From" without submitting, and reaching a
+     * live price for it at all meant a scheduled job proactively warming
+     * `route_day_price` for routes nobody had asked about yet.
      *
-     * Silent rather than guessing when there is nothing to show: no
-     * suggested origin yet, a POI that happens to be the origin itself, or
-     * a route `flights:explore` (`Noah\Flights\Explore`) has not warmed --
-     * this never builds one live, the same reason the command exists.
+     * Not personalised at all now, on purpose: the same "cheapest way in,
+     * from home and abroad" question `CityController::fares()` already
+     * answers on the destination's own page, reusing its two lower-level
+     * calls (`CityRepository::busiestOriginAirports()`,
+     * `FlightRepository::cheapestDirectPerOrigin()`) rather than its
+     * composed, two-tab shape -- a card needs one number, not a UI. The
+     * card links to that same page (`/city/<slug>`) rather than a
+     * pre-filled search, so a visitor lands on real fares from real
+     * origins instead of one this controller guessed at.
      *
      * `public` rather than `private`, matching the reason
      * `AdminController::scheduledCommandHelp()` is: so a test can call it
@@ -117,32 +127,34 @@ class HomeController extends AbstractController
      * @param list<array{country: string, city: string, code: string, title: string, image: string}> $poi
      * @return list<array{country: string, city: string, code: string, title: string, image: string, price: float|null, url: string|null}>
      */
-    public static function withExplorePrices(array $poi, ?string $origin, Connection $connection): array
+    public static function withCheapestFares(array $poi, Connection $connection): array
     {
-        if ($origin === null) {
-            return array_map(
-                static fn(array $card): array => $card + ['price' => null, 'url' => null],
-                $poi,
-            );
-        }
-
-        $prices = new RoutePriceRepository($connection);
-        $since = date('Y-m-d');
-        $until = date('Y-m-d', strtotime('+' . self::EXPLORE_WINDOW_DAYS . ' day'));
+        $cities = new CityRepository($connection);
+        $flights = new FlightRepository($connection);
 
         return array_map(
-            static function (array $card) use ($prices, $origin, $since, $until): array {
-                $cheapest = $card['code'] === $origin
-                    ? null
-                    : $prices->cheapest($origin, $card['code'], CabinClass::Economy, $since, $until);
+            static function (array $card) use ($cities, $flights): array {
+                $city = $cities->byCode($card['code']);
 
-                if ($cheapest === null) {
+                if ($city === null) {
                     return $card + ['price' => null, 'url' => null];
                 }
 
+                $url = '/city/' . Helper::placeSlug((string) $city['name'], (string) $city['code']);
+
+                $origins = [
+                    ...$cities->busiestOriginAirports($card['code'], (string) $city['country_code'], true, self::ORIGIN_LIMIT),
+                    ...$cities->busiestOriginAirports($card['code'], (string) $city['country_code'], false, self::ORIGIN_LIMIT),
+                ];
+                $destinations = array_column($cities->airports($card['code']), 'code');
+
+                $cheapest = $flights->cheapestDirectPerOrigin($origins, $destinations, CabinClass::Economy)[0] ?? null;
+
                 return $card + [
-                    'price' => $cheapest['base'] + $cheapest['tax'],
-                    'url' => new SearchUrl($origin, $card['code'], $cheapest['depart_date'], null)->path(),
+                    'price' => $cheapest === null ? null : (float) $cheapest['total'],
+                    // A page to send them to either way -- the fact of the
+                    // city is not conditional on a fare existing this minute.
+                    'url' => $url,
                 ];
             },
             $poi,
