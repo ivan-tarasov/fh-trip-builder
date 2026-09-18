@@ -41,6 +41,7 @@ final readonly class Kernel
         // Read during rendering, by the header's active link and by the robots
         // meta tag, so it has to be set before a controller runs.
         Routes::setCurrentPage($url);
+        Routes::setOrigin($this->request->origin());
 
         $route = Routes::resolve($url);
         [$controller, $action] = explode('@', $route ?? 'NotFound@index');

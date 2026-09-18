@@ -79,7 +79,7 @@ class SitemapController extends AbstractController
             $urls = $this->staticPaths();
         }
 
-        $origin = $this->origin();
+        $origin = $this->request->origin();
 
         echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
@@ -118,7 +118,7 @@ class SitemapController extends AbstractController
         echo "Disallow: /api/\n";
         echo "Disallow: /ajax/\n";
 
-        printf("\nSitemap: %s/sitemap.xml\n", $this->origin());
+        printf("\nSitemap: %s/sitemap.xml\n", $this->request->origin());
     }
 
     /**
@@ -298,18 +298,4 @@ class SitemapController extends AbstractController
         );
     }
 
-    /**
-     * Where this site is, according to whoever asked.
-     *
-     * A sitemap must carry absolute URLs -- the one place in this app that has
-     * no choice, which is why there is still no configured host. Taken from the
-     * request, so the file always names the host it was fetched from: a crawler
-     * that asks example.com is told about example.com.
-     */
-    private function origin(): string
-    {
-        $host = $this->request->header('Host') ?? 'localhost';
-
-        return ($this->request->isSecure() ? 'https' : 'http') . '://' . $host;
-    }
 }

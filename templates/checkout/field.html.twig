@@ -27,7 +27,7 @@
               the typing rather than the INSERT stopping the booking. The
               server still checks: an attribute is a courtesy, not a guard. #}
            {% if limit %}maxlength="{{ limit }}"{% endif %}
-           {% if attrs is defined %}{{ attrs|raw }}{% endif %}
+           {% if attrs is defined %}{% for attr_name, attr_value in attrs %} {{ attr_name }}="{{ attr_value }}"{% endfor %}{% endif %}
            {{ errors[key] is defined ? 'aria-invalid="true"' : '' }} />
     {% if errors[key] is defined %}
         <p class="field__error">{{ errors[key] }}</p>

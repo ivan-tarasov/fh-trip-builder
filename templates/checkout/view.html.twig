@@ -147,25 +147,25 @@
                             {% include 'checkout/field.html.twig' with {
                                 'name': 'card_name', 'label': 'Name on card',
                                 'autocomplete': 'cc-name', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
-                                'attrs': 'data-card="name"'
+                                'attrs': {'data-card': 'name'}
                             } only %}
 
                             {% include 'checkout/field.html.twig' with {
                                 'name': 'card_number', 'label': 'Card number',
                                 'autocomplete': 'cc-number', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
-                                'attrs': 'data-card="number" inputmode="numeric" maxlength="23"'
+                                'attrs': {'data-card': 'number', 'inputmode': 'numeric', 'maxlength': '23'}
                             } only %}
 
                             <div class="field-row">
                                 {% include 'checkout/field.html.twig' with {
                                     'name': 'card_expiry', 'label': 'Expiry', 'placeholder': 'MM / YY',
                                     'autocomplete': 'cc-exp', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
-                                    'attrs': 'data-card="expiry" inputmode="numeric" maxlength="7"'
+                                    'attrs': {'data-card': 'expiry', 'inputmode': 'numeric', 'maxlength': '7'}
                                 } only %}
                                 {% include 'checkout/field.html.twig' with {
                                     'name': 'card_cvv', 'label': 'Security code',
                                     'autocomplete': 'cc-csc', 'errors': errors, 'form': form, 'max_lengths': max_lengths,
-                                    'attrs': 'data-card="cvv" inputmode="numeric" maxlength="4"'
+                                    'attrs': {'data-card': 'cvv', 'inputmode': 'numeric', 'maxlength': '4'}
                                 } only %}
                             </div>
 

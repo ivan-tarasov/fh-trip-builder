@@ -304,6 +304,18 @@ final class LayoutData
     }
 
     /**
+     * Scheme and host, with nothing after it -- `Kernel::handle()`'s own
+     * copy of `Request::origin()`, the same way `currentPage()` above holds
+     * `Routes::setCurrentPage()`'s value. Open Graph and Twitter's own tags
+     * need an absolute URL and, like the header's active link, are read
+     * from deep inside a template with no `Request` of its own to ask.
+     */
+    public function origin(): string
+    {
+        return Routes::getOrigin();
+    }
+
+    /**
      * Whether a search engine should keep this page.
      *
      * Three kinds of page should not be kept. A search result is a snapshot of
