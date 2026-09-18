@@ -3067,6 +3067,34 @@
             note.dataset.tone = tone;
         };
 
+        // Remembered in this browser only -- there is no account to ask
+        // instead, and a visitor who has already watched one route should
+        // not have to retype their address to watch a second.
+        const REMEMBERED_EMAIL_KEY = 'tb-watch-route-email';
+
+        const rememberedEmail = () => {
+            try {
+                return window.localStorage.getItem(REMEMBERED_EMAIL_KEY);
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const rememberEmail = (value) => {
+            try {
+                window.localStorage.setItem(REMEMBERED_EMAIL_KEY, value);
+            } catch (e) {
+                // Private browsing, or no localStorage at all: the form still
+                // works, it just will not prefill next time.
+            }
+        };
+
+        const remembered = rememberedEmail();
+
+        if (remembered && email.value.trim() === '') {
+            email.value = remembered;
+        }
+
         form.addEventListener('submit', function (event) {
             event.preventDefault();
 
@@ -3109,6 +3137,7 @@
                     say(data.message || 'That did not work. Try again in a moment.', ok ? 'good' : 'bad');
 
                     if (ok) {
+                        rememberEmail(email.value.trim());
                         form.reset();
                     }
                 })
