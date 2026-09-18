@@ -45,12 +45,24 @@ final class HomeControllerTest extends IntegrationTestCase
         }
     }
 
-    public function testNoOriginShowsNothing(): void
+    /**
+     * No origin at all -- no recent search, no Cloudflare geo header --
+     * falls back to Montreal rather than showing nothing, the one place
+     * on the homepage that guesses (deliberately not the "From" field
+     * itself; see `HomeController::FALLBACK_ORIGIN`'s own docblock).
+     *
+     * Checked against explicitly passing `YMQ` rather than a hardcoded
+     * expectation, so this proves the fallback is Montreal specifically
+     * without this test needing to predict Montreal's own real fares.
+     */
+    public function testNoOriginFallsBackToMontreal(): void
     {
-        $deals = HomeController::travelDeals(null, new AirportRepository($this->connection()), $this->connection());
+        $airports = new AirportRepository($this->connection());
 
-        self::assertNull($deals['ceiling']);
-        self::assertSame([], $deals['cards']);
+        $withNull = HomeController::travelDeals(null, $airports, $this->connection());
+        $withMontreal = HomeController::travelDeals('YMQ', $airports, $this->connection());
+
+        self::assertSame($withMontreal, $withNull);
     }
 
     public function testAnUnresolvableOriginShowsNothing(): void

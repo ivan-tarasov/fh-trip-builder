@@ -28,6 +28,20 @@ class HomeController extends AbstractController
     private const int DEALS_LIMIT = 8;
 
     /**
+     * Montreal, for the carousel alone when nothing else resolves an
+     * origin at all -- no recent-search cookie, no Cloudflare geo header.
+     * In production a real visitor almost always carries one or the
+     * other; this exists for local development, where neither ever
+     * arrives. Deliberately not fed into `SuggestedOrigin` or the "From"
+     * field itself -- that field's own docblock never guesses on purpose
+     * ("leaves the field alone rather than guessing wide"), and a wrong
+     * guess sitting in an editable field is worse than an empty one. A
+     * display-only carousel defaulting to somewhere real is a much lower
+     * stake than a form silently answering for the visitor.
+     */
+    private const string FALLBACK_ORIGIN = 'YMQ';
+
+    /**
      * @throws Exception|\Twig\Error\Error
      */
     public function index(): void
@@ -118,9 +132,11 @@ class HomeController extends AbstractController
      *
      * `$X` is not a fixed number: it is the priciest of whichever cards
      * are actually shown, rounded up to the nearest $10, so the heading
-     * never promises a ceiling the cards do not back up. No origin, or no
-     * flights found under it, both read the same way -- an empty
-     * carousel, not a guess.
+     * never promises a ceiling the cards do not back up. No flights found
+     * under the resolved origin reads the same way as no origin at all --
+     * an empty carousel, not a guess -- but a missing origin itself falls
+     * back to `FALLBACK_ORIGIN` first; see that constant for why this is
+     * the one place on the homepage that guesses.
      *
      * `public` rather than `private`, matching the reason
      * `AdminController::scheduledCommandHelp()` is: so a test can call it
@@ -130,11 +146,7 @@ class HomeController extends AbstractController
      */
     public static function travelDeals(?string $origin, AirportRepository $airports, Connection $connection): array
     {
-        if ($origin === null) {
-            return ['ceiling' => null, 'cards' => []];
-        }
-
-        $fromAirports = $airports->codesFor($origin);
+        $fromAirports = $airports->codesFor($origin ?? self::FALLBACK_ORIGIN);
         $toAirports = array_column($airports->enabled(true), 'code');
 
         if ($fromAirports === [] || $toAirports === []) {
