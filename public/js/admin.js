@@ -1272,6 +1272,20 @@
             return chip.takesValue && chip.value !== '' ? chip.key + '=' + chip.value : chip.key;
         };
 
+        // `chip.value` is whatever was typed into the value box -- unlike
+        // `data-help`'s own text, not safe to drop into `innerHTML` as-is.
+        // Escaping it here covers both places it lands below: as a tag's
+        // own text and inside an `aria-label="..."` attribute, where an
+        // unescaped `"` would otherwise close the attribute early.
+        var escapeHtml = function (value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
         var serialize = function () {
             var composed = chips.map(function (chip) {
                 return chip.isArgument ? chip.value : (chip.takesValue && chip.value !== '' ? chip.key + '=' + chip.value : chip.key);
@@ -1310,10 +1324,12 @@
             argumentsInput.value = serialize();
 
             pickerList.innerHTML = chips.map(function (chip, index) {
+                var text = escapeHtml(chipText(chip));
+
                 return '<li class="argument-chip">'
-                    + '<code>' + chipText(chip) + '</code>'
+                    + '<code>' + text + '</code>'
                     + '<button type="button" class="argument-chip__remove js-argument-chip-remove" data-index="' + index + '"'
-                    + ' aria-label="Remove ' + chipText(chip) + '"><i class="bi bi-x" aria-hidden="true"></i></button>'
+                    + ' aria-label="Remove ' + text + '"><i class="bi bi-x" aria-hidden="true"></i></button>'
                     + '</li>';
             }).join('');
         };
