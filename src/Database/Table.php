@@ -38,6 +38,7 @@ enum Table: string
     case RouteDayPrice = 'route_day_price';
     case RoutePriceBuild = 'route_price_build';
     case RouteWatches = 'route_watches';
+    case RouteWatchAlertsSent = 'route_watch_alerts_sent';
     case ScheduledJobs = 'scheduled_jobs';
     case ScheduleRuns = 'schedule_runs';
     case ScheduleRunHistory = 'schedule_run_history';
