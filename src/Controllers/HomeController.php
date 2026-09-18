@@ -28,16 +28,17 @@ class HomeController extends AbstractController
     private const int DEALS_LIMIT = 8;
 
     /**
-     * Montreal, for the carousel alone when nothing else resolves an
-     * origin at all -- no recent-search cookie, no Cloudflare geo header.
-     * In production a real visitor almost always carries one or the
-     * other; this exists for local development, where neither ever
-     * arrives. Deliberately not fed into `SuggestedOrigin` or the "From"
-     * field itself -- that field's own docblock never guesses on purpose
-     * ("leaves the field alone rather than guessing wide"), and a wrong
-     * guess sitting in an editable field is worse than an empty one. A
-     * display-only carousel defaulting to somewhere real is a much lower
-     * stake than a form silently answering for the visitor.
+     * Montreal, when nothing resolves an origin at all -- no recent-search
+     * cookie, no Cloudflare geo header. In production a real visitor
+     * almost always carries one or the other; this exists for local
+     * development, where neither ever arrives and both the "From" field
+     * and the deals carousel would otherwise sit empty on every visit.
+     *
+     * Applied here and in the "From" field/its nearby block below, on
+     * request -- `SuggestedOrigin` itself is left alone, since its own
+     * three-way precedence (searched before, geo guess, nothing) is a
+     * real rule about *whose* answer wins and this is a fourth rung
+     * bolted on after it, not a change to that rule.
      */
     private const string FALLBACK_ORIGIN = 'YMQ';
 
@@ -76,9 +77,11 @@ class HomeController extends AbstractController
         // somebody is going is the question they came to answer, and guessing
         // at it would be answering it for them.
         // Where they appear to be, for a first visit with no search behind it.
-        // Null everywhere the edge is not -- local development included -- and
-        // null again where the nearest place we sell from is further than a
-        // drive, which leaves the field alone rather than guessing wide.
+        // Null everywhere the edge is not -- local development included --
+        // and null again where the nearest place we sell from is further
+        // than a drive, which leaves $origin itself null rather than
+        // guessing wide. $displayOrigin below is where that null is finally
+        // resolved to something, not here.
         $here = VisitorLocation::coordinates($this->request);
 
         $origin = SuggestedOrigin::choose(
@@ -92,6 +95,11 @@ class HomeController extends AbstractController
             array_column($places, 'code'),
         );
 
+        // Montreal rather than nothing when neither signal arrived -- see
+        // FALLBACK_ORIGIN's own docblock for why this sits here rather
+        // than inside SuggestedOrigin.
+        $displayOrigin = $origin ?? self::FALLBACK_ORIGIN;
+
         echo new TwigRenderer()->renderPage('index/view.html.twig', [
             'today_date' => date('Y-m-d'),
             'poi_cards' => $poi,
@@ -100,13 +108,13 @@ class HomeController extends AbstractController
             // Everywhere a search can start or end. Small enough to ship whole,
             // which is what lets the form filter in the browser.
             'places' => $places,
-            'depart_code' => $origin ?? '',
+            'depart_code' => $displayOrigin,
             // The nearby block, for the place the field opens on. Keyed by that
             // code because the template looks it up by the field's own value --
             // the same shape the results page passes.
-            'nearby' => $origin === null ? [] : [
-                $origin => $airports->nearbyPlaces(
-                    $origin,
+            'nearby' => [
+                $displayOrigin => $airports->nearbyPlaces(
+                    $displayOrigin,
                     AirportRepository::NEARBY_CITIES,
                     AirportRepository::NEARBY_KM,
                     $places,
