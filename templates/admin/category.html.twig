@@ -63,9 +63,12 @@
 
                     <div class="col-6 col-md-3">
                         <label for="accent" class="form-label">Accent</label>
-                        <input id="accent" name="accent" type="text" class="form-control" maxlength="32"
-                               value="{{ category.accent|default(accent) }}" autocapitalize="off" spellcheck="false">
-                        <p class="field__hint">The colour name the hub card uses.</p>
+                        <select id="accent" name="accent" class="form-select" required>
+                            {% for option in accents %}
+                                <option value="{{ option }}"{{ category.accent|default(accent) == option ? ' selected' : '' }}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="field__hint">The colour the hub card's icon uses.</p>
                     </div>
 
                     <div class="col-6 col-md-3">
