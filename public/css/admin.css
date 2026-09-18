@@ -921,6 +921,13 @@ a:hover { text-decoration: underline; }
     overflow: hidden;
 }
 .route-rank-row > * { position: relative; z-index: 1; }
+/* `.searches-row__bg` is itself `position: absolute` -- declared earlier in
+   this file, so the rule above (same specificity, later source order) was
+   winning and collapsing it back to a zero-height sliver, the bug that
+   left every row reading as a flat list with no bar at all. One more
+   specific selector, not a reorder, so this still holds if the file above
+   ever moves. */
+.route-rank-row > .searches-row__bg { position: absolute; z-index: 0; }
 .route-rank-row__metric {
     font-size: .78rem;
     color: var(--ink);
