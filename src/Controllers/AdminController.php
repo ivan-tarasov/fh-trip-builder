@@ -814,7 +814,7 @@ class AdminController extends AbstractController
      *     options: list<array{flag: string, takesValue: bool, description: string}>,
      * }>
      */
-    private static function scheduledCommandHelp(): array
+    public static function scheduledCommandHelp(): array
     {
         $help = [];
 
