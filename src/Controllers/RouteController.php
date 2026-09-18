@@ -140,6 +140,11 @@ class RouteController extends AbstractController
                     (string) $from['code'],
                     (string) $to['code'],
                 ),
+                'months' => self::monthsFor(
+                    $routes->cheapestPerDay($origins, $destinations, CabinClass::Economy),
+                    (string) $from['code'],
+                    (string) $to['code'],
+                ),
                 'carriers' => self::addressableCarriers(
                     $routes->carriers($origins, $destinations, CabinClass::Economy),
                 ),
@@ -176,6 +181,100 @@ class RouteController extends AbstractController
             ],
             $dates,
         );
+    }
+
+    /**
+     * Median price by month, from every day with a direct fare -- the months
+     * the schedule actually covers, not a promised twelve (C7, #156). A month
+     * with no direct-fare day at all (a seasonal route between two annual
+     * peaks) is left out rather than shown as a guess, and each bar carries
+     * how many real days it rests on so a visitor can judge a twelve-day
+     * month against a thirty-day one for themselves.
+     *
+     * The median and not the cheapest day in the month: the single cheapest
+     * fare is one seat sale, not what flying that month generally costs --
+     * the strip above this block already gives the cheapest days their own
+     * place. The link still points at the cheapest day within the month,
+     * since a visitor who picks a month is choosing when to search, not
+     * booking the median fare itself.
+     *
+     * @param list<array{depart_date: string, total: float}> $perDay
+     * @return list<array<string, mixed>>
+     */
+    public static function monthsFor(array $perDay, string $fromCode, string $toCode): array
+    {
+        $byMonth = [];
+
+        foreach ($perDay as $day) {
+            $byMonth[substr($day['depart_date'], 0, 7)][] = $day;
+        }
+
+        $months = [];
+
+        foreach ($byMonth as $month => $days) {
+            $cheapest = $days[0];
+
+            foreach ($days as $day) {
+                if ($day['total'] < $cheapest['total']) {
+                    $cheapest = $day;
+                }
+            }
+
+            $months[] = [
+                'month' => $month,
+                'label' => (string) date('M Y', (int) strtotime($month . '-01')),
+                'median' => self::median(array_column($days, 'total')),
+                'days' => count($days),
+                'is_cheapest' => false,
+                'search' => new SearchUrl(
+                    from: $fromCode,
+                    to: $toCode,
+                    depart: $cheapest['depart_date'],
+                    return: null,
+                )->path(),
+            ];
+        }
+
+        if ($months !== []) {
+            $medians = array_column($months, 'median');
+            $cheapestIndex = array_keys($medians, min($medians), true)[0];
+            $priciest = max($medians);
+
+            // One pass, both flags together -- setting `is_cheapest` on its
+            // own index first and `bar` on every index after left PHPStan
+            // unable to tell the two writes shared one array shape.
+            foreach ($months as $i => $month) {
+                $months[$i]['is_cheapest'] = $i === $cheapestIndex;
+                // Against the priciest month, not the cheapest -- a shorter
+                // bar reading as a cheaper month is the chart a price bar is
+                // supposed to be, the opposite of a popularity bar's own
+                // "longer is more".
+                $months[$i]['bar'] = $priciest > 0 ? (int) round($month['median'] / $priciest * 100) : 0;
+            }
+        }
+
+        return $months;
+    }
+
+    /**
+     * The middle value once sorted -- the average of the two middle values
+     * for an even count, the same definition every other "median" on the
+     * site would mean. Worth its own function rather than a one-line inline
+     * sort: it is the one part of {@see monthsFor()} worth testing without a
+     * database, the same reasoning {@see \TripBuilder\Noah\Alerts\Check::qualifies()}
+     * gives for splitting itself out.
+     *
+     * @param list<float> $values
+     */
+    public static function median(array $values): float
+    {
+        sort($values);
+        $count = count($values);
+        $middle = intdiv($count, 2);
+
+        return $count % 2 === 0
+            ? ($values[$middle - 1] + $values[$middle]) / 2
+            : $values[$middle];
     }
 
     /**

@@ -1,0 +1,28 @@
+{% import 'partials/money.html.twig' as money %}
+{# The median fare by month, from every day this route flies direct (C7,
+   #156) -- Kayak's "Best Time to Travel", scoped to what the schedule
+   actually covers rather than a promised year. `months` is already ordered
+   chronologically and already carries `bar` (percent of the priciest month,
+   so a shorter bar reads as cheaper the way a price chart should) and
+   `is_cheapest` (the one month worth calling out), both worked out in
+   RouteController::monthsFor() rather than here -- a template computing an
+   aggregate over its own loop is a template repeating it on every render. #}
+<p class="months__note">
+    Median fare by month, from {{ months|length }} month{{ months|length == 1 ? '' : 's' }}
+    of {{ place.from.code }} to {{ place.to.code }}'s own direct schedule.
+</p>
+
+<ul class="months__chart" aria-label="Median price by month">
+    {% for month in months %}
+        <li class="months__col">
+            <a class="months__bar-link{{ month.is_cheapest ? ' months__bar-link--cheapest' : '' }}"
+               href="{{ month.search }}"
+               title="{{ month.days }} day{{ month.days == 1 ? '' : 's' }} sampled">
+                {% set fare_price = price_whole(month.median) %}
+                <span class="months__price">{{ money.plain(fare_price) }}<span class="months__currency">{{ fare_price.code }}</span></span>
+                <span class="months__bar" style="height: {{ max(month.bar, 4) }}%;"></span>
+                <span class="months__label">{{ month.label }}</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>
