@@ -51,6 +51,7 @@ class Reprice extends AbstractCommand
     public const string NAME = 'flights:reprice';
 
     private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Report what the new fares would look like without writing anything.';
 
     private const int BATCH_SIZE = 20000;
 
@@ -60,7 +61,7 @@ class Reprice extends AbstractCommand
             self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Report what the new fares would look like without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
     }
 

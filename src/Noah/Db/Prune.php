@@ -60,6 +60,7 @@ final class Prune extends AbstractCommand
     public const string NAME = 'db:prune';
 
     private const string OPT_FORCE = 'force';
+    private const string OPT_FORCE_DESCRIPTION = 'Actually delete. Without this the command only says what it would remove.';
 
     protected function configure(): void
     {
@@ -67,7 +68,7 @@ final class Prune extends AbstractCommand
             self::OPT_FORCE,
             null,
             InputOption::VALUE_NONE,
-            'Actually delete. Without this the command only says what it would remove.',
+            self::OPT_FORCE_DESCRIPTION,
         );
     }
 

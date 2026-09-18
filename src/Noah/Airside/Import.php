@@ -50,7 +50,10 @@ final class Import extends AbstractCommand
     public const string NAME = 'airside:import';
 
     private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Parse and report, without writing anything.';
+
     private const string OPT_NO_UPLOAD = 'no-upload';
+    private const string OPT_NO_UPLOAD_DESCRIPTION = 'Write the rows but send nothing to the bucket.';
 
     private const string CONTENT_DIR = 'config/content/airside';
 
@@ -91,14 +94,14 @@ final class Import extends AbstractCommand
             self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Parse and report, without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
 
         $this->addOption(
             self::OPT_NO_UPLOAD,
             null,
             InputOption::VALUE_NONE,
-            'Write the rows but send nothing to the bucket.',
+            self::OPT_NO_UPLOAD_DESCRIPTION,
         );
     }
 

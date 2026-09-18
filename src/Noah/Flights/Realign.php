@@ -72,7 +72,11 @@ class Realign extends AbstractCommand
     public const string NAME = 'flights:realign';
 
     private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Report what would change without writing anything.';
+
     private const string OPT_KEEP_UNFLYABLE = 'keep-unflyable';
+    private const string OPT_KEEP_UNFLYABLE_DESCRIPTION = 'Leave legs longer than any aircraft can fly in place'
+        . ' instead of deleting them.';
 
     private const int BATCH_SIZE = 5000;
 
@@ -82,14 +86,14 @@ class Realign extends AbstractCommand
             self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Report what would change without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
 
         $this->addOption(
             self::OPT_KEEP_UNFLYABLE,
             null,
             InputOption::VALUE_NONE,
-            'Leave legs longer than any aircraft can fly in place instead of deleting them.',
+            self::OPT_KEEP_UNFLYABLE_DESCRIPTION,
         );
     }
 

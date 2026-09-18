@@ -39,8 +39,13 @@ class Generate extends AbstractCommand
     public const string NAME = 'flights:add';
 
     private const string ARG_FLIGHTS = 'flights';
+    private const string ARG_FLIGHTS_DESCRIPTION = 'Flights to add';
+
     private const string OPT_DAY = 'day';
+    private const string OPT_DAY_DESCRIPTION = 'Put them all on one day: a date (2026-12-12) or days from today (90).';
+
     private const string OPT_LEVEL = 'level';
+    private const string OPT_LEVEL_DESCRIPTION = 'Put them on the thinnest days in the window, thinnest first.';
 
     private const int FLIGHTS_COUNT = 10000;
     private const int NUMBERS_POOL = 9999;
@@ -89,18 +94,18 @@ class Generate extends AbstractCommand
 
     protected function configure(): void
     {
-        $this->addArgument(self::ARG_FLIGHTS, InputArgument::OPTIONAL, 'Flights to add');
+        $this->addArgument(self::ARG_FLIGHTS, InputArgument::OPTIONAL, self::ARG_FLIGHTS_DESCRIPTION);
         $this->addOption(
             self::OPT_DAY,
             null,
             InputOption::VALUE_REQUIRED,
-            'Put them all on one day: a date (2026-12-12) or days from today (90).',
+            self::OPT_DAY_DESCRIPTION,
         );
         $this->addOption(
             self::OPT_LEVEL,
             null,
             InputOption::VALUE_NONE,
-            'Put them on the thinnest days in the window, thinnest first.',
+            self::OPT_LEVEL_DESCRIPTION,
         );
     }
 

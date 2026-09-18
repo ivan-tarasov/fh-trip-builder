@@ -51,6 +51,7 @@ final class Run extends AbstractCommand
     public const string NAME = 'schedule:run';
 
     private const string OPT_PRETEND = 'pretend';
+    private const string OPT_PRETEND_DESCRIPTION = 'Say what is due and run none of it.';
 
     protected function configure(): void
     {
@@ -58,7 +59,7 @@ final class Run extends AbstractCommand
             self::OPT_PRETEND,
             null,
             InputOption::VALUE_NONE,
-            'Say what is due and run none of it.',
+            self::OPT_PRETEND_DESCRIPTION,
         );
     }
 

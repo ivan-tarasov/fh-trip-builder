@@ -52,6 +52,7 @@ class Migrate extends AbstractCommand
     public const string NAME = 'db:migrate';
 
     private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'List what would run without applying anything.';
 
     private const string MIGRATIONS_DIR = 'config/noah/db/migrations';
     private const string TABLE = 'schema_migrations';
@@ -62,7 +63,7 @@ class Migrate extends AbstractCommand
             self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'List what would run without applying anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
     }
 

@@ -43,6 +43,7 @@ final class Backup extends AbstractCommand
     public const string DIRECTORY = 'backups';
 
     private const string OPT_BINARY = 'binary';
+    private const string OPT_BINARY_DESCRIPTION = 'Path to mysqldump, when it is not on PATH.';
 
     protected function configure(): void
     {
@@ -50,7 +51,7 @@ final class Backup extends AbstractCommand
             self::OPT_BINARY,
             null,
             InputOption::VALUE_REQUIRED,
-            'Path to mysqldump, when it is not on PATH.',
+            self::OPT_BINARY_DESCRIPTION,
             'mysqldump',
         );
     }

@@ -58,7 +58,10 @@ class Import extends AbstractCommand
     public const string NAME = 'articles:import';
 
     private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Parse and report, without writing anything.';
+
     private const string OPT_FORCE = 'force';
+    private const string OPT_FORCE_DESCRIPTION = 'Take back the rows edited in the panel and rewrite them from the files.';
 
     /** Where the committed copy of each article lives. */
     private const string CONTENT_DIR = 'config/content/help';
@@ -91,14 +94,14 @@ class Import extends AbstractCommand
             self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Parse and report, without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
 
         $this->addOption(
             self::OPT_FORCE,
             null,
             InputOption::VALUE_NONE,
-            'Take back the rows edited in the panel and rewrite them from the files.',
+            self::OPT_FORCE_DESCRIPTION,
         );
     }
 

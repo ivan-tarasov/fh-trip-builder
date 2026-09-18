@@ -52,6 +52,7 @@ class Install extends AbstractCommand
     public const string NAME = 'app:install';
 
     private const string OPT_WITH_CONTENT = 'with-content';
+    private const string OPT_WITH_CONTENT_DESCRIPTION = 'Also import the help articles and the Airside posts.';
 
     private const string MESSAGE_CREATING_TABLE = 'Creating `%s` table';
     private const string MESSAGE_SEEDING_TABLE = 'Seeding `%s` table';
@@ -67,7 +68,7 @@ class Install extends AbstractCommand
             self::OPT_WITH_CONTENT,
             null,
             InputOption::VALUE_NONE,
-            'Also import the help articles and the Airside posts.',
+            self::OPT_WITH_CONTENT_DESCRIPTION,
         );
     }
 

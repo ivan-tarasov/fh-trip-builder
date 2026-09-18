@@ -67,7 +67,10 @@ class Cabins extends AbstractCommand
     public const string NAME = 'flights:cabins';
 
     private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Report what the cabins and their fares would look like without writing anything.';
+
     private const string OPT_FLEET = 'fleet';
+    private const string OPT_FLEET_DESCRIPTION = 'Also list what every aircraft type has fitted on board.';
 
     private const int BATCH_SIZE = 20000;
 
@@ -82,14 +85,14 @@ class Cabins extends AbstractCommand
             self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Report what the cabins and their fares would look like without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
 
         $this->addOption(
             self::OPT_FLEET,
             null,
             InputOption::VALUE_NONE,
-            'Also list what every aircraft type has fitted on board.',
+            self::OPT_FLEET_DESCRIPTION,
         );
     }
 

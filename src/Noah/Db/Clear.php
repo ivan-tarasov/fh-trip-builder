@@ -32,6 +32,7 @@ class Clear extends AbstractCommand
     private const string ARG_DESCRIPTION = 'Database table to clear';
 
     private const string OPT_NO_BACKUP = 'no-backup';
+    private const string OPT_NO_BACKUP_DESCRIPTION = 'Skip the backup. For data you know is disposable.';
 
     private const string MESSAGE_WARNING = 'WARNING!!! ';
     private const string MESSAGE_DONE = 'Table(s) was successfully purged';
@@ -51,7 +52,7 @@ class Clear extends AbstractCommand
             self::OPT_NO_BACKUP,
             null,
             InputOption::VALUE_NONE,
-            'Skip the backup. For data you know is disposable.',
+            self::OPT_NO_BACKUP_DESCRIPTION,
         );
     }
 

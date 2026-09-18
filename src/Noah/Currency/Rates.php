@@ -48,7 +48,11 @@ class Rates extends AbstractCommand
     public const string NAME = 'currency:rates';
 
     private const string ARG_SPAN = 'span';
+    private const string ARG_SPAN_DESCRIPTION = 'A date or a range to backfill, as `2025-09-13` or'
+        . ' `2025-09-13..2026-03-01`. Left out, the command fetches the latest rates and nothing else.';
+
     private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Fetch and check the rates, and report them without writing anything.';
 
     /**
      * The source, with the span written into the path.
@@ -75,18 +79,13 @@ class Rates extends AbstractCommand
 
     protected function configure(): void
     {
-        $this->addArgument(
-            self::ARG_SPAN,
-            InputArgument::OPTIONAL,
-            'A date or a range to backfill, as `2025-09-13` or `2025-09-13..2026-03-01`.'
-            . ' Left out, the command fetches the latest rates and nothing else.',
-        );
+        $this->addArgument(self::ARG_SPAN, InputArgument::OPTIONAL, self::ARG_SPAN_DESCRIPTION);
 
         $this->addOption(
             self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Fetch and check the rates, and report them without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
     }
 
