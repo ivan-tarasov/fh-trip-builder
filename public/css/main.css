@@ -172,6 +172,7 @@
   --cat-orange:        #E8590C;
   --cat-violet:        #7048E8;
   --cat-pink:          #C2255C;
+  --cat-red:           #C92A2A;
 
   --success-tint:      #E4F2EA;
   --success-tint-edge: #B2E2C4;
@@ -6551,12 +6552,17 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
 
    Five now that the city and airport pages have a routes block, and the fifth
    is the crimson those four started out with -- the one violet replaced. Same
-   ramp as the rest of the set, at the same step. */
+   ramp as the rest of the set, at the same step.
+
+   Six now -- the route page's `watch` block has called for `red` since it was
+   written; the class just never existed. A genuine red, distinct from the
+   crimson pink already carries. */
 .place__rail-icon--green  { background-color: var(--cat-green); }
 .place__rail-icon--blue   { background-color: var(--cat-blue); }
 .place__rail-icon--orange { background-color: var(--cat-orange); }
 .place__rail-icon--violet { background-color: var(--cat-violet); }
 .place__rail-icon--pink   { background-color: var(--cat-pink); }
+.place__rail-icon--red    { background-color: var(--cat-red); }
 
 .place__blocks {
   display: grid;

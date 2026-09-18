@@ -146,6 +146,13 @@ class AdminController extends AbstractController
     private const string ARGUMENTS_PATTERN = '/^[A-Za-z0-9 _.=,-]*$/';
 
     /**
+     * What a category's `accent` can be -- the colours
+     * `.help-group__icon--*` actually defines in `main.css`. Not the rail
+     * icon's own six; that CSS rule doesn't back this icon family.
+     */
+    private const array CATEGORY_ACCENTS = ['green', 'blue', 'orange', 'violet', 'pink'];
+
+    /**
      * The dashboard.
      *
      * An operations page and not a business one, which was measured rather than
@@ -2638,6 +2645,8 @@ class AdminController extends AbstractController
             trim($posted['summary']) === '' => 'A category needs a summary.',
             $slug === null && $categories->forEditing($posted['slug']) !== null
                 => 'There is already a category with that slug.',
+            !in_array($posted['accent'], self::CATEGORY_ACCENTS, true)
+                => 'Pick one of the colours the hub card actually has.',
             default => null,
         };
 
@@ -2735,6 +2744,7 @@ class AdminController extends AbstractController
         echo new TwigRenderer()->render('admin/category.html.twig', [
             'category' => $category,
             'accent' => ArticleCategoryRepository::DEFAULT_ACCENT,
+            'accents' => self::CATEGORY_ACCENTS,
             'error' => $error,
         ]);
     }
