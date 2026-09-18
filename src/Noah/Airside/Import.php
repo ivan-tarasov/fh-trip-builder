@@ -40,13 +40,30 @@ use TripBuilder\View\Airside\PostImageSet;
  * }
  */
 #[AsCommand(
-    name: 'airside:import',
+    name: self::NAME,
     description: 'Make the Airside posts in the database match the files in config/content/airside.',
     aliases: [],
     hidden: false,
 )]
 final class Import extends AbstractCommand
 {
+    public const string NAME = 'airside:import';
+
+    private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Parse and report, without writing anything.';
+
+    private const string OPT_NO_UPLOAD = 'no-upload';
+    private const string OPT_NO_UPLOAD_DESCRIPTION = 'Write the rows but send nothing to the bucket.';
+
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION,
+        self::OPT_NO_UPLOAD => self::OPT_NO_UPLOAD_DESCRIPTION,
+    ];
+
     private const string CONTENT_DIR = 'config/content/airside';
 
     /**
@@ -83,17 +100,17 @@ final class Import extends AbstractCommand
     protected function configure(): void
     {
         $this->addOption(
-            'dry-run',
+            self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Parse and report, without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
 
         $this->addOption(
-            'no-upload',
+            self::OPT_NO_UPLOAD,
             null,
             InputOption::VALUE_NONE,
-            'Write the rows but send nothing to the bucket.',
+            self::OPT_NO_UPLOAD_DESCRIPTION,
         );
     }
 
@@ -147,7 +164,7 @@ final class Import extends AbstractCommand
             return Command::FAILURE;
         }
 
-        if ($input->getOption('dry-run')) {
+        if ($input->getOption(self::OPT_DRY_RUN)) {
             foreach ($posts as $slug => $post) {
                 $this->formatOutput(
                     sprintf('%s (%s)', $slug, $post['published_at']),
@@ -174,7 +191,7 @@ final class Import extends AbstractCommand
         // credential, and a deployed one cannot silently skip the upload.
         $uploader = null;
 
-        if (!$input->getOption('no-upload') && Cdn::isConfigured()) {
+        if (!$input->getOption(self::OPT_NO_UPLOAD) && Cdn::isConfigured()) {
             try {
                 $uploader = PostImageUploader::fromEnvironment();
             } catch (Throwable $e) {

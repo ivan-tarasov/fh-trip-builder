@@ -19,7 +19,7 @@ use TripBuilder\Repository\ArticleRepository;
 use TripBuilder\Repository\ArticleVoteRepository;
 
 #[AsCommand(
-    name: 'articles:import',
+    name: self::NAME,
     description: 'Make the help articles in the database match the files in config/content/help.',
     aliases: [],
     hidden: false,
@@ -55,6 +55,23 @@ use TripBuilder\Repository\ArticleVoteRepository;
  */
 class Import extends AbstractCommand
 {
+    public const string NAME = 'articles:import';
+
+    private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Parse and report, without writing anything.';
+
+    private const string OPT_FORCE = 'force';
+    private const string OPT_FORCE_DESCRIPTION = 'Take back the rows edited in the panel and rewrite them from the files.';
+
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION,
+        self::OPT_FORCE => self::OPT_FORCE_DESCRIPTION,
+    ];
+
     /** Where the committed copy of each article lives. */
     private const string CONTENT_DIR = 'config/content/help';
 
@@ -83,23 +100,23 @@ class Import extends AbstractCommand
     protected function configure(): void
     {
         $this->addOption(
-            'dry-run',
+            self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Parse and report, without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
 
         $this->addOption(
-            'force',
+            self::OPT_FORCE,
             null,
             InputOption::VALUE_NONE,
-            'Take back the rows edited in the panel and rewrite them from the files.',
+            self::OPT_FORCE_DESCRIPTION,
         );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $force = (bool) $input->getOption('force');
+        $force = (bool) $input->getOption(self::OPT_FORCE);
 
         try {
             // Categories first: an article names one.
@@ -153,7 +170,7 @@ class Import extends AbstractCommand
             return Command::FAILURE;
         }
 
-        if ($input->getOption('dry-run')) {
+        if ($input->getOption(self::OPT_DRY_RUN)) {
             foreach ($categories as $slug => $category) {
                 $this->formatOutput(sprintf('%s (position %d)', $slug, $category['position']), 'category', 'info');
             }

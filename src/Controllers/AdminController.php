@@ -147,18 +147,18 @@ class AdminController extends AbstractController
      * @var array<string, class-string<Command>>
      */
     private const array SCHEDULABLE_COMMAND_CLASSES = [
-        'currency:rates' => CurrencyRates::class,
-        'db:prune' => DatabasePrune::class,
-        'db:backup' => DatabaseBackup::class,
-        'flights:add' => GenerateFlights::class,
-        'flights:cleaning' => CleaningFlights::class,
-        'flights:reprice' => RepriceFlights::class,
-        'flights:cabins' => CabinsFlights::class,
-        'flights:realign' => RealignFlights::class,
-        'articles:import' => ArticlesImport::class,
-        'airside:import' => AirsideImport::class,
-        'airside:prune' => AirsidePrune::class,
-        'alerts:check' => AlertsCheck::class,
+        CurrencyRates::NAME => CurrencyRates::class,
+        DatabasePrune::NAME => DatabasePrune::class,
+        DatabaseBackup::NAME => DatabaseBackup::class,
+        GenerateFlights::NAME => GenerateFlights::class,
+        CleaningFlights::NAME => CleaningFlights::class,
+        RepriceFlights::NAME => RepriceFlights::class,
+        CabinsFlights::NAME => CabinsFlights::class,
+        RealignFlights::NAME => RealignFlights::class,
+        ArticlesImport::NAME => ArticlesImport::class,
+        AirsideImport::NAME => AirsideImport::class,
+        AirsidePrune::NAME => AirsidePrune::class,
+        AlertsCheck::NAME => AlertsCheck::class,
     ];
 
     /** Flags and values only -- what a real command's arguments look like. */

@@ -115,7 +115,10 @@ final class ScheduledJobRepositoryTest extends IntegrationTestCase
         $registered = [];
 
         foreach (self::filesUnder(Helper::getRootDir() . '/src/Noah') as $file) {
-            if (preg_match("/name: '([^']+)'/", (string) file_get_contents($file), $found) === 1) {
+            // Reads the `NAME` constant every command class declares, not the
+            // `#[AsCommand(name: ...)]` attribute directly -- that argument is
+            // `self::NAME` now, precisely so this string exists in one place.
+            if (preg_match("/public const string NAME = '([^']+)';/", (string) file_get_contents($file), $found) === 1) {
                 $registered[] = $found[1];
             }
         }

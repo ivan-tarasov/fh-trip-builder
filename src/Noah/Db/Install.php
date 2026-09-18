@@ -16,6 +16,8 @@ use Throwable;
 use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
+use TripBuilder\Noah\Airside\Import as AirsideImport;
+use TripBuilder\Noah\Articles\Import as ArticlesImport;
 
 /**
  * Live against every file in `config/noah/db/tables/*.php`: a column
@@ -39,7 +41,7 @@ use TripBuilder\Noah\AbstractCommand;
  * }
  */
 #[AsCommand(
-    name: 'app:install',
+    name: self::NAME,
     description: 'Installing necessary database tables and seeding it with data.',
     aliases: ['install', 'setup', 'app:setup'],
     hidden: false,
@@ -47,6 +49,17 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Install extends AbstractCommand
 {
+    public const string NAME = 'app:install';
+
+    private const string OPT_WITH_CONTENT = 'with-content';
+    private const string OPT_WITH_CONTENT_DESCRIPTION = 'Also import the help articles and the Airside posts.';
+
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_WITH_CONTENT => self::OPT_WITH_CONTENT_DESCRIPTION];
+
     private const string MESSAGE_CREATING_TABLE = 'Creating `%s` table';
     private const string MESSAGE_SEEDING_TABLE = 'Seeding `%s` table';
     private const string MESSAGE_ADDING_COLUMN = 'Adding `%s`.`%s` column';
@@ -58,10 +71,10 @@ class Install extends AbstractCommand
     protected function configure(): void
     {
         $this->addOption(
-            'with-content',
+            self::OPT_WITH_CONTENT,
             null,
             InputOption::VALUE_NONE,
-            'Also import the help articles and the Airside posts.',
+            self::OPT_WITH_CONTENT_DESCRIPTION,
         );
     }
 
@@ -70,7 +83,7 @@ class Install extends AbstractCommand
         $this->createTables();
         $this->seedingTables();
 
-        if ($input->getOption('with-content') && !$this->importContent($output)) {
+        if ($input->getOption(self::OPT_WITH_CONTENT) && !$this->importContent($output)) {
             return Command::FAILURE;
         }
 
@@ -110,7 +123,7 @@ class Install extends AbstractCommand
             return false;
         }
 
-        foreach (['articles:import', 'airside:import'] as $command) {
+        foreach ([ArticlesImport::NAME, AirsideImport::NAME] as $command) {
             try {
                 // find()->run() and not Application::run(): `noah` never calls
                 // setAutoExit(false), so the application-level run would end

@@ -77,7 +77,10 @@ final class EveryCommandRunsInCiTest extends TestCase
 
             $contents = (string) file_get_contents($file->getPathname());
 
-            if (preg_match("/name: '([a-z]+:[a-z-]+)'/", $contents, $name) === 1) {
+            // Reads the `NAME` constant every command class declares, not the
+            // `#[AsCommand(name: ...)]` attribute directly -- that argument is
+            // `self::NAME` now, precisely so this string exists in one place.
+            if (preg_match("/public const string NAME = '([a-z]+:[a-z-]+)';/", $contents, $name) === 1) {
                 $found[$name[1]] = substr($file->getPathname(), strlen(Helper::getRootDir()) + 1);
             }
         }

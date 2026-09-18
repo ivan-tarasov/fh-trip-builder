@@ -18,7 +18,7 @@ use TripBuilder\Repository\PostRepository;
 use TripBuilder\Service\PostImageSweep;
 
 #[AsCommand(
-    name: 'airside:prune',
+    name: self::NAME,
     description: 'Remove Airside images in the bucket that no post points at any more.',
     aliases: [],
     hidden: false,
@@ -40,13 +40,24 @@ use TripBuilder\Service\PostImageSweep;
  */
 final class Prune extends AbstractCommand
 {
+    public const string NAME = 'airside:prune';
+
+    private const string OPT_FORCE = 'force';
+    private const string OPT_FORCE_DESCRIPTION = 'Actually delete. Without this the command only says what it would remove.';
+
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_FORCE => self::OPT_FORCE_DESCRIPTION];
+
     protected function configure(): void
     {
         $this->addOption(
-            'force',
+            self::OPT_FORCE,
             null,
             InputOption::VALUE_NONE,
-            'Actually delete. Without this the command only says what it would remove.',
+            self::OPT_FORCE_DESCRIPTION,
         );
     }
 
@@ -78,11 +89,11 @@ final class Prune extends AbstractCommand
         }
 
         foreach ($keys as $key) {
-            $this->formatOutput($key, $input->getOption('force') ? 'deleting' : 'would delete', 'comment');
+            $this->formatOutput($key, $input->getOption(self::OPT_FORCE) ? 'deleting' : 'would delete', 'comment');
         }
 
         foreach ($rows as $file) {
-            $this->formatOutput($file, $input->getOption('force') ? 'forgetting' : 'would forget', 'comment');
+            $this->formatOutput($file, $input->getOption(self::OPT_FORCE) ? 'forgetting' : 'would forget', 'comment');
         }
 
         if ($keys === [] && $rows === []) {
@@ -91,7 +102,7 @@ final class Prune extends AbstractCommand
             return Command::SUCCESS;
         }
 
-        if (!$input->getOption('force')) {
+        if (!$input->getOption(self::OPT_FORCE)) {
             $this->io->note(sprintf(
                 '%d object(s) and %d row(s) would be removed. Nothing was. Run again with --force.',
                 count($keys),
