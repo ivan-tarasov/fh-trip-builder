@@ -55,6 +55,15 @@ final class Import extends AbstractCommand
     private const string OPT_NO_UPLOAD = 'no-upload';
     private const string OPT_NO_UPLOAD_DESCRIPTION = 'Write the rows but send nothing to the bucket.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION,
+        self::OPT_NO_UPLOAD => self::OPT_NO_UPLOAD_DESCRIPTION,
+    ];
+
     private const string CONTENT_DIR = 'config/content/airside';
 
     /**

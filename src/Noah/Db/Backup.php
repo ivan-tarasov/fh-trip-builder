@@ -45,6 +45,12 @@ final class Backup extends AbstractCommand
     private const string OPT_BINARY = 'binary';
     private const string OPT_BINARY_DESCRIPTION = 'Path to mysqldump, when it is not on PATH.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_BINARY => self::OPT_BINARY_DESCRIPTION];
+
     protected function configure(): void
     {
         $this->addOption(

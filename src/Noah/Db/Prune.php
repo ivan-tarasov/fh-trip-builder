@@ -62,6 +62,12 @@ final class Prune extends AbstractCommand
     private const string OPT_FORCE = 'force';
     private const string OPT_FORCE_DESCRIPTION = 'Actually delete. Without this the command only says what it would remove.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_FORCE => self::OPT_FORCE_DESCRIPTION];
+
     protected function configure(): void
     {
         $this->addOption(

@@ -25,6 +25,10 @@ class Cleaning extends AbstractCommand
 {
     public const string NAME = 'flights:cleaning';
 
+    /** No `configure()` -- this command takes nothing. */
+    public const array ARGUMENTS = [];
+    public const array OPTIONS = [];
+
     private const int BATCH_SIZE = 5000;
 
     /**

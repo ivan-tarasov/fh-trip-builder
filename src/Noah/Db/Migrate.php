@@ -54,6 +54,12 @@ class Migrate extends AbstractCommand
     private const string OPT_DRY_RUN = 'dry-run';
     private const string OPT_DRY_RUN_DESCRIPTION = 'List what would run without applying anything.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION];
+
     private const string MIGRATIONS_DIR = 'config/noah/db/migrations';
     private const string TABLE = 'schema_migrations';
 

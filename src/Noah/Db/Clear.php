@@ -34,6 +34,12 @@ class Clear extends AbstractCommand
     private const string OPT_NO_BACKUP = 'no-backup';
     private const string OPT_NO_BACKUP_DESCRIPTION = 'Skip the backup. For data you know is disposable.';
 
+    /** Every argument this command takes, name => description. */
+    public const array ARGUMENTS = [self::ARG_NAME => self::ARG_DESCRIPTION];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_NO_BACKUP => self::OPT_NO_BACKUP_DESCRIPTION];
+
     private const string MESSAGE_WARNING = 'WARNING!!! ';
     private const string MESSAGE_DONE = 'Table(s) was successfully purged';
 

@@ -47,6 +47,15 @@ class Generate extends AbstractCommand
     private const string OPT_LEVEL = 'level';
     private const string OPT_LEVEL_DESCRIPTION = 'Put them on the thinnest days in the window, thinnest first.';
 
+    /** Every argument this command takes, name => description. */
+    public const array ARGUMENTS = [self::ARG_FLIGHTS => self::ARG_FLIGHTS_DESCRIPTION];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DAY => self::OPT_DAY_DESCRIPTION,
+        self::OPT_LEVEL => self::OPT_LEVEL_DESCRIPTION,
+    ];
+
     private const int FLIGHTS_COUNT = 10000;
     private const int NUMBERS_POOL = 9999;
 

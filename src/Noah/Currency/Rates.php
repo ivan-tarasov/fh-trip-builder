@@ -54,6 +54,12 @@ class Rates extends AbstractCommand
     private const string OPT_DRY_RUN = 'dry-run';
     private const string OPT_DRY_RUN_DESCRIPTION = 'Fetch and check the rates, and report them without writing anything.';
 
+    /** Every argument this command takes, name => description. */
+    public const array ARGUMENTS = [self::ARG_SPAN => self::ARG_SPAN_DESCRIPTION];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION];
+
     /**
      * The source, with the span written into the path.
      *

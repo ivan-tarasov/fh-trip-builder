@@ -53,6 +53,12 @@ class Reprice extends AbstractCommand
     private const string OPT_DRY_RUN = 'dry-run';
     private const string OPT_DRY_RUN_DESCRIPTION = 'Report what the new fares would look like without writing anything.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION];
+
     private const int BATCH_SIZE = 20000;
 
     protected function configure(): void

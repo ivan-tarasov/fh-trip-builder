@@ -78,6 +78,15 @@ class Realign extends AbstractCommand
     private const string OPT_KEEP_UNFLYABLE_DESCRIPTION = 'Leave legs longer than any aircraft can fly in place'
         . ' instead of deleting them.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION,
+        self::OPT_KEEP_UNFLYABLE => self::OPT_KEEP_UNFLYABLE_DESCRIPTION,
+    ];
+
     private const int BATCH_SIZE = 5000;
 
     protected function configure(): void

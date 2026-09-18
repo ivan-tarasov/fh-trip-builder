@@ -72,6 +72,15 @@ class Cabins extends AbstractCommand
     private const string OPT_FLEET = 'fleet';
     private const string OPT_FLEET_DESCRIPTION = 'Also list what every aircraft type has fitted on board.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION,
+        self::OPT_FLEET => self::OPT_FLEET_DESCRIPTION,
+    ];
+
     private const int BATCH_SIZE = 20000;
 
     private const string COLUMN = 'cabins';

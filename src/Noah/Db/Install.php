@@ -54,6 +54,12 @@ class Install extends AbstractCommand
     private const string OPT_WITH_CONTENT = 'with-content';
     private const string OPT_WITH_CONTENT_DESCRIPTION = 'Also import the help articles and the Airside posts.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_WITH_CONTENT => self::OPT_WITH_CONTENT_DESCRIPTION];
+
     private const string MESSAGE_CREATING_TABLE = 'Creating `%s` table';
     private const string MESSAGE_SEEDING_TABLE = 'Seeding `%s` table';
     private const string MESSAGE_ADDING_COLUMN = 'Adding `%s`.`%s` column';

@@ -53,6 +53,12 @@ final class Run extends AbstractCommand
     private const string OPT_PRETEND = 'pretend';
     private const string OPT_PRETEND_DESCRIPTION = 'Say what is due and run none of it.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_PRETEND => self::OPT_PRETEND_DESCRIPTION];
+
     protected function configure(): void
     {
         $this->addOption(

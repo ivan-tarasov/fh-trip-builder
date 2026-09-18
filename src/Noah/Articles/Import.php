@@ -63,6 +63,15 @@ class Import extends AbstractCommand
     private const string OPT_FORCE = 'force';
     private const string OPT_FORCE_DESCRIPTION = 'Take back the rows edited in the panel and rewrite them from the files.';
 
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION,
+        self::OPT_FORCE => self::OPT_FORCE_DESCRIPTION,
+    ];
+
     /** Where the committed copy of each article lives. */
     private const string CONTENT_DIR = 'config/content/help';
 

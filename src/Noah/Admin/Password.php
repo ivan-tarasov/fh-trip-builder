@@ -40,6 +40,10 @@ class Password extends AbstractCommand
 {
     public const string NAME = 'admin:password';
 
+    /** No `configure()` -- this command takes nothing. */
+    public const array ARGUMENTS = [];
+    public const array OPTIONS = [];
+
     /**
      * Below this, a hash is the only slow part of guessing.
      *
