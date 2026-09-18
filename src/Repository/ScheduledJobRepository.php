@@ -23,13 +23,17 @@ final readonly class ScheduledJobRepository
     /**
      * Every job, enabled and disabled -- what the list page shows.
      *
+     * `ORDER BY id`, the order they were added in -- alphabetical by
+     * `command` was tried first and read as though `alerts:check` had some
+     * special priority, when it only ever meant 'a' sorts before 'c'/'d'/'f'.
+     *
      * @return list<ScheduledJobRow>
      */
     public function all(): array
     {
         return array_map(
             self::shaped(...),
-            $this->connection->fetchAll('SELECT * FROM ' . Table::ScheduledJobs->value . ' ORDER BY command'),
+            $this->connection->fetchAll('SELECT * FROM ' . Table::ScheduledJobs->value . ' ORDER BY id'),
         );
     }
 
@@ -43,7 +47,7 @@ final readonly class ScheduledJobRepository
         return array_map(
             self::shaped(...),
             $this->connection->fetchAll(
-                'SELECT * FROM ' . Table::ScheduledJobs->value . ' WHERE enabled = 1 ORDER BY command',
+                'SELECT * FROM ' . Table::ScheduledJobs->value . ' WHERE enabled = 1 ORDER BY id',
             ),
         );
     }

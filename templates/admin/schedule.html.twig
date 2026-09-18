@@ -1,4 +1,5 @@
 {% extends 'admin/layout.html.twig' %}
+{% import 'admin/partials/time-macros.html.twig' as time %}
 
 {% set admin_section = 'schedule' %}
 
@@ -6,21 +7,20 @@
 {% block description %}<p class="well__description">What runs without anybody asking, and when.</p>{% endblock %}
 {% block tools %}<a class="btn btn-primary btn-sm" href="/admin/schedule/job">Add job</a>{% endblock %}
 
-{# One form per action, the same shape `content()`'s own dropdown uses --
-   three buttons cannot share a submit, and a form posting back to this same
-   page is what stops a refresh repeating the last move (G19, #377). #}
+{# One form per action -- three buttons cannot share a submit, and a form
+   posting back to this same page is what stops a refresh repeating the last
+   move (G19, #377). Inline `.btn-icon` buttons rather than a dropdown, so
+   the row's actions are visible without a click. #}
 {% macro act(label, icon, id, action, confirm) %}
-    <li>
-        <form method="post" action="/admin/schedule">
-            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
-            <input type="hidden" name="id" value="{{ id }}">
-            <input type="hidden" name="action" value="{{ action }}">
-            <button type="submit" class="dropdown-item d-flex align-items-center gap-2"
-                    {%- if confirm %} data-confirm="{{ confirm }}"{% endif %}>
-                <i class="bi bi-{{ icon }}" aria-hidden="true"></i> {{ label }}
-            </button>
-        </form>
-    </li>
+    <form method="post" action="/admin/schedule">
+        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        <input type="hidden" name="id" value="{{ id }}">
+        <input type="hidden" name="action" value="{{ action }}">
+        <button type="submit" class="btn btn-icon" title="{{ label }}" aria-label="{{ label }}"
+                {%- if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+            <i class="bi bi-{{ icon }}" aria-hidden="true"></i>
+        </button>
+    </form>
 {% endmacro %}
 
 {% block content %}
@@ -34,6 +34,7 @@
                         <tr>
                             <th scope="col">Command</th>
                             <th scope="col">Cron</th>
+                            <th scope="col">Last ran</th>
                             <th scope="col">Status</th>
                             <th scope="col" class="text-end">Actions</th>
                         </tr>
@@ -45,6 +46,9 @@
                                     <a href="/admin/schedule/job/{{ job.id }}">{{ job.command }}</a>
                                 </td>
                                 <td class="mono text-body-secondary">{{ job.cron }}</td>
+                                <td class="mono text-body-secondary">
+                                    {{ job.last_ran ? time.stamp(job.last_ran, 'freshness') : '—' }}
+                                </td>
                                 <td>
                                     {% if not job.enabled %}
                                         <span class="status-chip status-chip--muted"><i class="bi bi-pause-circle" aria-hidden="true"></i>disabled</span>
@@ -59,20 +63,16 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
-                                    <div class="dropdown">
-                                        <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for {{ job.command }}">
-                                            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item d-flex align-items-center gap-2" href="/admin/schedule/job/{{ job.id }}"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a></li>
-                                            <li><a class="dropdown-item d-flex align-items-center gap-2" href="/admin/schedule/history?command={{ job.command|url_encode }}"><i class="bi bi-clock-history" aria-hidden="true"></i> History</a></li>
-                                            {% if job.enabled %}
-                                                {{ _self.act('Disable', 'pause-circle', job.id, 'disable', null) }}
-                                            {% else %}
-                                                {{ _self.act('Enable', 'play-circle', job.id, 'enable', null) }}
-                                            {% endif %}
-                                            {{ _self.act('Remove', 'trash', job.id, 'remove', 'Remove ' ~ job.command ~ '? It stops running immediately.') }}
-                                        </ul>
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <a class="btn btn-icon" href="/admin/schedule/job/{{ job.id }}" title="Edit" aria-label="Edit {{ job.command }}"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                        <a class="btn btn-icon" href="/admin/schedule/history/{{ job.id }}" title="History" aria-label="History for {{ job.command }}"><i class="bi bi-clock-history" aria-hidden="true"></i></a>
+                                        {{ _self.act('Run now', 'lightning-charge', job.id, 'run', 'Run ' ~ job.command ~ ' now, instead of waiting for its next tick?') }}
+                                        {% if job.enabled %}
+                                            {{ _self.act('Disable', 'pause-circle', job.id, 'disable', null) }}
+                                        {% else %}
+                                            {{ _self.act('Enable', 'play-circle', job.id, 'enable', null) }}
+                                        {% endif %}
+                                        {{ _self.act('Remove', 'trash', job.id, 'remove', 'Remove ' ~ job.command ~ '? It stops running immediately.') }}
                                     </div>
                                 </td>
                             </tr>

@@ -19,6 +19,11 @@ return [
     | row still showing `started_at` with nothing else set is a visible sign of
     | a run that crashed or was killed, not a run silently missing from the log.
     |
+    | `DATETIME(3)`, not the plain `DATETIME` `schedule_runs` uses -- this is
+    | the only table `AdminController::runDuration()` reads, and a command
+    | that finishes in the same wall-clock second it started needs the
+    | milliseconds to show anything other than "0s".
+    |
     */
 
     'primary' => 'id',
@@ -52,7 +57,7 @@ return [
         [
             'name' => 'started_at',
             'type' => 'datetime',
-            'length' => null,
+            'length' => 3,
             'default' => false,
             'nullable' => false,
             'auto_inc' => false,
@@ -61,7 +66,7 @@ return [
         [
             'name' => 'finished_at',
             'type' => 'datetime',
-            'length' => null,
+            'length' => 3,
             'default' => null,
             'nullable' => true,
             'auto_inc' => false,

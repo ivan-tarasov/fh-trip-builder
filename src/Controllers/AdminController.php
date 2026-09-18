@@ -7,6 +7,9 @@ namespace TripBuilder\Controllers;
 use DateTimeImmutable;
 use Exception;
 use RuntimeException;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 use TripBuilder\Admin;
 use TripBuilder\AdminEvent;
@@ -130,7 +133,9 @@ class AdminController extends AbstractController
     private const int TOP_WATCHED_ROUTES_LIMIT = 10;
 
     /**
-     * What a scheduled job is allowed to run (G19, #377).
+     * What a scheduled job is allowed to run (G19, #377), and the class that
+     * answers for its own description and arguments -- one map rather than a
+     * name list plus a second lookup kept in step with it by hand.
      *
      * Not the full 16 `noah` commands -- `db:clear` wipes tables, `app:install`
      * and `db:migrate` are one-time operations a schedule would repeat forever,
@@ -138,20 +143,22 @@ class AdminController extends AbstractController
      * interactive prompt that does nothing when run unattended. Picking from
      * "every registered command" would put a destructive one in the same
      * dropdown as a currency refresh.
+     *
+     * @var array<string, class-string<Command>>
      */
-    private const array SCHEDULABLE_COMMANDS = [
-        CurrencyRates::NAME,
-        DatabasePrune::NAME,
-        DatabaseBackup::NAME,
-        GenerateFlights::NAME,
-        CleaningFlights::NAME,
-        RepriceFlights::NAME,
-        CabinsFlights::NAME,
-        RealignFlights::NAME,
-        ArticlesImport::NAME,
-        AirsideImport::NAME,
-        AirsidePrune::NAME,
-        AlertsCheck::NAME,
+    private const array SCHEDULABLE_COMMAND_CLASSES = [
+        CurrencyRates::NAME => CurrencyRates::class,
+        DatabasePrune::NAME => DatabasePrune::class,
+        DatabaseBackup::NAME => DatabaseBackup::class,
+        GenerateFlights::NAME => GenerateFlights::class,
+        CleaningFlights::NAME => CleaningFlights::class,
+        RepriceFlights::NAME => RepriceFlights::class,
+        CabinsFlights::NAME => CabinsFlights::class,
+        RealignFlights::NAME => RealignFlights::class,
+        ArticlesImport::NAME => ArticlesImport::class,
+        AirsideImport::NAME => AirsideImport::class,
+        AirsidePrune::NAME => AirsidePrune::class,
+        AlertsCheck::NAME => AlertsCheck::class,
     ];
 
     /** Flags and values only -- what a real command's arguments look like. */
@@ -472,7 +479,7 @@ class AdminController extends AbstractController
         }
 
         $jobs = new ScheduledJobRepository($this->connection());
-        $id = $this->scheduledJobIdFromPath();
+        $id = $this->numericIdFromPath();
 
         if ($this->request->isPost()) {
             $this->saveScheduleJob($jobs, $id);
@@ -505,6 +512,11 @@ class AdminController extends AbstractController
     /**
      * One command's real run history, newest first.
      *
+     * Addressed by the job's own id rather than its command spelled out in
+     * the query string -- `?command=db%3Aprune%20--force` is what a command
+     * with a flag on it turned into, the same reasoning the job editor
+     * itself is addressed by id and not by name.
+     *
      * @throws Exception|Error
      */
     public function scheduleHistory(): void
@@ -513,24 +525,67 @@ class AdminController extends AbstractController
             return;
         }
 
-        $command = $this->request->query->str('command');
+        $id = $this->numericIdFromPath();
+        $job = $id === null ? null : new ScheduledJobRepository($this->connection())->find($id);
 
-        if ($command === '') {
+        if ($job === null) {
             $this->notFound();
 
             return;
         }
 
-        $runs = new ScheduleRunRepository($this->connection())->historyFor($command, 50);
+        $runs = new ScheduleRunRepository($this->connection())->historyFor($job['command'], 50);
+        $base = self::splitCommand($job['command'])['base'];
 
         echo new TwigRenderer()->render('admin/schedule-history.html.twig', [
-            'command' => $command,
-            'runs' => array_map(static fn(array $row): array => [
-                'started_at' => new DateTimeImmutable($row['started_at']),
-                'finished_at' => $row['finished_at'] === null ? null : new DateTimeImmutable($row['finished_at']),
-                'exit_code' => $row['exit_code'],
-            ], $runs),
+            'command' => $job['command'],
+            'commandDescription' => self::scheduledCommandHelp()[$base]['description'] ?? null,
+            'runs' => array_map(static function (array $row): array {
+                $started = new DateTimeImmutable($row['started_at']);
+                $finished = $row['finished_at'] === null ? null : new DateTimeImmutable($row['finished_at']);
+
+                return [
+                    'started_at' => $started,
+                    'finished_at' => $finished,
+                    'exit_code' => $row['exit_code'],
+                    'duration' => self::runDuration($started, $finished),
+                ];
+            }, $runs),
         ]);
+    }
+
+    /**
+     * How long a run took, or null while it has no finish to measure against
+     * -- still running, or killed before it could report (the history page's
+     * own table already says which).
+     *
+     * `format('U.u')` rather than `getTimestamp()` -- most of what runs here
+     * (`alerts:check`, `currency:rates`) finishes inside the same
+     * wall-clock second it started, and whole seconds alone would call
+     * every one of those "0s".
+     */
+    public static function runDuration(DateTimeImmutable $started, ?DateTimeImmutable $finished): ?string
+    {
+        if ($finished === null) {
+            return null;
+        }
+
+        $elapsedMs = (int) round((((float) $finished->format('U.u')) - ((float) $started->format('U.u'))) * 1000);
+
+        if ($elapsedMs < 1000) {
+            return $elapsedMs . 'ms';
+        }
+
+        $seconds = intdiv($elapsedMs, 1000);
+
+        if ($seconds < 60) {
+            return $seconds . 's';
+        }
+
+        $minutes = intdiv($seconds, 60);
+        $rest = $seconds % 60;
+
+        return $rest === 0 ? $minutes . 'm' : sprintf('%dm %ds', $minutes, $rest);
     }
 
     /**
@@ -541,7 +596,7 @@ class AdminController extends AbstractController
      * jobs `Run.php` would and this page needs the disabled ones too.
      *
      * @param list<array{id: int, command: string, minute: string, hour: string, day: string, month: string, weekday: string, enabled: bool}> $rows
-     * @return list<array{id: int, command: string, cron: string, enabled: bool, age: string, exit: ?int, stale: bool}>
+     * @return list<array{id: int, command: string, cron: string, enabled: bool, age: string, exit: ?int, stale: bool, last_ran: ?string}>
      */
     private function scheduleJobRows(array $rows): array
     {
@@ -568,6 +623,11 @@ class AdminController extends AbstractController
                 'age' => $seen['age'],
                 'exit' => isset($records[$job['command']]) ? $records[$job['command']]['last_exit'] : null,
                 'stale' => $seen['stale'],
+                // When it last *started*, not `health()`'s own "age" (last
+                // *success*) -- a job failing every night should still say
+                // when it was last attempted, which Status already reads as
+                // failing.
+                'last_ran' => $records[$job['command']]['last_run_at'] ?? null,
             ];
         }
 
@@ -591,8 +651,21 @@ class AdminController extends AbstractController
         $jobs = new ScheduledJobRepository($this->connection());
         $job = $jobs->find($id);
 
-        if ($job === null || !in_array($action, ['enable', 'disable', 'remove'], true)) {
+        if ($job === null || !in_array($action, ['enable', 'disable', 'remove', 'run'], true)) {
             Flash::set('Nothing changed. That was not a real job.', FlashTone::Error);
+            $this->bounce('/admin/schedule');
+
+            return;
+        }
+
+        if ($action === 'run') {
+            $started = $this->runScheduledJobNow($job['command']);
+            Flash::set(
+                $started
+                    ? 'Started ' . $job['command'] . '. Check back in a moment.'
+                    : 'Could not start it -- this server does not allow running commands from a web request.',
+                $started ? FlashTone::Success : FlashTone::Error,
+            );
             $this->bounce('/admin/schedule');
 
             return;
@@ -633,7 +706,7 @@ class AdminController extends AbstractController
             : $posted['command_base'] . ' ' . $posted['arguments'];
 
         $error = match (true) {
-            !in_array($posted['command_base'], self::SCHEDULABLE_COMMANDS, true)
+            !array_key_exists($posted['command_base'], self::SCHEDULABLE_COMMAND_CLASSES)
                 => 'Pick one of the commands this can actually run.',
             $posted['arguments'] !== '' && preg_match(self::ARGUMENTS_PATTERN, $posted['arguments']) !== 1
                 => 'Arguments can only use letters, digits, spaces, and - _ . = ,',
@@ -720,9 +793,57 @@ class AdminController extends AbstractController
         echo new TwigRenderer()->render('admin/schedule-job.html.twig', [
             'id' => $id,
             'job' => $job,
-            'commands' => self::SCHEDULABLE_COMMANDS,
+            'commands' => array_keys(self::SCHEDULABLE_COMMAND_CLASSES),
+            'commandHelp' => self::scheduledCommandHelp(),
             'error' => $error,
         ]);
+    }
+
+    /**
+     * Every schedulable command's own description and arguments, straight
+     * from its Symfony `Command` definition -- the same text `noah <command>
+     * --help` would print, rather than a second copy of it kept in step by
+     * hand. Instantiating a command is safe and free of side effects: DB
+     * connections, `.env` loading and console output all happen in
+     * `AbstractCommand::initialize()`, which only `Command::run()` calls, not
+     * the constructor.
+     *
+     * @return array<string, array{
+     *     description: string,
+     *     arguments: list<array{name: string, required: bool, description: string}>,
+     *     options: list<array{flag: string, takesValue: bool, description: string}>,
+     * }>
+     */
+    public static function scheduledCommandHelp(): array
+    {
+        $help = [];
+
+        foreach (self::SCHEDULABLE_COMMAND_CLASSES as $name => $class) {
+            $command = new $class();
+            $definition = $command->getDefinition();
+
+            $help[$name] = [
+                'description' => (string) $command->getDescription(),
+                'arguments' => array_map(
+                    static fn(InputArgument $argument): array => [
+                        'name' => $argument->getName(),
+                        'required' => $argument->isRequired(),
+                        'description' => $argument->getDescription(),
+                    ],
+                    array_values($definition->getArguments()),
+                ),
+                'options' => array_map(
+                    static fn(InputOption $option): array => [
+                        'flag' => '--' . $option->getName(),
+                        'takesValue' => $option->acceptValue(),
+                        'description' => $option->getDescription(),
+                    ],
+                    array_values($definition->getOptions()),
+                ),
+            ];
+        }
+
+        return $help;
     }
 
     /**
@@ -736,11 +857,94 @@ class AdminController extends AbstractController
     }
 
     /**
-     * The id in the address, or null where there is none and this is a new
-     * job being written. One path segment deeper than `slugFromPath()`'s own
-     * `/admin/category(/{slug})?` -- this route is `/admin/schedule/job(/{id})?`.
+     * `/admin/schedule`'s "Run now" -- the exact command a `scheduled_jobs`
+     * row already runs unattended, just sooner. Detached (`&`, output
+     * discarded) so a slow job (`flights:add` and `flights:reprice` can take
+     * minutes) does not hold this request open; `noah schedule:run <command>`
+     * records start/finish in `schedule_runs`/`schedule_run_history` itself,
+     * the same as a real tick, so "Last ran" and History pick it up once it
+     * is done.
+     *
+     * Returns false without starting anything when this PHP cannot run a
+     * process at all -- some hardened production pools disable `exec()` on
+     * the web SAPI on purpose, and that is worth a clear message rather than
+     * a silent no-op.
      */
-    private function scheduledJobIdFromPath(): ?int
+    private function runScheduledJobNow(string $command): bool
+    {
+        $noah = dirname(__DIR__, 2) . '/noah';
+        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+
+        if (in_array('exec', $disabled, true) || !is_executable($noah)) {
+            return false;
+        }
+
+        // `noah`'s own `#!/usr/bin/env php` picks up whatever `php` sits
+        // first on this process's inherited PATH, which is not necessarily
+        // the one actually running this request -- a real risk on a host
+        // with more than one PHP install. `self::cliPhpBinary()` names the
+        // exact interpreter when it safely can; null falls back to the
+        // shebang's own PATH lookup, the same resolution the existing cron
+        // entry already depends on.
+        $interpreter = self::cliPhpBinary();
+
+        exec(sprintf(
+            '%s%s schedule:run %s > /dev/null 2>&1 &',
+            $interpreter === null ? '' : escapeshellarg($interpreter) . ' ',
+            escapeshellarg($noah),
+            escapeshellarg($command),
+        ));
+
+        return true;
+    }
+
+    /**
+     * A real PHP CLI binary to run `noah` with, or null to trust its own
+     * shebang instead.
+     *
+     * `PHP_BINARY` is the actual CLI interpreter under `php -S`, but under
+     * an embedded SAPI it names the web server's own binary instead --
+     * `apache2handler` under mod_php (this app's own local setup, per its
+     * README) and `fpm-fcgi` under php-fpm are both real cases, and neither
+     * understands `noah` as an argument -- one is Apache, the other is a
+     * pool master, and both simply fail to run it, which is why "Run now"
+     * looked like it worked (a flash message; nothing checked what actually
+     * happened) but never wrote a row.
+     *
+     * `PHP_BINDIR` is the fix: the "bin" directory of the exact PHP build
+     * serving this request, fixed at compile time and present under every
+     * SAPI, not only `cli`/`cli-server` -- almost every real PHP install
+     * (Homebrew, the Linux distro packages, MAMP/ServBay's own bundles)
+     * ships a `php` CLI binary there alongside whatever SAPI module or FPM
+     * binary is actually running. Verified rather than assumed either way:
+     * a real PHP CLI answers `-v` with "... (cli) ...", which neither a web
+     * server nor an FPM master does.
+     */
+    private static function cliPhpBinary(): ?string
+    {
+        foreach ([PHP_BINDIR . '/php', PHP_BINARY] as $candidate) {
+            if (!is_executable($candidate)) {
+                continue;
+            }
+
+            $lines = [];
+            exec(escapeshellarg($candidate) . ' -v 2>&1', $lines, $exit);
+
+            if ($exit === 0 && isset($lines[0]) && str_contains($lines[0], '(cli)')) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The id in the address, shared by `/admin/schedule/job(/{id})?` (null
+     * means a new job being written) and `/admin/schedule/history/{id}`.
+     * One path segment deeper than `slugFromPath()`'s own
+     * `/admin/category(/{slug})?`.
+     */
+    private function numericIdFromPath(): ?int
     {
         $parts = explode('/', trim($this->request->path(), '/'));
         $last = end($parts);

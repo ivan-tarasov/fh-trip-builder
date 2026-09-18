@@ -119,10 +119,10 @@ final class ScheduleRunRepositoryTest extends IntegrationTestCase
         $history = $runs->historyFor(self::COMMAND);
 
         self::assertCount(2, $history);
-        // Newest first.
-        self::assertSame('2026-09-13 03:00:00', $history[0]['started_at']);
+        // Newest first. `.000` because `started_at` is `DATETIME(3)`.
+        self::assertSame('2026-09-13 03:00:00.000', $history[0]['started_at']);
         self::assertSame(1, $history[0]['exit_code']);
-        self::assertSame('2026-09-12 03:00:00', $history[1]['started_at']);
+        self::assertSame('2026-09-12 03:00:00.000', $history[1]['started_at']);
         self::assertSame(0, $history[1]['exit_code']);
     }
 

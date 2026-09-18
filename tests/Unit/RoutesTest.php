@@ -227,10 +227,22 @@ final class RoutesTest extends TestCase
         self::assertSame('Admin@schedule', Routes::resolve('/admin/schedule'));
         self::assertSame('Admin@scheduleJob', Routes::resolve('/admin/schedule/job'));
         self::assertSame('Admin@scheduleJob', Routes::resolve('/admin/schedule/job/42'));
-        self::assertSame('Admin@scheduleHistory', Routes::resolve('/admin/schedule/history'));
 
         self::assertNull(Routes::resolve('/admin/schedule/job/abc'));
         self::assertNull(Routes::resolve('/admin/schedule/job/42/extra'));
+    }
+
+    /**
+     * Unlike the job editor above, history has no id-less state: there is
+     * nothing to show without one, so the bare address is not a route here.
+     */
+    public function testTheScheduleHistoryAnswersOnlyWithAnId(): void
+    {
+        self::assertSame('Admin@scheduleHistory', Routes::resolve('/admin/schedule/history/42'));
+
+        self::assertNull(Routes::resolve('/admin/schedule/history'));
+        self::assertNull(Routes::resolve('/admin/schedule/history/abc'));
+        self::assertNull(Routes::resolve('/admin/schedule/history/42/extra'));
     }
 
     /**

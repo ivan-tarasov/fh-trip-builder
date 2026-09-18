@@ -10,7 +10,10 @@
     <li class="breadcrumb-item active" aria-current="page">History</li>
 {% endblock %}
 
-{% block description %}<p class="well__description mono">{{ command }}</p>{% endblock %}
+{% block description %}
+    <p class="well__description mono mb-1">{{ command }}</p>
+    {% if commandDescription %}<p class="well__description">{{ commandDescription }}</p>{% endif %}
+{% endblock %}
 {% block tools %}<a class="btn btn-outline-secondary btn-sm" href="/admin/schedule">Back</a>{% endblock %}
 
 {% block content %}
@@ -24,16 +27,18 @@
                         <tr>
                             <th scope="col">Started</th>
                             <th scope="col">Finished</th>
+                            <th scope="col">Duration</th>
                             <th scope="col">Exit</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for run in runs %}
                             <tr>
-                                <td class="mono">{{ time.stamp(run.started_at) }}</td>
+                                <td class="mono">{{ time.stamp(run.started_at, 'datetime-seconds') }}</td>
                                 <td class="mono text-body-secondary">
-                                    {{ run.finished_at ? time.stamp(run.finished_at) : '—' }}
+                                    {{ run.finished_at ? time.stamp(run.finished_at, 'datetime-seconds') : '—' }}
                                 </td>
+                                <td class="mono text-body-secondary">{{ run.duration ?? '—' }}</td>
                                 <td>
                                     {% if run.exit_code is null %}
                                         {# Still running, or the process was killed before it could report --

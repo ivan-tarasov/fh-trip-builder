@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\StringInput;
@@ -45,22 +46,34 @@ use TripBuilder\Schedule;
  * The one thing it does fail on is not being able to reach that table, because
  * then it cannot tell what is due, cannot record what it did, and would run
  * every task on every tick.
+ *
+ * The optional `job` argument is `/admin/schedule`'s own "Run now" --
+ * launched detached so a slow job does not hold the request open, landing
+ * back here rather than duplicating `runOne()`'s own start/finish
+ * bookkeeping in the controller. Named `job`, not `command` -- Symfony's own
+ * `Application` already owns an argument called `command` (which command to
+ * run), merged into every command's definition, so a second one under that
+ * name throws.
  */
 final class Run extends AbstractCommand
 {
     public const string NAME = 'schedule:run';
 
+    private const string ARG_JOB = 'job';
+    private const string ARG_JOB_DESCRIPTION = 'Run this one command now instead of whatever is due.';
+
     private const string OPT_PRETEND = 'pretend';
     private const string OPT_PRETEND_DESCRIPTION = 'Say what is due and run none of it.';
 
-    /** No arguments -- everything here is a flag. */
-    public const array ARGUMENTS = [];
+    /** Every argument this command takes, name => description. */
+    public const array ARGUMENTS = [self::ARG_JOB => self::ARG_JOB_DESCRIPTION];
 
     /** Every option this command takes, name => description. */
     public const array OPTIONS = [self::OPT_PRETEND => self::OPT_PRETEND_DESCRIPTION];
 
     protected function configure(): void
     {
+        $this->addArgument(self::ARG_JOB, InputArgument::OPTIONAL, self::ARG_JOB_DESCRIPTION);
         $this->addOption(
             self::OPT_PRETEND,
             null,
@@ -71,11 +84,19 @@ final class Run extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $runs = new ScheduleRunRepository($this->connection());
+        $requested = $input->getArgument(self::ARG_JOB);
+
+        if ($requested !== null) {
+            $this->runOne((string) $requested, $runs, $output);
+
+            return Command::SUCCESS;
+        }
+
         $now = new DateTimeImmutable();
 
         try {
             $schedule = Schedule::fromRows(new ScheduledJobRepository($this->connection())->allEnabled());
-            $runs = new ScheduleRunRepository($this->connection());
             $due = $schedule->due($now, $runs->all());
         } catch (Throwable $e) {
             $this->io->error($e->getMessage());
@@ -148,8 +169,11 @@ final class Run extends AbstractCommand
         // Stamped before it runs. The tick fifteen minutes from now must not
         // pick up something still going, and a task whose process is killed
         // must not retry every quarter hour until somebody notices.
-        $runs->started($command, new DateTimeImmutable()->format('Y-m-d H:i:s'));
-        $historyId = $runs->historyStarted($command, new DateTimeImmutable()->format('Y-m-d H:i:s'));
+        $startedAt = new DateTimeImmutable();
+        $runs->started($command, $startedAt->format('Y-m-d H:i:s'));
+        // Milliseconds here, not on `started()` above -- `schedule_runs` is a
+        // plain `DATETIME` and would only truncate them back off.
+        $historyId = $runs->historyStarted($command, $startedAt->format('Y-m-d H:i:s.v'));
 
         try {
             $application = $this->getApplication();
@@ -173,9 +197,9 @@ final class Run extends AbstractCommand
             $this->io->error(sprintf('%s threw: %s', $command, $e->getMessage()));
         }
 
-        $at = new DateTimeImmutable()->format('Y-m-d H:i:s');
-        $runs->finished($command, $exit, $at);
-        $runs->historyFinished($historyId, $exit, $at);
+        $finishedAt = new DateTimeImmutable();
+        $runs->finished($command, $exit, $finishedAt->format('Y-m-d H:i:s'));
+        $runs->historyFinished($historyId, $exit, $finishedAt->format('Y-m-d H:i:s.v'));
 
         $this->formatOutput(
             $command,

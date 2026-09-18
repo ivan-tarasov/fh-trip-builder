@@ -24,20 +24,34 @@
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
                         <label for="command_base" class="form-label">Command</label>
-                        <select id="command_base" name="command_base" class="form-select" required>
+                        <select id="command_base" name="command_base" class="form-select" required
+                                data-help="{{ commandHelp|json_encode }}">
                             {% for option in commands %}
                                 <option value="{{ option }}"{{ job.command_base == option ? ' selected' : '' }}>{{ option }}</option>
                             {% endfor %}
                         </select>
                         <p class="field__hint">Only what this panel already knows how to run unattended.</p>
+                        <p class="field__hint js-command-description mb-0"></p>
                     </div>
 
                     <div class="col-12 col-md-6">
                         <label for="arguments" class="form-label">Arguments</label>
                         <input id="arguments" name="arguments" type="text" class="form-control mono" maxlength="190"
-                               value="{{ job.arguments }}" autocapitalize="off" spellcheck="false"
-                               placeholder="e.g. --force, or 10000 --level">
-                        <p class="field__hint">Optional. Whatever flags that command takes.</p>
+                               value="{{ job.arguments }}" autocapitalize="off" spellcheck="false" readonly
+                               placeholder="Nothing added yet">
+
+                        <div class="argument-picker js-argument-picker mt-2 d-none">
+                            <div class="d-flex gap-2">
+                                <select class="form-select form-select-sm js-argument-picker-select"
+                                        aria-label="Argument or option to add"></select>
+                                <input type="text" class="form-control form-control-sm mono js-argument-picker-value"
+                                       placeholder="value" aria-label="Value">
+                                <button type="button" class="btn btn-outline-secondary btn-sm js-argument-picker-add">Add</button>
+                            </div>
+                            <ul class="argument-picker__list js-argument-picker-list list-unstyled d-flex flex-wrap gap-2 mb-0 mt-2"></ul>
+                        </div>
+
+                        <p class="field__hint js-argument-picker-empty mb-0">Optional. This command takes no arguments.</p>
                     </div>
 
                     <div class="col-6 col-md-3">
