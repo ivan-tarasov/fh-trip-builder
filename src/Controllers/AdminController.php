@@ -460,7 +460,7 @@ class AdminController extends AbstractController
         }
 
         $jobs = new ScheduledJobRepository($this->connection());
-        $id = $this->scheduledJobIdFromPath();
+        $id = $this->numericIdFromPath();
 
         if ($this->request->isPost()) {
             $this->saveScheduleJob($jobs, $id);
@@ -493,6 +493,11 @@ class AdminController extends AbstractController
     /**
      * One command's real run history, newest first.
      *
+     * Addressed by the job's own id rather than its command spelled out in
+     * the query string -- `?command=db%3Aprune%20--force` is what a command
+     * with a flag on it turned into, the same reasoning the job editor
+     * itself is addressed by id and not by name.
+     *
      * @throws Exception|Error
      */
     public function scheduleHistory(): void
@@ -501,24 +506,54 @@ class AdminController extends AbstractController
             return;
         }
 
-        $command = $this->request->query->str('command');
+        $id = $this->numericIdFromPath();
+        $job = $id === null ? null : new ScheduledJobRepository($this->connection())->find($id);
 
-        if ($command === '') {
+        if ($job === null) {
             $this->notFound();
 
             return;
         }
 
-        $runs = new ScheduleRunRepository($this->connection())->historyFor($command, 50);
+        $runs = new ScheduleRunRepository($this->connection())->historyFor($job['command'], 50);
 
         echo new TwigRenderer()->render('admin/schedule-history.html.twig', [
-            'command' => $command,
-            'runs' => array_map(static fn(array $row): array => [
-                'started_at' => new DateTimeImmutable($row['started_at']),
-                'finished_at' => $row['finished_at'] === null ? null : new DateTimeImmutable($row['finished_at']),
-                'exit_code' => $row['exit_code'],
-            ], $runs),
+            'command' => $job['command'],
+            'runs' => array_map(static function (array $row): array {
+                $started = new DateTimeImmutable($row['started_at']);
+                $finished = $row['finished_at'] === null ? null : new DateTimeImmutable($row['finished_at']);
+
+                return [
+                    'started_at' => $started,
+                    'finished_at' => $finished,
+                    'exit_code' => $row['exit_code'],
+                    'duration' => self::runDuration($started, $finished),
+                ];
+            }, $runs),
         ]);
+    }
+
+    /**
+     * How long a run took, or null while it has no finish to measure against
+     * -- still running, or killed before it could report (the history page's
+     * own table already says which).
+     */
+    public static function runDuration(DateTimeImmutable $started, ?DateTimeImmutable $finished): ?string
+    {
+        if ($finished === null) {
+            return null;
+        }
+
+        $seconds = $finished->getTimestamp() - $started->getTimestamp();
+
+        if ($seconds < 60) {
+            return $seconds . 's';
+        }
+
+        $minutes = intdiv($seconds, 60);
+        $rest = $seconds % 60;
+
+        return $rest === 0 ? $minutes . 'm' : sprintf('%dm %ds', $minutes, $rest);
     }
 
     /**
@@ -529,7 +564,7 @@ class AdminController extends AbstractController
      * jobs `Run.php` would and this page needs the disabled ones too.
      *
      * @param list<array{id: int, command: string, minute: string, hour: string, day: string, month: string, weekday: string, enabled: bool}> $rows
-     * @return list<array{id: int, command: string, cron: string, enabled: bool, age: string, exit: ?int, stale: bool}>
+     * @return list<array{id: int, command: string, cron: string, enabled: bool, age: string, exit: ?int, stale: bool, last_ran: ?string}>
      */
     private function scheduleJobRows(array $rows): array
     {
@@ -556,6 +591,11 @@ class AdminController extends AbstractController
                 'age' => $seen['age'],
                 'exit' => isset($records[$job['command']]) ? $records[$job['command']]['last_exit'] : null,
                 'stale' => $seen['stale'],
+                // When it last *started*, not `health()`'s own "age" (last
+                // *success*) -- a job failing every night should still say
+                // when it was last attempted, which Status already reads as
+                // failing.
+                'last_ran' => $records[$job['command']]['last_run_at'] ?? null,
             ];
         }
 
@@ -724,11 +764,12 @@ class AdminController extends AbstractController
     }
 
     /**
-     * The id in the address, or null where there is none and this is a new
-     * job being written. One path segment deeper than `slugFromPath()`'s own
-     * `/admin/category(/{slug})?` -- this route is `/admin/schedule/job(/{id})?`.
+     * The id in the address, shared by `/admin/schedule/job(/{id})?` (null
+     * means a new job being written) and `/admin/schedule/history/{id}`.
+     * One path segment deeper than `slugFromPath()`'s own
+     * `/admin/category(/{slug})?`.
      */
-    private function scheduledJobIdFromPath(): ?int
+    private function numericIdFromPath(): ?int
     {
         $parts = explode('/', trim($this->request->path(), '/'));
         $last = end($parts);

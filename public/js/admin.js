@@ -239,6 +239,9 @@
                 el.textContent = day + ' ' + month + ', ' + time;
             } else if (flavor === 'datetime') {
                 el.textContent = day + ' ' + month + ' ' + year + ', ' + time;
+            } else if (flavor === 'datetime-seconds') {
+                var seconds = localizeTimestampsPad(instant.getSeconds());
+                el.textContent = day + ' ' + month + ' ' + year + ', ' + time + ':' + seconds;
             }
         });
     };

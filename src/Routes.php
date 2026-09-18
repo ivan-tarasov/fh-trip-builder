@@ -81,10 +81,8 @@ class Routes
         // destination -- plural, since `/admin/search` singular below is
         // already the command palette's own JSON endpoint (G16, #369).
         '/admin/searches' => 'Admin@searches',
-        // The live schedule (G19, #377). History is its own address since it
-        // is reached by command (`?command=`), not by id.
+        // The live schedule (G19, #377).
         '/admin/schedule' => 'Admin@schedule',
-        '/admin/schedule/history' => 'Admin@scheduleHistory',
         // Settings is a rail parent with two more children below it, each
         // its own address the same way -- Search rules kept `/admin/settings`
         // itself, the same idiom Orchid's own expandable parent link uses
@@ -225,6 +223,12 @@ class Routes
         // Same idiom, by id rather than by slug -- a scheduled job has no
         // name of its own to be one.
         '#^/admin/schedule/job(?:/\d+)?$#' => 'Admin@scheduleJob',
+        // By id and not by command spelled out in the query string, which
+        // is what a command with a flag on it -- `db:prune --force` --
+        // turned into: `?command=db%3Aprune%20--force`. Required rather
+        // than optional like the job editor above: there is no "new
+        // history" state for an empty id to mean.
+        '#^/admin/schedule/history/\d+$#' => 'Admin@scheduleHistory',
         // By id and not by reference. A reference is the code a traveller
         // quotes and it is unique, but it is empty on a row written before
         // checkout finished -- and those are exactly the bookings an operator
