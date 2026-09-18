@@ -2967,12 +2967,15 @@
         }
     });
 
-    /*[ Fare alerts -- the footer's own and the homepage banner's ]
+    /*[ Footer: fare alerts ]
     ===========================================================*/
-    // querySelectorAll rather than the single form this used to assume:
-    // the banner posts to the same endpoint with its own form, not a link
-    // to the footer's, so both need wiring up independently.
-    document.querySelectorAll('.js-subscribe').forEach(function (form) {
+    (function () {
+        const form = document.querySelector('.js-subscribe');
+
+        if (!form) {
+            return;
+        }
+
         const field = form.querySelector('.js-subscribe-email');
         const note = form.querySelector('.js-subscribe-note');
         const submit = form.querySelector('[type="submit"]');
@@ -3037,7 +3040,7 @@
                     submit.disabled = false;
                 });
         });
-    });
+    }());
 
     /*[ Route: watch this route for a price (C6, #155) ]
     ===========================================================*/
