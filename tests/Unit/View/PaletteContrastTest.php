@@ -41,7 +41,7 @@ final class PaletteContrastTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, string, float, string}>
+     * @return array<string, array{string, string, float}>
      */
     public static function pairs(): array
     {
@@ -85,11 +85,11 @@ final class PaletteContrastTest extends TestCase
         $cases = [];
 
         foreach ($text as $what => [$ink, $ground]) {
-            $cases[$what] = [$ink, $ground, self::TEXT, 'text'];
+            $cases[$what] = [$ink, $ground, self::TEXT];
         }
 
         foreach ($graphic as $what => [$ink, $ground]) {
-            $cases[$what] = [$ink, $ground, self::GRAPHIC, 'graphic'];
+            $cases[$what] = [$ink, $ground, self::GRAPHIC];
         }
 
         return $cases;
