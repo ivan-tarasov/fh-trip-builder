@@ -338,6 +338,30 @@ final readonly class AirportRepository
     }
 
     /**
+     * Every airport a code stands for -- itself, if it already names one, or
+     * every airport in its city if it names the city instead. The same
+     * either-or {@see cityByCode()} already reads, so a specific airport and
+     * its own city's group answer with the same set exactly when the city
+     * has only the one -- what {@see RoutePriceRepository} calls
+     * `airportsFor()` for its own build, public here because the
+     * search page needs the same expansion to check a route page exists
+     * before linking to it (C7, #156).
+     *
+     * @return list<string>
+     */
+    public function codesFor(string $code): array
+    {
+        /** @var list<array{code: string}> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT code FROM ' . Table::Airports->value
+            . ' WHERE (code = ? OR city_code = ?) AND enabled = 1 AND traffic_weight > 0',
+            [$code, $code],
+        );
+
+        return array_column($rows, 'code');
+    }
+
+    /**
      * One airport, by its IATA code.
      *
      * `country_code` on top of enabled()'s columns, because the page's
