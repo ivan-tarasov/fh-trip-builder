@@ -1199,45 +1199,219 @@
     | once rather than fetched per pick, since there are only a dozen of
     | them and the whole point is to answer "what does this take?" before a
     | save round-trips to find out.
+    |
+    | The `arguments` field itself is picked, not typed: a dropdown of
+    | whatever the selected command actually takes, a value box next to it
+    | when the pick needs one, and an "Add" that turns it into a removable
+    | chip -- so more than one can build up (`10000` and `--level` together)
+    | without hand-typing the exact flag spelling.
+    |
+    | Switching commands clears the chips, since another command's flags do
+    | not apply -- except once, on page load, when whatever the job already
+    | has (an edit) is parsed into chips instead of being thrown away. A
+    | token that parse cannot place -- a flag `data-help` does not list, an
+    | edit from outside this page -- is kept as `leftover` and folded back
+    | into the value verbatim rather than silently dropped.
     */
     var scheduleCommandHelp = function () {
         var select = document.getElementById('command_base');
         var description = document.querySelector('.js-command-description');
-        var argumentsEl = document.querySelector('.js-command-arguments');
+        var argumentsInput = document.getElementById('arguments');
+        var picker = document.querySelector('.js-argument-picker');
+        var pickerSelect = document.querySelector('.js-argument-picker-select');
+        var pickerValue = document.querySelector('.js-argument-picker-value');
+        var pickerAdd = document.querySelector('.js-argument-picker-add');
+        var pickerList = document.querySelector('.js-argument-picker-list');
+        var pickerEmpty = document.querySelector('.js-argument-picker-empty');
 
-        if (!select || !description || !argumentsEl) {
+        if (!select || !description || !argumentsInput || !picker || !pickerSelect
+            || !pickerValue || !pickerAdd || !pickerList || !pickerEmpty) {
             return;
         }
 
         var help = JSON.parse(select.dataset.help || '{}');
+        var chips = [];
+        var leftover = '';
+        var firstRender = true;
+
+        // Arguments and options, as one flat list of the same shape --
+        // `key` is what gets typed on the command line (`flights`, `--day`),
+        // `isArgument` is what tells `serialize()` whether it needs the `--`.
+        var currentItems = function () {
+            var info = help[select.value];
+
+            if (!info) {
+                return [];
+            }
+
+            return info.arguments.map(function (argument) {
+                return {
+                    key: argument.name,
+                    label: argument.name,
+                    description: argument.description,
+                    required: argument.required,
+                    takesValue: true,
+                    isArgument: true
+                };
+            }).concat(info.options.map(function (option) {
+                return {
+                    key: option.flag,
+                    label: option.flag,
+                    description: option.description,
+                    takesValue: option.takesValue,
+                    isArgument: false
+                };
+            }));
+        };
+
+        var chipText = function (chip) {
+            if (chip.isArgument) {
+                return chip.label + ' = ' + chip.value;
+            }
+
+            return chip.takesValue && chip.value !== '' ? chip.key + '=' + chip.value : chip.key;
+        };
+
+        var serialize = function () {
+            var composed = chips.map(function (chip) {
+                return chip.isArgument ? chip.value : (chip.takesValue && chip.value !== '' ? chip.key + '=' + chip.value : chip.key);
+            }).join(' ');
+
+            if (leftover === '') {
+                return composed;
+            }
+
+            return composed === '' ? leftover : composed + ' ' + leftover;
+        };
+
+        var updateValueVisibility = function () {
+            var items = currentItems();
+            var picked = items.filter(function (item) { return item.key === pickerSelect.value; })[0];
+
+            pickerValue.style.display = picked && picked.takesValue ? '' : 'none';
+        };
+
+        var renderSelect = function () {
+            var items = currentItems();
+            var chosen = chips.map(function (chip) { return chip.key; });
+
+            pickerSelect.innerHTML = items.map(function (item) {
+                var disabled = chosen.indexOf(item.key) !== -1;
+                var required = item.isArgument && item.required ? ' (required)' : '';
+
+                return '<option value="' + item.key + '"' + (disabled ? ' disabled' : '') + '>'
+                    + item.label + required + (item.description ? ' — ' + item.description : '') + '</option>';
+            }).join('');
+
+            updateValueVisibility();
+        };
+
+        var renderChips = function () {
+            argumentsInput.value = serialize();
+
+            pickerList.innerHTML = chips.map(function (chip, index) {
+                return '<li class="argument-chip">'
+                    + '<code>' + chipText(chip) + '</code>'
+                    + '<button type="button" class="argument-chip__remove js-argument-chip-remove" data-index="' + index + '"'
+                    + ' aria-label="Remove ' + chipText(chip) + '"><i class="bi bi-x" aria-hidden="true"></i></button>'
+                    + '</li>';
+            }).join('');
+        };
+
+        // Splits an existing `arguments` string (an edit) back into chips
+        // against the now-selected command's own list -- a bare token is the
+        // argument's value, `--flag` or `--flag=value` an option's. Anything
+        // that does not match either shape is kept as `leftover`.
+        var parseExisting = function (raw, items) {
+            var parsedChips = [];
+            var unparsed = [];
+
+            raw.split(/\s+/).filter(Boolean).forEach(function (token) {
+                if (token.indexOf('--') === 0) {
+                    var eq = token.indexOf('=');
+                    var flag = eq === -1 ? token : token.slice(0, eq);
+                    var value = eq === -1 ? '' : token.slice(eq + 1);
+                    var option = items.filter(function (item) { return !item.isArgument && item.key === flag; })[0];
+
+                    if (option) {
+                        parsedChips.push({ key: option.key, label: option.label, value: value, takesValue: option.takesValue, isArgument: false });
+                    } else {
+                        unparsed.push(token);
+                    }
+                } else {
+                    var argument = items.filter(function (item) { return item.isArgument; })[0];
+
+                    if (argument && !parsedChips.some(function (chip) { return chip.isArgument; })) {
+                        parsedChips.push({ key: argument.key, label: argument.label, value: token, takesValue: true, isArgument: true });
+                    } else {
+                        unparsed.push(token);
+                    }
+                }
+            });
+
+            return { chips: parsedChips, leftover: unparsed.join(' ') };
+        };
 
         var render = function () {
             var info = help[select.value];
 
-            if (!info) {
-                description.textContent = '';
-                argumentsEl.innerHTML = '';
+            description.textContent = info ? info.description : '';
 
-                return;
+            var items = currentItems();
+
+            if (firstRender) {
+                var parsed = parseExisting(argumentsInput.value, items);
+
+                chips = parsed.chips;
+                leftover = parsed.leftover;
+                firstRender = false;
+            } else {
+                chips = [];
+                leftover = '';
             }
 
-            description.textContent = info.description;
+            picker.classList.toggle('d-none', items.length === 0);
+            pickerEmpty.classList.toggle('d-none', items.length !== 0);
 
-            var items = info.arguments.concat(info.options);
-
-            if (items.length === 0) {
-                argumentsEl.innerHTML = 'Takes no arguments.';
-
-                return;
-            }
-
-            argumentsEl.innerHTML = '<ul class="mb-0 ps-3">' + items.map(function (item) {
-                var name = item.name ? item.name : item.flag;
-                var required = item.required ? ' (required)' : '';
-
-                return '<li><code>' + name + '</code>' + required + ' — ' + item.description + '</li>';
-            }).join('') + '</ul>';
+            renderSelect();
+            renderChips();
         };
+
+        pickerSelect.addEventListener('change', updateValueVisibility);
+
+        pickerAdd.addEventListener('click', function () {
+            var items = currentItems();
+            var picked = items.filter(function (item) { return item.key === pickerSelect.value; })[0];
+
+            if (!picked) {
+                return;
+            }
+
+            var value = picked.takesValue ? pickerValue.value.trim() : '';
+
+            if (picked.takesValue && value === '') {
+                return;
+            }
+
+            chips = chips.filter(function (chip) { return chip.key !== picked.key; });
+            chips.push({ key: picked.key, label: picked.label, value: value, takesValue: picked.takesValue, isArgument: picked.isArgument });
+
+            pickerValue.value = '';
+            renderSelect();
+            renderChips();
+        });
+
+        pickerList.addEventListener('click', function (event) {
+            var button = event.target.closest('.js-argument-chip-remove');
+
+            if (!button) {
+                return;
+            }
+
+            chips.splice(Number(button.dataset.index), 1);
+            renderSelect();
+            renderChips();
+        });
 
         select.addEventListener('change', render);
         render();

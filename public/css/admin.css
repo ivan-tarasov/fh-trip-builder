@@ -1182,6 +1182,36 @@ a:hover { text-decoration: underline; }
 .status-chip--bad { background: var(--bad-soft); color: var(--bad); }
 .status-chip--muted { background: var(--sunken); color: var(--ink-quiet); }
 
+/* The job editor's argument picker -- `.status-chip`'s own pill shape,
+   without a status tone since there is nothing here to signal, plus a
+   remove button the read-only kind never needed. */
+.argument-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .3rem .2rem .6rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.argument-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-quiet);
+  font-size: .7rem;
+  line-height: 1;
+}
+
+.argument-chip__remove:hover { background: var(--rule); color: var(--ink); }
+
 /* An initial or two, for a passenger row with no photo to show. One tone
    for every circle rather than a hashed palette -- the colour would carry no
    information a hash didn't invent. */
