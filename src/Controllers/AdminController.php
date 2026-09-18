@@ -813,16 +813,60 @@ class AdminController extends AbstractController
         // `noah`'s own `#!/usr/bin/env php` picks up whatever `php` sits
         // first on this process's inherited PATH, which is not necessarily
         // the one actually running this request -- a real risk on a host
-        // with more than one PHP install. `PHP_BINARY` names the exact
-        // interpreter running right now, and is safe to force here except
-        // under php-fpm, where it names the fpm master rather than a CLI
-        // php -- there, fall back to the shebang's own PATH lookup, the same
-        // resolution the existing cron entry already depends on.
-        $interpreter = PHP_SAPI === 'fpm-fcgi' ? '' : escapeshellarg(PHP_BINARY) . ' ';
+        // with more than one PHP install. `self::cliPhpBinary()` names the
+        // exact interpreter when it safely can; null falls back to the
+        // shebang's own PATH lookup, the same resolution the existing cron
+        // entry already depends on.
+        $interpreter = self::cliPhpBinary();
 
-        exec(sprintf('%s%s schedule:run %s > /dev/null 2>&1 &', $interpreter, escapeshellarg($noah), escapeshellarg($command)));
+        exec(sprintf(
+            '%s%s schedule:run %s > /dev/null 2>&1 &',
+            $interpreter === null ? '' : escapeshellarg($interpreter) . ' ',
+            escapeshellarg($noah),
+            escapeshellarg($command),
+        ));
 
         return true;
+    }
+
+    /**
+     * A real PHP CLI binary to run `noah` with, or null to trust its own
+     * shebang instead.
+     *
+     * `PHP_BINARY` is the actual CLI interpreter under `php -S`, but under
+     * an embedded SAPI it names the web server's own binary instead --
+     * `apache2handler` under mod_php (this app's own local setup, per its
+     * README) and `fpm-fcgi` under php-fpm are both real cases, and neither
+     * understands `noah` as an argument -- one is Apache, the other is a
+     * pool master, and both simply fail to run it, which is why "Run now"
+     * looked like it worked (a flash message; nothing checked what actually
+     * happened) but never wrote a row.
+     *
+     * `PHP_BINDIR` is the fix: the "bin" directory of the exact PHP build
+     * serving this request, fixed at compile time and present under every
+     * SAPI, not only `cli`/`cli-server` -- almost every real PHP install
+     * (Homebrew, the Linux distro packages, MAMP/ServBay's own bundles)
+     * ships a `php` CLI binary there alongside whatever SAPI module or FPM
+     * binary is actually running. Verified rather than assumed either way:
+     * a real PHP CLI answers `-v` with "... (cli) ...", which neither a web
+     * server nor an FPM master does.
+     */
+    private static function cliPhpBinary(): ?string
+    {
+        foreach ([PHP_BINDIR . '/php', PHP_BINARY] as $candidate) {
+            if (!is_executable($candidate)) {
+                continue;
+            }
+
+            $lines = [];
+            exec(escapeshellarg($candidate) . ' -v 2>&1', $lines, $exit);
+
+            if ($exit === 0 && isset($lines[0]) && str_contains($lines[0], '(cli)')) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
