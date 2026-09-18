@@ -17,11 +17,14 @@ use TripBuilder\BookingStatus;
 use TripBuilder\Cron;
 use TripBuilder\Csrf;
 use TripBuilder\DocumentType;
+use TripBuilder\Env;
+use TripBuilder\EnvKey;
 use TripBuilder\Flash;
 use TripBuilder\FlashTone;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
+use TripBuilder\Mail\Mailtrap;
 use TripBuilder\PanelSetting;
 use TripBuilder\RemarkTone;
 use TripBuilder\Repository\AdminEventRepository;
@@ -127,6 +130,7 @@ class AdminController extends AbstractController
         'articles:import',
         'airside:import',
         'airside:prune',
+        'alerts:check',
     ];
 
     /** Flags and values only -- what a real command's arguments look like. */
@@ -1768,6 +1772,121 @@ class AdminController extends AbstractController
     public function settingsMap(): void
     {
         $this->settingsGroup('Map');
+    }
+
+    /**
+     * A settings child of its own rather than a fourth `PanelSetting` group:
+     * a diagnostic is something run, not a field that is saved, and the two
+     * do not share a template honestly.
+     *
+     * One check exists today (Mailtrap). Adding another is a case in
+     * `runDiagnostic()`'s `match` and a form of its own in the template --
+     * deliberately not a registry or an interface for the one check this
+     * page has.
+     *
+     * @throws Exception|Error
+     */
+    public function settingsDiagnostics(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->runDiagnostic();
+
+            return;
+        }
+
+        echo new TwigRenderer()->render('admin/settings-diagnostics.html.twig', [
+            'mailtrap_sandboxed' => Env::get(EnvKey::MailtrapSandboxInboxId) !== '',
+        ]);
+    }
+
+    /**
+     * A redirect carrying a flash for a plain form post, or JSON for the
+     * page's own script -- `wantsJson()` is the same `Accept` check
+     * `respondBooking()` already answers to. No HTML to re-render here,
+     * unlike that one: nothing else on this page changes when a check runs.
+     */
+    private function runDiagnostic(): void
+    {
+        $asJson = $this->wantsJson();
+
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            $this->respondDiagnostic($asJson, 'That form went stale. Try again.', FlashTone::Error);
+
+            return;
+        }
+
+        [$ok, $message] = match ($this->request->body->str('check')) {
+            'mailtrap' => $this->testMailtrap(),
+            default => [false, 'Not a real check.'],
+        };
+
+        $this->respondDiagnostic($asJson, $message, $ok ? FlashTone::Success : FlashTone::Error);
+    }
+
+    private function respondDiagnostic(bool $asJson, string $message, FlashTone $tone): void
+    {
+        if (!$asJson) {
+            Flash::set($message, $tone);
+            $this->bounce('/admin/settings/diagnostics');
+
+            return;
+        }
+
+        header('Content-type: application/json; charset=utf-8');
+        http_response_code(($tone === FlashTone::Success ? HttpStatus::Ok : HttpStatus::UnprocessableEntity)->value);
+        echo json_encode([
+            'status' => $tone === FlashTone::Success ? 'ok' : 'error',
+            'message' => $message,
+            'tone' => $tone->bootstrapClass(),
+        ]);
+    }
+
+    /**
+     * Send one real email through Mailtrap and say exactly what happened.
+     *
+     * The failure message is shown, not logged and hidden -- unlike a public
+     * endpoint's own errors (`AjaxController::subscribe()` and its
+     * siblings), which stay in the log because a visitor cannot act on one.
+     * This page exists for the operator to read that message and fix
+     * whatever it names: a missing `MAILTRAP_API_TOKEN`, an unverified
+     * domain, Mailtrap's own refusal.
+     *
+     * Sandbox first, real send only as the fallback when none is configured
+     * -- `Mailtrap::sandbox()`'s own contract, not a choice made here.
+     * `MAILTRAP_SANDBOX_INBOX_ID` is meant to stay unset on a production
+     * server, so this page sending for real there is the intended
+     * behaviour, not a gap.
+     *
+     * @return array{0: bool, 1: string}
+     */
+    private function testMailtrap(): array
+    {
+        $to = trim($this->request->body->str('to'));
+
+        if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return [false, 'Give a real email address to send the test to.'];
+        }
+
+        try {
+            $mailer = Mailtrap::sandbox() ?? Mailtrap::fromEnvironment();
+
+            $mailer->send(
+                $to,
+                'Trip Builder: Mailtrap test',
+                "This is a test email from the admin panel's Diagnostics page. "
+                . 'If you are reading this, Mailtrap is configured correctly.',
+            );
+        } catch (Throwable $e) {
+            return [false, 'Mailtrap test failed: ' . $e->getMessage()];
+        }
+
+        return $mailer->sandboxInboxId === null
+            ? [true, 'Sent for real. Check ' . $to . "'s inbox, or Mailtrap's own logs."]
+            : [true, 'Sent to sandbox #' . $mailer->sandboxInboxId . ' -- ' . $to . ' received nothing.'];
     }
 
     /**

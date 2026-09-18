@@ -22,6 +22,10 @@ namespace TripBuilder\Http;
  * results page bumps `search_count`, and unlike the others this one does
  * not block the action it sits behind -- a client over the limit still
  * sees its results, it just stops adding to the count.
+ *
+ * The sixth is the fare-alert subscribe's own shape, on a different table
+ * (C6, #155): a free `INSERT` behind a CSRF token, given how often a real
+ * visitor plausibly submits it by hand.
  */
 enum RateLimit: string
 {
@@ -30,6 +34,7 @@ enum RateLimit: string
     case Checkout = 'checkout';
     case AdminLogin = 'admin_login';
     case Search = 'search';
+    case WatchRoute = 'watch_route';
 
     /**
      * Requests one client may make in one hour.
@@ -60,6 +65,11 @@ enum RateLimit: string
             // hammering one popular route does. This only gates the count,
             // so it can afford to be generous.
             self::Search => 100,
+
+            // Watching a handful of routes from one visit is ordinary; a
+            // script registering hundreds of watches to spam addresses with
+            // Mailtrap's own quota is not.
+            self::WatchRoute => 10,
         };
     }
 

@@ -1,0 +1,45 @@
+{# Watch this route for a price (C6, #155). Economy only and no cabin field:
+   the route page itself is always CabinClass::Economy (RouteController), so
+   offering a cabin choice here would be a choice the page cannot back up.
+
+   Same shape as the footer's own fare-alert form -- a real form posting to a
+   real endpoint, answered with and without scripting -- but its own classes
+   rather than the footer's: this sits in a light content block, not the dark
+   footer band, and the two are never on screen together. #}
+{# The block's own heading is already rendered by partials/place.html.twig
+   as `{{ block.id }}-title` -- `watch-title`, since this block's id is
+   `watch` -- so the form points at that rather than drawing a second one. #}
+{% set notice = route_watch_notice() %}
+<form class="route-watch js-watch-route" id="watch-route"
+      action="/ajax/watch-route" method="post" novalidate
+      aria-labelledby="watch-title">
+    <p class="route-watch__text">
+        Tell us the price you want and we'll email you the day {{ place.from.code }} to
+        {{ place.to.code }} beats it.
+    </p>
+
+    <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+    <input type="hidden" name="return_to" value="{{ current_page() }}">
+    <input type="hidden" name="from" value="{{ place.from.code }}">
+    <input type="hidden" name="to" value="{{ place.to.code }}">
+
+    <div class="route-watch__row">
+        <label class="visually-hidden" for="watch-route-email">Email address</label>
+        <input class="route-watch__input js-watch-route-email"
+               id="watch-route-email" type="email" name="email" required
+               autocomplete="email" placeholder="you@example.com">
+
+        <label class="visually-hidden" for="watch-route-threshold">Price to watch for, in CAD</label>
+        <span class="route-watch__threshold">
+            <span class="route-watch__threshold-prefix" aria-hidden="true">$</span>
+            <input class="route-watch__input route-watch__input--threshold js-watch-route-threshold"
+                   id="watch-route-threshold" type="number" name="threshold" min="1" max="100000" step="1"
+                   inputmode="numeric" required placeholder="{{ place.cheapest|round(0, 'floor') }}">
+        </span>
+
+        <button class="route-watch__submit" type="submit">Watch this route</button>
+    </div>
+
+    <p class="route-watch__note js-watch-route-note" role="status" aria-live="polite"
+       {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>{{ notice ? notice.message : '' }}</p>
+</form>

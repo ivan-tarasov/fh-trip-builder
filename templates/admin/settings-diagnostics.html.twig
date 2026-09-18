@@ -1,0 +1,64 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% set admin_section = 'settings-diagnostics' %}
+
+{% block title %}Diagnostics{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/settings">Settings</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Diagnostics</li>
+{% endblock %}
+
+{% block description %}<p class="well__description">Real checks against real integrations, run on demand.</p>{% endblock %}
+
+{% block content %}
+    <div class="card orchid-card">
+        <div class="card-body">
+            <h2 class="h5 mb-1">Mailtrap</h2>
+            {% if mailtrap_sandboxed %}
+                <p class="field__hint mb-3">
+                    Sends to the sandbox <code>MAILTRAP_SANDBOX_INBOX_ID</code> names -- captured there,
+                    never delivered. Unset that key to make this button send for real instead.
+                </p>
+            {% else %}
+                <p class="field__hint mb-3">
+                    Sends one real email through the account <code>MAILTRAP_API_TOKEN</code> and
+                    <code>MAILTRAP_FROM_EMAIL</code> name -- the same one <code>alerts:check</code>
+                    (C6, #155) sends real alerts through. Set <code>MAILTRAP_SANDBOX_INBOX_ID</code>
+                    to make this button send to a sandbox instead.
+                </p>
+            {% endif %}
+
+            <form method="post" action="/admin/settings/diagnostics" class="row g-2 align-items-end js-diagnostic-form">
+                <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                <input type="hidden" name="check" value="mailtrap">
+
+                <div class="col-12 col-sm-6 col-md-4">
+                    <label for="mailtrap-to" class="form-label">Send the test to</label>
+                    <input id="mailtrap-to" name="to" type="email" class="form-control" required
+                           placeholder="you@example.com" autocapitalize="off" spellcheck="false">
+                </div>
+
+                <div class="col-auto">
+                    {# The spinner sits inside the button it disables, the same
+                       pairing Bootstrap's own docs use -- disabled reads as
+                       "already handled" without it, and busy without a label
+                       reads as broken. #}
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" aria-hidden="true"></span>
+                        <span class="js-diagnostic-label">Send test email</span>
+                    </button>
+                </div>
+            </form>
+
+            {# A visible log, not only a toast -- a toast is gone in a few
+               seconds and this page exists precisely for an operator to
+               read what a check actually said. `role="log"`/`aria-live`,
+               the same reasoning the schedule form's own status line gives,
+               so a screen reader hears each run as it lands. #}
+            <div class="diagnostic-console js-diagnostic-console mt-3" role="log" aria-live="polite" aria-label="Diagnostic output">
+                <p class="diagnostic-console__line diagnostic-console__line--empty js-diagnostic-console-empty">Nothing run yet.</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

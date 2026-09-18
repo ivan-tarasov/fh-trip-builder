@@ -33,6 +33,15 @@
         'when': dates is not empty
     },
     {
+        'id': 'watch',
+        'title': 'Get an email when this drops',
+        'nav': 'Watch this route',
+        'icon': 'fa-bell',
+        'tone': 'red',
+        'template': 'route/blocks/watch.html.twig',
+        'when': true
+    },
+    {
         'id': 'airlines',
         'title': route.carriers > 1 ? 'Airlines flying this route' : 'The airline flying this route',
         'nav': 'Airlines',

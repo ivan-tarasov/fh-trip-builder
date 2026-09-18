@@ -3042,6 +3042,83 @@
         });
     }());
 
+    /*[ Route: watch this route for a price (C6, #155) ]
+    ===========================================================*/
+    (function () {
+        const form = document.querySelector('.js-watch-route');
+
+        if (!form) {
+            return;
+        }
+
+        const email = form.querySelector('.js-watch-route-email');
+        const threshold = form.querySelector('.js-watch-route-threshold');
+        const note = form.querySelector('.js-watch-route-note');
+        const submit = form.querySelector('[type="submit"]');
+        const from = form.querySelector('[name="from"]').value;
+        const to = form.querySelector('[name="to"]').value;
+        // Only the search page's popup sends this -- the route page is
+        // always economy and never carries the field at all.
+        const cabinField = form.querySelector('[name="cabin"]');
+        const cabin = cabinField ? cabinField.value : '';
+
+        const say = (message, tone) => {
+            note.textContent = message;
+            note.dataset.tone = tone;
+        };
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            // Checked again on the server. This one is only here to save a
+            // round trip on an obvious typo.
+            if (!email.checkValidity() || email.value.trim() === '') {
+                say('That does not look like an email address.', 'bad');
+                email.focus();
+
+                return;
+            }
+
+            if (!threshold.checkValidity() || threshold.value.trim() === '') {
+                say('Give a real price to watch for.', 'bad');
+                threshold.focus();
+
+                return;
+            }
+
+            submit.disabled = true;
+            say('Sending…', 'quiet');
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-Token': csrfToken(),
+                    'Accept': 'application/json'
+                },
+                body: new URLSearchParams({
+                    email: email.value.trim(),
+                    from: from,
+                    to: to,
+                    ...(cabin ? {cabin: cabin} : {}),
+                    threshold: threshold.value
+                })
+            })
+                .then((response) => response.json().then((data) => ({ok: response.ok, data: data})))
+                .then(({ok, data}) => {
+                    say(data.message || 'That did not work. Try again in a moment.', ok ? 'good' : 'bad');
+
+                    if (ok) {
+                        form.reset();
+                    }
+                })
+                .catch(() => say('That did not work. Try again in a moment.', 'bad'))
+                .finally(() => {
+                    submit.disabled = false;
+                });
+        });
+    }());
+
     /*[ Article: did this help? ]
     ===========================================================*/
     (function () {

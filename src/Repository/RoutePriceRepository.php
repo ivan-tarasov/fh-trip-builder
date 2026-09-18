@@ -82,6 +82,37 @@ final readonly class RoutePriceRepository
     }
 
     /**
+     * The single cheapest upcoming day on a route, all-in -- what
+     * `alerts:check` (C6, #155) compares a watch's threshold against.
+     *
+     * Ordered rather than aggregated: `MIN(price_base + price_tax)` alone
+     * would answer the cheapest total but lose which day it fell on, and the
+     * day is worth keeping even though nothing reads it yet.
+     *
+     * @return array{depart_date: string, base: float, tax: float}|null
+     */
+    public function cheapest(string $from, string $to, CabinClass $cabin, string $since): ?array
+    {
+        /** @var RouteDayPriceRow|null $row */
+        $row = $this->connection->fetchOne(
+            'SELECT depart_date, price_base, price_tax FROM ' . Table::RouteDayPrice->value
+            . ' WHERE from_code = ? AND to_code = ? AND cabin = ? AND depart_date >= ?'
+            . ' ORDER BY (price_base + price_tax) ASC LIMIT 1',
+            [$from, $to, $cabin->value, $since],
+        );
+
+        if ($row === null) {
+            return null;
+        }
+
+        return [
+            'depart_date' => (string) $row['depart_date'],
+            'base' => (float) $row['price_base'],
+            'tax' => (float) $row['price_tax'],
+        ];
+    }
+
+    /**
      * When this route was last worked out, or null if it never has been.
      *
      * The prices table cannot answer this. A route with no fares at all and a

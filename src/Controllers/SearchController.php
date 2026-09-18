@@ -342,6 +342,10 @@ class SearchController extends AbstractController
                     ? $this->searchUrl()->returnUntil()
                     : $this->searchUrl()->departUntil(),
                 'price_mode' => $this->data()['price_mode'],
+                // What the "Watch this route" form suggests as a threshold --
+                // the same signpost role `place.cheapest` plays on the route
+                // page, not a promise this exact price will recur.
+                'cheapest_total' => $this->data()['cheapest_total'],
                 'selected' => $this->data()['selected'] === null
                     ? null
                     : $this->presenter()->direction($this->data()['selected'])['direction'],
