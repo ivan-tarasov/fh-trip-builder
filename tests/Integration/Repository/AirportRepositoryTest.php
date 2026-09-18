@@ -160,6 +160,41 @@ final class AirportRepositoryTest extends IntegrationTestCase
     }
 
     /**
+     * The one thing `canonicalCityByCode()` exists for: a multi-airport
+     * city's own non-lead airport spells a different word than the group it
+     * belongs to, and `RouteAddress::path()` needs the group's word, not the
+     * airport's own -- found live (C7, #156) as `/route/newark-to-tokyo`
+     * 404ing where the real page was `/route/new-york-to-tokyo`.
+     */
+    public function testCanonicalCityByCodeAgreesWithTheGroupNotTheAirportsOwnLabel(): void
+    {
+        $airports = $this->repository();
+        $cityRepository = new CityRepository($this->connection());
+        $found = false;
+
+        foreach ($cityRepository->names() as $cityCode => $canonicalName) {
+            foreach ($cityRepository->airports((string) $cityCode) as $airport) {
+                $airportCode = (string) $airport['code'];
+
+                if ($airports->cityByCode($airportCode) === $canonicalName) {
+                    continue;
+                }
+
+                self::assertSame(
+                    $canonicalName,
+                    $airports->canonicalCityByCode($airportCode),
+                    $airportCode . " should resolve to its group's name, not its own",
+                );
+                $found = true;
+
+                break 2;
+            }
+        }
+
+        self::assertTrue($found, 'no airport in the data disagrees with its own city group -- nothing exercised the fix');
+    }
+
+    /**
      * The place nearest a point, which is what fills the homepage's field.
      *
      * The coordinates are from a real request through Cloudflare -- downtown

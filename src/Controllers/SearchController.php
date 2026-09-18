@@ -822,8 +822,12 @@ class SearchController extends AbstractController
             return null;
         }
 
-        $fromName = $airports->cityByCode($fromCode);
-        $toName = $airports->cityByCode($toCode);
+        // The canonical grouped name, not the specific airport's own city
+        // label -- RouteAddress::path() built from EWR's own "Newark"
+        // spells a slug RouteAddress::index() never indexed, since that
+        // city's real page is "New York" to Tokyo's own group.
+        $fromName = $airports->canonicalCityByCode($fromCode);
+        $toName = $airports->canonicalCityByCode($toCode);
 
         return $fromName === null || $toName === null ? null : RouteAddress::path($fromName, $toName);
     }

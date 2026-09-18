@@ -338,6 +338,33 @@ final readonly class AirportRepository
     }
 
     /**
+     * The name RouteAddress::path() has to be given for a code -- its city's
+     * canonical name, not the specific airport's own `city` column
+     * {@see cityByCode()} reads.
+     *
+     * The two disagree exactly for a multi-airport city: EWR's own `city`
+     * column says "Newark", but the group it shares with JFK and LGA is
+     * canonically "New York" -- the same `MIN(city) ... GROUP BY city_code`
+     * {@see CityRepository::names()} builds its whole slug index from.
+     * A link built from `cityByCode()` instead
+     * spells a name `RouteAddress::index()` never indexed, and 404s
+     * (found live, #156: `/route/newark-to-tokyo` where `/route/new-york-to-tokyo`
+     * was the real page).
+     */
+    public function canonicalCityByCode(string $code): ?string
+    {
+        /** @var string|null $name */
+        $name = $this->connection->fetchValue(
+            'SELECT MIN(city) FROM ' . Table::Airports->value
+            . ' WHERE city_code = (SELECT city_code FROM ' . Table::Airports->value
+            . ' WHERE code = ? OR city_code = ? LIMIT 1)',
+            [$code, $code],
+        );
+
+        return $name;
+    }
+
+    /**
      * Every airport a code stands for -- itself, if it already names one, or
      * every airport in its city if it names the city instead. The same
      * either-or {@see cityByCode()} already reads, so a specific airport and
