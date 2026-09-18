@@ -62,7 +62,7 @@ try {
     |
     */
 
-    $application->add(new DatabaseInstall());
+    $application->addCommand(new DatabaseInstall());
 
     /*
     |--------------------------------------------------------------------------
@@ -73,7 +73,7 @@ try {
     |
     */
 
-    $application->add(new DatabaseClear());
+    $application->addCommand(new DatabaseClear());
 
     /*
     |--------------------------------------------------------------------------
@@ -86,7 +86,7 @@ try {
     |
     */
 
-    $application->add(new DatabaseBackup());
+    $application->addCommand(new DatabaseBackup());
 
     /*
     |--------------------------------------------------------------------------
@@ -98,7 +98,7 @@ try {
     |
     */
 
-    $application->add(new DatabaseMigrate());
+    $application->addCommand(new DatabaseMigrate());
 
     /*
     |--------------------------------------------------------------------------
@@ -116,7 +116,7 @@ try {
     |
     */
 
-    $application->add(new DatabasePrune());
+    $application->addCommand(new DatabasePrune());
 
     /*
     |--------------------------------------------------------------------------
@@ -130,7 +130,7 @@ try {
     |
     */
 
-    $application->add(new GenerateFlights());
+    $application->addCommand(new GenerateFlights());
 
     /*
     |--------------------------------------------------------------------------
@@ -142,7 +142,7 @@ try {
     |
     */
 
-    $application->add(new CleaningFlights());
+    $application->addCommand(new CleaningFlights());
 
     /*
     |--------------------------------------------------------------------------
@@ -154,7 +154,7 @@ try {
     |
     */
 
-    $application->add(new RepriceFlights());
+    $application->addCommand(new RepriceFlights());
 
     /*
     |--------------------------------------------------------------------------
@@ -167,7 +167,7 @@ try {
     |
     */
 
-    $application->add(new CabinsFlights());
+    $application->addCommand(new CabinsFlights());
 
     /*
     |--------------------------------------------------------------------------
@@ -180,7 +180,7 @@ try {
     |
     */
 
-    $application->add(new RealignFlights());
+    $application->addCommand(new RealignFlights());
 
     /*
     |--------------------------------------------------------------------------
@@ -198,7 +198,7 @@ try {
     |
     */
 
-    $application->add(new CurrencyRates());
+    $application->addCommand(new CurrencyRates());
 
     /*
     |--------------------------------------------------------------------------
@@ -216,7 +216,7 @@ try {
     |
     */
 
-    $application->add(new ArticlesImport());
+    $application->addCommand(new ArticlesImport());
 
     /*
     |--------------------------------------------------------------------------
@@ -234,7 +234,7 @@ try {
     |
     */
 
-    $application->add(new AirsideImport());
+    $application->addCommand(new AirsideImport());
 
     /*
     |--------------------------------------------------------------------------
@@ -251,7 +251,7 @@ try {
     |
     */
 
-    $application->add(new AirsidePrune());
+    $application->addCommand(new AirsidePrune());
 
     /*
     |--------------------------------------------------------------------------
@@ -266,7 +266,7 @@ try {
     |
     */
 
-    $application->add(new ScheduleRun());
+    $application->addCommand(new ScheduleRun());
 
     /*
     |--------------------------------------------------------------------------
@@ -278,7 +278,7 @@ try {
     |
     */
 
-    $application->add(new AlertsCheck());
+    $application->addCommand(new AlertsCheck());
 
     /*
     |--------------------------------------------------------------------------
@@ -295,7 +295,7 @@ try {
     |
     */
 
-    $application->add(new AdminPassword());
+    $application->addCommand(new AdminPassword());
 
     /*
     |--------------------------------------------------------------------------
