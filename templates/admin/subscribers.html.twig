@@ -3,7 +3,15 @@
 
 {% set admin_section = 'subscribers' %}
 
-{% block title %}Fare alerts{% endblock %}
+{% block title %}Subscribers{% endblock %}
+
+{# "Fare alerts" became a section (G21, #385) once route watches (C6, #155)
+   gave it a second page -- the same reasoning Settings' own children each
+   carry a breadcrumb back to their parent. #}
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/subscribers">Fare alerts</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Subscribers</li>
+{% endblock %}
 
 {% block description %}<p class="well__description">Everyone who has asked to be told when a fare drops.</p>{% endblock %}
 

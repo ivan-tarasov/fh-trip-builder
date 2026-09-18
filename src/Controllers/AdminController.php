@@ -14,6 +14,7 @@ use TripBuilder\AdminEventResource;
 use TripBuilder\BookingActor;
 use TripBuilder\BookingEvent;
 use TripBuilder\BookingStatus;
+use TripBuilder\CabinClass;
 use TripBuilder\Cron;
 use TripBuilder\Csrf;
 use TripBuilder\DocumentType;
@@ -25,6 +26,7 @@ use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Mail\Mailtrap;
+use TripBuilder\Money;
 use TripBuilder\PanelSetting;
 use TripBuilder\RemarkTone;
 use TripBuilder\Repository\AdminEventRepository;
@@ -37,6 +39,7 @@ use TripBuilder\Repository\BookingRepository;
 use TripBuilder\Repository\BookingTicketRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\DashboardRepository;
+use TripBuilder\Repository\RouteWatchRepository;
 use TripBuilder\Repository\ScheduledJobRepository;
 use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Repository\SearchRepository;
@@ -102,11 +105,17 @@ class AdminController extends AbstractController
     /** How many days back each named range covers. `all` has no entry -- it has no length to name. */
     private const array HERO_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90];
 
-    /** The `searches()` page's own range names -- a year, not `all`: nothing here needs an unbounded query. */
+    /**
+     * The range names `searches()` and `subscribersRoutes()` both offer -- a
+     * year, not `all`: nothing here needs an unbounded query.
+     */
     private const array SEARCH_RANGE_DAYS = ['1d' => 1, '7d' => 7, '30d' => 30, '90d' => 90, '180d' => 180, '365d' => 365];
 
     /** More than Overview's own top five, still short enough to read in one screen. */
     private const int SEARCHES_RANKING_LIMIT = 20;
+
+    /** Same reasoning as `SEARCHES_RANKING_LIMIT`, for the routes ranked by watch count. */
+    private const int TOP_WATCHED_ROUTES_LIMIT = 10;
 
     /**
      * What a scheduled job is allowed to run (G19, #377).
@@ -1731,6 +1740,158 @@ class AdminController extends AbstractController
         }
 
         $this->bounce('/admin/subscribers');
+    }
+
+    /**
+     * Fare alerts' other list -- who is watching a route, and how the
+     * routes and the sending are doing (C6, #155; G21, #385).
+     *
+     * The same range buckets `searches()` already offers, since both are
+     * "how has this been going" trends over a window rather than a page of
+     * its own filters.
+     */
+    public function subscribersRoutes(): void
+    {
+        if (!$this->guard()) {
+            return;
+        }
+
+        if ($this->request->isPost()) {
+            $this->removeRouteWatch();
+
+            return;
+        }
+
+        $range = $this->request->query->str('range', '7d');
+        $range = array_key_exists($range, self::SEARCH_RANGE_DAYS) ? $range : '7d';
+
+        $watches = new RouteWatchRepository($this->connection());
+        $term = $this->request->query->nullableStr('q');
+        $page = max(1, (int) $this->request->query->str('page', '1'));
+        $offset = ($page - 1) * self::PER_PAGE;
+
+        echo new TwigRenderer()->render('admin/subscribers-routes.html.twig', [
+            'range' => $range,
+            'range_label' => match ($range) {
+                '1d' => 'today',
+                '7d' => 'in the last 7 days',
+                '30d' => 'in the last 30 days',
+                '90d' => 'in the last 90 days',
+                '180d' => 'in the last 6 months',
+                '365d' => 'in the last year',
+            },
+            'term' => $term,
+            'hero' => $this->routeWatchHero($watches, $range),
+            'active_count' => number_format($watches->count()),
+            'triggered_count' => number_format($watches->triggeredCount()),
+            'top_routes' => array_map(
+                static fn(array $row): array => $row + ['cabin_label' => CabinClass::from($row['cabin'])->label()],
+                $watches->topRoutes(self::TOP_WATCHED_ROUTES_LIMIT),
+            ),
+            'route_count' => $watches->distinctRouteCount(),
+            'watches' => array_map(
+                static fn(array $row): array => $row + [
+                    'cabin_label' => CabinClass::from($row['cabin'])->label(),
+                    // Always CAD, whatever currency the operator's own
+                    // cookie happens to say -- the same money
+                    // `alerts:check` actually sends against, not the
+                    // visitor-facing conversion `Money::active()` gives.
+                    'threshold_price' => new ItineraryPresenter()->priceParts($row['threshold'], Money::base()),
+                    'notified_price_display' => $row['notified_price'] === null
+                        ? null
+                        : new ItineraryPresenter()->priceParts($row['notified_price'], Money::base()),
+                ],
+                $watches->paginated(self::PER_PAGE, $offset, $term),
+            ),
+            'total' => $watches->countMatching($term),
+            'page' => $page,
+            'per_page' => self::PER_PAGE,
+        ]);
+    }
+
+    /**
+     * The two period-scoped cards -- new watches and alerts sent, each with
+     * a delta against the equal-length period before it and a day-by-day
+     * sparkline -- the same shape {@see hero()} already gives Bookings, cut
+     * down to the two series this page actually has (G21, #385).
+     *
+     * @return list<array{key: string, label: string, display: string, tone: string, delta: array{pct: float, good: bool}|null, points: array<string, int>}>
+     */
+    private function routeWatchHero(RouteWatchRepository $watches, string $range): array
+    {
+        $to = new DateTimeImmutable('tomorrow');
+        $days = self::SEARCH_RANGE_DAYS[$range];
+        $from = $to->modify("-{$days} days");
+        $prevFrom = $from->modify("-{$days} days");
+        $prevTo = $from;
+
+        $createdByDay = $watches->dailyCreatedCounts($from, $to);
+        $sentByDay = $watches->dailySentCounts($from, $to);
+
+        $created = array_sum($createdByDay);
+        $prevCreated = array_sum($watches->dailyCreatedCounts($prevFrom, $prevTo));
+        $sent = $watches->totalSent($from, $to);
+        $prevSent = $watches->totalSent($prevFrom, $prevTo);
+
+        return [
+            [
+                'key' => 'created',
+                'label' => 'New watches',
+                'display' => number_format($created),
+                'tone' => 'neutral',
+                'delta' => self::delta($created, $prevCreated),
+                'points' => $createdByDay,
+            ],
+            [
+                'key' => 'sent',
+                'label' => 'Alerts sent',
+                'display' => number_format($sent),
+                'tone' => 'good',
+                'delta' => self::delta($sent, $prevSent),
+                'points' => $sentByDay,
+            ],
+        ];
+    }
+
+    /**
+     * The route-watches list's own removal, the same shape
+     * {@see removeSubscriber()} already gives the general list.
+     */
+    private function removeRouteWatch(): void
+    {
+        if (!Csrf::isValid($this->request->body->nullableStr(Csrf::FIELD))) {
+            Flash::set('That form went stale. Try again.', FlashTone::Error);
+            $this->bounce('/admin/subscribers/routes');
+
+            return;
+        }
+
+        $watches = new RouteWatchRepository($this->connection());
+        $events = new AdminEventRepository($this->connection());
+        $raw = $this->request->body->raw('ids');
+
+        if (is_array($raw)) {
+            $ids = array_values(array_unique(array_map(intval(...), $raw)));
+            $descriptors = $watches->descriptorsFor($ids);
+            $removed = $watches->removeMany($ids);
+
+            foreach ($descriptors as $id => $descriptor) {
+                $events->record(AdminEventResource::RouteWatch, (string) $id, AdminEvent::Removed, $descriptor);
+            }
+
+            Flash::set($removed === 1 ? 'Removed the watch.' : $removed . ' watches removed.');
+        } else {
+            $id = $this->request->body->int('id');
+            $descriptor = $watches->descriptorsFor([$id])[$id] ?? null;
+
+            if ($watches->remove($id) && $descriptor !== null) {
+                $events->record(AdminEventResource::RouteWatch, (string) $id, AdminEvent::Removed, $descriptor);
+            }
+
+            Flash::set('Removed the watch.');
+        }
+
+        $this->bounce('/admin/subscribers/routes');
     }
 
     /**

@@ -1,0 +1,227 @@
+{% extends 'admin/layout.html.twig' %}
+{% import 'admin/partials/time-macros.html.twig' as time %}
+{% import 'partials/money.html.twig' as money %}
+
+{% set admin_section = 'subscribers-routes' %}
+
+{% block title %}Route watches{% endblock %}
+
+{# "Fare alerts" became a section (G21, #385) once this page gave it a
+   second child -- `admin/subscribers.html.twig` carries the matching
+   breadcrumb back here. #}
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="/admin/subscribers">Fare alerts</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Route watches</li>
+{% endblock %}
+
+{% block description %}<p class="well__description">Who is watching a route, and what it would take to hear from us.</p>{% endblock %}
+
+{% block content %}
+    {# Carried onto the search box and pagination, the same reasoning
+       `bookings.html.twig`'s own `filter_qs` gives -- a range or a term is
+       part of what is being looked at, not chrome to drop on the next
+       click. #}
+    {% set carry_qs = 'range=' ~ range ~ (term ? '&q=' ~ term|url_encode : '') %}
+
+    <div class="searches-range" role="group" aria-label="Date range">
+        {% for value, label in {'1d': '1 day', '7d': '7 days', '30d': '30 days', '90d': '90 days', '180d': '6 months', '365d': 'Year'} %}
+            <a class="searches-range__btn{{ range == value ? ' is-active' : '' }}"
+               href="/admin/subscribers/routes?range={{ value }}{{ term ? '&q=' ~ term|url_encode : '' }}"
+               {{ range == value ? 'aria-current="true"' : '' }}>{{ label }}</a>
+        {% endfor %}
+    </div>
+
+    {# Two period-scoped cards -- new watches and alerts sent, each with a
+       delta and a day-by-day trend -- the same shape `hero()` already
+       gives Bookings, cut down to the two series this page has (G21,
+       #385). Not a fifth column of `.bookings-hero`'s own dark band: that
+       hero is Bookings' own centrepiece, and reusing it here would make
+       every stats page compete for the same weight. #}
+    <div class="row g-3 mb-3">
+        {% for card in hero %}
+            <div class="col-12 col-md-6">
+                <div class="card orchid-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <p class="stat-card__label mb-1">{{ card.label }}</p>
+                            {% if card.delta %}
+                                <span class="status-chip status-chip--{{ card.delta.good ? 'good' : 'bad' }}">
+                                    <i class="bi bi-arrow-{{ card.delta.pct >= 0 ? 'up' : 'down' }}-right" aria-hidden="true"></i>
+                                    {{ card.delta.pct|abs|number_format(1) }}%
+                                </span>
+                            {% endif %}
+                        </div>
+                        <h3 class="stat-card__value mono mb-0">{{ card.display }}</h3>
+                        <p class="stat-card__note mb-0">{{ range_label }}</p>
+
+                        {% if card.points|length > 1 %}
+                            <div class="orchid-chart-wrap orchid-chart-wrap--sm mt-3">
+                                <canvas class="js-chart" data-chart="volume" data-series="{{ card.points|json_encode }}"></canvas>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# Two point-in-time snapshots -- neither is a period total, so neither
+       gets a delta or a trend: "how many exist" and "how many would fire
+       right now" are read at the instant the page loads, not over a
+       window. #}
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6">
+            <div class="card orchid-card">
+                <div class="card-body">
+                    <p class="stat-card__label mb-1">Active watches</p>
+                    <h3 class="stat-card__value mono mb-0">{{ active_count }}</h3>
+                    <p class="stat-card__note mb-0">right now, across {{ route_count }} route{{ route_count == 1 ? '' : 's' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6">
+            <div class="card orchid-card">
+                <div class="card-body">
+                    <p class="stat-card__label mb-1">Under threshold now</p>
+                    <h3 class="stat-card__value mono mb-0">{{ triggered_count }}</h3>
+                    <p class="stat-card__note mb-0">would be emailed on the next tick</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="band">Most watched routes</p>
+
+    <div class="card orchid-card mb-4">
+        <div class="card-body">
+            {% if top_routes is empty %}
+                <p class="text-body-secondary mb-0">Nobody is watching a route yet.</p>
+            {% else %}
+                <div class="searches-list">
+                    {% for row in top_routes %}
+                        <div class="route-rank-row">
+                            <span class="searches-row__bg" style="width: {{ row.bar }}%;" aria-hidden="true"></span>
+                            <span class="searches-row__rank">{{ '%02d'|format(loop.index) }}</span>
+                            <div class="searches-row__main">
+                                <span class="searches-row__route">{{ row.from }} &rarr; {{ row.to }}</span>
+                                <span class="searches-row__cities">{{ row.cabin_label }}</span>
+                            </div>
+                            <span class="route-rank-row__metric">{{ row.count }} watch{{ row.count == 1 ? '' : 'es' }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+        <p class="band mb-0">Watches</p>
+
+        <form method="get" action="/admin/subscribers/routes" class="d-flex gap-2" role="search">
+            <input type="hidden" name="range" value="{{ range }}">
+            <label class="visually-hidden" for="route-watch-search">Search by address</label>
+            <input id="route-watch-search" type="search" name="q" value="{{ term }}"
+                   class="form-control form-control-sm" placeholder="Search by address" style="max-width: 16rem;">
+            <button class="btn btn-outline-secondary btn-sm" type="submit">Search</button>
+            {% if term %}<a class="btn btn-outline-secondary btn-sm" href="/admin/subscribers/routes?range={{ range }}">Clear</a>{% endif %}
+        </form>
+    </div>
+
+    {% if watches is empty %}
+        <p class="notice">{{ term ? 'No watch matches that address.' : 'Nobody is watching a route yet.' }}</p>
+    {% else %}
+        {# Two independent forms, neither nested in the other, the same
+           reasoning `subscribers.html.twig`'s own bulk bar gives (G3.7,
+           #310). #}
+        <form id="bulkRemoveRoutesForm" method="post" action="/admin/subscribers/routes">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+        </form>
+
+        <div class="d-none align-items-center justify-content-between gap-2 mb-2" data-bulk-bar>
+            <span class="text-body-secondary small" data-bulk-count aria-live="polite"></span>
+            <button type="submit" form="bulkRemoveRoutesForm" class="btn btn-sm btn-outline-danger"
+                    data-confirm="Remove the selected watches?">
+                Remove selected
+            </button>
+        </div>
+
+        <div class="card orchid-card">
+            <div class="table-responsive">
+                <table class="table orchid-table align-middle mb-0" data-bulk-table aria-label="Route watches">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width: 1%;">
+                                <input type="checkbox" class="form-check-input" form="bulkRemoveRoutesForm" data-bulk-select-all aria-label="Select all">
+                            </th>
+                            <th scope="col">Address</th>
+                            <th scope="col">Route</th>
+                            <th scope="col">Cabin</th>
+                            <th scope="col">Threshold (CAD)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Watching since</th>
+                            <th scope="col" class="text-end">&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for watch in watches %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input" form="bulkRemoveRoutesForm" name="ids[]" value="{{ watch.id }}" data-bulk-checkbox aria-label="Select {{ watch.email }}">
+                                </td>
+                                <td>{{ watch.email }}</td>
+                                <td class="mono">{{ watch.from_code }} &rarr; {{ watch.to_code }}</td>
+                                <td class="text-body-secondary">{{ watch.cabin_label }}</td>
+                                <td class="mono">{{ money.plain(watch.threshold_price) }}</td>
+                                <td>
+                                    {% if watch.notified_price_display %}
+                                        <span class="status-chip status-chip--good">Triggered {{ money.plain(watch.notified_price_display) }}</span>
+                                    {% else %}
+                                        <span class="status-chip status-chip--muted">Watching</span>
+                                    {% endif %}
+                                </td>
+                                <td class="mono text-body-secondary">{{ time.stamp(watch.created, 'date') }}</td>
+                                <td class="text-end row-actions" style="width: 1%;">
+                                    <form method="post" action="/admin/subscribers/routes">
+                                        <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="id" value="{{ watch.id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                data-confirm="Remove {{ watch.email }}'s watch on {{ watch.from_code }} to {{ watch.to_code }}?">
+                                            Remove
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if total > per_page %}
+            <div class="d-flex align-items-center justify-content-between mt-3">
+                <span class="text-body-secondary small">
+                    {{ (page - 1) * per_page + 1 }}&ndash;{{ min(page * per_page, total) }} of {{ total }}
+                </span>
+
+                <nav aria-label="Route watch pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item{{ page > 1 ? '' : ' disabled' }}">
+                            <a class="page-link" href="/admin/subscribers/routes?page={{ page - 1 }}&{{ carry_qs }}"{{ page > 1 ? '' : ' tabindex="-1" aria-disabled="true"' }}>
+                                <i class="bi bi-chevron-left" aria-hidden="true"></i> Newer
+                            </a>
+                        </li>
+                        <li class="page-item{{ page * per_page < total ? '' : ' disabled' }}">
+                            <a class="page-link" href="/admin/subscribers/routes?page={{ page + 1 }}&{{ carry_qs }}"{{ page * per_page < total ? '' : ' tabindex="-1" aria-disabled="true"' }}>
+                                Older <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ asset(config('site.directory.js') ~ '/chart.umd.min.js') }}" defer></script>
+{% endblock %}

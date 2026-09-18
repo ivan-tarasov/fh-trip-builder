@@ -85,7 +85,13 @@
                         'label': missing_ticket_count == 1 ? 'booking needs a ticket' : 'bookings need a ticket'
                     } : null
                 },
-                { 'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'match': 'subscribers' },
+                {
+                    'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'group': 'subscribers',
+                    'children': [
+                        { 'href': '/admin/subscribers', 'label': 'Subscribers', 'match': 'subscribers' },
+                        { 'href': '/admin/subscribers/routes', 'label': 'Route watches', 'match': 'subscribers-routes' }
+                    ]
+                },
                 { 'href': '/admin/content', 'label': 'Help content', 'icon': 'journal-text', 'match': 'content' },
                 {
                     'href': '/admin/settings', 'label': 'Settings', 'icon': 'gear', 'group': 'settings',

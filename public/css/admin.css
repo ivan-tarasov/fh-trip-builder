@@ -815,6 +815,10 @@ a:hover { text-decoration: underline; }
 
 .orchid-chart-wrap { position: relative; width: 100%; }
 .orchid-chart-wrap--md { height: 12rem; }
+/* A card-sized trend, not a page-wide one -- Route watches' own two hero
+   cards (G21, #385) sit two to a row, so the full `--md` height read as
+   the card competing with its own number for attention. */
+.orchid-chart-wrap--sm { height: 6rem; }
 
 /* "Most searched" -- Orchid's own Top Landing Pages (analytics.html,
    `.analytics-page-row`), renamed into this app's own vocabulary the way
@@ -899,6 +903,30 @@ a:hover { text-decoration: underline; }
 @media (max-width: 575.98px) {
     .searches-row { grid-template-columns: 24px 1fr auto auto; }
     .searches-row__metric--last { display: none; }
+}
+
+/* "Most watched routes" (G21, #385) -- three columns rather than
+   `.searches-row`'s five, since there is no per-row remove action and no
+   second metric here. Reuses `.searches-row__bg`/`__rank`/`__main`/`__route`
+   as they are: those classes carry no assumption about the column count
+   they sit in. */
+.route-rank-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: .875rem;
+    padding: .625rem .75rem;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.route-rank-row > * { position: relative; z-index: 1; }
+.route-rank-row__metric {
+    font-size: .78rem;
+    color: var(--ink);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 /* The `searches()` page's own range switcher (G16, #369) -- same shape as
