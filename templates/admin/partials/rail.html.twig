@@ -50,50 +50,116 @@
             'info': 'bg-primary-subtle text-primary'
         } %}
 
-        {# Settings is the one item with children -- Orchid's own expandable-
-           parent pattern for "Dashboard" (Bootstrap's stock Collapse, no
-           bespoke JS), grafted onto the panel's real page-per-section
-           structure rather than a static demo's `.html` files (G2.6, #299).
-           A flat item still needs only `match`; a parent needs `group` (what
+        {# One item, flat or with children -- pulled into a macro because
+           three sections now call it rather than one shared loop. A flat
+           item still needs only `match`; a parent needs `group` (what
            `admin_section` is checked to *start with*, so it stays expanded
            and lit across all three of its children) and its own `children`
            list, each a flat item in its own right. An optional `badge`
            ({tone, value, label}) draws a count at the item's own right
            edge -- `label` is read to a screen reader instead of the bare
-           number, since "8" alone says nothing (G17, #375). #}
-        <ul class="rail__list">
-            {% for item in [
-                {
+           number, since "8" alone says nothing (G17, #375). Takes
+           `current_section` rather than reading `admin_section` itself: a
+           macro does not see the including template's variables unless
+           told to. #}
+        {% macro item(item, current_section, badge_tones) %}
+            {% if item.children is defined %}
+                {% set expanded = current_section starts with item.group %}
+                <li>
+                    {# `data-bs-toggle` intercepts the click before `href` is
+                       followed, so this link only ever toggles -- the href is
+                       a no-JS fallback, not the normal way in. Reaching a
+                       child means clicking a child. #}
+                    <a class="rail__item{{ expanded ? ' is-current' : '' }}" href="{{ item.href }}"
+                       data-bs-toggle="collapse" data-bs-target="#rail-{{ item.group }}-sub" role="button"
+                       aria-expanded="{{ expanded ? 'true' : 'false' }}" aria-controls="rail-{{ item.group }}-sub">
+                        <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
+                        <span>{{ item.label }}</span>
+                        <i class="bi bi-chevron-down rail__chevron" aria-hidden="true"></i>
+                    </a>
+                    <ul class="collapse{{ expanded ? ' show' : '' }} rail__sub" id="rail-{{ item.group }}-sub">
+                        {% for child in item.children %}
+                            {% set current = current_section == child.match %}
+                            <li>
+                                <a class="rail__sublink{{ current ? ' is-current' : '' }}" href="{{ child.href }}"
+                                   {{ current ? 'aria-current="page"' : '' }}>{{ child.label }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% else %}
+                {% set current = current_section == item.match %}
+                <li>
+                    <a class="rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
+                       {{ current ? 'aria-current="page"' : '' }}>
+                        <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
+                        <span>{{ item.label }}</span>
+                        {% if item.badge is defined and item.badge %}
+                            <span class="badge {{ badge_tones[item.badge.tone] }} ms-auto" aria-label="{{ item.badge.value }} {{ item.badge.label }}">{{ item.badge.value }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+            {% endif %}
+        {% endmacro %}
+        {% import _self as rail %}
+
+        {% set current_section = admin_section|default('') %}
+
+        {# Three sections, Orchid's own `.orchid-nav-section` shape (under
+           this project's own `.rail__section` naming): Overview on its own
+           at the top, Settings on its own at the bottom, everything else
+           -- the day-to-day tools rather than configuration -- carrying
+           the middle label. #}
+        <div class="rail__section">
+            <span class="rail__section-label">Main</span>
+            <ul class="rail__list">
+                {{ rail.item({
                     'href': '/admin', 'label': 'Overview', 'icon': 'speedometer2', 'match': 'overview',
                     'badge': attention_count > 0 ? {
                         'tone': 'warn', 'value': attention_count,
                         'label': attention_count == 1 ? 'thing needs attention' : 'things need attention'
                     } : null
-                },
-                {
-                    'href': '/admin/schedule', 'label': 'Schedule', 'icon': 'clock-history', 'match': 'schedule',
-                    'badge': schedule_issue_count > 0 ? {
-                        'tone': 'warn', 'value': schedule_issue_count,
-                        'label': schedule_issue_count == 1 ? 'job is late' : 'jobs are late'
-                    } : null
-                },
-                { 'href': '/admin/searches', 'label': 'Searches', 'icon': 'search', 'match': 'searches' },
-                {
-                    'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings',
-                    'badge': missing_ticket_count > 0 ? {
-                        'tone': 'warn', 'value': missing_ticket_count,
-                        'label': missing_ticket_count == 1 ? 'booking needs a ticket' : 'bookings need a ticket'
-                    } : null
-                },
-                {
-                    'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'group': 'subscribers',
-                    'children': [
-                        { 'href': '/admin/subscribers', 'label': 'Subscribers', 'match': 'subscribers' },
-                        { 'href': '/admin/subscribers/routes', 'label': 'Route watches', 'match': 'subscribers-routes' }
-                    ]
-                },
-                { 'href': '/admin/content', 'label': 'Help content', 'icon': 'journal-text', 'match': 'content' },
-                {
+                }, current_section, badge_tones) }}
+            </ul>
+        </div>
+
+        <div class="rail__section">
+            <span class="rail__section-label">Operations</span>
+            <ul class="rail__list">
+                {% for item in [
+                    {
+                        'href': '/admin/schedule', 'label': 'Schedule', 'icon': 'clock-history', 'match': 'schedule',
+                        'badge': schedule_issue_count > 0 ? {
+                            'tone': 'warn', 'value': schedule_issue_count,
+                            'label': schedule_issue_count == 1 ? 'job is late' : 'jobs are late'
+                        } : null
+                    },
+                    { 'href': '/admin/searches', 'label': 'Searches', 'icon': 'search', 'match': 'searches' },
+                    {
+                        'href': '/admin/bookings', 'label': 'Bookings', 'icon': 'briefcase', 'match': 'bookings',
+                        'badge': missing_ticket_count > 0 ? {
+                            'tone': 'warn', 'value': missing_ticket_count,
+                            'label': missing_ticket_count == 1 ? 'booking needs a ticket' : 'bookings need a ticket'
+                        } : null
+                    },
+                    {
+                        'href': '/admin/subscribers', 'label': 'Fare alerts', 'icon': 'bell', 'group': 'subscribers',
+                        'children': [
+                            { 'href': '/admin/subscribers', 'label': 'Subscribers', 'match': 'subscribers' },
+                            { 'href': '/admin/subscribers/routes', 'label': 'Route watches', 'match': 'subscribers-routes' }
+                        ]
+                    },
+                    { 'href': '/admin/content', 'label': 'Help content', 'icon': 'journal-text', 'match': 'content' }
+                ] %}
+                    {{ rail.item(item, current_section, badge_tones) }}
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="rail__section">
+            <span class="rail__section-label">System</span>
+            <ul class="rail__list">
+                {{ rail.item({
                     'href': '/admin/settings', 'label': 'Settings', 'icon': 'gear', 'group': 'settings',
                     'children': [
                         { 'href': '/admin/settings', 'label': 'Search rules', 'match': 'settings-search-rules' },
@@ -101,47 +167,9 @@
                         { 'href': '/admin/settings/map', 'label': 'Map', 'match': 'settings-map' },
                         { 'href': '/admin/settings/diagnostics', 'label': 'Diagnostics', 'match': 'settings-diagnostics' }
                     ]
-                }
-            ] %}
-                {% if item.children is defined %}
-                    {% set expanded = admin_section|default('') starts with item.group %}
-                    <li>
-                        {# `data-bs-toggle` intercepts the click before `href` is
-                           followed, so this link only ever toggles -- the href is
-                           a no-JS fallback, not the normal way in. Reaching a
-                           child means clicking a child. #}
-                        <a class="rail__item{{ expanded ? ' is-current' : '' }}" href="{{ item.href }}"
-                           data-bs-toggle="collapse" data-bs-target="#rail-{{ item.group }}-sub" role="button"
-                           aria-expanded="{{ expanded ? 'true' : 'false' }}" aria-controls="rail-{{ item.group }}-sub">
-                            <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
-                            <span>{{ item.label }}</span>
-                            <i class="bi bi-chevron-down rail__chevron" aria-hidden="true"></i>
-                        </a>
-                        <ul class="collapse{{ expanded ? ' show' : '' }} rail__sub" id="rail-{{ item.group }}-sub">
-                            {% for child in item.children %}
-                                {% set current = admin_section|default('') == child.match %}
-                                <li>
-                                    <a class="rail__sublink{{ current ? ' is-current' : '' }}" href="{{ child.href }}"
-                                       {{ current ? 'aria-current="page"' : '' }}>{{ child.label }}</a>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-                {% else %}
-                    {% set current = admin_section|default('') == item.match %}
-                    <li>
-                        <a class="rail__item{{ current ? ' is-current' : '' }}" href="{{ item.href }}"
-                           {{ current ? 'aria-current="page"' : '' }}>
-                            <i class="bi bi-{{ item.icon }}" aria-hidden="true"></i>
-                            <span>{{ item.label }}</span>
-                            {% if item.badge is defined and item.badge %}
-                                <span class="badge {{ badge_tones[item.badge.tone] }} ms-auto" aria-label="{{ item.badge.value }} {{ item.badge.label }}">{{ item.badge.value }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-        </ul>
+                }, current_section, badge_tones) }}
+            </ul>
+        </div>
     </div>
 </div>
 

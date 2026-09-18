@@ -251,6 +251,7 @@ a:hover { text-decoration: underline; }
   html[data-rail-collapsed] .well { margin-left: 5.25rem; }
   html[data-rail-collapsed] .rail__mark-name,
   html[data-rail-collapsed] .rail__mark-role,
+  html[data-rail-collapsed] .rail__section-label,
   html[data-rail-collapsed] .rail__item span { display: none; }
   html[data-rail-collapsed] .rail__item { justify-content: center; }
 }
@@ -301,6 +302,22 @@ a:hover { text-decoration: underline; }
 }
 
 .rail__body { display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding: 1.25rem 1rem 1.5rem; }
+
+/* Orchid's own `.orchid-nav-section`/`.orchid-nav-section__label`, under
+   this project's own naming -- a label above a group of items, the same
+   look, none of the demo's page-per-category items to carry along with it. */
+.rail__section:last-child .rail__list { margin-bottom: 0; }
+.rail__section-label {
+  display: block;
+  font-size: .6875rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+  padding: 0 .75rem;
+  margin-bottom: .375rem;
+}
+
 .rail__list { display: flex; flex-direction: column; gap: .125rem; margin: 0 0 1.25rem; padding: 0; list-style: none; }
 
 .rail__item {
