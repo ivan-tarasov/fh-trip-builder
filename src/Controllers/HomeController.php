@@ -28,11 +28,22 @@ class HomeController extends AbstractController
     private const int DEALS_LIMIT = 8;
 
     /**
-     * Montreal, when nothing resolves an origin at all -- no recent-search
-     * cookie, no Cloudflare geo header. In production a real visitor
-     * almost always carries one or the other; this exists for local
-     * development, where neither ever arrives and both the "From" field
-     * and the deals carousel would otherwise sit empty on every visit.
+     * Montreal's own airport, when nothing resolves an origin at all -- no
+     * recent-search cookie, no Cloudflare geo header. In production a
+     * real visitor almost always carries one or the other; this exists
+     * for local development, where neither ever arrives and both the
+     * "From" field and the deals carousel would otherwise sit empty on
+     * every visit.
+     *
+     * `YUL`, not Montreal's city code `YMQ` -- the "From" field is a
+     * `<select>` whose options are exactly `AirportRepository::pickable()`'s
+     * own list, and a city only appears there in its own right when it
+     * has more than one major airport. Montreal has one, so `YMQ` is
+     * never an option at all: the field rendered empty despite
+     * `depart_code` holding a real value, because nothing in the list
+     * matched it. `YUL` is what a real resolved Montreal origin would
+     * actually be, since that is the only code `pickable()` ever offers
+     * for it.
      *
      * Applied here and in the "From" field/its nearby block below, on
      * request -- `SuggestedOrigin` itself is left alone, since its own
@@ -40,7 +51,7 @@ class HomeController extends AbstractController
      * real rule about *whose* answer wins and this is a fourth rung
      * bolted on after it, not a change to that rule.
      */
-    private const string FALLBACK_ORIGIN = 'YMQ';
+    private const string FALLBACK_ORIGIN = 'YUL';
 
     /**
      * @throws Exception|\Twig\Error\Error
