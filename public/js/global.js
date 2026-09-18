@@ -3233,8 +3233,15 @@
                 .then((response) => response.json().then((data) => ({ok: response.ok, data: data})))
                 .then(({ok, data}) => {
                     if (ok) {
-                        rememberEmail(email.value.trim());
+                        const submittedEmail = email.value.trim();
+
+                        rememberEmail(submittedEmail);
                         form.reset();
+                        // Put back rather than left blank by reset() -- a
+                        // visitor setting a second price trigger on the same
+                        // route, in the same visit, should not have to
+                        // retype the address they just used.
+                        email.value = submittedEmail;
                         // Cleared rather than left on "Sending…" -- the
                         // route page's own copy of this form has no modal
                         // to hide, so the confirmation popping up over a
