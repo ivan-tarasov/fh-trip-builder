@@ -18,7 +18,7 @@ use TripBuilder\Config;
 use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
-    name: 'db:clear',
+    name: self::NAME,
     description: 'Purge data from database tables.',
     aliases: ['database:clear', 'mysql:clear'],
     hidden: false,
@@ -26,8 +26,19 @@ use TripBuilder\Noah\AbstractCommand;
 
 class Clear extends AbstractCommand
 {
+    public const string NAME = 'db:clear';
+
     private const string ARG_NAME = 'table';
     private const string ARG_DESCRIPTION = 'Database table to clear';
+
+    private const string OPT_NO_BACKUP = 'no-backup';
+    private const string OPT_NO_BACKUP_DESCRIPTION = 'Skip the backup. For data you know is disposable.';
+
+    /** Every argument this command takes, name => description. */
+    public const array ARGUMENTS = [self::ARG_NAME => self::ARG_DESCRIPTION];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_NO_BACKUP => self::OPT_NO_BACKUP_DESCRIPTION];
 
     private const string MESSAGE_WARNING = 'WARNING!!! ';
     private const string MESSAGE_DONE = 'Table(s) was successfully purged';
@@ -44,10 +55,10 @@ class Clear extends AbstractCommand
     {
         $this->addArgument(self::ARG_NAME, InputArgument::OPTIONAL, self::ARG_DESCRIPTION);
         $this->addOption(
-            'no-backup',
+            self::OPT_NO_BACKUP,
             null,
             InputOption::VALUE_NONE,
-            'Skip the backup. For data you know is disposable.',
+            self::OPT_NO_BACKUP_DESCRIPTION,
         );
     }
 
@@ -90,7 +101,7 @@ class Clear extends AbstractCommand
 
         // Two confirmations establish that you meant it. They do not establish
         // that you can undo it, which is what this is for (E18, #176).
-        if (!$input->getOption('no-backup') && !$this->backedUp($output)) {
+        if (!$input->getOption(self::OPT_NO_BACKUP) && !$this->backedUp($output)) {
             $this->io->error('No backup was taken, so nothing was cleared. Use --no-backup to clear anyway.');
 
             return Command::FAILURE;
@@ -138,7 +149,7 @@ class Clear extends AbstractCommand
         }
 
         try {
-            return $application->find('db:backup')->run(new ArrayInput([]), $output) === Command::SUCCESS;
+            return $application->find(Backup::NAME)->run(new ArrayInput([]), $output) === Command::SUCCESS;
         } catch (Throwable $e) {
             $this->io->error($e->getMessage());
 

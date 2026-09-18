@@ -42,23 +42,34 @@ use TripBuilder\Noah\AbstractCommand;
  * stays unrecorded -- write them so that re-running the whole file is safe.
  */
 #[AsCommand(
-    name: 'db:migrate',
+    name: self::NAME,
     description: 'Apply schema changes the installer cannot make.',
     aliases: ['migrate'],
     hidden: false,
 )]
 class Migrate extends AbstractCommand
 {
+    public const string NAME = 'db:migrate';
+
+    private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'List what would run without applying anything.';
+
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION];
+
     private const string MIGRATIONS_DIR = 'config/noah/db/migrations';
     private const string TABLE = 'schema_migrations';
 
     protected function configure(): void
     {
         $this->addOption(
-            'dry-run',
+            self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'List what would run without applying anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
     }
 
@@ -81,7 +92,7 @@ class Migrate extends AbstractCommand
             return Command::SUCCESS;
         }
 
-        if ($input->getOption('dry-run')) {
+        if ($input->getOption(self::OPT_DRY_RUN)) {
             $this->io->listing($pending);
             $this->io->note('Dry run: nothing was applied.');
 

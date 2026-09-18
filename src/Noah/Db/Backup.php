@@ -19,7 +19,7 @@ use TripBuilder\Helper;
 use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
-    name: 'db:backup',
+    name: self::NAME,
     description: 'Write a gzipped mysqldump of the whole database.',
     aliases: [],
     hidden: false,
@@ -39,15 +39,25 @@ use TripBuilder\Noah\AbstractCommand;
  */
 final class Backup extends AbstractCommand
 {
+    public const string NAME = 'db:backup';
     public const string DIRECTORY = 'backups';
+
+    private const string OPT_BINARY = 'binary';
+    private const string OPT_BINARY_DESCRIPTION = 'Path to mysqldump, when it is not on PATH.';
+
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_BINARY => self::OPT_BINARY_DESCRIPTION];
 
     protected function configure(): void
     {
         $this->addOption(
-            'binary',
+            self::OPT_BINARY,
             null,
             InputOption::VALUE_REQUIRED,
-            'Path to mysqldump, when it is not on PATH.',
+            self::OPT_BINARY_DESCRIPTION,
             'mysqldump',
         );
     }
@@ -55,7 +65,7 @@ final class Backup extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         /** @var string $binary */
-        $binary = $input->getOption('binary');
+        $binary = $input->getOption(self::OPT_BINARY);
 
         if (!Dump::isAvailable($binary)) {
             $this->io->error(sprintf(

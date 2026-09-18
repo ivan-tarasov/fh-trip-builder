@@ -57,13 +57,30 @@ use TripBuilder\Noah\AbstractCommand;
  * @phpstan-type CabinTotalsRow array{total: int, y: string, w: string, c: string, f: string}
  */
 #[AsCommand(
-    name: 'flights:cabins',
+    name: self::NAME,
     description: 'Populate the cabins each flight sells from its aircraft.',
     aliases: [],
     hidden: false,
 )]
 class Cabins extends AbstractCommand
 {
+    public const string NAME = 'flights:cabins';
+
+    private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Report what the cabins and their fares would look like without writing anything.';
+
+    private const string OPT_FLEET = 'fleet';
+    private const string OPT_FLEET_DESCRIPTION = 'Also list what every aircraft type has fitted on board.';
+
+    /** No arguments -- everything here is a flag. */
+    public const array ARGUMENTS = [];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [
+        self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION,
+        self::OPT_FLEET => self::OPT_FLEET_DESCRIPTION,
+    ];
+
     private const int BATCH_SIZE = 20000;
 
     private const string COLUMN = 'cabins';
@@ -74,17 +91,17 @@ class Cabins extends AbstractCommand
     protected function configure(): void
     {
         $this->addOption(
-            'dry-run',
+            self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Report what the cabins and their fares would look like without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
 
         $this->addOption(
-            'fleet',
+            self::OPT_FLEET,
             null,
             InputOption::VALUE_NONE,
-            'Also list what every aircraft type has fitted on board.',
+            self::OPT_FLEET_DESCRIPTION,
         );
     }
 
@@ -94,7 +111,7 @@ class Cabins extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $flights = Table::Flights->value;
-        $dryRun = (bool) $input->getOption('dry-run');
+        $dryRun = (bool) $input->getOption(self::OPT_DRY_RUN);
 
         try {
             /** @var FlightBoundsRow|null $bounds */
@@ -113,7 +130,7 @@ class Cabins extends AbstractCommand
             return Command::SUCCESS;
         }
 
-        if ($input->getOption('fleet') || $dryRun) {
+        if ($input->getOption(self::OPT_FLEET) || $dryRun) {
             $this->reportFleet();
         }
 

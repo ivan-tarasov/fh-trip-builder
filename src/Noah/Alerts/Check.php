@@ -17,7 +17,7 @@ use TripBuilder\Repository\RoutePriceRepository;
 use TripBuilder\Repository\RouteWatchRepository;
 
 #[AsCommand(
-    name: 'alerts:check',
+    name: self::NAME,
     description: 'Check watched routes against their price threshold and email the ones that qualify.',
     aliases: [],
     hidden: false,
@@ -41,6 +41,12 @@ use TripBuilder\Repository\RouteWatchRepository;
  */
 final class Check extends AbstractCommand
 {
+    public const string NAME = 'alerts:check';
+
+    /** No `configure()` -- this command takes nothing. */
+    public const array ARGUMENTS = [];
+    public const array OPTIONS = [];
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $watches = new RouteWatchRepository($this->connection());

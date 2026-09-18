@@ -18,7 +18,7 @@ use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\CurrencyRateRepository;
 
 #[AsCommand(
-    name: 'currency:rates',
+    name: self::NAME,
     description: 'Refresh the currency conversion rates from the European Central Bank.',
     aliases: [],
     hidden: false,
@@ -45,6 +45,21 @@ use TripBuilder\Repository\CurrencyRateRepository;
  */
 class Rates extends AbstractCommand
 {
+    public const string NAME = 'currency:rates';
+
+    private const string ARG_SPAN = 'span';
+    private const string ARG_SPAN_DESCRIPTION = 'A date or a range to backfill, as `2025-09-13` or'
+        . ' `2025-09-13..2026-03-01`. Left out, the command fetches the latest rates and nothing else.';
+
+    private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_DRY_RUN_DESCRIPTION = 'Fetch and check the rates, and report them without writing anything.';
+
+    /** Every argument this command takes, name => description. */
+    public const array ARGUMENTS = [self::ARG_SPAN => self::ARG_SPAN_DESCRIPTION];
+
+    /** Every option this command takes, name => description. */
+    public const array OPTIONS = [self::OPT_DRY_RUN => self::OPT_DRY_RUN_DESCRIPTION];
+
     /**
      * The source, with the span written into the path.
      *
@@ -70,18 +85,13 @@ class Rates extends AbstractCommand
 
     protected function configure(): void
     {
-        $this->addArgument(
-            'span',
-            InputArgument::OPTIONAL,
-            'A date or a range to backfill, as `2025-09-13` or `2025-09-13..2026-03-01`.'
-            . ' Left out, the command fetches the latest rates and nothing else.',
-        );
+        $this->addArgument(self::ARG_SPAN, InputArgument::OPTIONAL, self::ARG_SPAN_DESCRIPTION);
 
         $this->addOption(
-            'dry-run',
+            self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
-            'Fetch and check the rates, and report them without writing anything.',
+            self::OPT_DRY_RUN_DESCRIPTION,
         );
     }
 
@@ -105,10 +115,10 @@ class Rates extends AbstractCommand
             return Command::FAILURE;
         }
 
-        $span = $input->getArgument('span');
+        $span = $input->getArgument(self::ARG_SPAN);
 
         if (is_string($span) && $span !== '') {
-            return $this->backfill($span, $wanted, (bool) $input->getOption('dry-run'));
+            return $this->backfill($span, $wanted, (bool) $input->getOption(self::OPT_DRY_RUN));
         }
 
         try {
@@ -126,7 +136,7 @@ class Rates extends AbstractCommand
         $this->formatOutput('Rates published', $payload['date'], 'info');
         $this->formatOutput('Currencies read', (string) count($payload['rates']), 'info');
 
-        if ($input->getOption('dry-run')) {
+        if ($input->getOption(self::OPT_DRY_RUN)) {
             $this->io->note('Dry run: nothing written.');
             $this->io->listing(array_map(
                 static fn(string $code): string => $code . ' ' . $payload['rates'][$code],
