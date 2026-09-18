@@ -52,6 +52,7 @@ use TripBuilder\Database\Table;
  *     depart_date: string, airline: string, departure_airport: string, arrival_airport: string,
  *     departure_time: string, arrival_time: string, duration: int, total: string, rn: int,
  * }
+ * @phpstan-type RouteDayFareRow array{depart_date: string, total: string}
  */
 final readonly class RouteRepository
 {
@@ -510,6 +511,48 @@ final readonly class RouteRepository
         );
 
         return $rows;
+    }
+
+    /**
+     * Every day with a direct fare, cheapest first within the day -- the same
+     * per-day ranking `cheapestDates()` uses, but every day rather than the
+     * top few and with no upper bound on how far out it looks, so "Best month
+     * to fly" (C7, #156) can compare whichever months the schedule actually
+     * covers rather than the ninety days `RoutePriceRepository`'s own cache
+     * affords. Direct only is what makes that affordable live -- see this
+     * class's own docblock.
+     *
+     * @param list<string> $from
+     * @param list<string> $to
+     * @return list<array{depart_date: string, total: float}>
+     */
+    public function cheapestPerDay(array $from, array $to, CabinClass $cabin): array
+    {
+        if ($from === [] || $to === []) {
+            return [];
+        }
+
+        $fare = self::fare('f', $cabin);
+
+        /** @var list<RouteDayFareRow> $rows */
+        $rows = $this->connection->fetchAll(
+            'SELECT x.depart_date, x.total FROM ('
+            . ' SELECT DATE(f.departure_time) AS depart_date, ' . $fare . ' AS total,'
+            . '  ROW_NUMBER() OVER ('
+            . '   PARTITION BY DATE(f.departure_time)'
+            . '   ORDER BY ' . $fare . ' ASC'
+            . '  ) AS rn'
+            . self::source()
+            . self::filter($from, $to, $cabin)
+            . ' ) x WHERE x.rn = 1'
+            . ' ORDER BY x.depart_date ASC',
+            [...$from, ...$to],
+        );
+
+        return array_map(static fn(array $row): array => [
+            'depart_date' => (string) $row['depart_date'],
+            'total' => (float) $row['total'],
+        ], $rows);
     }
 
     /**

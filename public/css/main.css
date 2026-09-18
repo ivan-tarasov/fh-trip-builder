@@ -7166,6 +7166,69 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
   .fares__strip { grid-auto-columns: minmax(13rem, 1fr); }
 }
 
+/* ---------- Best month to fly (C7, #156) ---------- */
+
+.months__note { margin: 0 0 1.25rem; color: var(--ink-secondary); font-size: .875rem; }
+
+.months__chart {
+  display: flex;
+  align-items: flex-end;
+  gap: .5rem;
+  height: 12rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.months__col { flex: 1 0 3.5rem; height: 100%; }
+
+.months__bar-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  padding: .5rem .25rem 0;
+  border-radius: .75rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .months__bar-link:hover { background-color: var(--surface-sunken); }
+}
+
+.months__price {
+  margin-bottom: .5rem;
+  color: var(--ink-body);
+  font-size: .8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.months__currency { margin-left: 2px; color: var(--ink-muted); font-size: .6875rem; font-weight: 400; }
+
+.months__bar {
+  width: 100%;
+  max-width: 2.25rem;
+  border-radius: .375rem .375rem 0 0;
+  background-color: var(--line-strong);
+  transition: background-color var(--dur-fast) ease;
+}
+
+/* The one month worth calling out gets the same accent every other "go here"
+   control on the page uses, not a colour invented for this chart alone. */
+.months__bar-link--cheapest .months__bar { background-color: var(--brand-accent-fill); }
+.months__bar-link--cheapest .months__price { color: var(--brand-accent); }
+
+@media (hover: hover) and (pointer: fine) {
+  .months__bar-link:hover .months__bar { background-color: var(--line-strongest); }
+  .months__bar-link--cheapest:hover .months__bar { background-color: var(--brand-accent-fill-700); }
+}
+
+.months__label { margin-top: .625rem; color: var(--ink-secondary); font-size: .8125rem; white-space: nowrap; }
+
 /* ==========================================================================
    #ARTICLE
    ==========================================================================

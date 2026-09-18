@@ -36,6 +36,9 @@ final class StepHeaderRenderTest extends TestCase
             'step' => $step,
             'step_title' => 'Choose your departing flight',
             'step_route' => 'Montreal (YUL) &rarr; London (LHR)',
+            // Not this test's own concern either (C7, #156) -- a real value
+            // so the link branch renders too, not just the plain-text one.
+            'route_url' => '/route/montreal-to-london',
             'step_date' => $step === 2 ? $search->return : $search->depart,
             'step_date_until' => $step === 2 ? $search->returnUntil() : $search->departUntil(),
             'total_flights_text' => '55 options',

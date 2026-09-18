@@ -20,7 +20,9 @@ use TripBuilder\Log;
 use TripBuilder\Repository\AirportRepository;
 use TripBuilder\Repository\FareBrandRepository;
 use TripBuilder\Repository\FlightRepository;
+use TripBuilder\Repository\RouteRepository;
 use TripBuilder\Repository\SearchRepository;
+use TripBuilder\RouteAddress;
 use TripBuilder\SearchUrl;
 use TripBuilder\Service\FlightFinder;
 use TripBuilder\TripType;
@@ -299,6 +301,11 @@ class SearchController extends AbstractController
                 'recent' => RecentSearches::rows($this->request->cookies, $places),
                 'depart_city' => $this->data()['depart'],
                 'arrive_city' => $this->data()['arrive'],
+                // Only when a nonstop one actually exists for this exact
+                // pair -- most do (RouteController's own docblock counts
+                // five exceptions out of 163 real searched pairs), but
+                // never a link the route page would 404 on.
+                'route_url' => $this->routeUrlFor($this->get[self::GET_FROM], $this->get[self::GET_TO]),
                 'depart_date' => $this->get[self::GET_DEPART],
                 'return_date' => $this->get[self::GET_RETURN],
                 'depart_flex' => $this->searchUrl()->departSpan,
@@ -785,6 +792,44 @@ class SearchController extends AbstractController
         ]);
 
         return $query === [] ? '' : '&' . http_build_query($query);
+    }
+
+    /**
+     * The route page for this exact pair, only when a nonstop one exists to
+     * link to.
+     *
+     * `RouteController` answers a pair with only connecting itineraries
+     * with a 404 -- checked here with its own `summary()`, the same way it
+     * checks, so the search results never draw a link the route page would
+     * refuse. A search for two places already the same city (their airport
+     * sets overlap) gets no link either, the same reasoning
+     * `RouteController::show()` gives its own "a route to where you already
+     * are is not a route" guard.
+     */
+    private function routeUrlFor(string $fromCode, string $toCode): ?string
+    {
+        $airports = new AirportRepository($this->connection());
+        $origins = $airports->codesFor($fromCode);
+        $destinations = $airports->codesFor($toCode);
+
+        if ($origins === [] || $destinations === [] || array_intersect($origins, $destinations) !== []) {
+            return null;
+        }
+
+        $summary = new RouteRepository($this->connection())->summary($origins, $destinations, CabinClass::Economy);
+
+        if ($summary === null) {
+            return null;
+        }
+
+        // The canonical grouped name, not the specific airport's own city
+        // label -- RouteAddress::path() built from EWR's own "Newark"
+        // spells a slug RouteAddress::index() never indexed, since that
+        // city's real page is "New York" to Tokyo's own group.
+        $fromName = $airports->canonicalCityByCode($fromCode);
+        $toName = $airports->canonicalCityByCode($toCode);
+
+        return $fromName === null || $toName === null ? null : RouteAddress::path($fromName, $toName);
     }
 
     /**

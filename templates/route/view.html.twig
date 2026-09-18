@@ -42,6 +42,15 @@
         'when': true
     },
     {
+        'id': 'months',
+        'title': 'The best month to fly',
+        'nav': 'Best month to fly',
+        'icon': 'fa-calendar',
+        'tone': 'pink',
+        'template': 'route/blocks/months.html.twig',
+        'when': months is not empty
+    },
+    {
         'id': 'airlines',
         'title': route.carriers > 1 ? 'Airlines flying this route' : 'The airline flying this route',
         'nav': 'Airlines',
@@ -70,6 +79,7 @@
         'place': route,
         'reverse': reverse,
         'dates': dates,
+        'months': months,
         'carriers': carriers,
         'ends': ends
     }
