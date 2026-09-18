@@ -10,7 +10,10 @@
     <li class="breadcrumb-item active" aria-current="page">History</li>
 {% endblock %}
 
-{% block description %}<p class="well__description mono">{{ command }}</p>{% endblock %}
+{% block description %}
+    <p class="well__description mono mb-1">{{ command }}</p>
+    {% if commandDescription %}<p class="well__description">{{ commandDescription }}</p>{% endif %}
+{% endblock %}
 {% block tools %}<a class="btn btn-outline-secondary btn-sm" href="/admin/schedule">Back</a>{% endblock %}
 
 {% block content %}

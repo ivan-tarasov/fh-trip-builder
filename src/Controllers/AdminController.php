@@ -7,6 +7,9 @@ namespace TripBuilder\Controllers;
 use DateTimeImmutable;
 use Exception;
 use RuntimeException;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 use TripBuilder\Admin;
 use TripBuilder\AdminEvent;
@@ -27,6 +30,18 @@ use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Mail\Mailtrap;
 use TripBuilder\Money;
+use TripBuilder\Noah\Airside\Import as AirsideImport;
+use TripBuilder\Noah\Airside\Prune as AirsidePrune;
+use TripBuilder\Noah\Alerts\Check as AlertsCheck;
+use TripBuilder\Noah\Articles\Import as ArticlesImport;
+use TripBuilder\Noah\Currency\Rates as CurrencyRates;
+use TripBuilder\Noah\Db\Backup as DatabaseBackup;
+use TripBuilder\Noah\Db\Prune as DatabasePrune;
+use TripBuilder\Noah\Flights\Cabins as CabinsFlights;
+use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
+use TripBuilder\Noah\Flights\Generate as GenerateFlights;
+use TripBuilder\Noah\Flights\Realign as RealignFlights;
+use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
 use TripBuilder\PanelSetting;
 use TripBuilder\RemarkTone;
 use TripBuilder\Repository\AdminEventRepository;
@@ -118,7 +133,9 @@ class AdminController extends AbstractController
     private const int TOP_WATCHED_ROUTES_LIMIT = 10;
 
     /**
-     * What a scheduled job is allowed to run (G19, #377).
+     * What a scheduled job is allowed to run (G19, #377), and the class that
+     * answers for its own description and arguments -- one map rather than a
+     * name list plus a second lookup kept in step with it by hand.
      *
      * Not the full 16 `noah` commands -- `db:clear` wipes tables, `app:install`
      * and `db:migrate` are one-time operations a schedule would repeat forever,
@@ -126,20 +143,22 @@ class AdminController extends AbstractController
      * interactive prompt that does nothing when run unattended. Picking from
      * "every registered command" would put a destructive one in the same
      * dropdown as a currency refresh.
+     *
+     * @var array<string, class-string<Command>>
      */
-    private const array SCHEDULABLE_COMMANDS = [
-        'currency:rates',
-        'db:prune',
-        'db:backup',
-        'flights:add',
-        'flights:cleaning',
-        'flights:reprice',
-        'flights:cabins',
-        'flights:realign',
-        'articles:import',
-        'airside:import',
-        'airside:prune',
-        'alerts:check',
+    private const array SCHEDULABLE_COMMAND_CLASSES = [
+        'currency:rates' => CurrencyRates::class,
+        'db:prune' => DatabasePrune::class,
+        'db:backup' => DatabaseBackup::class,
+        'flights:add' => GenerateFlights::class,
+        'flights:cleaning' => CleaningFlights::class,
+        'flights:reprice' => RepriceFlights::class,
+        'flights:cabins' => CabinsFlights::class,
+        'flights:realign' => RealignFlights::class,
+        'articles:import' => ArticlesImport::class,
+        'airside:import' => AirsideImport::class,
+        'airside:prune' => AirsidePrune::class,
+        'alerts:check' => AlertsCheck::class,
     ];
 
     /** Flags and values only -- what a real command's arguments look like. */
@@ -516,9 +535,11 @@ class AdminController extends AbstractController
         }
 
         $runs = new ScheduleRunRepository($this->connection())->historyFor($job['command'], 50);
+        $base = self::splitCommand($job['command'])['base'];
 
         echo new TwigRenderer()->render('admin/schedule-history.html.twig', [
             'command' => $job['command'],
+            'commandDescription' => self::scheduledCommandHelp()[$base]['description'] ?? null,
             'runs' => array_map(static function (array $row): array {
                 $started = new DateTimeImmutable($row['started_at']);
                 $finished = $row['finished_at'] === null ? null : new DateTimeImmutable($row['finished_at']);
@@ -685,7 +706,7 @@ class AdminController extends AbstractController
             : $posted['command_base'] . ' ' . $posted['arguments'];
 
         $error = match (true) {
-            !in_array($posted['command_base'], self::SCHEDULABLE_COMMANDS, true)
+            !array_key_exists($posted['command_base'], self::SCHEDULABLE_COMMAND_CLASSES)
                 => 'Pick one of the commands this can actually run.',
             $posted['arguments'] !== '' && preg_match(self::ARGUMENTS_PATTERN, $posted['arguments']) !== 1
                 => 'Arguments can only use letters, digits, spaces, and - _ . = ,',
@@ -772,9 +793,57 @@ class AdminController extends AbstractController
         echo new TwigRenderer()->render('admin/schedule-job.html.twig', [
             'id' => $id,
             'job' => $job,
-            'commands' => self::SCHEDULABLE_COMMANDS,
+            'commands' => array_keys(self::SCHEDULABLE_COMMAND_CLASSES),
+            'commandHelp' => self::scheduledCommandHelp(),
             'error' => $error,
         ]);
+    }
+
+    /**
+     * Every schedulable command's own description and arguments, straight
+     * from its Symfony `Command` definition -- the same text `noah <command>
+     * --help` would print, rather than a second copy of it kept in step by
+     * hand. Instantiating a command is safe and free of side effects: DB
+     * connections, `.env` loading and console output all happen in
+     * `AbstractCommand::initialize()`, which only `Command::run()` calls, not
+     * the constructor.
+     *
+     * @return array<string, array{
+     *     description: string,
+     *     arguments: list<array{name: string, required: bool, description: string}>,
+     *     options: list<array{flag: string, takesValue: bool, description: string}>,
+     * }>
+     */
+    private static function scheduledCommandHelp(): array
+    {
+        $help = [];
+
+        foreach (self::SCHEDULABLE_COMMAND_CLASSES as $name => $class) {
+            $command = new $class();
+            $definition = $command->getDefinition();
+
+            $help[$name] = [
+                'description' => (string) $command->getDescription(),
+                'arguments' => array_map(
+                    static fn(InputArgument $argument): array => [
+                        'name' => $argument->getName(),
+                        'required' => $argument->isRequired(),
+                        'description' => $argument->getDescription(),
+                    ],
+                    array_values($definition->getArguments()),
+                ),
+                'options' => array_map(
+                    static fn(InputOption $option): array => [
+                        'flag' => '--' . $option->getName(),
+                        'takesValue' => $option->acceptValue(),
+                        'description' => $option->getDescription(),
+                    ],
+                    array_values($definition->getOptions()),
+                ),
+            ];
+        }
+
+        return $help;
     }
 
     /**

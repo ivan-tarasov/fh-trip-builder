@@ -1193,6 +1193,56 @@
         });
     };
 
+    /*
+    | The job editor's "Command" select carries every schedulable command's
+    | own description and arguments as one JSON blob -- `data-help`, read
+    | once rather than fetched per pick, since there are only a dozen of
+    | them and the whole point is to answer "what does this take?" before a
+    | save round-trips to find out.
+    */
+    var scheduleCommandHelp = function () {
+        var select = document.getElementById('command_base');
+        var description = document.querySelector('.js-command-description');
+        var argumentsEl = document.querySelector('.js-command-arguments');
+
+        if (!select || !description || !argumentsEl) {
+            return;
+        }
+
+        var help = JSON.parse(select.dataset.help || '{}');
+
+        var render = function () {
+            var info = help[select.value];
+
+            if (!info) {
+                description.textContent = '';
+                argumentsEl.innerHTML = '';
+
+                return;
+            }
+
+            description.textContent = info.description;
+
+            var items = info.arguments.concat(info.options);
+
+            if (items.length === 0) {
+                argumentsEl.innerHTML = 'Takes no arguments.';
+
+                return;
+            }
+
+            argumentsEl.innerHTML = '<ul class="mb-0 ps-3">' + items.map(function (item) {
+                var name = item.name ? item.name : item.flag;
+                var required = item.required ? ' (required)' : '';
+
+                return '<li><code>' + name + '</code>' + required + ' — ' + item.description + '</li>';
+            }).join('') + '</ul>';
+        };
+
+        select.addEventListener('change', render);
+        render();
+    };
+
     markdownPreview();
     confirmFirst();
     fixedStrategyDropdowns();
@@ -1208,4 +1258,5 @@
     commandPalette();
     recordRecentBooking();
     diagnosticsForm();
+    scheduleCommandHelp();
 }());
