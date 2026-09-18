@@ -34,46 +34,15 @@
 
     <title>{% block title %}Admin{% endblock %} &middot; {{ config('app.name') }}</title>
 
-    {# The stored theme before the first paint, for the reason the site's own
-       header gives: a stylesheet cannot read localStorage and a script at the
-       foot runs after the paint, so a dark reader would see the light palette
-       flash on every navigation. The same key as the public side, so choosing
-       dark out there means dark in here. `data-bs-theme` is set alongside
-       `data-theme` so Bootstrap's own component colours never disagree with
-       ours -- the same pairing `global.js`'s toggle already keeps in step on
-       the public site.
-
-       The collapsed sidebar reads the same way and for the same reason: a
-       class Bootstrap's `defer`red bundle applied after paint would still
-       show the full-width rail for one frame. `data-rail-collapsed` sits on
-       `<html>` rather than `<body>`, because `<body>` does not exist yet
-       while this still runs in `<head>`. #}
-    <script>
-        (function () {
-            try {
-                var choice = window.localStorage.getItem('tb-theme');
-
-                if (choice === 'light' || choice === 'dark') {
-                    document.documentElement.setAttribute('data-theme', choice);
-                    document.documentElement.setAttribute('data-bs-theme', choice);
-                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    /* admin.css already follows prefers-color-scheme on its own tokens;
-                       Bootstrap's tokens only flip under data-bs-theme, so it needs setting here too. */
-                    document.documentElement.setAttribute('data-bs-theme', 'dark');
-                }
-
-                if (window.localStorage.getItem('tb-admin-rail-collapsed') === '1') {
-                    document.documentElement.setAttribute('data-rail-collapsed', '');
-                }
-
-                /* No OS-level preference to fall back to here, unlike the
-                   theme above -- density is compact only when asked for. */
-                if (window.localStorage.getItem('tb-density') === 'compact') {
-                    document.documentElement.setAttribute('data-density', 'compact');
-                }
-            } catch (e) {}
-        }());
-    </script>
+    {# The stored theme, rail state and density, before the first paint, for
+       the reason the site's own header gives: a stylesheet cannot read
+       localStorage and a deferred script runs after the paint, so a dark
+       reader would see the light palette (or the full-width rail) flash on
+       every navigation. A plain blocking `<script src>` here keeps the same
+       "before first paint" guarantee an inline script had, without putting
+       JS in the page source. See `admin-init.js` for the rest of the
+       reasoning. #}
+    <script src="{{ asset(config('site.directory.js') ~ '/admin-init.js') }}"></script>
 
     <link href="{{ asset(config('site.directory.css') ~ '/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset(config('site.directory.css') ~ '/admin.css') }}" rel="stylesheet">

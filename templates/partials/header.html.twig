@@ -6,60 +6,14 @@
 
     {# The stored theme, applied before anything is painted.
 
-       Inline and first in the head on purpose. A stylesheet cannot read
-       localStorage, and a script at the foot of the page runs after the first
-       paint -- so a reader who chose dark would see the light palette flash and
-       then be corrected, on every navigation. This is the one thing that has to
-       be inline.
-
-       Two attributes, because there are two palettes to keep in step. This
-       file's own lives on `data-theme`; Bootstrap's lives on `data-bs-theme`
-       and covers the components whose variables main.css does not name.
-
-       With nothing stored, `data-theme` is deliberately left off so the media
-       query decides and a machine that dims at sunset dims this with it. But
-       Bootstrap has no media query of its own, so `data-bs-theme` is resolved
-       here and kept in step below.
-
-       try/catch because localStorage throws rather than returning null in a
-       browser set to block site data, and a theme preference is not worth a
-       broken page. #}
-    <script>
-        (function () {
-            var choice = null;
-
-            try {
-                choice = window.localStorage.getItem('tb-theme');
-            } catch (e) {}
-
-            if (choice !== 'light' && choice !== 'dark') {
-                choice = null;
-            }
-
-            if (choice !== null) {
-                document.documentElement.setAttribute('data-theme', choice);
-            }
-
-            var dark = window.matchMedia('(prefers-color-scheme: dark)');
-
-            document.documentElement.setAttribute(
-                'data-bs-theme',
-                (choice !== null ? choice === 'dark' : dark.matches) ? 'dark' : 'light'
-            );
-
-            // Only while there is no stored choice: an explicit one outranks
-            // the machine, and should not be undone when the machine changes.
-            dark.addEventListener('change', function (event) {
-                try {
-                    if (window.localStorage.getItem('tb-theme') !== null) {
-                        return;
-                    }
-                } catch (e) {}
-
-                document.documentElement.setAttribute('data-bs-theme', event.matches ? 'dark' : 'light');
-            });
-        })();
-    </script>
+       First in the head and loaded without `defer`/`async` on purpose. A
+       stylesheet cannot read localStorage, and a deferred script runs after
+       the first paint -- so a reader who chose dark would see the light
+       palette flash and then be corrected, on every navigation. A plain
+       blocking `<script src>` here keeps the same "before first paint"
+       guarantee an inline script had, without putting JS in the page
+       source. See `theme-init.js` for the rest of the reasoning. #}
+    <script src="{{ asset(config('site.directory.js') ~ '/theme-init.js') }}"></script>
     {# The page's own, or the site's if it has none.
 
        Not truncated here. A search engine cuts a description around 160

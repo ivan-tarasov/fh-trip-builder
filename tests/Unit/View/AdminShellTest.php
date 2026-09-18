@@ -91,7 +91,11 @@ final class AdminShellTest extends TestCase
 
         // Four, and no more: a vendored pair plus our own pair.
         self::assertSame(2, substr_count($layout, 'rel="stylesheet"'));
-        self::assertSame(2, substr_count($layout, '<script src='));
+
+        // Three, and no more: `admin-init.js` (before the stylesheet, so it
+        // beats the paint), `bootstrap.bundle.min.js` and `admin.js` (both
+        // deferred, at the foot).
+        self::assertSame(3, substr_count($layout, '<script src='));
     }
 
     /**
@@ -157,18 +161,28 @@ final class AdminShellTest extends TestCase
 
     /**
      * The theme is read before the first paint, for the reason the public
-     * header gives: a script at the foot runs after it, so a dark reader would
+     * header gives: a deferred script runs after it, so a dark reader would
      * see the light palette flash on every navigation.
+     *
+     * The read itself lives in `admin-init.js` rather than inline, so what
+     * this checks is the tag: no `defer`/`async` (either would let the
+     * browser paint first), placed before the stylesheet.
      */
     public function testTheThemeIsSettledBeforeAnythingIsPainted(): void
     {
         $layout = self::stripComments(self::read(self::LAYOUT));
-        $script = strpos($layout, "getItem('tb-theme')");
+        $script = strpos($layout, "<script src=\"{{ asset(config('site.directory.js') ~ '/admin-init.js') }}\">");
         $sheet = strpos($layout, 'rel="stylesheet"');
 
-        self::assertIsInt($script, 'nothing reads the stored theme');
+        self::assertIsInt($script, 'nothing loads admin-init.js as a blocking script');
         self::assertIsInt($sheet);
-        self::assertLessThan($sheet, $script, 'the theme is read after the stylesheet, so it cannot beat the paint');
+        self::assertLessThan($sheet, $script, 'admin-init.js is loaded after the stylesheet, so it cannot beat the paint');
+
+        self::assertStringContainsString(
+            "getItem('tb-theme')",
+            self::read('public/js/admin-init.js'),
+            'admin-init.js no longer reads the stored theme',
+        );
     }
 
     /**
