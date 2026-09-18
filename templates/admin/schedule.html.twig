@@ -66,7 +66,7 @@
                                     <div class="d-flex justify-content-end gap-1">
                                         <a class="btn btn-icon" href="/admin/schedule/job/{{ job.id }}" title="Edit" aria-label="Edit {{ job.command }}"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                                         <a class="btn btn-icon" href="/admin/schedule/history/{{ job.id }}" title="History" aria-label="History for {{ job.command }}"><i class="bi bi-clock-history" aria-hidden="true"></i></a>
-                                        {{ _self.act('Run now', 'lightning-charge', job.id, 'run', null) }}
+                                        {{ _self.act('Run now', 'lightning-charge', job.id, 'run', 'Run ' ~ job.command ~ ' now, instead of waiting for its next tick?') }}
                                         {% if job.enabled %}
                                             {{ _self.act('Disable', 'pause-circle', job.id, 'disable', null) }}
                                         {% else %}
