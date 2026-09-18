@@ -1516,6 +1516,120 @@ button {
   .hero-cards { margin-top: -2.5rem; }
 }
 
+/* The homepage's own full-width band, between "Top searches" and the
+   footer. Content today is the fare-alert signup; the band itself is
+   built to hold whatever goes here next. A photo (one of the 8 already
+   curated for the POI cards -- there is no other image library) rather
+   than a flat tint, laid out the same no-repeat/cover/center way
+   `.card-cover` already does for those cards. */
+.homepage-banner {
+  background-repeat: no-repeat;
+  /* Right/bottom, not centre: the photo's own subject (the plane, the sun)
+     sits in its lower-right corner, and this band is much shorter and
+     wider than the photo -- `cover` crops its top and bottom to fill the
+     width, and a centred crop would cut the subject out entirely. */
+  background-position: right bottom;
+  background-size: cover;
+}
+
+.homepage-banner__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 2.5rem 1rem;
+}
+
+.homepage-banner__copy { max-width: 32rem; }
+
+/* No colour of their own -- both inherit `text-white` from
+   `.homepage-banner__copy`, the same class the POI cards already put on
+   the same photo/text pairing. */
+.homepage-banner__title {
+  margin: 0 0 .375rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.homepage-banner__text {
+  margin: 0;
+  font-size: .9375rem;
+}
+
+.homepage-banner__form { flex: 0 0 auto; }
+
+.homepage-banner__row {
+  display: flex;
+  gap: .5rem;
+}
+
+.homepage-banner__input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  height: 2.75rem;
+  padding: 0 .875rem;
+  color: var(--ink-body);
+  font-size: .9375rem;
+  background-color: var(--surface-raised);
+  border: 1px solid transparent;
+  border-radius: .5rem;
+}
+
+.homepage-banner__input::placeholder { color: var(--ink-faint); }
+
+/* Same treatment as .footer__subscribe-submit / .route-watch__submit --
+   the accent this site already puts on every other form's own submit,
+   not a second "one action" competing with Search flights, since a
+   visitor reaches this band only after scrolling the hero's own button
+   out of view. */
+.homepage-banner__submit {
+  flex: 0 0 auto;
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  color: var(--on-brand);
+  font-size: .9375rem;
+  font-weight: 600;
+  background-color: var(--brand-accent-fill);
+  border-radius: .5rem;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .homepage-banner__submit:hover { background-color: var(--brand-accent-fill-700); }
+}
+
+.homepage-banner__submit:active { transform: scale(.97); }
+
+.homepage-banner__submit:disabled {
+  opacity: .6;
+  cursor: default;
+  transform: none;
+}
+
+/* -on-dark, not `.route-watch__note`'s plain tokens: this sits on a photo
+   with white body text, the same reason `.footer__subscribe-note` (the
+   other dark-surface copy of this form) reads its tones the same way. */
+.homepage-banner__note {
+  margin: .625rem 0 0;
+  font-size: .8125rem;
+}
+
+.homepage-banner__note:empty { display: none; }
+
+.homepage-banner__note[data-tone="good"]  { color: var(--good-on-dark); }
+.homepage-banner__note[data-tone="bad"]   { color: var(--bad-on-dark); }
+.homepage-banner__note[data-tone="quiet"] { color: var(--ink-on-dark); }
+
+@media (max-width: 575.98px) {
+  .homepage-banner__inner { flex-direction: column; align-items: stretch; }
+  .homepage-banner__copy { max-width: none; }
+  /* flex-basis is a height once the row's own axis turns vertical -- without
+     this override the input's 16rem width basis became a 16rem *height*. */
+  .homepage-banner__row { flex-direction: column; }
+  .homepage-banner__input { flex: 0 0 auto; }
+}
+
 /* Holds the tray's height while the tray is up in the header, so nothing below
    it moves when it leaves. The height itself is written by global.js from the
    tray's own.

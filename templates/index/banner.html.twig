@@ -1,0 +1,54 @@
+{# A full-width band between the homepage's own sections. Content is the
+   fare-alert list -- a real feature, already built (the footer's own
+   `subscribers` form, `/ajax/subscribe`), promoted here rather than
+   invented for the slot: this is the demo's own placeholder for "whatever
+   goes here next," and a real signup is more honest than mock copy for
+   something that doesn't exist.
+
+   A second `.js-subscribe` form, not a link down to the footer's -- see
+   `global.js`, which used to assume there was only ever one and now wires
+   up every one it finds.
+
+   The background (`public/img/banner-sky.jpg`) is a real photo the owner
+   supplied -- a dusk sky gradient with a plane climbing in the lower
+   right, mostly empty sky on the left where the copy sits. Re-encoded
+   from the original PNG to a quality-82 JPEG (1.1MB -> 90KB) with `sips`;
+   nothing else about it was edited. `text-white text-shadow-1` is the
+   same pairing `index/poi.html.twig` already proves legible over any
+   photo card, bright or dark.
+
+   The submit button keeps `--brand-accent-fill`: that token's own
+   docblock in main.css reserves the accent for the one action a screen is
+   allowed, but a visitor has scrolled the hero's "Search flights" out of
+   view by the time they reach this band, the same reasoning
+   `.footer__subscribe-submit`/`.route-watch__submit` already rely on. #}
+<div class="homepage-banner" style="background-image: url('{{ asset('/img/banner-sky.jpg') }}');">
+    <div class="container homepage-banner__inner">
+        <div class="homepage-banner__copy text-white text-shadow-1">
+            <h2 class="homepage-banner__title" id="homepage-fare-alerts-title">Never miss a price drop</h2>
+            <p class="homepage-banner__text">
+                Leave your address and it goes on the fare-alert list. Nothing is sent yet
+                &mdash; there is no mail behind this demonstration.
+            </p>
+        </div>
+
+        {% set notice = subscribe_notice() %}
+        <form class="homepage-banner__form js-subscribe" id="homepage-fare-alerts"
+              action="/ajax/subscribe" method="post" novalidate
+              aria-labelledby="homepage-fare-alerts-title">
+            <input type="hidden" name="{{ csrf_field() }}" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_to" value="{{ current_page() }}">
+
+            <div class="homepage-banner__row">
+                <label class="visually-hidden" for="homepage-fare-alerts-email">Email address</label>
+                <input class="homepage-banner__input js-subscribe-email"
+                       id="homepage-fare-alerts-email" type="email" name="email" required
+                       autocomplete="email" placeholder="you@example.com">
+                <button class="homepage-banner__submit" type="submit">Join the list</button>
+            </div>
+
+            <p class="homepage-banner__note js-subscribe-note" role="status" aria-live="polite"
+               {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>{{ notice ? notice.message : '' }}</p>
+        </form>
+    </div>
+</div>
