@@ -74,6 +74,9 @@ class Routes
         '/admin/bookings/export' => 'Admin@exportBookings',
         '/admin/subscribers' => 'Admin@subscribers',
         '/admin/subscribers/export' => 'Admin@exportSubscribers',
+        // Fare alerts' other list -- who is watching a route, not just an
+        // address on file (C6, #155; G21, #385).
+        '/admin/subscribers/routes' => 'Admin@subscribersRoutes',
         // A drill-down from Overview's "Most searched", not a rail
         // destination -- plural, since `/admin/search` singular below is
         // already the command palette's own JSON endpoint (G16, #369).

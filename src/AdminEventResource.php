@@ -19,6 +19,7 @@ enum AdminEventResource: string
     case Subscriber = 'subscriber';
     case Search = 'search';
     case Schedule = 'schedule';
+    case RouteWatch = 'route_watch';
 
     public function label(): string
     {
@@ -28,6 +29,7 @@ enum AdminEventResource: string
             self::Subscriber => 'Subscriber',
             self::Search => 'Search',
             self::Schedule => 'Schedule',
+            self::RouteWatch => 'Route watch',
         };
     }
 }

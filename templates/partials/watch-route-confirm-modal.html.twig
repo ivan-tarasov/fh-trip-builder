@@ -1,0 +1,23 @@
+{# Answers a successful "Watch this route" submit, from either entry point
+   (the route page's own inline form or the search page's popup) -- shown in
+   place of the form's own inline note so a visitor is not left staring at a
+   dialog they already finished with. Closes itself after a few seconds, with
+   a button for anyone who would rather not wait (`watchRouteConfirm()` in
+   global.js). Included once, in the shared layout, since neither page that
+   uses it needs a copy of its own. #}
+<div class="modal fade watch-route-confirm" id="watch-route-confirm-modal" tabindex="-1"
+     aria-labelledby="watch-route-confirm-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="done mb-0">
+                <i class="fas fa-circle-check done__icon" aria-hidden="true"></i>
+                <h2 class="h5 mt-3 mb-2" id="watch-route-confirm-title">You're all set</h2>
+                <p class="text-muted mb-3 js-watch-route-confirm-message"></p>
+                <button type="button" class="btn btn-outline-secondary btn-sm js-watch-route-confirm-close" data-bs-dismiss="modal">
+                    Close <span class="js-watch-route-confirm-countdown"></span>
+                </button>
+            </div>
+            <div class="watch-route-confirm__timer js-watch-route-confirm-timer" aria-hidden="true"></div>
+        </div>
+    </div>
+</div>

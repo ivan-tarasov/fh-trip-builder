@@ -4441,6 +4441,18 @@ body:has(.hero) header#top {
 /* --- confirmation ------------------------------------------------------- */
 .done { text-align: center; padding: 1.5rem 0 2rem; }
 .done__icon { font-size: 2.75rem; color: var(--brand-success); }
+
+/* The "Watch this route" success dialog's own auto-close bar -- a width
+   transition JS starts at 100% and ends at 0%, rather than a JS-ticked
+   countdown, so the browser's own compositor draws it and a slow tab does
+   not make the timer lie about how long is left. */
+.watch-route-confirm .modal-content { overflow: hidden; }
+.watch-route-confirm__timer {
+  height: 3px;
+  width: 100%;
+  background: var(--brand-accent-fill);
+  transition: width linear;
+}
 .done__title { margin: .875rem 0 .5rem; font-size: 1.75rem; font-weight: 700; }
 .done__lead { margin: 0 auto; max-width: 32rem; color: var(--ink-secondary); }
 .done__reference {
@@ -5869,6 +5881,20 @@ body:has(main.article) .breadcrumbs__list {
   opacity: .6;
   cursor: default;
   transform: none;
+}
+
+.route-watch__lowest {
+  margin: .625rem 0 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--brand-accent);
+  font-size: .8125rem;
+  text-decoration: underline;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .route-watch__lowest:hover { color: var(--brand-accent-fill-700); }
 }
 
 .route-watch__note {

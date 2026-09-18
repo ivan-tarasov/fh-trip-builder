@@ -103,6 +103,7 @@ final class Check extends AbstractCommand
                         self::body($airports, $route['from_code'], $route['to_code'], $total, $cheapest['depart_date']),
                     );
                     $watches->markNotified($watch['id'], $total);
+                    $watches->recordAlertSent();
                     $sent++;
                 } catch (Throwable $e) {
                     $this->io->error(sprintf('Could not email %s: %s', $watch['email'], $e->getMessage()));
