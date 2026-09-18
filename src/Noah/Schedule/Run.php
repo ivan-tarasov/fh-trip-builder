@@ -59,22 +59,21 @@ final class Run extends AbstractCommand
 {
     public const string NAME = 'schedule:run';
 
+    private const string ARG_JOB = 'job';
+    private const string ARG_JOB_DESCRIPTION = 'Run this one command now instead of whatever is due.';
+
     private const string OPT_PRETEND = 'pretend';
     private const string OPT_PRETEND_DESCRIPTION = 'Say what is due and run none of it.';
 
-    /** No arguments -- everything here is a flag. */
-    public const array ARGUMENTS = [];
+    /** Every argument this command takes, name => description. */
+    public const array ARGUMENTS = [self::ARG_JOB => self::ARG_JOB_DESCRIPTION];
 
     /** Every option this command takes, name => description. */
     public const array OPTIONS = [self::OPT_PRETEND => self::OPT_PRETEND_DESCRIPTION];
 
     protected function configure(): void
     {
-        $this->addArgument(
-            'job',
-            InputArgument::OPTIONAL,
-            'Run this one command now instead of whatever is due.',
-        );
+        $this->addArgument(self::ARG_JOB, InputArgument::OPTIONAL, self::ARG_JOB_DESCRIPTION);
         $this->addOption(
             self::OPT_PRETEND,
             null,
@@ -86,7 +85,7 @@ final class Run extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $runs = new ScheduleRunRepository($this->connection());
-        $requested = $input->getArgument('job');
+        $requested = $input->getArgument(self::ARG_JOB);
 
         if ($requested !== null) {
             $this->runOne((string) $requested, $runs, $output);
