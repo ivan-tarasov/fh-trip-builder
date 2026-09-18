@@ -176,6 +176,8 @@ final readonly class Mailtrap
         $body = curl_exec($handle);
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         $error = curl_error($handle);
+        // No curl_close(): it has done nothing since PHP 8.0 and is deprecated
+        // from 8.5, where it prints a notice over this command's own output.
 
         if ($error !== '') {
             throw new RuntimeException('The request to Mailtrap failed: ' . $error);
