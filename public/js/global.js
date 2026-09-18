@@ -3095,6 +3095,104 @@
             email.value = remembered;
         }
 
+        const lowestButton = form.querySelector('.js-watch-route-lowest');
+
+        if (lowestButton) {
+            lowestButton.addEventListener('click', function () {
+                // The threshold stays a real number either way -- "the
+                // lowest fare" is today's cheapest price as the floor, not
+                // no floor at all, so a further drop still has something to
+                // beat.
+                threshold.value = threshold.placeholder;
+                threshold.focus();
+            });
+        }
+
+        // Bootstrap only if this form sits inside a modal (the search
+        // page's popup) -- the route page's own copy is a block on the
+        // page, with nothing to close.
+        const ownModalEl = form.closest('.modal');
+        const ownModal = ownModalEl && typeof bootstrap !== 'undefined'
+            ? bootstrap.Modal.getOrCreateInstance(ownModalEl)
+            : null;
+
+        const CONFIRM_CLOSE_AFTER_MS = 6000;
+
+        // Answers a success from either entry point with the same dialog,
+        // closing whichever form it came from first -- a visitor who just
+        // finished with the popup should not still be looking at it.
+        function watchRouteConfirm(message, sourceModal) {
+            const confirmEl = document.getElementById('watch-route-confirm-modal');
+
+            if (!confirmEl || typeof bootstrap === 'undefined') {
+                return;
+            }
+
+            const messageEl = confirmEl.querySelector('.js-watch-route-confirm-message');
+
+            messageEl.textContent = message;
+
+            // Showing the confirmation before the popup has actually
+            // finished hiding races Bootstrap's own backdrop/body-class
+            // cleanup -- both modals briefly think they own it, and the
+            // popup's own cleanup, landing after, tears the confirmation
+            // straight back down. Waiting for its "hidden" event is the one
+            // way that holds up in practice.
+            if (sourceModal) {
+                sourceModal._element.addEventListener('hidden.bs.modal', function () {
+                    showWatchRouteConfirm(confirmEl);
+                }, {once: true});
+                sourceModal.hide();
+            } else {
+                showWatchRouteConfirm(confirmEl);
+            }
+        }
+
+        function showWatchRouteConfirm(confirmEl) {
+            const timerEl = confirmEl.querySelector('.js-watch-route-confirm-timer');
+            const countdownEl = confirmEl.querySelector('.js-watch-route-confirm-countdown');
+            const confirmModal = bootstrap.Modal.getOrCreateInstance(confirmEl);
+
+            confirmModal.show();
+
+            // Full width with no transition first, so the browser paints
+            // that as a real frame -- setting the end state in the same
+            // tick as the start state would collapse both into one paint
+            // and the bar would never visibly move.
+            timerEl.style.transitionDuration = '0ms';
+            timerEl.style.width = '100%';
+
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    timerEl.style.transitionDuration = CONFIRM_CLOSE_AFTER_MS + 'ms';
+                    timerEl.style.width = '0%';
+                });
+            });
+
+            const closeTimeout = window.setTimeout(function () {
+                confirmModal.hide();
+            }, CONFIRM_CLOSE_AFTER_MS);
+
+            // The bar alone was too easy to miss -- a number on the button
+            // itself is the part nobody scrolls past.
+            let secondsLeft = Math.round(CONFIRM_CLOSE_AFTER_MS / 1000);
+            countdownEl.textContent = '(' + secondsLeft + ')';
+
+            const countdownInterval = window.setInterval(function () {
+                secondsLeft -= 1;
+                countdownEl.textContent = secondsLeft > 0 ? '(' + secondsLeft + ')' : '';
+
+                if (secondsLeft <= 0) {
+                    window.clearInterval(countdownInterval);
+                }
+            }, 1000);
+
+            confirmEl.addEventListener('hidden.bs.modal', function () {
+                window.clearTimeout(closeTimeout);
+                window.clearInterval(countdownInterval);
+            }, {once: true});
+        }
+
         form.addEventListener('submit', function (event) {
             event.preventDefault();
 
@@ -3134,11 +3232,18 @@
             })
                 .then((response) => response.json().then((data) => ({ok: response.ok, data: data})))
                 .then(({ok, data}) => {
-                    say(data.message || 'That did not work. Try again in a moment.', ok ? 'good' : 'bad');
-
                     if (ok) {
                         rememberEmail(email.value.trim());
                         form.reset();
+                        // Cleared rather than left on "Sending…" -- the
+                        // route page's own copy of this form has no modal
+                        // to hide, so the confirmation popping up over a
+                        // stale inline message would read as two answers
+                        // to the one submit.
+                        say('', 'quiet');
+                        watchRouteConfirm(data.message, ownModal);
+                    } else {
+                        say(data.message || 'That did not work. Try again in a moment.', 'bad');
                     }
                 })
                 .catch(() => say('That did not work. Try again in a moment.', 'bad'))

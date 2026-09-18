@@ -40,6 +40,16 @@
         <button class="route-watch__submit" type="submit">Watch this route</button>
     </div>
 
+    {% if place.cheapest %}
+        {# Fills the threshold with today's own cheapest fare rather than
+           dropping the field: `alerts:check` only ever compares a watch
+           against a real number, so "any new low" is this, not a watch
+           with no floor at all. #}
+        <button type="button" class="route-watch__lowest js-watch-route-lowest">
+            Just watch for the lowest fare
+        </button>
+    {% endif %}
+
     <p class="route-watch__note js-watch-route-note" role="status" aria-live="polite"
        {% if notice %}data-tone="{{ notice.tone }}"{% endif %}>{{ notice ? notice.message : '' }}</p>
 </form>

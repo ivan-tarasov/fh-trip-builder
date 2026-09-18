@@ -54,6 +54,11 @@
                                inputmode="numeric" required
                                placeholder="{{ cheapest_total is not null ? cheapest_total|round(0, 'floor') : '' }}">
                     </div>
+                    {% if cheapest_total is not null %}
+                        <button type="button" class="btn btn-link btn-sm p-0 mt-1 js-watch-route-lowest">
+                            Just watch for the lowest fare
+                        </button>
+                    {% endif %}
                 </div>
 
                 <p class="route-watch__note js-watch-route-note mb-0" role="status" aria-live="polite"></p>
