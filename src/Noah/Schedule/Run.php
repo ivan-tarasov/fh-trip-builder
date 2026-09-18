@@ -19,7 +19,7 @@ use TripBuilder\Repository\ScheduleRunRepository;
 use TripBuilder\Schedule;
 
 #[AsCommand(
-    name: 'schedule:run',
+    name: self::NAME,
     description: 'Run the scheduled commands that are due. The only thing cron needs to call.',
     aliases: [],
     hidden: false,
@@ -48,10 +48,14 @@ use TripBuilder\Schedule;
  */
 final class Run extends AbstractCommand
 {
+    public const string NAME = 'schedule:run';
+
+    private const string OPT_PRETEND = 'pretend';
+
     protected function configure(): void
     {
         $this->addOption(
-            'pretend',
+            self::OPT_PRETEND,
             null,
             InputOption::VALUE_NONE,
             'Say what is due and run none of it.',
@@ -72,7 +76,7 @@ final class Run extends AbstractCommand
             return Command::FAILURE;
         }
 
-        if ($input->getOption('pretend')) {
+        if ($input->getOption(self::OPT_PRETEND)) {
             $this->report($schedule, $runs->all(), $due, $now);
 
             return Command::SUCCESS;

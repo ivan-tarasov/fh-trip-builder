@@ -41,19 +41,23 @@ use TripBuilder\Noah\AbstractCommand;
  * @phpstan-type FareSampleRow array{distance: int, price_base: string, price_tax: string}
  */
 #[AsCommand(
-    name: 'flights:reprice',
+    name: self::NAME,
     description: 'Recalculate fares on existing flights with the current formula.',
     aliases: [],
     hidden: false,
 )]
 class Reprice extends AbstractCommand
 {
+    public const string NAME = 'flights:reprice';
+
+    private const string OPT_DRY_RUN = 'dry-run';
+
     private const int BATCH_SIZE = 20000;
 
     protected function configure(): void
     {
         $this->addOption(
-            'dry-run',
+            self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
             'Report what the new fares would look like without writing anything.',
@@ -89,7 +93,7 @@ class Reprice extends AbstractCommand
 
         $this->reportSample($flights);
 
-        if ($input->getOption('dry-run')) {
+        if ($input->getOption(self::OPT_DRY_RUN)) {
             $this->io->note('Dry run: nothing was written.');
 
             return Command::SUCCESS;

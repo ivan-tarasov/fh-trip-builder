@@ -6,6 +6,10 @@ namespace TripBuilder\Tests\Unit\Noah;
 
 use PHPUnit\Framework\TestCase;
 use TripBuilder\Helper;
+use TripBuilder\Noah\Airside\Import as AirsideImport;
+use TripBuilder\Noah\Articles\Import as ArticlesImport;
+use TripBuilder\Noah\Db\Prune as DatabasePrune;
+use TripBuilder\Noah\Flights\Generate as GenerateFlights;
 
 /**
  * What `app:install --with-content` runs, and what it must never run.
@@ -40,7 +44,7 @@ final class InstallContentTest extends TestCase
      */
     public function testItComposesExactlyTheTwoImportersInOrder(): void
     {
-        self::assertSame(['articles:import', 'airside:import'], self::composed());
+        self::assertSame([ArticlesImport::NAME, AirsideImport::NAME], self::composed());
     }
 
     /**
@@ -56,8 +60,8 @@ final class InstallContentTest extends TestCase
     {
         $composed = self::composed();
 
-        self::assertNotContains('db:prune', $composed, 'the installer would delete data');
-        self::assertNotContains('flights:add', $composed, 'the installer would write 200,000 rows');
+        self::assertNotContains(DatabasePrune::NAME, $composed, 'the installer would delete data');
+        self::assertNotContains(GenerateFlights::NAME, $composed, 'the installer would write 200,000 rows');
     }
 
     /**
@@ -75,9 +79,19 @@ final class InstallContentTest extends TestCase
 
         self::assertNotEmpty($found, 'the installer no longer iterates a list of commands');
 
-        preg_match_all("/'([a-z]+:[a-z-]+)'/", $found[1], $names);
+        preg_match_all('/(\w+)::NAME/', $found[1], $names);
 
-        return $names[1];
+        // Each element is a class's own name, not a retyped copy of it -- a
+        // rename of `ArticlesImport::NAME` moves this test's expectation with
+        // it, rather than leaving a string here for somebody to notice is stale.
+        return array_map(
+            static fn(string $class): string => match ($class) {
+                'ArticlesImport' => ArticlesImport::NAME,
+                'AirsideImport' => AirsideImport::NAME,
+                default => self::fail('The installer now composes an importer this test does not know: ' . $class),
+            },
+            $names[1],
+        );
     }
 
     /**

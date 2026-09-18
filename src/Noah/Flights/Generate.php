@@ -28,7 +28,7 @@ use TripBuilder\Repository\AirportRepository;
  * @phpstan-type FareBrandSeedRow array{code: string, weight: int}
  */
 #[AsCommand(
-    name: 'flights:add',
+    name: self::NAME,
     description: 'Generate flights to database.',
     aliases: ['flights:generate'],
     hidden: false,
@@ -36,6 +36,12 @@ use TripBuilder\Repository\AirportRepository;
 
 class Generate extends AbstractCommand
 {
+    public const string NAME = 'flights:add';
+
+    private const string ARG_FLIGHTS = 'flights';
+    private const string OPT_DAY = 'day';
+    private const string OPT_LEVEL = 'level';
+
     private const int FLIGHTS_COUNT = 10000;
     private const int NUMBERS_POOL = 9999;
 
@@ -83,15 +89,15 @@ class Generate extends AbstractCommand
 
     protected function configure(): void
     {
-        $this->addArgument('flights', InputArgument::OPTIONAL, 'Flights to add');
+        $this->addArgument(self::ARG_FLIGHTS, InputArgument::OPTIONAL, 'Flights to add');
         $this->addOption(
-            'day',
+            self::OPT_DAY,
             null,
             InputOption::VALUE_REQUIRED,
             'Put them all on one day: a date (2026-12-12) or days from today (90).',
         );
         $this->addOption(
-            'level',
+            self::OPT_LEVEL,
             null,
             InputOption::VALUE_NONE,
             'Put them on the thinnest days in the window, thinnest first.',
@@ -108,8 +114,8 @@ class Generate extends AbstractCommand
     private function plan(InputInterface $input, int $flightsToAdd): ?array
     {
         /** @var string|null $day */
-        $day = $input->getOption('day');
-        $level = $input->getOption('level') === true;
+        $day = $input->getOption(self::OPT_DAY);
+        $level = $input->getOption(self::OPT_LEVEL) === true;
 
         if ($day !== null && $level) {
             throw new RuntimeException('`--day` names one day and `--level` finds them; pick one.');
@@ -178,7 +184,7 @@ class Generate extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         // If flights to add not provided – ask
-        $flightsToAdd = $input->getArgument('flights') ?? $this->io->ask(
+        $flightsToAdd = $input->getArgument(self::ARG_FLIGHTS) ?? $this->io->ask(
             'Number of flights to add',
             (string) self::FLIGHTS_COUNT,
             function (mixed $number): int {

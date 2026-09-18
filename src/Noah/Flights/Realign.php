@@ -62,26 +62,31 @@ use TripBuilder\Noah\AbstractCommand;
  * @phpstan-type ShapeBandRow array{legs: int, wide: string, none: string}
  */
 #[AsCommand(
-    name: 'flights:realign',
+    name: self::NAME,
     description: 'Reassign aircraft on existing flights and drop unflyable legs.',
     aliases: [],
     hidden: false,
 )]
 class Realign extends AbstractCommand
 {
+    public const string NAME = 'flights:realign';
+
+    private const string OPT_DRY_RUN = 'dry-run';
+    private const string OPT_KEEP_UNFLYABLE = 'keep-unflyable';
+
     private const int BATCH_SIZE = 5000;
 
     protected function configure(): void
     {
         $this->addOption(
-            'dry-run',
+            self::OPT_DRY_RUN,
             null,
             InputOption::VALUE_NONE,
             'Report what would change without writing anything.',
         );
 
         $this->addOption(
-            'keep-unflyable',
+            self::OPT_KEEP_UNFLYABLE,
             null,
             InputOption::VALUE_NONE,
             'Leave legs longer than any aircraft can fly in place instead of deleting them.',
@@ -94,7 +99,7 @@ class Realign extends AbstractCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $flights = Table::Flights->value;
-        $dryRun = (bool) $input->getOption('dry-run');
+        $dryRun = (bool) $input->getOption(self::OPT_DRY_RUN);
 
         try {
             $legs = LegBuilder::fromConnection($this->connection());
@@ -116,7 +121,7 @@ class Realign extends AbstractCommand
         );
 
         $this->formatOutput(
-            $input->getOption('keep-unflyable') ? 'Unflyable legs (kept)' : 'Unflyable legs to delete',
+            $input->getOption(self::OPT_KEEP_UNFLYABLE) ? 'Unflyable legs (kept)' : 'Unflyable legs to delete',
             number_format($overCap),
             $overCap > 0 ? 'comment' : 'info',
         );
@@ -127,7 +132,7 @@ class Realign extends AbstractCommand
             return Command::SUCCESS;
         }
 
-        if (!$input->getOption('keep-unflyable') && $overCap > 0 && !$this->deleteOverCap($flights, $maxLegKm)) {
+        if (!$input->getOption(self::OPT_KEEP_UNFLYABLE) && $overCap > 0 && !$this->deleteOverCap($flights, $maxLegKm)) {
             return Command::FAILURE;
         }
 

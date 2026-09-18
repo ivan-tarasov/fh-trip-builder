@@ -15,7 +15,7 @@ use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\FlightRepository;
 
 #[AsCommand(
-    name: 'flights:cleaning',
+    name: self::NAME,
     description: 'Deleting old flights from database.',
     aliases: [],
     hidden: false,
@@ -23,6 +23,8 @@ use TripBuilder\Repository\FlightRepository;
 
 class Cleaning extends AbstractCommand
 {
+    public const string NAME = 'flights:cleaning';
+
     private const int BATCH_SIZE = 5000;
 
     /**

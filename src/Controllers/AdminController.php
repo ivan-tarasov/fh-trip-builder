@@ -27,6 +27,18 @@ use TripBuilder\Http\HttpStatus;
 use TripBuilder\Http\RateLimit;
 use TripBuilder\Mail\Mailtrap;
 use TripBuilder\Money;
+use TripBuilder\Noah\Airside\Import as AirsideImport;
+use TripBuilder\Noah\Airside\Prune as AirsidePrune;
+use TripBuilder\Noah\Alerts\Check as AlertsCheck;
+use TripBuilder\Noah\Articles\Import as ArticlesImport;
+use TripBuilder\Noah\Currency\Rates as CurrencyRates;
+use TripBuilder\Noah\Db\Backup as DatabaseBackup;
+use TripBuilder\Noah\Db\Prune as DatabasePrune;
+use TripBuilder\Noah\Flights\Cabins as CabinsFlights;
+use TripBuilder\Noah\Flights\Cleaning as CleaningFlights;
+use TripBuilder\Noah\Flights\Generate as GenerateFlights;
+use TripBuilder\Noah\Flights\Realign as RealignFlights;
+use TripBuilder\Noah\Flights\Reprice as RepriceFlights;
 use TripBuilder\PanelSetting;
 use TripBuilder\RemarkTone;
 use TripBuilder\Repository\AdminEventRepository;
@@ -128,18 +140,18 @@ class AdminController extends AbstractController
      * dropdown as a currency refresh.
      */
     private const array SCHEDULABLE_COMMANDS = [
-        'currency:rates',
-        'db:prune',
-        'db:backup',
-        'flights:add',
-        'flights:cleaning',
-        'flights:reprice',
-        'flights:cabins',
-        'flights:realign',
-        'articles:import',
-        'airside:import',
-        'airside:prune',
-        'alerts:check',
+        CurrencyRates::NAME,
+        DatabasePrune::NAME,
+        DatabaseBackup::NAME,
+        GenerateFlights::NAME,
+        CleaningFlights::NAME,
+        RepriceFlights::NAME,
+        CabinsFlights::NAME,
+        RealignFlights::NAME,
+        ArticlesImport::NAME,
+        AirsideImport::NAME,
+        AirsidePrune::NAME,
+        AlertsCheck::NAME,
     ];
 
     /** Flags and values only -- what a real command's arguments look like. */

@@ -17,7 +17,7 @@ use TripBuilder\Repository\RateLimitRepository;
 use TripBuilder\Repository\SearchCandidateRepository;
 
 #[AsCommand(
-    name: 'db:prune',
+    name: self::NAME,
     description: 'Remove rows the retention policy says are no longer kept.',
     aliases: [],
     hidden: false,
@@ -57,10 +57,14 @@ use TripBuilder\Repository\SearchCandidateRepository;
  */
 final class Prune extends AbstractCommand
 {
+    public const string NAME = 'db:prune';
+
+    private const string OPT_FORCE = 'force';
+
     protected function configure(): void
     {
         $this->addOption(
-            'force',
+            self::OPT_FORCE,
             null,
             InputOption::VALUE_NONE,
             'Actually delete. Without this the command only says what it would remove.',
@@ -69,7 +73,7 @@ final class Prune extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $force = (bool) $input->getOption('force');
+        $force = (bool) $input->getOption(self::OPT_FORCE);
         $cutoff = self::cutoff();
 
         $this->io->text(sprintf(

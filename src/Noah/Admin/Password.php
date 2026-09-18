@@ -15,7 +15,7 @@ use TripBuilder\EnvKey;
 use TripBuilder\Noah\AbstractCommand;
 
 #[AsCommand(
-    name: 'admin:password',
+    name: self::NAME,
     description: 'Hash a password for the admin panel, to be pasted into `.env`.',
     aliases: [],
     hidden: false,
@@ -38,6 +38,8 @@ use TripBuilder\Noah\AbstractCommand;
  */
 class Password extends AbstractCommand
 {
+    public const string NAME = 'admin:password';
+
     /**
      * Below this, a hash is the only slow part of guessing.
      *
