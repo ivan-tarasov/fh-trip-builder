@@ -537,6 +537,11 @@ class AdminController extends AbstractController
      * How long a run took, or null while it has no finish to measure against
      * -- still running, or killed before it could report (the history page's
      * own table already says which).
+     *
+     * `format('U.u')` rather than `getTimestamp()` -- most of what runs here
+     * (`alerts:check`, `currency:rates`) finishes inside the same
+     * wall-clock second it started, and whole seconds alone would call
+     * every one of those "0s".
      */
     public static function runDuration(DateTimeImmutable $started, ?DateTimeImmutable $finished): ?string
     {
@@ -544,7 +549,13 @@ class AdminController extends AbstractController
             return null;
         }
 
-        $seconds = $finished->getTimestamp() - $started->getTimestamp();
+        $elapsedMs = (int) round((((float) $finished->format('U.u')) - ((float) $started->format('U.u'))) * 1000);
+
+        if ($elapsedMs < 1000) {
+            return $elapsedMs . 'ms';
+        }
+
+        $seconds = intdiv($elapsedMs, 1000);
 
         if ($seconds < 60) {
             return $seconds . 's';
@@ -799,7 +810,17 @@ class AdminController extends AbstractController
             return false;
         }
 
-        exec(sprintf('%s schedule:run %s > /dev/null 2>&1 &', escapeshellarg($noah), escapeshellarg($command)));
+        // `noah`'s own `#!/usr/bin/env php` picks up whatever `php` sits
+        // first on this process's inherited PATH, which is not necessarily
+        // the one actually running this request -- a real risk on a host
+        // with more than one PHP install. `PHP_BINARY` names the exact
+        // interpreter running right now, and is safe to force here except
+        // under php-fpm, where it names the fpm master rather than a CLI
+        // php -- there, fall back to the shebang's own PATH lookup, the same
+        // resolution the existing cron entry already depends on.
+        $interpreter = PHP_SAPI === 'fpm-fcgi' ? '' : escapeshellarg(PHP_BINARY) . ' ';
+
+        exec(sprintf('%s%s schedule:run %s > /dev/null 2>&1 &', $interpreter, escapeshellarg($noah), escapeshellarg($command)));
 
         return true;
     }

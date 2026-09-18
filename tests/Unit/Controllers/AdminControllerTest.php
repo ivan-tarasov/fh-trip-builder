@@ -52,10 +52,43 @@ final class AdminControllerTest extends TestCase
         );
     }
 
-    public function testAnInstantRunIsZeroSeconds(): void
+    public function testAnInstantRunIsZeroMilliseconds(): void
     {
         $at = new DateTimeImmutable('2026-09-18 03:00:00');
 
-        self::assertSame('0s', AdminController::runDuration($at, $at));
+        self::assertSame('0ms', AdminController::runDuration($at, $at));
+    }
+
+    public function testUnderASecondIsSpelledInMilliseconds(): void
+    {
+        self::assertSame(
+            '127ms',
+            AdminController::runDuration(
+                new DateTimeImmutable('2026-09-18 03:00:00.000'),
+                new DateTimeImmutable('2026-09-18 03:00:00.127'),
+            ),
+        );
+    }
+
+    public function testAWholeSecondOfMillisecondsSwitchesToSeconds(): void
+    {
+        self::assertSame(
+            '1s',
+            AdminController::runDuration(
+                new DateTimeImmutable('2026-09-18 03:00:00.000'),
+                new DateTimeImmutable('2026-09-18 03:00:01.000'),
+            ),
+        );
+    }
+
+    public function testJustUnderASecondStaysInMilliseconds(): void
+    {
+        self::assertSame(
+            '999ms',
+            AdminController::runDuration(
+                new DateTimeImmutable('2026-09-18 03:00:00.000'),
+                new DateTimeImmutable('2026-09-18 03:00:00.999'),
+            ),
+        );
     }
 }

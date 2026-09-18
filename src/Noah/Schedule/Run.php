@@ -159,8 +159,11 @@ final class Run extends AbstractCommand
         // Stamped before it runs. The tick fifteen minutes from now must not
         // pick up something still going, and a task whose process is killed
         // must not retry every quarter hour until somebody notices.
-        $runs->started($command, new DateTimeImmutable()->format('Y-m-d H:i:s'));
-        $historyId = $runs->historyStarted($command, new DateTimeImmutable()->format('Y-m-d H:i:s'));
+        $startedAt = new DateTimeImmutable();
+        $runs->started($command, $startedAt->format('Y-m-d H:i:s'));
+        // Milliseconds here, not on `started()` above -- `schedule_runs` is a
+        // plain `DATETIME` and would only truncate them back off.
+        $historyId = $runs->historyStarted($command, $startedAt->format('Y-m-d H:i:s.v'));
 
         try {
             $application = $this->getApplication();
@@ -184,9 +187,9 @@ final class Run extends AbstractCommand
             $this->io->error(sprintf('%s threw: %s', $command, $e->getMessage()));
         }
 
-        $at = new DateTimeImmutable()->format('Y-m-d H:i:s');
-        $runs->finished($command, $exit, $at);
-        $runs->historyFinished($historyId, $exit, $at);
+        $finishedAt = new DateTimeImmutable();
+        $runs->finished($command, $exit, $finishedAt->format('Y-m-d H:i:s'));
+        $runs->historyFinished($historyId, $exit, $finishedAt->format('Y-m-d H:i:s.v'));
 
         $this->formatOutput(
             $command,
