@@ -288,8 +288,8 @@ class SearchController extends AbstractController
                 'checkout_pax' => $this->checkoutPax(),
                 // Lead form + sidebar + cards share the resolved query context.
                 'triptype' => $this->get[self::GET_TRIPTYPE],
-                'depart_code' => $this->get[self::GET_FROM],
-                'arrive_code' => $this->get[self::GET_TO],
+                'depart_code' => AirportRepository::pickableCodeFor($places, $this->get[self::GET_FROM]),
+                'arrive_code' => AirportRepository::pickableCodeFor($places, $this->get[self::GET_TO]),
                 // So the results page's own form comes back showing the cabin
                 // that produced these results.
                 'cabin' => $cabin,

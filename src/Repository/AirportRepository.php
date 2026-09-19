@@ -324,13 +324,26 @@ final readonly class AirportRepository
     }
 
     /**
-     * City name for an airport code or city code (first match), or null.
+     * City name for an airport code, or a city code's own major airport, or
+     * null.
+     *
+     * `ORDER BY is_major DESC`, not an unordered `LIMIT 1`: a single airport
+     * code matches exactly one row regardless, but a metro-grouping city
+     * code can match several, and without an order MySQL is free to hand
+     * back whichever it finds first. Live-found (a "Travel deals" card):
+     * `YTO` groups Toronto Pearson (`YYZ`, major) with three secondary
+     * fields including Hamilton (`YHM`), and an unordered match returned
+     * "Hamilton" for a flight that actually lands at Pearson. The major
+     * airport's own `city` is the one worth showing here.
      */
     public function cityByCode(string $code): ?string
     {
         /** @var string|null $city */
         $city = $this->connection->fetchValue(
-            'SELECT city FROM ' . Table::Airports->value . ' WHERE code = ? OR city_code = ? LIMIT 1',
+            'SELECT city FROM ' . Table::Airports->value
+            . ' WHERE code = ? OR city_code = ?'
+            . ' ORDER BY is_major DESC, city ASC'
+            . ' LIMIT 1',
             [$code, $code],
         );
 
@@ -488,6 +501,36 @@ final readonly class AirportRepository
         }
 
         return ['cities' => $cities, 'airports' => $airports];
+    }
+
+    /**
+     * The code to preselect in the "City or airport" field for an
+     * origin/destination code that may not be one pickable() offers as its
+     * own row -- itself when it already is, or the single major airport
+     * standing in for it otherwise.
+     *
+     * A search is reachable with a code pickable() never lists on its own:
+     * a metro-grouping code with exactly one major airport under it
+     * (`YMQ` has only `YUL`; `YTO` has only `YYZ`) still searches every
+     * airport in the group, but pickable() only draws a city as its own
+     * row once it has more than one. Without this, form.html.twig's exact
+     * `place.value == row.code` match finds nothing and the field renders
+     * its placeholder despite `depart_code`/`arrive_code` holding a real
+     * value -- found live: a "Travel deals" card to Toronto (`YTO`) left
+     * the header form on the results page empty.
+     *
+     * Built on byCity()'s own map rather than a new query: a code
+     * pickable() already offers on its own is a key in neither map and
+     * falls through unchanged; a group code with exactly one major
+     * airport is a key only in `airports`, and resolves to it.
+     *
+     * @param list<PickableRow> $places
+     */
+    public static function pickableCodeFor(array $places, string $code): string
+    {
+        ['cities' => $cities, 'airports' => $airports] = self::byCity($places);
+
+        return $cities[$code] ?? $airports[$code][0] ?? $code;
     }
 
     /**
