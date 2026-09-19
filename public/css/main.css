@@ -1516,6 +1516,16 @@ button {
   .hero-cards { margin-top: -2.5rem; }
 }
 
+/* Alternating bands down the homepage (C21, #422), so a long scroll reads
+   as a series of blocks rather than one undifferentiated column.
+   `--surface-raised` rather than `--surface` -- the page's own background
+   is already `--surface` (see `body`, above), so a band painted with it
+   would be no visible change at all -- and rather than `--surface-sunken`,
+   which is the fare cards' own background in both "Travel deals" and
+   "Popular flights near you": a band that colour would swallow every card
+   sitting on it instead of framing them. */
+.band-raised { background-color: var(--surface-raised); }
+
 /* The homepage's own full-width band, between "Top searches" and the
    footer. Content today is the fare-alert signup; the band itself is
    built to hold whatever goes here next. A photo (one of the 8 already

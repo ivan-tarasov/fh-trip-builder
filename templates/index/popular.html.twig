@@ -11,9 +11,15 @@
 
    Silent when there is nothing to show, same as `index/deals.html.twig`. #}
 {% if popular is not empty %}
-    <div class="container px-4 py-5" id="popular-flights">
-        <h2 class="pb-2 mb-4 border-bottom">Popular flights near you</h2>
+    {# `.band-raised` on this outer div, full-bleed, and `.container` on the
+       one inside it -- Bootstrap's container has its own max-width, so a
+       background painted on it stops at that width rather than filling the
+       viewport (C21, #422). #}
+    <div class="band-raised" id="popular-flights">
+        <div class="container px-4 py-5">
+            <h2 class="pb-2 mb-4 border-bottom">Popular flights near you</h2>
 
-        {% include 'place/fares.html.twig' with {'fares': popular} only %}
+            {% include 'place/fares.html.twig' with {'fares': popular} only %}
+        </div>
     </div>
 {% endif %}
