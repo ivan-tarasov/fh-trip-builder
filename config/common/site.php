@@ -21,6 +21,7 @@ return [
         'endpoint' => [
             'images' => 'images',
             'poi' => 'images/poi',
+            'cities' => 'images/cities',
             'css' => 'css',
             'js' => 'js',
             'vendor' => 'vendor',

@@ -4,8 +4,9 @@
    first, styled like the existing `.fare` cards `place/fares.html.twig`
    already uses.
 
-   A photo on top when one is cached (`cities:images`, from Wikipedia --
-   see CityImageRepository) via the `.fare--photo` modifier, which moves
+   A photo on top when one is cached (`cities:images`, downloaded from
+   Wikipedia and re-hosted under our own S3 key -- see
+   CityImageRepository) via the `.fare--photo` modifier, which moves
    `.fare`'s own padding/gap down onto a new `.fare__body` wrapper rather
    than touching the base `.fare` rule `place/fares.html.twig` still uses
    unmodified. Falls back to the original flat card -- no modifier, no
@@ -50,7 +51,7 @@
                     <li class="fares__item">
                         {% if card.image %}
                             <a class="fare fare--photo" href="{{ card.url }}">
-                                <span class="fare__photo" style="background-image: url('{{ card.image }}');" aria-hidden="true"></span>
+                                <span class="fare__photo" style="background-image: url('{{ cdn(card.image) }}');" aria-hidden="true"></span>
                                 <span class="fare__body">{{ macros.content(card) }}</span>
                             </a>
                         {% else %}

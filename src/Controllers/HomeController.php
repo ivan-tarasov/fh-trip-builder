@@ -162,11 +162,14 @@ class HomeController extends AbstractController
      * `AdminController::scheduledCommandHelp()` is: so a test can call it
      * directly rather than parsing rendered HTML back out for what it says.
      *
-     * The photo is whatever `cities:images` (`Noah\Cities\Images`) already
-     * cached from Wikipedia -- read here, never fetched here. `null` when
-     * a city has none (17 of 231 real cities, live-measured) or has not
-     * been looked up yet; the template falls back to the plain card for
-     * either case rather than an empty image box.
+     * `image` is our own S3 key -- whatever `cities:images`
+     * (`Noah\Cities\Images`) already downloaded from Wikipedia and
+     * re-hosted -- read here, never fetched here, and never a Wikipedia
+     * URL. The template renders it through `cdn()`, the same way
+     * `poi.image` already is. `null` when a city has none (17 of 231 real
+     * cities, live-measured) or has not been looked up yet; the template
+     * falls back to the plain card for either case rather than an empty
+     * image box.
      *
      * @return array{ceiling: int|null, cards: list<array{city: string, price: float, url: string, airline: string, departure_time: string, duration: int, image: string|null}>}
      */
@@ -207,7 +210,7 @@ class HomeController extends AbstractController
                     'airline' => $row['airline'],
                     'departure_time' => $row['departure_time'],
                     'duration' => $row['duration'],
-                    'image' => $images->imageFor($row['to_city_code']),
+                    'image' => $images->imageKeyFor($row['to_city_code']),
                 ],
                 $rows,
             ),

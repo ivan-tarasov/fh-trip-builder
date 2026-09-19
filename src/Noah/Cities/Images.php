@@ -9,15 +9,24 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use TripBuilder\Aws\ObjectStore;
+use TripBuilder\Aws\S3;
+use TripBuilder\Config;
 use TripBuilder\Noah\AbstractCommand;
 use TripBuilder\Repository\CityImageRepository;
 use TripBuilder\Repository\CityRepository;
 
 /**
- * One photo per city, from Wikipedia's own REST summary endpoint -- see
- * `config/noah/db/tables/city_images.php` for why this is a cache table
- * rather than a live call. C10 (#395)'s "Travel deals" carousel is the
- * first reader.
+ * One photo and one summary paragraph per city, from Wikipedia's own REST
+ * summary endpoint -- see `config/noah/db/tables/city_images.php` for why
+ * this is a cache table rather than a live call. C10 (#395)'s "Travel
+ * deals" carousel reads the photo; C15 (#405) is the planned reader for
+ * the text.
+ *
+ * The photo itself is downloaded and re-hosted under our own S3 key
+ * (`Noah\Aws\S3`, the same store `PostImageUploader` writes to) rather
+ * than linked straight to Wikipedia's CDN, so a page never depends on a
+ * third party's hotlinking policy or uptime to render.
  *
  * Every real city (`CityRepository::all()`, ~231 of them) rather than a
  * lazy per-request build: unlike a route, the set of cities is small and
@@ -25,18 +34,19 @@ use TripBuilder\Repository\CityRepository;
  * everywhere the carousel could ever land, rather than warming routes one
  * request at a time forever.
  *
- * A city already in the table is skipped unless `--force` is given.
- * Recorded even when Wikipedia has nothing (a real 404, or a page with no
- * thumbnail) -- the same "recorded even when nothing was found" idiom
- * `RoutePriceRepository::build()` already uses, so a city with no photo is
- * not asked about again every run. A *transient* failure (a timeout, a
- * 5xx, a dropped connection) is answered neither yes nor no and is left
- * unrecorded on purpose, so the next run tries it again rather than
- * treating a bad moment on Wikipedia's end as a permanent "no photo".
+ * A city is looked up again once it is older than `STALE_AFTER_DAYS`, or
+ * always with `--force`. Recorded even when Wikipedia has nothing (a real
+ * 404, or a page with no thumbnail) -- the same "recorded even when
+ * nothing was found" idiom `RoutePriceRepository::build()` already uses,
+ * so a city with no photo is not asked about again until it is next due.
+ * A *transient* failure (a timeout, a 5xx, a dropped connection, or a
+ * downloaded "photo" this could not decode) is answered neither yes nor
+ * no and is left unrecorded on purpose, so the next run tries it again
+ * rather than treating a bad moment as a permanent answer.
  */
 #[AsCommand(
     name: self::NAME,
-    description: 'Cache a Wikipedia photo for every real city.',
+    description: 'Cache a Wikipedia photo and summary for every real city.',
     aliases: [],
     hidden: false,
 )]
@@ -48,7 +58,7 @@ class Images extends AbstractCommand
     private const string OPT_DRY_RUN_DESCRIPTION = 'List the cities that would be looked up without asking Wikipedia.';
 
     private const string OPT_FORCE = 'force';
-    private const string OPT_FORCE_DESCRIPTION = 'Look up every city again, including ones already cached.';
+    private const string OPT_FORCE_DESCRIPTION = 'Look up every city again, ignoring how recently it was last checked.';
 
     /** No arguments -- everything here is a flag. */
     public const array ARGUMENTS = [];
@@ -72,11 +82,29 @@ class Images extends AbstractCommand
     private const int MAX_BACKOFF_SECONDS = 15;
 
     /**
-     * A sentinel `lookUp()` can return instead of `null`: `null` is "asked,
-     * confirmed no photo", this is "could not ask" -- see the class
-     * docblock for why the two are stored differently. A string rather
-     * than a real tri-state so the method's own return type can stay the
-     * plain `?string` every caller already expects a URL lookup to have.
+     * How long a cached answer is trusted before it is asked for again. A
+     * city's Wikipedia photo and summary are effectively static -- there is
+     * no event in this app that would need a fresher answer than this --
+     * and a short TTL would mean re-asking a rate-limited source about 231
+     * cities for no real gain. `--force` bypasses this entirely.
+     */
+    private const int STALE_AFTER_DAYS = 90;
+
+    /**
+     * A day, not `ObjectStore::IMMUTABLE`: unlike `PostImageUploader`'s
+     * keys, this one does not carry a content hash, so the same key can
+     * legitimately hold different bytes after a refresh. `IMMUTABLE` would
+     * tell every CDN and browser in between never to ask again.
+     */
+    private const string CACHE_CONTROL = 'public, max-age=86400';
+
+    /**
+     * A sentinel `lookUp()`/`download()` can return instead of a real
+     * answer: "could not ask (or could not use what came back) this run" --
+     * see the class docblock for why this is stored differently from a
+     * confirmed no-photo answer. A string rather than a real tri-state so
+     * the calling code can `match` on one type instead of juggling `null`
+     * for two different meanings.
      */
     private const string TRANSIENT = 'transient';
 
@@ -94,9 +122,14 @@ class Images extends AbstractCommand
         $cities = new CityRepository($this->connection())->all();
 
         if (!$force) {
+            $due = array_flip($images->staleOrMissing(
+                array_map(static fn(array $city): string => (string) $city['code'], $cities),
+                self::STALE_AFTER_DAYS,
+            ));
+
             $cities = array_values(array_filter(
                 $cities,
-                static fn(array $city): bool => !$images->has((string) $city['code']),
+                static fn(array $city): bool => isset($due[(string) $city['code']]),
             ));
         }
 
@@ -112,6 +145,8 @@ class Images extends AbstractCommand
             return Command::SUCCESS;
         }
 
+        $store = S3::fromEnvironment();
+
         $found = 0;
         $noPhoto = 0;
         $skipped = 0;
@@ -120,14 +155,13 @@ class Images extends AbstractCommand
         $progress->start();
 
         foreach ($cities as $i => $city) {
-            $answer = $this->lookUp((string) $city['name']);
+            $outcome = $this->processCity($images, $store, (string) $city['code'], (string) $city['name']);
 
-            if ($answer === self::TRANSIENT) {
-                $skipped++;
-            } else {
-                $images->store((string) $city['code'], $answer);
-                $answer === null ? $noPhoto++ : $found++;
-            }
+            match ($outcome) {
+                self::TRANSIENT => $skipped++,
+                null => $noPhoto++,
+                default => $found++,
+            };
 
             $progress->advance();
 
@@ -154,8 +188,50 @@ class Images extends AbstractCommand
     }
 
     /**
-     * The image URL, `null` for a confirmed no-photo answer, or
-     * `self::TRANSIENT` to try again next run.
+     * One city, start to finish: ask Wikipedia, decide whether the photo
+     * needs re-downloading, and store the answer.
+     *
+     * @return string|null the S3 key stored, null for a confirmed no-photo
+     *     answer, or `self::TRANSIENT` to try again next run
+     */
+    private function processCity(CityImageRepository $images, ObjectStore $store, string $cityCode, string $cityName): ?string
+    {
+        $existing = $images->find($cityCode);
+        $summary = $this->lookUp($cityName);
+
+        if ($summary === self::TRANSIENT) {
+            return self::TRANSIENT;
+        }
+
+        $imageKey = $existing['image_key'] ?? null;
+        $sourceUrl = $existing['image_source_url'] ?? null;
+
+        if ($summary['source'] === null) {
+            $imageKey = null;
+            $sourceUrl = null;
+        } elseif ($summary['source'] !== $sourceUrl) {
+            // First time, or Wikipedia's own photo changed since we last
+            // checked -- either way, the bytes we have (if any) are not
+            // the bytes this answer names, so go get the real ones.
+            $imageKey = $this->download($store, $cityCode, $summary['source']);
+
+            if ($imageKey === self::TRANSIENT) {
+                return self::TRANSIENT;
+            }
+
+            $sourceUrl = $summary['source'];
+        }
+
+        // else: the same photo as last time -- keep the key already on S3
+        // rather than spending a download and an upload on identical bytes.
+
+        $images->store($cityCode, $imageKey, $sourceUrl, $summary['extract']);
+
+        return $imageKey;
+    }
+
+    /**
+     * Wikipedia's answer for one city.
      *
      * One retry, and only for a `429` -- live-measured, this is a real,
      * IP-based limit Wikipedia enforces and names with its own
@@ -165,8 +241,10 @@ class Images extends AbstractCommand
      * it out once is worth doing since the answer says exactly how long;
      * a second `429` after that is left transient rather than waited out
      * again, so one throttled city cannot stall the whole run.
+     *
+     * @return self::TRANSIENT|array{source: string|null, extract: string|null}
      */
-    private function lookUp(string $cityName): ?string
+    private function lookUp(string $cityName): array|string
     {
         $url = sprintf(self::ENDPOINT, rawurlencode(str_replace(' ', '_', $cityName)));
 
@@ -179,7 +257,7 @@ class Images extends AbstractCommand
 
         // A real "no such page" -- confirmed, not transient.
         if ($response['status'] === 404) {
-            return null;
+            return ['source' => null, 'extract' => null];
         }
 
         if ($response['body'] === null || $response['status'] !== 200) {
@@ -194,8 +272,45 @@ class Images extends AbstractCommand
 
         /** @var mixed $thumbnail */
         $thumbnail = $data['thumbnail']['source'] ?? null;
+        /** @var mixed $extract */
+        $extract = $data['extract'] ?? null;
 
-        return is_string($thumbnail) ? $thumbnail : null;
+        return [
+            'source' => is_string($thumbnail) ? $thumbnail : null,
+            'extract' => is_string($extract) && $extract !== '' ? $extract : null,
+        ];
+    }
+
+    /**
+     * Download the photo at `$sourceUrl` and hand it to our own bucket
+     * under this city's key, overwriting whatever was there. Overwriting
+     * is correct here: the key is per-city, not per-content, so a changed
+     * photo simply replaces the old bytes at the same address rather than
+     * needing a new one.
+     *
+     * @return string|self::TRANSIENT the key stored, or TRANSIENT when the
+     *     bytes could not be fetched or read as an image this run
+     */
+    private function download(ObjectStore $store, string $cityCode, string $sourceUrl): string
+    {
+        $response = $this->request($sourceUrl);
+
+        if ($response['status'] !== 200 || $response['body'] === null) {
+            return self::TRANSIENT;
+        }
+
+        $size = getimagesizefromstring($response['body']);
+
+        if ($size === false) {
+            return self::TRANSIENT;
+        }
+
+        $key = Config::get('site.static.endpoint.cities', 'images/cities')
+            . '/' . $cityCode . '.' . image_type_to_extension($size[2], false);
+
+        $store->put($key, $response['body'], (string) $size['mime'], self::CACHE_CONTROL);
+
+        return $key;
     }
 
     /** @return array{status: int, body: string|null, retryAfter: int|null} */
