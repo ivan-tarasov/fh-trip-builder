@@ -2,14 +2,13 @@
    included by every strip rather than three copies, since the markup and
    the classes global.js binds to never vary by page.
 
-   Written here, next to the strip, but not meant to stay here: global.js
-   moves this whole `.js-carousel-nav` up into the section's own heading
-   (whichever preceding sibling carries `.carousel-head`) once the page has
-   loaded, so it reads as part of the title rather than as a control
-   floating over the cards. Hidden until then by `.carousel__nav`'s own
-   CSS, and by a `(hover: hover) and (pointer: fine)` gate either way --
-   touch and trackpad already drag the strip, so the buttons exist only
-   for the pointer type that had no way in at all. #}
+   Sits right here, right after the strip -- the same place Kayak's own
+   reference puts its pair, below the card row rather than beside its
+   title. `.carousel__nav`'s own CSS hides it until global.js has proven
+   there is something to scroll to, and gates it either way to
+   `(hover: hover) and (pointer: fine)` -- touch and trackpad already drag
+   the strip, so the buttons exist only for the pointer type that had no
+   way in at all. #}
 <div class="carousel__nav js-carousel-nav">
     <button type="button" class="carousel__arrow carousel__arrow--prev js-carousel-prev" aria-label="Scroll left">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>

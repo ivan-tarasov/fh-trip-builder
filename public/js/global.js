@@ -2327,22 +2327,6 @@
                 return;
             }
 
-            // The nav is written next to the strip in the markup but belongs
-            // beside the section's own title -- walking back past whatever
-            // else sits between them (a route's `.months__note`, say) to the
-            // nearest preceding sibling that is one. A heading missing this
-            // class -- a template C20 has not reached yet -- leaves the nav
-            // where it was written rather than losing it.
-            let heading = carousel.previousElementSibling;
-
-            while (heading && !heading.classList.contains('carousel-head')) {
-                heading = heading.previousElementSibling;
-            }
-
-            if (heading) {
-                heading.appendChild(nav);
-            }
-
             // Only one track is ever on screen -- a tabset hides the rest
             // behind a radio with `display: none` -- and that is the one the
             // buttons should act on. A hidden element's offsetWidth is 0 and

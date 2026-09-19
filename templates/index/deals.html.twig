@@ -37,7 +37,7 @@
 
 {% if deals.cards is not empty %}
     <div class="container px-4 py-5" id="travel-deals">
-        <h2 class="pb-2 mb-4 border-bottom carousel-head">Travel deals under {{ money.plain(price_whole(deals.ceiling)) }}</h2>
+        <h2 class="pb-2 mb-4 border-bottom">Travel deals under {{ money.plain(price_whole(deals.ceiling)) }}</h2>
 
         {# `fares tabset` on the wrapper even with nothing to switch between:
            `.fares__strip` only becomes a grid through the `--tabset-panel`

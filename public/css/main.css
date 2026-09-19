@@ -7325,17 +7325,11 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
    trackpad already drag either one; a mouse's plain vertical wheel has no
    native way to, which is the gap these close.
 
-   The pair sits beside the section's own title rather than over the strip
-   -- there is nothing else on that line (no "Explore more", nothing) --
-   so `.carousel-head` is a flex row wherever a heading might own one, and
-   global.js moves `.carousel__nav` there from wherever it was written in
-   the markup. It cannot be laid out there by CSS alone: `place/fares.html.twig`
-   is included by `partials/place.html.twig` *after* that file has already
-   printed the title, and Twig has no way to hand content back up into
-   markup a parent template already emitted. */
-.carousel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-
-.carousel__nav { display: none; flex: 0 0 auto; gap: .5rem; }
+   The pair sits right-aligned in its own row after the strip -- the same
+   place Kayak's own reference puts it, measured live against its actual
+   layout rather than guessed from the screenshot alone: its arrows sit
+   below the card row, not beside the "Travel deals" title. */
+.carousel__nav { display: none; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
 
 @media (hover: hover) and (pointer: fine) {
   .carousel__nav.is-scrollable { display: flex; }
