@@ -239,7 +239,11 @@ class HomeController extends AbstractController
      * Cards per tab is `PanelSetting::HomePopularLimit` (G22, #426), not a
      * constant -- same reasoning `travelDeals()`'s own limit has: enough to
      * fill a strip worth scrolling without asking `cheapestPerDestinationCity()`
-     * to rank every city in the split.
+     * to rank every city in the split. It is a ceiling, not a promise: the
+     * domestic tab from Montreal never shows more than 6 no matter how
+     * high the setting goes, because Canada has only 6 other major
+     * airports in this data -- confirmed live, not assumed, before this
+     * was ever filed as a bug (G22 follow-up).
      *
      * @return list<array{id: string, label: string, fares: list<array<string, mixed>>}>
      */
