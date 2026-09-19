@@ -102,13 +102,19 @@
     </div>
 </div>
 
-<div class="container px-4 py-5 band-raised" id="icon-grid">
-    <h2 class="pb-2 mb-4 border-bottom">Top searches</h2>
+{# `.band-raised` on this outer div, full-bleed, and `.container` on the
+   one inside it -- Bootstrap's container has its own max-width, so a
+   background painted on it stops at that width rather than filling the
+   viewport (C21, #422). #}
+<div class="band-raised" id="icon-grid">
+    <div class="container px-4 py-5">
+        <h2 class="pb-2 mb-4 border-bottom">Top searches</h2>
 
-    <div class="list-group">
-        {% for search in top_searches %}
-            {% include 'index/top-search.html.twig' with {'rank': loop.index} %}
-        {% endfor %}
+        <div class="list-group">
+            {% for search in top_searches %}
+                {% include 'index/top-search.html.twig' with {'rank': loop.index} %}
+            {% endfor %}
+        </div>
     </div>
 </div>
 
