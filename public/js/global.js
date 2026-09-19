@@ -2302,12 +2302,15 @@
         paint();
     })();
 
-    /*[ Carousel arrows ]
+    /*[ Carousel arrows and edge fade ]
     ===========================================================*/
     // C20 (#420). `.fares__strip` and `.months__chart` both scroll the same
     // way -- overflow-x: auto with scroll-snap -- and neither ever gave a
     // mouse a way in beyond a plain vertical wheel. One pair of buttons per
     // `.carousel`, wired to whichever track inside it is actually visible.
+    // C22 (#423) reuses this same pass: the fade at each edge needs the same
+    // "is there another card that way" answer the buttons' own disabled
+    // state already is.
     (function () {
         const carousels = document.querySelectorAll('.carousel');
 
@@ -2316,6 +2319,11 @@
         }
 
         const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+        // How much of a cut-off card fades rather than clips (C22, #423).
+        // Wide enough to read as a fade rather than a hairline, narrow
+        // enough that it never reaches a card's own price or route text.
+        const FADE_WIDTH = '2rem';
 
         carousels.forEach(function (carousel) {
             const nav = carousel.querySelector('.js-carousel-nav');
@@ -2341,6 +2349,12 @@
                 nav.classList.toggle('is-scrollable', max > 1);
                 prev.disabled = track.scrollLeft <= 0;
                 next.disabled = track.scrollLeft >= max - 1;
+
+                // A fade only where there is another card to scroll to --
+                // one on a true start or end would say "more here" over
+                // nothing.
+                track.style.setProperty('--fade-start', prev.disabled ? '0px' : FADE_WIDTH);
+                track.style.setProperty('--fade-end', next.disabled ? '0px' : FADE_WIDTH);
             };
 
             prev.addEventListener('click', function () {
