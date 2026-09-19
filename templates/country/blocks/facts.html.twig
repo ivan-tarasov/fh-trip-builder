@@ -1,3 +1,16 @@
+{# Wikipedia's own summary, ahead of the facts -- something to read before
+   the numbers, C17 (#409), the same idea `city/blocks/facts.html.twig`
+   already has for cities (C15, #405). No trimming or length gate here
+   either: `countries:content`'s own disambiguation handling (shared with
+   `cities:images` via `Summary`, C16 #408) already keeps a wrong page's
+   text out of this column.
+
+   Absent silently for a country with nothing cached yet -- the facts
+   grid below still stands on its own, the same as before this existed. #}
+{% if extract %}
+    <p class="place-about">{{ extract }}</p>
+{% endif %}
+
 {# Four things somebody checks before booking, and nothing else.
 
    The time zone is a span, not a value. 87 of the 93 countries we sell to sit

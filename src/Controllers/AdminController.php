@@ -35,6 +35,7 @@ use TripBuilder\Noah\Airside\Prune as AirsidePrune;
 use TripBuilder\Noah\Alerts\Check as AlertsCheck;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
 use TripBuilder\Noah\Cities\Images as CityImages;
+use TripBuilder\Noah\Countries\Content as CountryContent;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Backup as DatabaseBackup;
 use TripBuilder\Noah\Db\Prune as DatabasePrune;
@@ -158,6 +159,7 @@ class AdminController extends AbstractController
         RealignFlights::NAME => RealignFlights::class,
         ArticlesImport::NAME => ArticlesImport::class,
         CityImages::NAME => CityImages::class,
+        CountryContent::NAME => CountryContent::class,
         AirsideImport::NAME => AirsideImport::class,
         AirsidePrune::NAME => AirsidePrune::class,
         AlertsCheck::NAME => AlertsCheck::class,

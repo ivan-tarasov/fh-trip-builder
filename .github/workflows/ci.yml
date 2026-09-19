@@ -167,6 +167,7 @@ jobs:
           php noah currency:rates --dry-run --no-ansi
           php noah articles:import --dry-run --no-ansi
           php noah cities:images --dry-run --no-ansi
+          php noah countries:content --dry-run --no-ansi
           php noah airside:import --dry-run --no-ansi
           php noah flights:cabins --dry-run --no-ansi
           php noah flights:realign --dry-run --no-ansi

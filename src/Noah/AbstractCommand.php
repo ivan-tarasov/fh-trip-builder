@@ -56,8 +56,12 @@ abstract class AbstractCommand extends Command
      * `cities:images` (requesting a wider Wikipedia thumbnail) opened before
      * `v1.7.0` existed, and never carrying its own bump until the CI check
      * above said so.
+     *
+     * `v1.8.0`: `countries:content` (C17, #409), a new command -- built
+     * alongside C16 (#408), which pulled the fetch/backoff/disambiguation
+     * logic this and `cities:images` now both share out of the latter.
      */
-    private const string NOAH_VERSION = 'v1.7.1';
+    private const string NOAH_VERSION = 'v1.8.0';
 
     /**
      * Color presets

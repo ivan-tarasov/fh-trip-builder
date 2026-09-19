@@ -31,6 +31,7 @@ use TripBuilder\Noah\Airside\Prune as AirsidePrune;
 use TripBuilder\Noah\Alerts\Check as AlertsCheck;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
 use TripBuilder\Noah\Cities\Images as CityImages;
+use TripBuilder\Noah\Countries\Content as CountryContent;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Backup as DatabaseBackup;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
@@ -231,6 +232,20 @@ try {
     */
 
     $application->addCommand(new CityImages());
+
+    /*
+    |--------------------------------------------------------------------------
+    | Country content
+    |--------------------------------------------------------------------------
+    |
+    | One Wikipedia summary per sellable country, for /country/<slug>'s
+    | "General information" block (C17, #409) -- built on the same shared
+    | fetcher (C16, #408) `cities:images` above uses, description-first
+    | rather than photo-first.
+    |
+    */
+
+    $application->addCommand(new CountryContent());
 
     /*
     |--------------------------------------------------------------------------

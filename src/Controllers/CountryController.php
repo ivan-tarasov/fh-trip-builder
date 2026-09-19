@@ -11,6 +11,7 @@ use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Log;
 use TripBuilder\Repository\CityRepository;
+use TripBuilder\Repository\CountryContentRepository;
 use TripBuilder\Repository\CountryRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\SearchUrl;
@@ -97,6 +98,11 @@ class CountryController extends AbstractController
             echo new TwigRenderer()->renderPage('country/view.html.twig', [
                 'breadcrumbs' => self::trailFor($country),
                 'country' => $country,
+                // Wikipedia's own summary, read from the cache
+                // `countries:content` fills -- never fetched here. Null
+                // for the same two reasons the city page's own extract
+                // can be: not looked up yet, or nothing usable.
+                'extract' => new CountryContentRepository($this->connection())->extractFor($code),
                 'country_cities' => self::cityAddresses($cities->inCountry($code)),
                 'country_airports' => self::airportAddresses($airports),
                 'fares' => $this->fares($cities, $country, array_column($airports, 'code')),
