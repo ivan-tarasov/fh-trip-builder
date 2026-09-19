@@ -16,7 +16,7 @@ return [
     | `extract`.
     |
     | This app owns the photo, not just a link to it: `image_key` is our own
-    | S3 key (`Noah\Cities\Images` downloads the bytes and uploads them),
+    | S3 key (`Noah\Cities\Content` downloads the bytes and uploads them),
     | never Wikipedia's own CDN URL directly -- a page must not depend on a
     | third party's hotlinking policy or uptime to render. `image_source_url`
     | is kept only to notice when Wikipedia's own photo has changed, so a
@@ -26,7 +26,7 @@ return [
     | A cache, not a record, the same reason `route_day_price` is one:
     | nothing here is the only copy of anything -- Wikipedia and our own S3
     | bucket are -- and every row can be rebuilt. Filled and refreshed by a
-    | scheduled command (`cities:images`), never live on a request: a
+    | scheduled command (`cities:content`), never live on a request: a
     | homepage render is not the place to make eight external HTTP calls to
     | a service this app does not control the uptime of.
     |
@@ -38,7 +38,7 @@ return [
     | re-asking a source that has already answered "nothing" once.
     |
     | `fetched_at` is also the staleness clock a scheduled refresh reads:
-    | see `Noah\Cities\Images::STALE_AFTER_DAYS`.
+    | see `Noah\Cities\Content::STALE_AFTER_DAYS`.
     |
     | `utf8mb4` at the table level for `extract`, which is real prose and
     | will carry accented and non-Latin names (Québec, Zürich, ...); the
