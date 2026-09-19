@@ -91,26 +91,44 @@ class Images extends AbstractCommand
     private const int STALE_AFTER_DAYS = 90;
 
     /**
-     * A city whose plain name is also a president, a state, or a common
-     * placename shared by several other real cities does not resolve to
-     * its own Wikipedia article -- it resolves to a disambiguation page,
-     * which has no thumbnail and no useful extract. Live-found: `NYC` and
-     * `WAS` (New York, Washington) both landed here, and a check of every
-     * city already looked up at the time found the same thing for `PHX`,
-     * `PDX` and `CLT` (Phoenix, Portland, Charlotte) -- five of the
-     * seventeen cities this command had filed as "no photo" were actually
-     * this, not a real absence.
+     * A city whose plain name does not resolve to its own Wikipedia
+     * article -- either a disambiguation page (a name shared with a
+     * president, a state, or another city: `NYC`, `WAS`, `PHX`, `PDX`,
+     * `CLT`, and eight more found the same way, live) or a plain spelling
+     * mismatch between this app's own name for the city and Wikipedia's
+     * exact title (`OOL` is "Coolangatta (Gold Coast)" here and
+     * "Coolangatta" there; `SJD`/`PMI` similarly). Both answer with no
+     * thumbnail, and the second kind answers with a 404 rather than
+     * anything this code could tell apart from a city Wikipedia truly has
+     * nothing on.
      *
-     * A general disambiguation resolver would mean fetching and parsing
-     * the disambiguation page's own links, which is a second, heavier
-     * Wikipedia call for every one of these with no guarantee the first
-     * link is the right city. A short, hand-verified map of the exact
-     * title that *is* the city is simpler and correct for as long as the
-     * list of real cities stays the bounded, slow-changing set it is.
-     * `lookUp()` still flags an unmapped disambiguation page rather than
-     * silently filing it as "no photo", so a new collision in the other
-     * cities not yet checked is something this command's own output
-     * says out loud instead of a wrong answer nobody notices.
+     * Checked live and found in Wikimedia's own REST API spec
+     * (mediawiki.org/wiki/Page_Previews/API_Specification) before writing
+     * this: a disambiguation response can in principle carry
+     * `disambiguation_links`, the titles the page itself points to -- but
+     * the spec marks that field "Blocked" (never shipped), and it is
+     * absent from every live response this command has seen. There is no
+     * documented way to ask Wikipedia "which of these is the city" --
+     * only a title that already names it.
+     *
+     * Geocoding was tried and rejected: this app stores real coordinates
+     * per city, and Wikipedia's own geosearch
+     * (`list=geosearch`, capped at a 10km radius) can find the article
+     * nearest a point. Tested against Halifax's own stored coordinate --
+     * its one airport, 35km from downtown -- and geosearch returned a
+     * plane-crash article, the airport itself and a speedway, never
+     * "Halifax, Nova Scotia". An airport far from its own city centre is
+     * common enough that this could not be trusted generally.
+     *
+     * So: a short, hand-verified map, checked against the live API before
+     * being written down. Every one of the twelve cities this command had
+     * filed as "no photo" turned out to be one of these two things, not a
+     * real absence -- a genuine "Wikipedia has nothing on this real city"
+     * has not been seen once. `lookUp()` still flags an unmapped
+     * disambiguation page rather than silently filing it as "no photo",
+     * so a new collision among cities not yet (re)checked says so in this
+     * command's own output instead of becoming a wrong answer nobody
+     * notices.
      */
     private const array WIKIPEDIA_TITLE_OVERRIDES = [
         'NYC' => 'New York City',
@@ -118,6 +136,18 @@ class Images extends AbstractCommand
         'PHX' => 'Phoenix, Arizona',
         'PDX' => 'Portland, Oregon',
         'CLT' => 'Charlotte, North Carolina',
+        'AUS' => 'Austin, Texas',
+        'KAN' => 'Kano, Nigeria',
+        'NAT' => 'Natal, Rio Grande do Norte',
+        'ORL' => 'Orlando, Florida',
+        'PBH' => 'Paro, Bhutan',
+        'RUN' => 'Saint-Denis, Réunion',
+        'SSA' => 'Salvador, Bahia',
+        'TIP' => 'Tripoli, Libya',
+        'YHZ' => 'Halifax, Nova Scotia',
+        'OOL' => 'Coolangatta, Queensland',
+        'PMI' => 'Palma, Spain',
+        'SJD' => 'San José del Cabo',
     ];
 
     /**
