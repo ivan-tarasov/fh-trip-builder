@@ -7234,6 +7234,31 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
   transition: background-color var(--dur-fast) ease;
 }
 
+/* A photo on top, for the homepage's "Travel deals" cards (C10, #395) --
+   `place/fares.html.twig`'s own `.fare` cards never carry this modifier,
+   since there is no per-destination photo for an arbitrary city/country
+   pair there. `.fare`'s own padding moves onto `.fare__body`, so the
+   photo can sit flush with the card's edges rather than inset by it. */
+.fare--photo {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+
+.fare__photo {
+  display: block;
+  aspect-ratio: 16 / 10;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+}
+
+.fare__body {
+  display: grid;
+  gap: .375rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .fare:hover { background-color: var(--line); }
 }
