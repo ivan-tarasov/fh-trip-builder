@@ -10,6 +10,7 @@ use TripBuilder\Config;
 use TripBuilder\Helper;
 use TripBuilder\Http\HttpStatus;
 use TripBuilder\Log;
+use TripBuilder\Repository\CityImageRepository;
 use TripBuilder\Repository\CityRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\RouteRepository;
@@ -101,6 +102,10 @@ class CityController extends AbstractController
             echo new TwigRenderer()->renderPage('city/view.html.twig', [
                 'breadcrumbs' => self::trailFor($city),
                 'city' => $city,
+                // Wikipedia's own summary, read from the cache `cities:images`
+                // fills -- never fetched here. Null for the same two reasons
+                // the photo can be: not looked up yet, or nothing usable.
+                'extract' => new CityImageRepository($this->connection())->extractFor($code),
                 'city_airports' => self::addressableAirports($cities->airports($code)),
                 'nearby' => self::addressable($cities->nearby($code, self::NEARBY_LIMIT, self::NEARBY_MAX_KM)),
                 'fares' => $this->fares($cities, $city),

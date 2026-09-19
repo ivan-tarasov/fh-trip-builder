@@ -1,3 +1,20 @@
+{# Wikipedia's own summary, ahead of the facts -- something to read before
+   the numbers, C15 (#405). Read live from a sample of the cache before
+   writing this: no trimming or length gate, because nothing in a real
+   sample of cached extracts needed one -- every one read was on-topic,
+   factual and city-specific (never a disambiguation opener; `Images`
+   already filters those out before they are ever stored). This is a
+   full-width prose section, not a card with a fixed height, so the real
+   spread seen (182 to 969 characters) is something this layout can carry
+   as written rather than something to normalise away.
+
+   Absent silently for the 3 of 233 cities with nothing cached yet or
+   nothing Wikipedia had -- the facts grid below still stands on its own,
+   the same as before this existed. #}
+{% if extract %}
+    <p class="city-about">{{ extract }}</p>
+{% endif %}
+
 {# Four things somebody checks before booking, and nothing else.
 
    The timezone is printed from the stored offset rather than the IANA name:
