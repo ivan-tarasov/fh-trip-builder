@@ -2,12 +2,38 @@
 {# "Travel deals under $X" -- C10 (#395). The cheapest direct fare into
    each reachable city from the visitor's own suggested origin, cheapest
    first, styled like the existing `.fare` cards `place/fares.html.twig`
-   already uses -- price-forward, no photo, since no image library exists
-   for arbitrary destinations (only the 8 POI cities have one).
+   already uses.
+
+   A photo on top when one is cached (`cities:images`, from Wikipedia --
+   see CityImageRepository) via the `.fare--photo` modifier, which moves
+   `.fare`'s own padding/gap down onto a new `.fare__body` wrapper rather
+   than touching the base `.fare` rule `place/fares.html.twig` still uses
+   unmodified. Falls back to the original flat card -- no modifier, no
+   `.fare__body`, content as `.fare`'s own direct children exactly like
+   that other file -- for the 17 of 231 real cities with nothing cached,
+   never a broken or empty image box.
+
+   The card's own content is a macro rather than written twice, since it
+   is identical either way and only what wraps it differs.
 
    Silent when there is nothing to show: no suggested origin yet, or no
    direct flights found from it. Never built live for a wider search --
    `deals.cards` is already the whole answer HomeController computed. #}
+{% macro content(card) %}
+    {% import 'partials/money.html.twig' as money %}
+    {% set card_price = price_whole(card.price) %}<span class="fare__price">{{ money.plain(card_price) }}<span class="fare__currency">{{ card_price.code }}</span></span>
+    <span class="fare__route">{{ card.city }}</span>
+
+    <span class="fare__detail">
+        <img class="fare__airline"
+             src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ card.airline ~ '.png') }}"
+             width="28" height="28" loading="lazy" alt="">
+        <span class="fare__when">{{ card.departure_time|date('j M, D') }}</span>
+        <span class="fare__legs">{{ duration(card.duration) }} &middot; direct</span>
+    </span>
+{% endmacro %}
+{% import _self as macros %}
+
 {% if deals.cards is not empty %}
     <div class="container px-4 py-5" id="travel-deals">
         <h2 class="pb-2 mb-4 border-bottom">Travel deals under {{ money.plain(price_whole(deals.ceiling)) }}</h2>
@@ -22,18 +48,14 @@
             <ul class="fares__strip tabset__panel">
                 {% for card in deals.cards %}
                     <li class="fares__item">
-                        <a class="fare" href="{{ card.url }}">
-                            {% set card_price = price_whole(card.price) %}<span class="fare__price">{{ money.plain(card_price) }}<span class="fare__currency">{{ card_price.code }}</span></span>
-                            <span class="fare__route">{{ card.city }}</span>
-
-                            <span class="fare__detail">
-                                <img class="fare__airline"
-                                     src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ card.airline ~ '.png') }}"
-                                     width="28" height="28" loading="lazy" alt="">
-                                <span class="fare__when">{{ card.departure_time|date('j M, D') }}</span>
-                                <span class="fare__legs">{{ duration(card.duration) }} &middot; direct</span>
-                            </span>
-                        </a>
+                        {% if card.image %}
+                            <a class="fare fare--photo" href="{{ card.url }}">
+                                <span class="fare__photo" style="background-image: url('{{ card.image }}');" aria-hidden="true"></span>
+                                <span class="fare__body">{{ macros.content(card) }}</span>
+                            </a>
+                        {% else %}
+                            <a class="fare" href="{{ card.url }}">{{ macros.content(card) }}</a>
+                        {% endif %}
                     </li>
                 {% endfor %}
             </ul>

@@ -30,6 +30,7 @@ use TripBuilder\Noah\Airside\Import as AirsideImport;
 use TripBuilder\Noah\Airside\Prune as AirsidePrune;
 use TripBuilder\Noah\Alerts\Check as AlertsCheck;
 use TripBuilder\Noah\Articles\Import as ArticlesImport;
+use TripBuilder\Noah\Cities\Images as CityImages;
 use TripBuilder\Noah\Currency\Rates as CurrencyRates;
 use TripBuilder\Noah\Db\Backup as DatabaseBackup;
 use TripBuilder\Noah\Db\Clear as DatabaseClear;
@@ -217,6 +218,19 @@ try {
     */
 
     $application->addCommand(new ArticlesImport());
+
+    /*
+    |--------------------------------------------------------------------------
+    | City images
+    |--------------------------------------------------------------------------
+    |
+    | One Wikipedia photo per real city, cached for the homepage's "Travel
+    | deals" carousel (C10, #395) -- see config/noah/db/tables/city_images.php
+    | for why this runs as its own pass rather than a live call.
+    |
+    */
+
+    $application->addCommand(new CityImages());
 
     /*
     |--------------------------------------------------------------------------

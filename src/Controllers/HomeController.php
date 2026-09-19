@@ -9,6 +9,7 @@ use TripBuilder\CabinClass;
 use TripBuilder\Config;
 use TripBuilder\Database\Connection;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\CityImageRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\SearchUrl;
@@ -161,7 +162,13 @@ class HomeController extends AbstractController
      * `AdminController::scheduledCommandHelp()` is: so a test can call it
      * directly rather than parsing rendered HTML back out for what it says.
      *
-     * @return array{ceiling: int|null, cards: list<array{city: string, price: float, url: string, airline: string, departure_time: string, duration: int}>}
+     * The photo is whatever `cities:images` (`Noah\Cities\Images`) already
+     * cached from Wikipedia -- read here, never fetched here. `null` when
+     * a city has none (17 of 231 real cities, live-measured) or has not
+     * been looked up yet; the template falls back to the plain card for
+     * either case rather than an empty image box.
+     *
+     * @return array{ceiling: int|null, cards: list<array{city: string, price: float, url: string, airline: string, departure_time: string, duration: int, image: string|null}>}
      */
     public static function travelDeals(?string $origin, AirportRepository $airports, Connection $connection): array
     {
@@ -183,6 +190,7 @@ class HomeController extends AbstractController
         }
 
         $totals = array_map(static fn(array $row): float => (float) $row['total'], $rows);
+        $images = new CityImageRepository($connection);
 
         return [
             'ceiling' => (int) (ceil(max($totals) / 10) * 10),
@@ -199,6 +207,7 @@ class HomeController extends AbstractController
                     'airline' => $row['airline'],
                     'departure_time' => $row['departure_time'],
                     'duration' => $row['duration'],
+                    'image' => $images->imageFor($row['to_city_code']),
                 ],
                 $rows,
             ),
