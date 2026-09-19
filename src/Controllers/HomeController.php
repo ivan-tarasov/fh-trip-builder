@@ -22,11 +22,11 @@ class HomeController extends AbstractController
 {
     /**
      * Cards in the "Travel deals" carousel -- C10 (#395). Trip.com's own
-     * reference shows four; eight is enough to make a strip worth
+     * reference shows four; ten is enough to make a strip worth
      * scrolling without asking `cheapestPerDestinationCity()` to rank the
      * entire network for a row nobody will reach.
      */
-    private const int DEALS_LIMIT = 8;
+    private const int DEALS_LIMIT = 10;
 
     /**
      * Montreal's own airport, when nothing resolves an origin at all -- no

@@ -75,8 +75,8 @@ final class HomeControllerTest extends IntegrationTestCase
 
     /**
      * Checked as a self-consistency invariant rather than a hardcoded
-     * number: with `DEALS_LIMIT` at 8 and hundreds of real destination
-     * cities reachable from a real origin, six of the eight shown are
+     * number: with `DEALS_LIMIT` at 10 and hundreds of real destination
+     * cities reachable from a real origin, eight of the ten shown are
      * whatever the generator happens to have made cheapest that run --
      * only that the ceiling always equals the priciest *shown* card,
      * never a fixed figure, is this repository's to prove.
