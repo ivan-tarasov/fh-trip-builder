@@ -11,7 +11,7 @@ use TripBuilder\Tests\Integration\IntegrationTestCase;
  * `CountryContentRepository` -- the cache `Noah\Countries\Content` fills
  * from Wikipedia and C17 (#409)'s country page reads. The network call
  * is deliberately untested, the same reason `CityImageRepositoryTest`
- * does not test `Noah\Cities\Images`'s own call: CI has curl but no
+ * does not test `Noah\Cities\Content`'s own call: CI has curl but no
  * promise of a route to the internet, and a test that could only pass by
  * calling out would be a flaky one waiting to happen. What is tested here
  * is the cache's own contract, which owes nothing to Wikipedia being up.

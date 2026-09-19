@@ -16,19 +16,19 @@ use TripBuilder\Repository\CountryRepository;
 
 /**
  * One Wikipedia summary per country -- description-first (C17, #409),
- * unlike `cities:images`' photo-first shape (C10, #395): no image
+ * unlike `cities:content`' photo-first shape (C10, #395): no image
  * pipeline, just the text. Built on `Summary` (C16, #408), the shared
- * fetch/backoff/disambiguation-detection logic `cities:images` built
+ * fetch/backoff/disambiguation-detection logic `cities:content` built
  * first and this reuses rather than hand-copies a second time.
  *
  * Every sellable country (`CountryRepository::sellable()`, ~93 of them)
  * rather than a lazy per-request build, the same reasoning
- * `cities:images` uses: the set is small and fixed, so there is a real
+ * `cities:content` uses: the set is small and fixed, so there is a real
  * "done" state to reach.
  *
  * A country is looked up again once it is older than `STALE_AFTER_DAYS`,
  * or always with `--force`. Recorded even when Wikipedia has nothing --
- * the same "recorded even when nothing was found" idiom `cities:images`
+ * the same "recorded even when nothing was found" idiom `cities:content`
  * already uses, so a country with no summary is not asked about again
  * until it is next due.
  */
@@ -58,14 +58,14 @@ class Content extends AbstractCommand
     ];
 
     /**
-     * A courtesy pause between requests, the same value `cities:images`
+     * A courtesy pause between requests, the same value `cities:content`
      * measured live against Wikipedia's own IP-based rate limit --
      * `Summary::lookUp()` is the same source, so the same pacing applies.
      */
     private const int REQUEST_PAUSE_MICROSECONDS = 200_000;
 
     /**
-     * Same reasoning as `Images::STALE_AFTER_DAYS`: a country's Wikipedia
+     * Same reasoning as `Cities\Content::STALE_AFTER_DAYS`: a country's Wikipedia
      * summary is effectively static, and a short TTL would mean
      * re-asking a rate-limited source about ~93 countries for no real
      * gain.
@@ -74,7 +74,7 @@ class Content extends AbstractCommand
 
     /**
      * A country whose plain name does not resolve to its own Wikipedia
-     * article -- built the same way `Images::WIKIPEDIA_TITLE_OVERRIDES`
+     * article -- built the same way `Cities\Content::WIKIPEDIA_TITLE_OVERRIDES`
      * was, checked live against every country this command actually
      * found nothing for, not guessed at ahead of time.
      */
@@ -87,7 +87,7 @@ class Content extends AbstractCommand
      * landed on was a disambiguation page with no entry in
      * `WIKIPEDIA_TITLE_OVERRIDES` -- stored the same as a confirmed
      * no-summary answer, but counted and printed separately, the same
-     * reason `Images::AMBIGUOUS` is.
+     * reason `Cities\Content::AMBIGUOUS` is.
      */
     private const string AMBIGUOUS = 'ambiguous';
 
@@ -151,7 +151,7 @@ class Content extends AbstractCommand
             $progress->advance();
 
             // Skipped on the last country so the command does not end by
-            // waiting on nothing -- the same reason `cities:images` skips
+            // waiting on nothing -- the same reason `cities:content` skips
             // it too.
             if ($i < count($countries) - 1) {
                 usleep(self::REQUEST_PAUSE_MICROSECONDS);

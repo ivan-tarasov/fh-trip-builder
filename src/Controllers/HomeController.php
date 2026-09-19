@@ -162,8 +162,8 @@ class HomeController extends AbstractController
      * `AdminController::scheduledCommandHelp()` is: so a test can call it
      * directly rather than parsing rendered HTML back out for what it says.
      *
-     * `image` is our own S3 key -- whatever `cities:images`
-     * (`Noah\Cities\Images`) already downloaded from Wikipedia and
+     * `image` is our own S3 key -- whatever `cities:content`
+     * (`Noah\Cities\Content`) already downloaded from Wikipedia and
      * re-hosted -- read here, never fetched here, and never a Wikipedia
      * URL. The template renders it through `cdn()`, the same way
      * `poi.image` already is. `null` when a city has none (17 of 231 real

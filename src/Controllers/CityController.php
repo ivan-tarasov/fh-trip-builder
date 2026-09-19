@@ -102,7 +102,7 @@ class CityController extends AbstractController
             echo new TwigRenderer()->renderPage('city/view.html.twig', [
                 'breadcrumbs' => self::trailFor($city),
                 'city' => $city,
-                // Wikipedia's own summary, read from the cache `cities:images`
+                // Wikipedia's own summary, read from the cache `cities:content`
                 // fills -- never fetched here. Null for the same two reasons
                 // the photo can be: not looked up yet, or nothing usable.
                 'extract' => new CityImageRepository($this->connection())->extractFor($code),

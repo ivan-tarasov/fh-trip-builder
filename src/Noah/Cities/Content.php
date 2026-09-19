@@ -21,8 +21,16 @@ use TripBuilder\Repository\CityRepository;
  * One photo and one summary paragraph per city, from Wikipedia's own REST
  * summary endpoint -- see `config/noah/db/tables/city_images.php` for why
  * this is a cache table rather than a live call. C10 (#395)'s "Travel
- * deals" carousel reads the photo; C15 (#405) is the planned reader for
- * the text.
+ * deals" carousel reads the photo; C15 (#405) reads the text on the city
+ * page.
+ *
+ * Named `cities:content`, not `cities:content`: the command fetches and
+ * stores both from the start, and a name that only said "images" read as
+ * confusing once `countries:content` (C17, #409) shipped right next to
+ * it doing the same two-things-in-one shape for countries. Renamed
+ * rather than left, on the same "the number should say what is true"
+ * reasoning `NOAH_VERSION`'s own docblock uses -- a rename is why this
+ * bump is a major, per that constant's own table.
  *
  * The photo itself is downloaded and re-hosted under our own S3 key
  * (`Noah\Aws\S3`, the same store `PostImageUploader` writes to) rather
@@ -51,9 +59,9 @@ use TripBuilder\Repository\CityRepository;
     aliases: [],
     hidden: false,
 )]
-class Images extends AbstractCommand
+class Content extends AbstractCommand
 {
-    public const string NAME = 'cities:images';
+    public const string NAME = 'cities:content';
 
     private const string OPT_DRY_RUN = 'dry-run';
     private const string OPT_DRY_RUN_DESCRIPTION = 'List the cities that would be looked up without asking Wikipedia.';
@@ -207,7 +215,7 @@ class Images extends AbstractCommand
         }
 
         $store = S3::fromEnvironment();
-        $wikipedia = new Summary('fh-trip-builder cities:images');
+        $wikipedia = new Summary('fh-trip-builder cities:content');
 
         $found = 0;
         $noPhoto = 0;
@@ -482,7 +490,7 @@ class Images extends AbstractCommand
             CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
             CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS,
             CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_USERAGENT => 'fh-trip-builder cities:images',
+            CURLOPT_USERAGENT => 'fh-trip-builder cities:content',
         ]);
 
         $body = curl_exec($handle);

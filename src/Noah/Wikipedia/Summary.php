@@ -10,7 +10,7 @@ namespace TripBuilder\Noah\Wikipedia;
  * rate limit honored via `Retry-After`, and its own disambiguation signal
  * read off `type` rather than guessed at from the response text.
  *
- * Extracted from `Noah\Cities\Images` (C10, #395) once a second caller
+ * Extracted from `Noah\Cities\Content` (C10, #395) once a second caller
  * (`Noah\Countries\Content`, C17 #409) needed the identical shape -- see
  * C16 (#408) for why this was not done with only one caller to check it
  * against.
@@ -47,7 +47,7 @@ final readonly class Summary
     public function __construct(private string $userAgent) {}
 
     /**
-     * One retry, and only for a `429` -- live-measured on `cities:images`,
+     * One retry, and only for a `429` -- live-measured on `cities:content`,
      * this is a real, IP-based limit Wikipedia enforces and names with its
      * own `Retry-After` header, not noise: a batch of requests that ran
      * clean in isolation started failing consistently once it hit some

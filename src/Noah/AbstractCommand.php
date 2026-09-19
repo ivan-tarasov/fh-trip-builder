@@ -60,8 +60,18 @@ abstract class AbstractCommand extends Command
      * `v1.8.0`: `countries:content` (C17, #409), a new command -- built
      * alongside C16 (#408), which pulled the fetch/backoff/disambiguation
      * logic this and `cities:images` now both share out of the latter.
+     *
+     * `v2.0.0`: `cities:images` renamed to `cities:content` -- once
+     * `countries:content` existed right beside it, a name that only said
+     * "images" read as confusing about a command that had cached a text
+     * summary since C15 (#405). A rename is a major on purpose: the
+     * crontab and E14 (#159) name commands, so this is a breaking change
+     * to somebody's server rather than to a library -- and here it broke
+     * a real one, `scheduled_jobs`' own already-seeded row (migration
+     * `0011`), fixed by a follow-up migration rather than editing that
+     * one's history.
      */
-    private const string NOAH_VERSION = 'v1.8.0';
+    private const string NOAH_VERSION = 'v2.0.0';
 
     /**
      * Color presets

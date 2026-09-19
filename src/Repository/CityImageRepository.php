@@ -10,7 +10,7 @@ use TripBuilder\Database\Table;
 /**
  * One cached Wikipedia answer per city -- see
  * `config/noah/db/tables/city_images.php` for why this exists as a table
- * rather than a live call, and `Noah\Cities\Images` for what fills and
+ * rather than a live call, and `Noah\Cities\Content` for what fills and
  * refreshes it.
  *
  * @phpstan-type CityImageRow array{image_key: string|null, image_source_url: string|null, extract: string|null, fetched_at: string}

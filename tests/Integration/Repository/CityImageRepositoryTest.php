@@ -8,7 +8,7 @@ use TripBuilder\Repository\CityImageRepository;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
 /**
- * `CityImageRepository` -- the cache `Noah\Cities\Images` fills from
+ * `CityImageRepository` -- the cache `Noah\Cities\Content` fills from
  * Wikipedia and C10 (#395)'s "Travel deals" carousel reads. The network
  * call and the S3 upload are deliberately untested, the same reason
  * `Noah\Currency\Rates`'s own `fetch()` is not: CI has curl but no
