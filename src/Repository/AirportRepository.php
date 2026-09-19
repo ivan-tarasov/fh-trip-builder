@@ -195,6 +195,36 @@ final readonly class AirportRepository
     }
 
     /**
+     * Enabled airports (optionally major only), split by whether they share
+     * a country with the given code.
+     *
+     * The reverse of {@see CityRepository::busiestOriginAirports()}: that
+     * one holds a destination fixed and splits *origins* by country,
+     * ranked by traffic because the fare list it feeds has to stay short.
+     * Here the origin is what is fixed and this splits *destinations*
+     * instead -- deliberately unranked, since the caller passes this list
+     * to `FlightRepository::cheapestPerDestinationCity()` as that query's
+     * own broad side.
+     *
+     * @return list<string>
+     */
+    public function enabledByCountry(string $countryCode, bool $domestic, bool $majorOnly): array
+    {
+        $sql = 'SELECT a.code FROM ' . Table::Airports->value . ' a'
+            . ' WHERE a.enabled = 1'
+            . ' AND a.country_code ' . ($domestic ? '=' : '<>') . ' ?';
+
+        if ($majorOnly) {
+            $sql .= ' AND a.is_major = 1';
+        }
+
+        /** @var list<array{code: string}> $rows */
+        $rows = $this->connection->fetchAll($sql, [strtoupper($countryCode)]);
+
+        return array_column($rows, 'code');
+    }
+
+    /**
      * Everywhere a search can start or end: the cities the network serves and
      * the airports inside them, as one ordered list.
      *

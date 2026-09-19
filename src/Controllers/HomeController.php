@@ -29,6 +29,14 @@ class HomeController extends AbstractController
     private const int DEALS_LIMIT = 10;
 
     /**
+     * Fares per tab in the "Popular flights near you" carousel -- C12
+     * (#401). Same reasoning as DEALS_LIMIT: enough to fill a strip worth
+     * scrolling without asking cheapestPerDestinationCity() to rank every
+     * city in the split.
+     */
+    private const int POPULAR_LIMIT = 8;
+
+    /**
      * Montreal's own airport, when nothing resolves an origin at all -- no
      * recent-search cookie, no Cloudflare geo header. In production a
      * real visitor almost always carries one or the other; this exists
@@ -117,6 +125,7 @@ class HomeController extends AbstractController
             'poi_cards' => $poi,
             'top_searches' => $topSearches,
             'deals' => self::travelDeals($origin, $airports, $this->connection()),
+            'popular' => self::popularFlights($origin, $airports, $this->connection()),
             // Everywhere a search can start or end. Small enough to ship whole,
             // which is what lets the form filter in the browser.
             'places' => $places,
@@ -215,6 +224,76 @@ class HomeController extends AbstractController
                 $rows,
             ),
         ];
+    }
+
+    /**
+     * "Popular flights near you" -- domestic and international tabs of the
+     * cheapest direct fare into each destination city reachable from the
+     * visitor's own suggested origin. C12 (#401).
+     *
+     * The reverse of what a city page's own fares block asks
+     * ({@see CityController::fares()}): that one
+     * holds the destination fixed and splits *origins* by country; here
+     * the origin is fixed (the same one travelDeals() resolves) and the
+     * split is on the *destination* side instead, via
+     * {@see AirportRepository::enabledByCountry()}. A tab that comes back
+     * empty -- most likely international, from an origin whose country
+     * sells nowhere else -- is dropped rather than shown scrolling nothing.
+     *
+     * Reuses `place/fares.html.twig`, the same tabset partial the city and
+     * country pages already render their own fare tabs through: each
+     * `cheapestPerDestinationCity()` row already carries `from_city` /
+     * `to_city`, so only `search` needs adding.
+     *
+     * @return list<array{id: string, label: string, fares: list<array<string, mixed>>}>
+     */
+    public static function popularFlights(?string $origin, AirportRepository $airports, Connection $connection): array
+    {
+        $fromAirports = $airports->codesFor($origin ?? self::FALLBACK_ORIGIN);
+
+        if ($fromAirports === []) {
+            return [];
+        }
+
+        $originCountry = $airports->byCode($fromAirports[0])['country_code'] ?? null;
+
+        if ($originCountry === null) {
+            return [];
+        }
+
+        $flights = new FlightRepository($connection);
+        $tabs = [];
+
+        foreach ([true, false] as $domestic) {
+            $toAirports = $airports->enabledByCountry($originCountry, $domestic, true);
+            $rows = array_slice(
+                $flights->cheapestPerDestinationCity($fromAirports, $toAirports, CabinClass::Economy),
+                0,
+                self::POPULAR_LIMIT,
+            );
+
+            if ($rows === []) {
+                continue;
+            }
+
+            $tabs[] = [
+                'id' => $domestic ? 'home' : 'away',
+                'label' => $domestic ? 'Domestic' : 'International',
+                'fares' => array_map(
+                    static fn(array $row): array => $row + [
+                        'search' => new SearchUrl(
+                            from: $row['from_city_code'],
+                            to: $row['to_city_code'],
+                            depart: substr($row['departure_time'], 0, 10),
+                            return: null,
+                        )->path(),
+                    ],
+                    $rows,
+                ),
+            ];
+        }
+
+        return $tabs;
     }
 
 }

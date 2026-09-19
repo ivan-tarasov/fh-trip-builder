@@ -1,0 +1,19 @@
+{# "Popular flights near you" -- C12 (#401). The cheapest direct fare into
+   each reachable city from the visitor's own suggested origin, split into
+   domestic and international tabs.
+
+   Renders through `place/fares.html.twig` unchanged -- the same tabset the
+   city and country pages already use for their own "cheapest way in"
+   block, just with the origin held fixed and the split on the destination
+   side instead. `popular` is already the whole answer HomeController
+   computed; a tab it dropped (usually international, from an origin whose
+   country sells nowhere else) simply is not in the list.
+
+   Silent when there is nothing to show, same as `index/deals.html.twig`. #}
+{% if popular is not empty %}
+    <div class="container px-4 py-5" id="popular-flights">
+        <h2 class="pb-2 mb-4 border-bottom">Popular flights near you</h2>
+
+        {% include 'place/fares.html.twig' with {'fares': popular} only %}
+    </div>
+{% endif %}
