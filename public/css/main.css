@@ -6920,11 +6920,11 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
 .place__legend-role { color: var(--ink-muted); }
 
 /* Wikipedia's own summary, ahead of the facts grid it shares a block with
-   (C15, #405). `max-width` for a readable line length: `.place__block` is
-   a card wide enough to hold an eight-item fare strip, and a paragraph
-   left to fill it would run well past a comfortable measure. */
+   (C15, #405). Full width of `.place__block`, not capped to a reading
+   measure -- asked for after seeing it capped: the block already reads
+   as one column, and a paragraph stopping short of the grid below it
+   looked like an unrelated leftover width rather than a deliberate one. */
 .city-about {
-  max-width: 70ch;
   margin: 0 0 1.25rem;
   color: var(--ink-body);
   line-height: 1.6;
