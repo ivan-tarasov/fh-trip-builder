@@ -7,42 +7,53 @@
 
    Both ends of the route are printed off the fare. A city page varies the
    origin and holds the destination; a country page holds neither, because the
-   cheapest way into Canada lands in a different city for every row. #}
-<div class="fares tabset">
-    {% if fares|length > 1 %}
-        <div class="tabset__tabs" role="radiogroup" aria-label="Where the fare starts from">
-            {% for tab in fares %}
-                <input class="tabset__radio" type="radio" name="fares-origin"
-                       id="fares-{{ tab.id }}" {{ loop.first ? 'checked' : '' }}>
-                <label class="tabset__tab" for="fares-{{ tab.id }}">{{ tab.label }}</label>
-            {% endfor %}
-        </div>
-    {% endif %}
+   cheapest way into Canada lands in a different city for every row.
 
-    {% for tab in fares %}
-        <ul class="fares__strip tabset__panel" id="fares-panel-{{ tab.id }}"
-            aria-label="{{ tab.label }}">
-            {% for fare in tab.fares %}
-                <li class="fares__item">
-                    <a class="fare" href="{{ fare.search }}">
-                        {% set fare_price = price_whole(fare.total) %}<span class="fare__price">{{ money.plain(fare_price) }}<span class="fare__currency">{{ fare_price.code }}</span></span>
-                        <span class="fare__route">{{ fare.from_city }} &mdash; {{ fare.to_city }}</span>
+   `.carousel` wraps the whole tabset rather than each panel -- C20 (#420).
+   Only one panel is ever on screen (the rest sit behind a radio with
+   `display: none`), so one pair of arrows outside the tabset, acting on
+   whichever panel global.js finds visible, is enough; wrapping panels
+   individually would have put each alone in its own parent and broken the
+   `:nth-of-type` the tab-switching CSS depends on. #}
+<div class="carousel">
+    <div class="fares tabset">
+        {% if fares|length > 1 %}
+            <div class="tabset__tabs" role="radiogroup" aria-label="Where the fare starts from">
+                {% for tab in fares %}
+                    <input class="tabset__radio" type="radio" name="fares-origin"
+                           id="fares-{{ tab.id }}" {{ loop.first ? 'checked' : '' }}>
+                    <label class="tabset__tab" for="fares-{{ tab.id }}">{{ tab.label }}</label>
+                {% endfor %}
+            </div>
+        {% endif %}
 
-                        <span class="fare__detail">
-                            <img class="fare__airline"
-                                 src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ fare.airline ~ '.png') }}"
-                                 width="28" height="28" loading="lazy" alt="">
-                            <span class="fare__when">{{ fare.departure_time|date('j M, D') }}</span>
-                            {# "direct" is not a claim about this row so much as
-                                the reason it is here: the block only asks for
-                                flights that do not connect. #}
-                            <span class="fare__legs">{{ duration(fare.duration) }} &middot; direct</span>
-                        </span>
+        {% for tab in fares %}
+            <ul class="fares__strip tabset__panel" id="fares-panel-{{ tab.id }}"
+                aria-label="{{ tab.label }}">
+                {% for fare in tab.fares %}
+                    <li class="fares__item">
+                        <a class="fare" href="{{ fare.search }}">
+                            {% set fare_price = price_whole(fare.total) %}<span class="fare__price">{{ money.plain(fare_price) }}<span class="fare__currency">{{ fare_price.code }}</span></span>
+                            <span class="fare__route">{{ fare.from_city }} &mdash; {{ fare.to_city }}</span>
 
-                        <span class="fare__times">{{ fare.departure_time|date('H:i') }} &ndash; {{ fare.arrival_time|date('H:i') }}</span>
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endfor %}
+                            <span class="fare__detail">
+                                <img class="fare__airline"
+                                     src="{{ cdn(config('site.static.endpoint.images') ~ '/suppliers/' ~ fare.airline ~ '.png') }}"
+                                     width="28" height="28" loading="lazy" alt="">
+                                <span class="fare__when">{{ fare.departure_time|date('j M, D') }}</span>
+                                {# "direct" is not a claim about this row so much as
+                                    the reason it is here: the block only asks for
+                                    flights that do not connect. #}
+                                <span class="fare__legs">{{ duration(fare.duration) }} &middot; direct</span>
+                            </span>
+
+                            <span class="fare__times">{{ fare.departure_time|date('H:i') }} &ndash; {{ fare.arrival_time|date('H:i') }}</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+    </div>
+
+    {% include 'partials/carousel-arrows.html.twig' %}
 </div>

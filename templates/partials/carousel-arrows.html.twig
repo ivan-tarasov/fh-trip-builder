@@ -1,0 +1,19 @@
+{# The prev/next pair for one `.carousel` -- C20 (#420). Written once and
+   included by every strip rather than three copies, since the markup and
+   the classes global.js binds to never vary by page.
+
+   Sits right here, right after the strip -- the same place Kayak's own
+   reference puts its pair, below the card row rather than beside its
+   title. `.carousel__nav`'s own CSS hides it until global.js has proven
+   there is something to scroll to, and gates it either way to
+   `(hover: hover) and (pointer: fine)` -- touch and trackpad already drag
+   the strip, so the buttons exist only for the pointer type that had no
+   way in at all. #}
+<div class="carousel__nav js-carousel-nav">
+    <button type="button" class="carousel__arrow carousel__arrow--prev js-carousel-prev" aria-label="Scroll left">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="carousel__arrow carousel__arrow--next js-carousel-next" aria-label="Scroll right">
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+    </button>
+</div>
