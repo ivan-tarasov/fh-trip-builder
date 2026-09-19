@@ -1,0 +1,71 @@
+name: PR assignee
+
+# Every pull request here gets the owner as assignee at creation -- an
+# established convention (this repo's own fh-trip-builder workflow guidance),
+# enforced only by whoever remembers to pass `--assignee`. Filed and built
+# alongside E34 (#416), mirroring pr-labels.yml's own "Release label" check
+# almost exactly -- same reasons: read live state rather than the event
+# payload, and retry a few seconds for the same creation-order race.
+#
+# Scoped to pull requests only. Issues get the same convention but have no
+# `pull_request`-shaped event to hook a required check onto, and GitHub does
+# not block issue creation on a required check the way it blocks a PR merge
+# -- issues stay a manual habit for now.
+#
+# Failing this check only *blocks* a merge once it is added as a required
+# status check in the branch protection rules for develop.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, assigned, unassigned, ready_for_review]
+    branches: [develop]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  pr-assignee:
+    name: Assignee
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require an assignee
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          # Read now, not from the event payload -- pr-labels.yml already
+          # found this race for --label, and `gh pr create --assignee` goes
+          # through the same create-then-attach sequence: the `opened` run
+          # can see an empty list a moment before the assignee actually
+          # lands, and a check that only reads the payload would fail a PR
+          # that was correctly assigned a second later.
+          assignee_count() {
+            gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json assignees --jq '.assignees | length'
+          }
+
+          count=0
+
+          for attempt in 1 2 3; do
+            count=$(assignee_count)
+
+            if [ "$count" -gt 0 ]; then
+              break
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "No assignee yet -- reading again in 5s (${attempt} of 3)."
+              sleep 5
+            fi
+          done
+
+          if [ "$count" -eq 0 ]; then
+            echo "::error::This pull request has no assignee. Every pull request here"\
+                 "gets the owner as assignee at creation."
+            exit 1
+          fi
+
+          echo "Assignees: $count"
+          echo "Assignees: $count" >> "$GITHUB_STEP_SUMMARY"
