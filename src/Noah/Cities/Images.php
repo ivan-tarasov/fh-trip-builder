@@ -91,6 +91,36 @@ class Images extends AbstractCommand
     private const int STALE_AFTER_DAYS = 90;
 
     /**
+     * A city whose plain name is also a president, a state, or a common
+     * placename shared by several other real cities does not resolve to
+     * its own Wikipedia article -- it resolves to a disambiguation page,
+     * which has no thumbnail and no useful extract. Live-found: `NYC` and
+     * `WAS` (New York, Washington) both landed here, and a check of every
+     * city already looked up at the time found the same thing for `PHX`,
+     * `PDX` and `CLT` (Phoenix, Portland, Charlotte) -- five of the
+     * seventeen cities this command had filed as "no photo" were actually
+     * this, not a real absence.
+     *
+     * A general disambiguation resolver would mean fetching and parsing
+     * the disambiguation page's own links, which is a second, heavier
+     * Wikipedia call for every one of these with no guarantee the first
+     * link is the right city. A short, hand-verified map of the exact
+     * title that *is* the city is simpler and correct for as long as the
+     * list of real cities stays the bounded, slow-changing set it is.
+     * `lookUp()` still flags an unmapped disambiguation page rather than
+     * silently filing it as "no photo", so a new collision in the other
+     * cities not yet checked is something this command's own output
+     * says out loud instead of a wrong answer nobody notices.
+     */
+    private const array WIKIPEDIA_TITLE_OVERRIDES = [
+        'NYC' => 'New York City',
+        'WAS' => 'Washington, D.C.',
+        'PHX' => 'Phoenix, Arizona',
+        'PDX' => 'Portland, Oregon',
+        'CLT' => 'Charlotte, North Carolina',
+    ];
+
+    /**
      * A day, not `ObjectStore::IMMUTABLE`: unlike `PostImageUploader`'s
      * keys, this one does not carry a content hash, so the same key can
      * legitimately hold different bytes after a refresh. `IMMUTABLE` would
@@ -107,6 +137,17 @@ class Images extends AbstractCommand
      * for two different meanings.
      */
     private const string TRANSIENT = 'transient';
+
+    /**
+     * What `processCity()` returns instead of `null` when the page it
+     * landed on was a disambiguation page with no entry in
+     * `WIKIPEDIA_TITLE_OVERRIDES` -- stored the same as a confirmed
+     * no-photo answer (there is still no real one to give), but counted
+     * and printed separately so this is discoverable from the command's
+     * own output rather than indistinguishable from a city that
+     * genuinely has no Wikipedia photo.
+     */
+    private const string AMBIGUOUS = 'ambiguous';
 
     protected function configure(): void
     {
@@ -150,6 +191,7 @@ class Images extends AbstractCommand
         $found = 0;
         $noPhoto = 0;
         $skipped = 0;
+        $ambiguous = 0;
 
         $progress = $this->io->createProgressBar(count($cities));
         $progress->start();
@@ -159,6 +201,7 @@ class Images extends AbstractCommand
 
             match ($outcome) {
                 self::TRANSIENT => $skipped++,
+                self::AMBIGUOUS => $ambiguous++,
                 null => $noPhoto++,
                 default => $found++,
             };
@@ -182,6 +225,7 @@ class Images extends AbstractCommand
 
         $this->formatOutput('Photos found', number_format($found), 'info');
         $this->formatOutput('No photo on Wikipedia', number_format($noPhoto), 'comment');
+        $this->formatOutput('Landed on a disambiguation page (add it to WIKIPEDIA_TITLE_OVERRIDES)', number_format($ambiguous), $ambiguous > 0 ? 'danger' : 'info');
         $this->formatOutput('Skipped (try again next run)', number_format($skipped), $skipped > 0 ? 'comment' : 'info', true);
 
         return Command::SUCCESS;
@@ -191,13 +235,17 @@ class Images extends AbstractCommand
      * One city, start to finish: ask Wikipedia, decide whether the photo
      * needs re-downloading, and store the answer.
      *
-     * @return string|null the S3 key stored, null for a confirmed no-photo
-     *     answer, or `self::TRANSIENT` to try again next run
+     * @return string|null|self::AMBIGUOUS|self::TRANSIENT the S3 key
+     *     stored, null for a confirmed no-photo answer, `self::AMBIGUOUS`
+     *     for a disambiguation page with no override (also stored as
+     *     null -- there is still nothing to show -- but counted apart so
+     *     it is not mistaken for a real no-photo answer), or
+     *     `self::TRANSIENT` to try again next run
      */
     private function processCity(CityImageRepository $images, ObjectStore $store, string $cityCode, string $cityName): ?string
     {
         $existing = $images->find($cityCode);
-        $summary = $this->lookUp($cityName);
+        $summary = $this->lookUp($cityCode, $cityName);
 
         if ($summary === self::TRANSIENT) {
             return self::TRANSIENT;
@@ -227,7 +275,7 @@ class Images extends AbstractCommand
 
         $images->store($cityCode, $imageKey, $sourceUrl, $summary['extract']);
 
-        return $imageKey;
+        return $summary['ambiguous'] ? self::AMBIGUOUS : $imageKey;
     }
 
     /**
@@ -242,11 +290,17 @@ class Images extends AbstractCommand
      * a second `429` after that is left transient rather than waited out
      * again, so one throttled city cannot stall the whole run.
      *
-     * @return self::TRANSIENT|array{source: string|null, extract: string|null}
+     * `$cityCode` picks the title actually requested: an entry in
+     * `WIKIPEDIA_TITLE_OVERRIDES` when this city has one, the plain name
+     * otherwise -- see that constant for why a handful of real cities
+     * need it.
+     *
+     * @return self::TRANSIENT|array{source: string|null, extract: string|null, ambiguous: bool}
      */
-    private function lookUp(string $cityName): array|string
+    private function lookUp(string $cityCode, string $cityName): array|string
     {
-        $url = sprintf(self::ENDPOINT, rawurlencode(str_replace(' ', '_', $cityName)));
+        $title = self::WIKIPEDIA_TITLE_OVERRIDES[$cityCode] ?? $cityName;
+        $url = sprintf(self::ENDPOINT, rawurlencode(str_replace(' ', '_', $title)));
 
         $response = $this->request($url);
 
@@ -257,7 +311,7 @@ class Images extends AbstractCommand
 
         // A real "no such page" -- confirmed, not transient.
         if ($response['status'] === 404) {
-            return ['source' => null, 'extract' => null];
+            return ['source' => null, 'extract' => null, 'ambiguous' => false];
         }
 
         if ($response['body'] === null || $response['status'] !== 200) {
@@ -270,14 +324,22 @@ class Images extends AbstractCommand
             return self::TRANSIENT;
         }
 
+        // Wikipedia's own signal for "this title is not one article" -- a
+        // disambiguation page's own `extract` is a list of what the name
+        // could mean ("Washington most commonly refers to: ..."), not a
+        // summary of any real place, so it is worth no more than the
+        // thumbnail it also does not have.
+        $ambiguous = ($data['type'] ?? null) === 'disambiguation';
+
         /** @var mixed $thumbnail */
-        $thumbnail = $data['thumbnail']['source'] ?? null;
+        $thumbnail = $ambiguous ? null : ($data['thumbnail']['source'] ?? null);
         /** @var mixed $extract */
-        $extract = $data['extract'] ?? null;
+        $extract = $ambiguous ? null : ($data['extract'] ?? null);
 
         return [
             'source' => is_string($thumbnail) ? $thumbnail : null,
             'extract' => is_string($extract) && $extract !== '' ? $extract : null,
+            'ambiguous' => $ambiguous,
         ];
     }
 
