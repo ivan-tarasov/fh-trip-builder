@@ -1,0 +1,69 @@
+name: Noah version
+
+# Enforces AbstractCommand::NOAH_VERSION's own rule instead of trusting
+# whoever is editing src/Noah/ to remember it (E22, #184). Built once before,
+# then removed on the owner's call because the written rule was judged
+# enough -- it then lapsed a second time, silently, across a new command and
+# three fixes to it. Brought back for that reason, not a reversal made
+# lightly: see NOAH_VERSION's own docblock.
+#
+# Reads the compare API rather than checking out the repository: this only
+# needs a file list and two small file reads, and pr-labels.yml already
+# prefers live API state over whatever the event payload or a local checkout
+# would carry.
+#
+# Failing this check only *blocks* a merge once it is added as a required
+# status check in the branch protection rules for develop.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [develop]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  noah-version:
+    name: Noah version bumped
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Require NOAH_VERSION to move when a Noah file does
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          files=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${BASE}...${HEAD}" --jq '.files[].filename')
+
+          # The bootstrap script by its exact name (it registers every
+          # command and is where a removal or a rename shows), or anything
+          # under the commands directory itself. Not AdminController's own
+          # SCHEDULABLE_COMMAND_CLASSES list -- that is the admin panel's
+          # dropdown, not Noah moving.
+          if ! grep -qE '^(noah|src/Noah/.+)$' <<< "$files"; then
+            echo "No Noah command files changed -- nothing to check."
+            exit 0
+          fi
+
+          version_at() {
+            gh api "repos/${GITHUB_REPOSITORY}/contents/src/Noah/AbstractCommand.php?ref=$1" --jq '.content' \
+              | base64 -d \
+              | grep -oE "NOAH_VERSION = '[^']+'"
+          }
+
+          before=$(version_at "$BASE")
+          after=$(version_at "$HEAD")
+
+          if [ "$before" = "$after" ]; then
+            echo "::error::This pull request changes a Noah command (or the noah bootstrap)"\
+                 "but NOAH_VERSION in src/Noah/AbstractCommand.php is still ${before}."\
+                 "A new command is a minor bump, a fix to one is a patch, and removing or"\
+                 "renaming one is a major -- see that constant's own docblock."
+            exit 1
+          fi
+
+          echo "NOAH_VERSION: ${before} -> ${after}"

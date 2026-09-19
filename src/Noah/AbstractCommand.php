@@ -30,17 +30,28 @@ abstract class AbstractCommand extends Command
      *
      * It said `v0.3.4` from 2025-08-25 until 2026-09-12, during which eleven
      * commands were added and the CLI went from four to fifteen. The bumps
-     * before that were all real, so the habit existed and lapsed -- which is
-     * the reason this docblock is here rather than a line in a changelog
-     * (E22, #184). Nothing enforces it; if you are editing this directory, the
-     * version is part of the edit.
+     * before that were all real, so the habit existed and lapsed once already
+     * (E22, #184) -- and then lapsed a second time: `alerts:check`'s own
+     * addition was the last commit to touch this line, and `cities:images`
+     * (C10, #395) landed after it, plus three more PRs fixing that one
+     * command, with nothing here moving through any of them.
      *
-     * `v1.0.0` and not `v0.14.0`, which is what eleven feature additions would
-     * count to. The number should say what is true: this is the tool a
+     * `v1.7.0` and not `v1.6.3`, which is what one new command plus three
+     * fixes to it would count to piecemeal. The number should say what is
+     * true, the same reasoning `v1.0.0` was picked on: this is the tool a
      * production deploy is built on -- cron calls `schedule:run`, `db:clear`
-     * refuses to run without `db:backup`, and the runbook is made of it.
+     * refuses to run without `db:backup`, and the runbook is made of it. A
+     * command that did not exist in `v1.6.0` existing now is what matters;
+     * how many pull requests it took to get right is not.
+     *
+     * Enforced now, the second time this lapsed being reason enough to
+     * revisit a call the docblock used to record as settled: a required CI
+     * check (`.github/workflows/noah-version.yml`) fails a pull request that
+     * touches `src/Noah/` or the `noah` bootstrap without this constant's own
+     * value also moving, the same way `pr-labels.yml` already blocks a merge
+     * with no release label.
      */
-    private const string NOAH_VERSION = 'v1.6.0';
+    private const string NOAH_VERSION = 'v1.7.0';
 
     /**
      * Color presets
