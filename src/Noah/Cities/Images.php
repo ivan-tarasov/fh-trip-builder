@@ -374,17 +374,44 @@ class Images extends AbstractCommand
     }
 
     /**
+     * PHP's own `image_type_to_extension()` spells the format it detects
+     * from real bytes as "jpeg", never "jpg" -- but every Wikimedia
+     * thumbnail URL seen so far spells it "jpg" in the path. Without this,
+     * `guessKey()`'s own extension would never match a key this same
+     * command already wrote, and the existence check below would miss on
+     * every single JPEG -- which is effectively all of them.
+     */
+    private const array URL_EXTENSION_ALIASES = ['jpg' => 'jpeg'];
+
+    /**
      * Download the photo at `$sourceUrl` and hand it to our own bucket
      * under this city's key, overwriting whatever was there. Overwriting
      * is correct here: the key is per-city, not per-content, so a changed
      * photo simply replaces the old bytes at the same address rather than
      * needing a new one.
      *
+     * Checks whether the bucket already has this exact key before asking
+     * Wikipedia for anything -- the same `has()`-before-`put()` idiom
+     * `PostImageUploader::upload()` already uses, missing here until a
+     * shared bucket between local testing and production made it matter:
+     * this app's own dev testing had already uploaded a real photo for
+     * most of these cities under this exact deterministic key, and a
+     * fresh (or newly-restored) database re-fetching every one of them
+     * from Wikipedia on its first run would be genuine, avoidable waste --
+     * against the same rate-limited source `lookUp()` already has to be
+     * careful with.
+     *
      * @return string|self::TRANSIENT the key stored, or TRANSIENT when the
      *     bytes could not be fetched or read as an image this run
      */
     private function download(ObjectStore $store, string $cityCode, string $sourceUrl): string
     {
+        $guessed = self::guessKey($cityCode, $sourceUrl);
+
+        if ($guessed !== null && $store->has($guessed)) {
+            return $guessed;
+        }
+
         $response = $this->request($sourceUrl);
 
         if ($response['status'] !== 200 || $response['body'] === null) {
@@ -403,6 +430,26 @@ class Images extends AbstractCommand
         $store->put($key, $response['body'], (string) $size['mime'], self::CACHE_CONTROL);
 
         return $key;
+    }
+
+    /**
+     * The key this city's photo would get, from the source URL's own
+     * extension alone -- no bytes fetched to find out. Null when the URL
+     * carries no extension to go on, which is a real "cannot tell" rather
+     * than something to guess past.
+     */
+    private static function guessKey(string $cityCode, string $sourceUrl): ?string
+    {
+        $path = parse_url($sourceUrl, PHP_URL_PATH);
+        $extension = is_string($path) ? strtolower(pathinfo($path, PATHINFO_EXTENSION)) : '';
+
+        if ($extension === '') {
+            return null;
+        }
+
+        $extension = self::URL_EXTENSION_ALIASES[$extension] ?? $extension;
+
+        return Config::get('site.static.endpoint.cities', 'images/cities') . '/' . $cityCode . '.' . $extension;
     }
 
     /** @return array{status: int, body: string|null, retryAfter: int|null} */
