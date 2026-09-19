@@ -378,7 +378,7 @@ class Images extends AbstractCommand
         $extract = $ambiguous ? null : ($data['extract'] ?? null);
 
         return [
-            'source' => is_string($thumbnail) ? $thumbnail : null,
+            'source' => is_string($thumbnail) ? self::widened($thumbnail) : null,
             'extract' => is_string($extract) && $extract !== '' ? $extract : null,
             'ambiguous' => $ambiguous,
         ];
@@ -393,6 +393,42 @@ class Images extends AbstractCommand
      * every single JPEG -- which is effectively all of them.
      */
     private const array URL_EXTENSION_ALIASES = ['jpg' => 'jpeg'];
+
+    /**
+     * The width Wikipedia's own thumbnail CDN is asked for a bucket size
+     * of, comfortably covering a wide desktop card (`.fares__strip`'s
+     * `minmax(16.5rem, 1fr)` columns render at up to 400px+ of CSS width)
+     * at a retina display's real pixel density.
+     *
+     * Live-checked against the CDN's own error message: only a fixed list
+     * of widths is served on request -- 20, 40, 60, 120, 250, 330, 500,
+     * 960, 1280, 1920, 3840 -- anything else answers `400`. This is the
+     * smallest one that comfortably clears what the card needs.
+     */
+    private const int THUMBNAIL_WIDTH_PX = 960;
+
+    /**
+     * The REST summary endpoint always hands back a 330px thumbnail --
+     * too small for how the carousel card actually renders it, visibly
+     * soft on any retina display. Swaps the width segment Wikipedia's own
+     * URL already carries (`.../330px-Name.jpg`) for a wider bucket size
+     * from the same CDN host, rather than fetching the original file and
+     * resizing it here: no second request (the source stays on
+     * `thumb.wikimedia.org`, distinct from the rate-limited summary
+     * endpoint), and no need for `ImageResizer`'s own machinery just to
+     * shrink a multi-megapixel original back down.
+     *
+     * A regex on the width segment rather than a literal "330px" replace:
+     * live testing only ever saw 330, but nothing in the API's own
+     * contract promises every source image answers with that same
+     * default.
+     */
+    private static function widened(string $url): string
+    {
+        $wider = preg_replace('#/\d+px-#', '/' . self::THUMBNAIL_WIDTH_PX . 'px-', $url, 1);
+
+        return is_string($wider) ? $wider : $url;
+    }
 
     /**
      * Download the photo at `$sourceUrl` and hand it to our own bucket

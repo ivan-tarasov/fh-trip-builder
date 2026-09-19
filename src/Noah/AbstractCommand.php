@@ -50,8 +50,14 @@ abstract class AbstractCommand extends Command
      * touches `src/Noah/` or the `noah` bootstrap without this constant's own
      * value also moving, the same way `pr-labels.yml` already blocks a merge
      * with no release label.
+     *
+     * `v1.7.1`: the check's own first real catch, on the pull request that
+     * made it necessary to write down again -- a further fix to
+     * `cities:images` (requesting a wider Wikipedia thumbnail) opened before
+     * `v1.7.0` existed, and never carrying its own bump until the CI check
+     * above said so.
      */
-    private const string NOAH_VERSION = 'v1.7.0';
+    private const string NOAH_VERSION = 'v1.7.1';
 
     /**
      * Color presets
