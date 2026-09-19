@@ -44,6 +44,16 @@ final class PanelSettingTest extends TestCase
         self::assertNotNull($setting->invalidBecause($setting->parse('-1')));
     }
 
+    public function testAHomepageLimitFieldMustBeAtLeastOne(): void
+    {
+        $setting = PanelSetting::HomeDealsLimit;
+
+        self::assertNull($setting->invalidBecause($setting->parse('10')));
+        self::assertNotNull($setting->invalidBecause($setting->parse('0')));
+        self::assertNotNull($setting->invalidBecause($setting->parse('-1')));
+        self::assertNotNull($setting->invalidBecause($setting->parse('ten')));
+    }
+
     public function testARatioFieldMustBeGreaterThanOne(): void
     {
         $setting = PanelSetting::MaxDetourRatio;

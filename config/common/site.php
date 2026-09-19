@@ -178,6 +178,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Homepage carousels
+    |--------------------------------------------------------------------------
+    |
+    | How many cards "Travel deals under $X" and "Popular flights near you"
+    | (per tab) show, before the operator overrides either from the panel
+    | (G22, #426).
+    |
+    */
+
+    'home' => [
+        'deals_limit' => 10,
+        'popular_limit' => 8,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Index POI cards
     |--------------------------------------------------------------------------
     |

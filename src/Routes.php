@@ -83,15 +83,17 @@ class Routes
         '/admin/searches' => 'Admin@searches',
         // The live schedule (G19, #377).
         '/admin/schedule' => 'Admin@schedule',
-        // Settings is a rail parent with two more children below it, each
+        // Settings is a rail parent with three more children below it, each
         // its own address the same way -- Search rules kept `/admin/settings`
         // itself, the same idiom Orchid's own expandable parent link uses
         // (its href is its first child) (G2.6, #299).
         '/admin/settings' => 'Admin@settings',
         '/admin/settings/site-identity' => 'Admin@settingsSiteIdentity',
         '/admin/settings/map' => 'Admin@settingsMap',
+        // Homepage carousel limits (G22, #426).
+        '/admin/settings/homepage' => 'Admin@settingsHomepage',
         '/admin/settings/diagnostics' => 'Admin@settingsDiagnostics',
-        // One export for all three groups, since the history it reads is
+        // One export for all four groups, since the history it reads is
         // already shared across them (G3.5, #308).
         '/admin/settings/export' => 'Admin@exportSettingsHistory',
         // The command palette's own endpoint (G4.1, #312) -- JSON, listed in
