@@ -30,6 +30,17 @@ final readonly class CityImageRepository
         return $this->find($cityCode)['image_key'] ?? null;
     }
 
+    /**
+     * Wikipedia's own summary paragraph for the city, or null -- either
+     * because nothing has looked yet, or because Wikipedia had nothing
+     * usable (a real 404, or a disambiguation page -- see `Images`).
+     * C15 (#405)'s city-page reader.
+     */
+    public function extractFor(string $cityCode): ?string
+    {
+        return $this->find($cityCode)['extract'] ?? null;
+    }
+
     /** @return CityImageRow|null null when this city has never been looked up */
     public function find(string $cityCode): ?array
     {

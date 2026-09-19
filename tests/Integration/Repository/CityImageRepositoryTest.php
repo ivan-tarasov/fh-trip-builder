@@ -51,6 +51,7 @@ final class CityImageRepositoryTest extends IntegrationTestCase
         self::assertSame('https://example.com/photo.jpg', $row['image_source_url']);
         self::assertSame('A fictional city.', $row['extract']);
         self::assertSame('images/cities/ZZQ.jpg', $images->imageKeyFor(self::CITY));
+        self::assertSame('A fictional city.', $images->extractFor(self::CITY));
     }
 
     /**
@@ -71,6 +72,7 @@ final class CityImageRepositoryTest extends IntegrationTestCase
         self::assertNotNull($row);
         self::assertNull($row['image_key']);
         self::assertNull($images->imageKeyFor(self::CITY));
+        self::assertNull($images->extractFor(self::CITY));
     }
 
     public function testStoringAgainReplacesRatherThanFailing(): void
