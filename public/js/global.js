@@ -2302,6 +2302,71 @@
         paint();
     })();
 
+    /*[ Carousel arrows ]
+    ===========================================================*/
+    // C20 (#420). `.fares__strip` and `.months__chart` both scroll the same
+    // way -- overflow-x: auto with scroll-snap -- and neither ever gave a
+    // mouse a way in beyond a plain vertical wheel. One pair of buttons per
+    // `.carousel`, wired to whichever track inside it is actually visible.
+    (function () {
+        const carousels = document.querySelectorAll('.carousel');
+
+        if (carousels.length === 0) {
+            return;
+        }
+
+        const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+        carousels.forEach(function (carousel) {
+            const nav = carousel.querySelector('.js-carousel-nav');
+            const prev = nav ? nav.querySelector('.js-carousel-prev') : null;
+            const next = nav ? nav.querySelector('.js-carousel-next') : null;
+            const tracks = [...carousel.querySelectorAll('.fares__strip, .months__chart')];
+
+            if (!nav || !prev || !next || tracks.length === 0) {
+                return;
+            }
+
+            // Only one track is ever on screen -- a tabset hides the rest
+            // behind a radio with `display: none` -- and that is the one the
+            // buttons should act on. A hidden element's offsetWidth is 0 and
+            // a shown one's never is, so this needs no class of its own to
+            // say which track is current.
+            const active = () => tracks.find((track) => track.offsetWidth > 0) || tracks[0];
+
+            const sync = function () {
+                const track = active();
+                const max = track.scrollWidth - track.clientWidth;
+
+                nav.classList.toggle('is-scrollable', max > 1);
+                prev.disabled = track.scrollLeft <= 0;
+                next.disabled = track.scrollLeft >= max - 1;
+            };
+
+            prev.addEventListener('click', function () {
+                const track = active();
+                track.scrollBy({ left: track.clientWidth * -0.9, behavior: still.matches ? 'auto' : 'smooth' });
+            });
+
+            next.addEventListener('click', function () {
+                const track = active();
+                track.scrollBy({ left: track.clientWidth * 0.9, behavior: still.matches ? 'auto' : 'smooth' });
+            });
+
+            // `scroll` does not bubble, so each track needs its own listener
+            // rather than one delegated from the carousel wrapper.
+            tracks.forEach((track) => track.addEventListener('scroll', sync, { passive: true }));
+
+            // Switching tabs can swap in a track scrolled to a different
+            // point, or one short enough to need no arrows at all.
+            carousel.querySelectorAll('.tabset__radio').forEach((radio) => radio.addEventListener('change', sync));
+
+            window.addEventListener('resize', sync);
+
+            sync();
+        });
+    })();
+
     /*[ A list that grows ]
     ===========================================================*/
     // "Show more" is a real link to a longer list, so this only upgrades it:

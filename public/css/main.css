@@ -5038,6 +5038,7 @@ body:has(.hero) header#top {
 .filter-section__chevron-btn:active,
 .review__change:active,
 .article__verdict-button:active,
+.carousel__arrow:active,
 .to-top:active {
   transform: scale(.97);
   transition: transform var(--dur-fast) var(--ease-out);
@@ -7317,6 +7318,45 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
 @media (max-width: 575.98px) {
   .fares__strip { grid-auto-columns: minmax(13rem, 1fr); }
 }
+
+/* ---------- Carousel arrows (C20, #420) ----------
+   Shared by .fares__strip and .months__chart -- both are the same
+   overflow-x: auto pattern, just a different element underneath. Touch and
+   trackpad already drag either one; a mouse's plain vertical wheel has no
+   native way to, which is the gap these close.
+
+   The pair sits right-aligned in its own row after the strip -- the same
+   place Kayak's own reference puts it, measured live against its actual
+   layout rather than guessed from the screenshot alone: its arrows sit
+   below the card row, not beside the "Travel deals" title. */
+.carousel__nav { display: none; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
+
+@media (hover: hover) and (pointer: fine) {
+  .carousel__nav.is-scrollable { display: flex; }
+}
+
+/* Sized and coloured off Kayak's own reference rather than guessed --
+   `--surface-sunken`/`--line-strong` already sit within a few points of
+   its button fill and border in the light palette, so this reads as the
+   same control family instead of a borrowed one. Both arrows stay drawn
+   at each end, the same as the reference: a muted icon says "no further"
+   without the button disappearing and reflowing the row beside it. */
+.carousel__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.625rem;
+  height: 2.625rem;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background-color: var(--surface-sunken);
+  color: var(--ink-body);
+  font-size: .875rem;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.carousel__arrow:hover:not(:disabled) { background-color: var(--line); }
+.carousel__arrow:disabled { color: var(--ink-muted); cursor: default; }
 
 /* ---------- Best month to fly (C7, #156) ---------- */
 
