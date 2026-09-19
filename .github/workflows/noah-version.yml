@@ -1,4 +1,4 @@
-name: Noah version
+name: Noah
 
 # Enforces AbstractCommand::NOAH_VERSION's own rule instead of trusting
 # whoever is editing src/Noah/ to remember it (E22, #184). Built once before,
@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   noah-version:
-    name: Noah version bumped
+    name: Version bumped
     runs-on: ubuntu-latest
 
     steps:
