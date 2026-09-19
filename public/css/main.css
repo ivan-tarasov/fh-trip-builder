@@ -5038,6 +5038,7 @@ body:has(.hero) header#top {
 .filter-section__chevron-btn:active,
 .review__change:active,
 .article__verdict-button:active,
+.carousel__arrow:active,
 .to-top:active {
   transform: scale(.97);
   transition: transform var(--dur-fast) var(--ease-out);
@@ -7317,6 +7318,51 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
 @media (max-width: 575.98px) {
   .fares__strip { grid-auto-columns: minmax(13rem, 1fr); }
 }
+
+/* ---------- Carousel arrows (C20, #420) ----------
+   Shared by .fares__strip and .months__chart -- both are the same
+   overflow-x: auto pattern, just a different element underneath. Touch and
+   trackpad already drag either one; a mouse's plain vertical wheel has no
+   native way to, which is the gap these close.
+
+   The pair sits beside the section's own title rather than over the strip
+   -- there is nothing else on that line (no "Explore more", nothing) --
+   so `.carousel-head` is a flex row wherever a heading might own one, and
+   global.js moves `.carousel__nav` there from wherever it was written in
+   the markup. It cannot be laid out there by CSS alone: `place/fares.html.twig`
+   is included by `partials/place.html.twig` *after* that file has already
+   printed the title, and Twig has no way to hand content back up into
+   markup a parent template already emitted. */
+.carousel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+.carousel__nav { display: none; flex: 0 0 auto; gap: .5rem; }
+
+@media (hover: hover) and (pointer: fine) {
+  .carousel__nav.is-scrollable { display: flex; }
+}
+
+/* Sized and coloured off Kayak's own reference rather than guessed --
+   `--surface-sunken`/`--line-strong` already sit within a few points of
+   its button fill and border in the light palette, so this reads as the
+   same control family instead of a borrowed one. Both arrows stay drawn
+   at each end, the same as the reference: a muted icon says "no further"
+   without the button disappearing and reflowing the row beside it. */
+.carousel__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.625rem;
+  height: 2.625rem;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background-color: var(--surface-sunken);
+  color: var(--ink-body);
+  font-size: .875rem;
+  transition: background-color var(--dur-fast) ease;
+}
+
+.carousel__arrow:hover:not(:disabled) { background-color: var(--line); }
+.carousel__arrow:disabled { color: var(--ink-muted); cursor: default; }
 
 /* ---------- Best month to fly (C7, #156) ---------- */
 

@@ -37,29 +37,36 @@
 
 {% if deals.cards is not empty %}
     <div class="container px-4 py-5" id="travel-deals">
-        <h2 class="pb-2 mb-4 border-bottom">Travel deals under {{ money.plain(price_whole(deals.ceiling)) }}</h2>
+        <h2 class="pb-2 mb-4 border-bottom carousel-head">Travel deals under {{ money.plain(price_whole(deals.ceiling)) }}</h2>
 
         {# `fares tabset` on the wrapper even with nothing to switch between:
            `.fares__strip` only becomes a grid through the `--tabset-panel`
            variable `.fares` sets and `.tabset__panel` reads, and the "one
            tab, no radios" rule already shows a panel with nothing to check
            against. Matches `place/fares.html.twig`'s own structure exactly
-           rather than a second way to draw the same strip. #}
-        <div class="fares tabset">
-            <ul class="fares__strip tabset__panel">
-                {% for card in deals.cards %}
-                    <li class="fares__item">
-                        {% if card.image %}
-                            <a class="fare fare--photo" href="{{ card.url }}">
-                                <span class="fare__photo" style="background-image: url('{{ cdn(card.image) }}');" aria-hidden="true"></span>
-                                <span class="fare__body">{{ macros.content(card) }}</span>
-                            </a>
-                        {% else %}
-                            <a class="fare" href="{{ card.url }}">{{ macros.content(card) }}</a>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
+           rather than a second way to draw the same strip.
+
+           `.carousel` wraps it the same way it wraps that other file's own
+           tabset -- C20 (#420). #}
+        <div class="carousel">
+            <div class="fares tabset">
+                <ul class="fares__strip tabset__panel">
+                    {% for card in deals.cards %}
+                        <li class="fares__item">
+                            {% if card.image %}
+                                <a class="fare fare--photo" href="{{ card.url }}">
+                                    <span class="fare__photo" style="background-image: url('{{ cdn(card.image) }}');" aria-hidden="true"></span>
+                                    <span class="fare__body">{{ macros.content(card) }}</span>
+                                </a>
+                            {% else %}
+                                <a class="fare" href="{{ card.url }}">{{ macros.content(card) }}</a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            {% include 'partials/carousel-arrows.html.twig' %}
         </div>
     </div>
 {% endif %}
