@@ -291,7 +291,18 @@ class Images extends AbstractCommand
             // First time, or Wikipedia's own photo changed since we last
             // checked -- either way, the bytes we have (if any) are not
             // the bytes this answer names, so go get the real ones.
-            $imageKey = $this->download($store, $cityCode, $summary['source']);
+            //
+            // The bucket is trusted to already hold the right bytes only
+            // on a first-ever look at this city ($existing === null): S3
+            // is shared with local testing, which may have uploaded this
+            // exact key already. Once a row exists, this app already
+            // knows the current source differs from what made that key --
+            // its content is confirmed stale, not merely unconfirmed, so
+            // trusting an existing key here would silently keep serving
+            // it forever. Found live: a resolution bump changes every
+            // stored source without changing the key's own file
+            // extension, which is exactly the case this guards.
+            $imageKey = $this->download($store, $cityCode, $summary['source'], trustExistingKey: $existing === null);
 
             if ($imageKey === self::TRANSIENT) {
                 return self::TRANSIENT;
@@ -390,23 +401,27 @@ class Images extends AbstractCommand
      * photo simply replaces the old bytes at the same address rather than
      * needing a new one.
      *
-     * Checks whether the bucket already has this exact key before asking
-     * Wikipedia for anything -- the same `has()`-before-`put()` idiom
-     * `PostImageUploader::upload()` already uses, missing here until a
-     * shared bucket between local testing and production made it matter:
-     * this app's own dev testing had already uploaded a real photo for
-     * most of these cities under this exact deterministic key, and a
-     * fresh (or newly-restored) database re-fetching every one of them
-     * from Wikipedia on its first run would be genuine, avoidable waste --
-     * against the same rate-limited source `lookUp()` already has to be
-     * careful with.
+     * When `$trustExistingKey` is true, checks whether the bucket already
+     * has this exact key before asking Wikipedia for anything -- the same
+     * `has()`-before-`put()` idiom `PostImageUploader::upload()` already
+     * uses, missing here until a shared bucket between local testing and
+     * production made it matter: this app's own dev testing had already
+     * uploaded a real photo for most of these cities under this exact
+     * deterministic key, and a fresh (or newly-restored) database
+     * re-fetching every one of them from Wikipedia on its first run would
+     * be genuine, avoidable waste against the same rate-limited source
+     * `lookUp()` already has to be careful with.
+     *
+     * That trust is conditional on purpose -- see the call site in
+     * `processCity()` for why a *known-stale* key must never take this
+     * path, only a key nothing here has an opinion about yet.
      *
      * @return string|self::TRANSIENT the key stored, or TRANSIENT when the
      *     bytes could not be fetched or read as an image this run
      */
-    private function download(ObjectStore $store, string $cityCode, string $sourceUrl): string
+    private function download(ObjectStore $store, string $cityCode, string $sourceUrl, bool $trustExistingKey): string
     {
-        $guessed = self::guessKey($cityCode, $sourceUrl);
+        $guessed = $trustExistingKey ? self::guessKey($cityCode, $sourceUrl) : null;
 
         if ($guessed !== null && $store->has($guessed)) {
             return $guessed;
