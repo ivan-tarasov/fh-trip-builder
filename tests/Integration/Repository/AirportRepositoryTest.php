@@ -80,6 +80,26 @@ final class AirportRepositoryTest extends IntegrationTestCase
         self::assertSame(count($codes), count(array_unique($codes)));
     }
 
+    public function testEnabledByCountrySplitsDomesticFromInternational(): void
+    {
+        $domestic = $this->repository()->enabledByCountry('CA', true, true);
+        $international = $this->repository()->enabledByCountry('CA', false, true);
+
+        self::assertNotEmpty($domestic);
+        self::assertNotEmpty($international);
+        self::assertSame([], array_intersect($domestic, $international));
+
+        $countries = array_column(
+            $this->connection()->fetchAll(
+                'SELECT country_code FROM airports WHERE code IN (' . implode(',', array_fill(0, count($domestic), '?')) . ')',
+                $domestic,
+            ),
+            'country_code',
+        );
+
+        self::assertSame(array_fill(0, count($countries), 'CA'), $countries);
+    }
+
     public function testACityLeadsTheAirportsItExpandsTo(): void
     {
         // Picking the city searches all of them, so it belongs with them rather
