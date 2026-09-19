@@ -13,6 +13,7 @@ use TripBuilder\Aws\ObjectStore;
 use TripBuilder\Aws\S3;
 use TripBuilder\Config;
 use TripBuilder\Noah\AbstractCommand;
+use TripBuilder\Noah\Wikipedia\Summary;
 use TripBuilder\Repository\CityImageRepository;
 use TripBuilder\Repository\CityRepository;
 
@@ -69,17 +70,16 @@ class Images extends AbstractCommand
         self::OPT_FORCE => self::OPT_FORCE_DESCRIPTION,
     ];
 
-    private const string ENDPOINT = 'https://en.wikipedia.org/api/rest_v1/page/summary/%s';
-
-    /** Long enough for a slow response, short enough not to hang the whole run on one city. */
+    /**
+     * For `request()`'s own use in `download()` -- the photo bytes
+     * themselves, not the Wikipedia summary lookup, which has its own
+     * copy of these inside `Summary` now.
+     */
     private const int TIMEOUT_SECONDS = 10;
     private const int CONNECT_TIMEOUT_SECONDS = 5;
 
     /** See the pause's own comment in execute() for why this exists at all. */
     private const int REQUEST_PAUSE_MICROSECONDS = 200_000;
-
-    /** A `Retry-After` this command will not sit and wait longer than. */
-    private const int MAX_BACKOFF_SECONDS = 15;
 
     /**
      * How long a cached answer is trusted before it is asked for again. A
@@ -159,16 +159,6 @@ class Images extends AbstractCommand
     private const string CACHE_CONTROL = 'public, max-age=86400';
 
     /**
-     * A sentinel `lookUp()`/`download()` can return instead of a real
-     * answer: "could not ask (or could not use what came back) this run" --
-     * see the class docblock for why this is stored differently from a
-     * confirmed no-photo answer. A string rather than a real tri-state so
-     * the calling code can `match` on one type instead of juggling `null`
-     * for two different meanings.
-     */
-    private const string TRANSIENT = 'transient';
-
-    /**
      * What `processCity()` returns instead of `null` when the page it
      * landed on was a disambiguation page with no entry in
      * `WIKIPEDIA_TITLE_OVERRIDES` -- stored the same as a confirmed
@@ -217,6 +207,7 @@ class Images extends AbstractCommand
         }
 
         $store = S3::fromEnvironment();
+        $wikipedia = new Summary('fh-trip-builder cities:images');
 
         $found = 0;
         $noPhoto = 0;
@@ -227,10 +218,10 @@ class Images extends AbstractCommand
         $progress->start();
 
         foreach ($cities as $i => $city) {
-            $outcome = $this->processCity($images, $store, (string) $city['code'], (string) $city['name']);
+            $outcome = $this->processCity($images, $store, $wikipedia, (string) $city['code'], (string) $city['name']);
 
             match ($outcome) {
-                self::TRANSIENT => $skipped++,
+                Summary::TRANSIENT => $skipped++,
                 self::AMBIGUOUS => $ambiguous++,
                 null => $noPhoto++,
                 default => $found++,
@@ -265,20 +256,20 @@ class Images extends AbstractCommand
      * One city, start to finish: ask Wikipedia, decide whether the photo
      * needs re-downloading, and store the answer.
      *
-     * @return string|null|self::AMBIGUOUS|self::TRANSIENT the S3 key
+     * @return string|null|self::AMBIGUOUS|Summary::TRANSIENT the S3 key
      *     stored, null for a confirmed no-photo answer, `self::AMBIGUOUS`
      *     for a disambiguation page with no override (also stored as
      *     null -- there is still nothing to show -- but counted apart so
      *     it is not mistaken for a real no-photo answer), or
-     *     `self::TRANSIENT` to try again next run
+     *     `Summary::TRANSIENT` to try again next run
      */
-    private function processCity(CityImageRepository $images, ObjectStore $store, string $cityCode, string $cityName): ?string
+    private function processCity(CityImageRepository $images, ObjectStore $store, Summary $wikipedia, string $cityCode, string $cityName): ?string
     {
         $existing = $images->find($cityCode);
-        $summary = $this->lookUp($cityCode, $cityName);
+        $summary = $this->lookUp($wikipedia, $cityCode, $cityName);
 
-        if ($summary === self::TRANSIENT) {
-            return self::TRANSIENT;
+        if ($summary === Summary::TRANSIENT) {
+            return Summary::TRANSIENT;
         }
 
         $imageKey = $existing['image_key'] ?? null;
@@ -304,8 +295,8 @@ class Images extends AbstractCommand
             // extension, which is exactly the case this guards.
             $imageKey = $this->download($store, $cityCode, $summary['source'], trustExistingKey: $existing === null);
 
-            if ($imageKey === self::TRANSIENT) {
-                return self::TRANSIENT;
+            if ($imageKey === Summary::TRANSIENT) {
+                return Summary::TRANSIENT;
             }
 
             $sourceUrl = $summary['source'];
@@ -320,68 +311,34 @@ class Images extends AbstractCommand
     }
 
     /**
-     * Wikipedia's answer for one city.
-     *
-     * One retry, and only for a `429` -- live-measured, this is a real,
-     * IP-based limit Wikipedia enforces and names with its own
-     * `Retry-After` header, not noise: a batch of requests that ran clean
-     * in isolation started failing consistently once it hit some request
-     * count, and every failure was a `429` carrying that header. Waiting
-     * it out once is worth doing since the answer says exactly how long;
-     * a second `429` after that is left transient rather than waited out
-     * again, so one throttled city cannot stall the whole run.
+     * Wikipedia's answer for one city, widened to a real thumbnail size --
+     * the fetch/backoff/disambiguation-detection itself is
+     * `Summary::lookUp()`'s job now (C16, #408), shared with
+     * `Noah\Countries\Content`; this only adds what stays city-specific:
+     * which title to actually ask for, and asking for a bigger photo than
+     * the 330px default.
      *
      * `$cityCode` picks the title actually requested: an entry in
      * `WIKIPEDIA_TITLE_OVERRIDES` when this city has one, the plain name
      * otherwise -- see that constant for why a handful of real cities
      * need it.
      *
-     * @return self::TRANSIENT|array{source: string|null, extract: string|null, ambiguous: bool}
+     * @return Summary::TRANSIENT|array{source: string|null, extract: string|null, ambiguous: bool}
      */
-    private function lookUp(string $cityCode, string $cityName): array|string
+    private function lookUp(Summary $wikipedia, string $cityCode, string $cityName): array|string
     {
         $title = self::WIKIPEDIA_TITLE_OVERRIDES[$cityCode] ?? $cityName;
-        $url = sprintf(self::ENDPOINT, rawurlencode(str_replace(' ', '_', $title)));
+        $summary = $wikipedia->lookUp($title);
 
-        $response = $this->request($url);
-
-        if ($response['status'] === 429 && $response['retryAfter'] !== null) {
-            sleep(min($response['retryAfter'], self::MAX_BACKOFF_SECONDS));
-            $response = $this->request($url);
+        if ($summary === Summary::TRANSIENT) {
+            return Summary::TRANSIENT;
         }
 
-        // A real "no such page" -- confirmed, not transient.
-        if ($response['status'] === 404) {
-            return ['source' => null, 'extract' => null, 'ambiguous' => false];
+        if ($summary['source'] !== null) {
+            $summary['source'] = self::widened($summary['source']);
         }
 
-        if ($response['body'] === null || $response['status'] !== 200) {
-            return self::TRANSIENT;
-        }
-
-        $data = json_decode($response['body'], true);
-
-        if (!is_array($data)) {
-            return self::TRANSIENT;
-        }
-
-        // Wikipedia's own signal for "this title is not one article" -- a
-        // disambiguation page's own `extract` is a list of what the name
-        // could mean ("Washington most commonly refers to: ..."), not a
-        // summary of any real place, so it is worth no more than the
-        // thumbnail it also does not have.
-        $ambiguous = ($data['type'] ?? null) === 'disambiguation';
-
-        /** @var mixed $thumbnail */
-        $thumbnail = $ambiguous ? null : ($data['thumbnail']['source'] ?? null);
-        /** @var mixed $extract */
-        $extract = $ambiguous ? null : ($data['extract'] ?? null);
-
-        return [
-            'source' => is_string($thumbnail) ? self::widened($thumbnail) : null,
-            'extract' => is_string($extract) && $extract !== '' ? $extract : null,
-            'ambiguous' => $ambiguous,
-        ];
+        return $summary;
     }
 
     /**
@@ -452,7 +409,7 @@ class Images extends AbstractCommand
      * `processCity()` for why a *known-stale* key must never take this
      * path, only a key nothing here has an opinion about yet.
      *
-     * @return string|self::TRANSIENT the key stored, or TRANSIENT when the
+     * @return string|Summary::TRANSIENT the key stored, or TRANSIENT when the
      *     bytes could not be fetched or read as an image this run
      */
     private function download(ObjectStore $store, string $cityCode, string $sourceUrl, bool $trustExistingKey): string
@@ -466,13 +423,13 @@ class Images extends AbstractCommand
         $response = $this->request($sourceUrl);
 
         if ($response['status'] !== 200 || $response['body'] === null) {
-            return self::TRANSIENT;
+            return Summary::TRANSIENT;
         }
 
         $size = getimagesizefromstring($response['body']);
 
         if ($size === false) {
-            return self::TRANSIENT;
+            return Summary::TRANSIENT;
         }
 
         $key = Config::get('site.static.endpoint.cities', 'images/cities')
@@ -503,16 +460,22 @@ class Images extends AbstractCommand
         return Config::get('site.static.endpoint.cities', 'images/cities') . '/' . $cityCode . '.' . $extension;
     }
 
-    /** @return array{status: int, body: string|null, retryAfter: int|null} */
+    /**
+     * The photo's own bytes, from `$sourceUrl` -- Wikipedia's summary
+     * lookup (with its own retry-after handling for a 429) is
+     * `Summary::lookUp()`'s job now; this is a plain GET against the
+     * separate, unrelated thumbnail CDN, which has never answered with
+     * one.
+     *
+     * @return array{status: int, body: string|null}
+     */
     private function request(string $url): array
     {
         $handle = curl_init($url);
 
         if ($handle === false) {
-            return ['status' => 0, 'body' => null, 'retryAfter' => null];
+            return ['status' => 0, 'body' => null];
         }
-
-        $retryAfter = null;
 
         curl_setopt_array($handle, [
             CURLOPT_RETURNTRANSFER => true,
@@ -520,17 +483,6 @@ class Images extends AbstractCommand
             CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_USERAGENT => 'fh-trip-builder cities:images',
-            CURLOPT_HTTPHEADER => ['Accept: application/json'],
-            // The only header this command reads. A closure over $retryAfter
-            // rather than a second curl_getinfo() call: libcurl hands headers
-            // to this as they arrive, not the response body's own parser.
-            CURLOPT_HEADERFUNCTION => static function ($ch, string $line) use (&$retryAfter): int {
-                if (preg_match('/^retry-after:\s*(\d+)/i', $line, $match) === 1) {
-                    $retryAfter = (int) $match[1];
-                }
-
-                return strlen($line);
-            },
         ]);
 
         $body = curl_exec($handle);
@@ -542,7 +494,6 @@ class Images extends AbstractCommand
         return [
             'status' => $status,
             'body' => is_string($body) && $error === '' ? $body : null,
-            'retryAfter' => $retryAfter,
         ];
     }
 }
