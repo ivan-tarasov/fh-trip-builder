@@ -17,7 +17,8 @@
 {% set icons = {
     'Search rules': 'sliders',
     'Site identity': 'globe2',
-    'Map': 'map'
+    'Map': 'map',
+    'Homepage': 'house'
 } %}
 
 {# One line per group, the same reasoning `icons` above gives for keeping
@@ -25,7 +26,8 @@
 {% set descriptions = {
     'Search rules': 'Real business rules for search results -- recoverable if a value turns out wrong.',
     'Site identity': 'The three lines of copy the site shows as its own name and brand.',
-    'Map': 'Which provider and style draws the airport map.'
+    'Map': 'Which provider and style draws the airport map.',
+    'Homepage': 'How many cards each homepage carousel shows.'
 } %}
 {% block description %}<p class="well__description">{{ descriptions[group]|default('Config values worth changing without a deploy.') }}</p>{% endblock %}
 
@@ -36,9 +38,9 @@
    setting and is left out on purpose, the way articles were before it.
 
    One page, one group, one save: `$group`'s fields validate and save
-   together, independently of the other two groups -- three pages instead of
-   one since G2.6 (#299), so a typo in Search rules no longer blocks a Site
-   identity save. "Reset to default" is its own button per field -- it posts
+   together, independently of the other groups -- separate pages since G2.6
+   (#299), so a typo in Search rules no longer blocks a Site identity save.
+   "Reset to default" is its own button per field -- it posts
    only its own name, so clicking it does not also save whatever else is
    sitting unsaved in the form. #}
 {% block content %}

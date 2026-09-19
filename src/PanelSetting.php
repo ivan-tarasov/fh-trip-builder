@@ -38,6 +38,8 @@ enum PanelSetting: string
     case MetaDescription = 'meta.description';
     case MetaKeywords = 'meta.keywords';
     case MapStyle = 'maps.static.style';
+    case HomeDealsLimit = 'site.home.deals_limit';
+    case HomePopularLimit = 'site.home.popular_limit';
 
     // The operator's own identity (G9, #350) -- shown in the topbar user
     // menu and the public site's footer credit line (G6.4, #348), and
@@ -58,6 +60,7 @@ enum PanelSetting: string
             self::NightFromHour, self::NightToHour, self::GulfCountries => 'Search rules',
             self::AppName, self::MetaDescription, self::MetaKeywords => 'Site identity',
             self::MapStyle => 'Map',
+            self::HomeDealsLimit, self::HomePopularLimit => 'Homepage',
             self::ProfileName, self::ProfileEmail, self::ProfileRole, self::ProfileAvatar => 'Profile',
         };
     }
@@ -77,6 +80,8 @@ enum PanelSetting: string
             self::MetaDescription => 'Meta description',
             self::MetaKeywords => 'Meta keywords',
             self::MapStyle => 'Map style',
+            self::HomeDealsLimit => 'Travel deals cards',
+            self::HomePopularLimit => 'Popular flights cards',
             self::ProfileName => 'Name',
             self::ProfileEmail => 'Email address',
             self::ProfileRole => 'Role',
@@ -105,6 +110,8 @@ enum PanelSetting: string
             self::MetaDescription => 'The line a search result shows under the page title.',
             self::MetaKeywords => 'One per line. Most search engines ignore this today.',
             self::MapStyle => 'A Mapbox style, written as "username/style-id".',
+            self::HomeDealsLimit => 'How many cards "Travel deals under $X" shows on the homepage.',
+            self::HomePopularLimit => 'How many cards "Popular flights near you" shows per tab.',
             self::ProfileName => 'Shown in the topbar user menu and the public site\'s footer credit.',
             self::ProfileEmail => 'Shown in the topbar user menu and the page \'author\' meta tag.',
             self::ProfileRole => 'Shown under the name in the topbar user menu.',
@@ -186,6 +193,8 @@ enum PanelSetting: string
             self::MinConnectMinutes, self::MaxConnectMinutes, self::MinDetourKm
                 => !is_int($parsed) || $parsed < 0 ? 'Needs a whole number, zero or more.' : null,
             self::MaxStops => !is_int($parsed) || $parsed < 0 ? 'Needs a whole number, zero or more.' : null,
+            self::HomeDealsLimit, self::HomePopularLimit
+                => !is_int($parsed) || $parsed < 1 ? 'Needs a whole number, one or more.' : null,
             self::MaxDetourRatio => !is_float($parsed) || $parsed <= 1.0 ? 'Needs a number greater than 1.' : null,
             self::NightFromHour, self::NightToHour
                 => !is_int($parsed) || $parsed < 0 || $parsed > 23 ? 'Needs an hour from 0 to 23.' : null,

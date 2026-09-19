@@ -7,7 +7,9 @@ namespace TripBuilder\Tests\Integration\Controllers;
 use TripBuilder\CabinClass;
 use TripBuilder\Controllers\HomeController;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\SettingsRepository;
 use TripBuilder\SearchUrl;
+use TripBuilder\Settings;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -43,6 +45,10 @@ final class HomeControllerPopularFlightsTest extends IntegrationTestCase
         foreach ($this->flightIds as $id) {
             $this->connection()->execute('DELETE FROM flights WHERE id = ?', [$id]);
         }
+
+        $this->connection()->execute('DELETE FROM settings WHERE setting_key = ?', ['site.home.popular_limit']);
+        $this->connection()->execute('DELETE FROM setting_changes WHERE setting_key = ?', ['site.home.popular_limit']);
+        Settings::forget();
     }
 
     public function testAnUnresolvableOriginShowsNothing(): void
@@ -72,6 +78,27 @@ final class HomeControllerPopularFlightsTest extends IntegrationTestCase
 
         self::assertContains(self::DOMESTIC_DESTINATION_CITY, $homeCities, 'the domestic fixture should show up in the domestic tab');
         self::assertContains('LON', $awayCities, 'the international fixture should show up in the international tab');
+    }
+
+    /**
+     * G22 (#426): fares per tab follows `PanelSetting::HomePopularLimit`,
+     * not a constant. The real Canadian network already reaches plenty of
+     * cities from Montreal, so this needs no fixture -- only that an
+     * override of 1 actually caps a tab at 1 rather than the config
+     * default of 8.
+     */
+    public function testFaresPerTabFollowTheAdminOverride(): void
+    {
+        new SettingsRepository($this->connection())->set('site.home.popular_limit', 1);
+        Settings::forget();
+
+        $tabs = HomeController::popularFlights(self::ORIGIN, new AirportRepository($this->connection()), $this->connection());
+
+        self::assertNotEmpty($tabs);
+
+        foreach ($tabs as $tab) {
+            self::assertCount(1, $tab['fares'], "{$tab['id']} tab should be capped at the overridden limit");
+        }
     }
 
     public function testEveryCityInTheDomesticTabSharesTheOriginsCountryAndEveryCityAbroadDoesNot(): void

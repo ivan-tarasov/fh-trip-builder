@@ -13,6 +13,7 @@ use TripBuilder\Repository\CityImageRepository;
 use TripBuilder\Repository\FlightRepository;
 use TripBuilder\Repository\SearchRepository;
 use TripBuilder\SearchUrl;
+use TripBuilder\Settings;
 use TripBuilder\View\RecentSearches;
 use TripBuilder\View\SuggestedOrigin;
 use TripBuilder\View\TwigRenderer;
@@ -20,22 +21,6 @@ use TripBuilder\VisitorLocation;
 
 class HomeController extends AbstractController
 {
-    /**
-     * Cards in the "Travel deals" carousel -- C10 (#395). Trip.com's own
-     * reference shows four; ten is enough to make a strip worth
-     * scrolling without asking `cheapestPerDestinationCity()` to rank the
-     * entire network for a row nobody will reach.
-     */
-    private const int DEALS_LIMIT = 10;
-
-    /**
-     * Fares per tab in the "Popular flights near you" carousel -- C12
-     * (#401). Same reasoning as DEALS_LIMIT: enough to fill a strip worth
-     * scrolling without asking cheapestPerDestinationCity() to rank every
-     * city in the split.
-     */
-    private const int POPULAR_LIMIT = 8;
-
     /**
      * Montreal's own airport, when nothing resolves an origin at all -- no
      * recent-search cookie, no Cloudflare geo header. In production a
@@ -171,6 +156,12 @@ class HomeController extends AbstractController
      * `AdminController::scheduledCommandHelp()` is: so a test can call it
      * directly rather than parsing rendered HTML back out for what it says.
      *
+     * How many cards show is `PanelSetting::HomeDealsLimit` (G22, #426),
+     * not a constant -- Trip.com's own reference shows four; ten is the
+     * config default, enough to make a strip worth scrolling without
+     * asking `cheapestPerDestinationCity()` to rank the entire network for
+     * a row nobody will reach.
+     *
      * `image` is our own S3 key -- whatever `cities:content`
      * (`Noah\Cities\Content`) already downloaded from Wikipedia and
      * re-hosted -- read here, never fetched here, and never a Wikipedia
@@ -194,7 +185,7 @@ class HomeController extends AbstractController
         $rows = array_slice(
             new FlightRepository($connection)->cheapestPerDestinationCity($fromAirports, $toAirports, CabinClass::Economy),
             0,
-            self::DEALS_LIMIT,
+            (int) Settings::get('site.home.deals_limit', 10),
         );
 
         if ($rows === []) {
@@ -245,6 +236,11 @@ class HomeController extends AbstractController
      * `cheapestPerDestinationCity()` row already carries `from_city` /
      * `to_city`, so only `search` needs adding.
      *
+     * Cards per tab is `PanelSetting::HomePopularLimit` (G22, #426), not a
+     * constant -- same reasoning `travelDeals()`'s own limit has: enough to
+     * fill a strip worth scrolling without asking `cheapestPerDestinationCity()`
+     * to rank every city in the split.
+     *
      * @return list<array{id: string, label: string, fares: list<array<string, mixed>>}>
      */
     public static function popularFlights(?string $origin, AirportRepository $airports, Connection $connection): array
@@ -262,6 +258,7 @@ class HomeController extends AbstractController
         }
 
         $flights = new FlightRepository($connection);
+        $popularLimit = (int) Settings::get('site.home.popular_limit', 8);
         $tabs = [];
 
         foreach ([true, false] as $domestic) {
@@ -269,7 +266,7 @@ class HomeController extends AbstractController
             $rows = array_slice(
                 $flights->cheapestPerDestinationCity($fromAirports, $toAirports, CabinClass::Economy),
                 0,
-                self::POPULAR_LIMIT,
+                $popularLimit,
             );
 
             if ($rows === []) {

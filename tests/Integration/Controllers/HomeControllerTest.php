@@ -7,7 +7,9 @@ namespace TripBuilder\Tests\Integration\Controllers;
 use TripBuilder\CabinClass;
 use TripBuilder\Controllers\HomeController;
 use TripBuilder\Repository\AirportRepository;
+use TripBuilder\Repository\SettingsRepository;
 use TripBuilder\SearchUrl;
+use TripBuilder\Settings;
 use TripBuilder\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -43,6 +45,10 @@ final class HomeControllerTest extends IntegrationTestCase
         foreach ($this->flightIds as $id) {
             $this->connection()->execute('DELETE FROM flights WHERE id = ?', [$id]);
         }
+
+        $this->connection()->execute('DELETE FROM settings WHERE setting_key = ?', ['site.home.deals_limit']);
+        $this->connection()->execute('DELETE FROM setting_changes WHERE setting_key = ?', ['site.home.deals_limit']);
+        Settings::forget();
     }
 
     /**
@@ -74,9 +80,27 @@ final class HomeControllerTest extends IntegrationTestCase
     }
 
     /**
+     * G22 (#426): the card count follows `PanelSetting::HomeDealsLimit`, not
+     * a fixed number. The real network already reaches plenty of
+     * destinations from Montreal, so this needs no fixture -- only that an
+     * override of 1 actually caps the cards at 1 rather than the config
+     * default of 10.
+     */
+    public function testTheCardCountFollowsTheAdminOverride(): void
+    {
+        new SettingsRepository($this->connection())->set('site.home.deals_limit', 1);
+        Settings::forget();
+
+        $deals = HomeController::travelDeals(self::ORIGIN, new AirportRepository($this->connection()), $this->connection());
+
+        self::assertCount(1, $deals['cards']);
+    }
+
+    /**
      * Checked as a self-consistency invariant rather than a hardcoded
-     * number: with `DEALS_LIMIT` at 10 and hundreds of real destination
-     * cities reachable from a real origin, eight of the ten shown are
+     * number: with the deals limit at its config default of 10 and
+     * hundreds of real destination cities reachable from a real origin,
+     * eight of the ten shown are
      * whatever the generator happens to have made cheapest that run --
      * only that the ceiling always equals the priciest *shown* card,
      * never a fixed figure, is this repository's to prove.

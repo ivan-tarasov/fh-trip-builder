@@ -2133,6 +2133,7 @@ class AdminController extends AbstractController
         'Search rules' => ['slug' => 'search-rules', 'path' => '/admin/settings'],
         'Site identity' => ['slug' => 'site-identity', 'path' => '/admin/settings/site-identity'],
         'Map' => ['slug' => 'map', 'path' => '/admin/settings/map'],
+        'Homepage' => ['slug' => 'homepage', 'path' => '/admin/settings/homepage'],
     ];
 
     // Not in `SETTINGS_GROUPS` above: the profile page is reached from the
@@ -2160,6 +2161,12 @@ class AdminController extends AbstractController
     public function settingsMap(): void
     {
         $this->settingsGroup('Map');
+    }
+
+    /** @throws Exception|Error */
+    public function settingsHomepage(): void
+    {
+        $this->settingsGroup('Homepage');
     }
 
     /**
