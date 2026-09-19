@@ -7235,6 +7235,49 @@ body:has(.cookie-notice) .theme-toggle { display: none; }
   scroll-snap-type: x proximity;
 }
 
+/* Fades the edge that still has a card cut in half, rather than clipping
+   it flat (C22, #423). Shared with .months__chart, below.
+
+   `--fade-start`/`--fade-end` are widths, not booleans, and default to 0
+   so a track never touched by JS -- disabled, or before global.js's own
+   `sync()` (C20) has run once -- shows no fade rather than a permanently
+   faded edge. Set from that same function, off the same `scrollLeft`/
+   `scrollWidth`/`clientWidth` triple already computing `prev.disabled`/
+   `next.disabled`: a card is only faded on the side that has another one
+   to scroll to, never on a true start or end.
+
+   Registered via @property rather than left untyped: a plain custom
+   property has no notion of "between 0px and 2rem", so global.js flipping
+   it on arrival at an edge snapped the mask straight to nothing instead of
+   easing there -- exactly the "disappears, not fades" the property exists
+   to prevent. Typing it `<length>` is what lets `transition` interpolate
+   it at all. */
+@property --fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.fares__strip,
+.months__chart {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  transition: --fade-start var(--dur-fast) var(--ease-out),
+              --fade-end var(--dur-fast) var(--ease-out);
+  -webkit-mask-image: linear-gradient(to right,
+    transparent, black var(--fade-start),
+    black calc(100% - var(--fade-end)), transparent);
+  mask-image: linear-gradient(to right,
+    transparent, black var(--fade-start),
+    black calc(100% - var(--fade-end)), transparent);
+}
+
 .fares__item { scroll-snap-align: start; }
 
 .fare {
